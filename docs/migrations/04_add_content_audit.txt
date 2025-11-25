@@ -1,0 +1,9 @@
+
+-- Run this in Supabase SQL Editor to add the content_audit column
+-- This allows persisting the result of the Content Integrity Audit
+
+ALTER TABLE public.content_briefs 
+ADD COLUMN IF NOT EXISTS content_audit jsonb;
+
+-- Force schema cache reload
+NOTIFY pgrst, 'reload config';

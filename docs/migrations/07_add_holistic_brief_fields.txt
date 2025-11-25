@@ -1,0 +1,20 @@
+
+-- Run this in the Supabase SQL Editor to fix the "Could not find column" error
+
+-- Add columns for Linguistic & Strategic Metadata
+ALTER TABLE public.content_briefs 
+ADD COLUMN IF NOT EXISTS query_type_format text,
+ADD COLUMN IF NOT EXISTS methodology_note text,
+ADD COLUMN IF NOT EXISTS perspectives jsonb,
+ADD COLUMN IF NOT EXISTS discourse_anchors jsonb,
+ADD COLUMN IF NOT EXISTS predicted_user_journey text;
+
+-- Add columns for Structural & Visual Metadata
+ALTER TABLE public.content_briefs
+ADD COLUMN IF NOT EXISTS structured_outline jsonb,
+ADD COLUMN IF NOT EXISTS structural_template_hash text,
+ADD COLUMN IF NOT EXISTS visual_semantics jsonb,
+ADD COLUMN IF NOT EXISTS featured_snippet_target jsonb;
+
+-- Force PostgREST schema cache reload to recognize new columns immediately
+NOTIFY pgrst, 'reload config';

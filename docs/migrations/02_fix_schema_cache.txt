@@ -1,0 +1,9 @@
+-- Run this in Supabase SQL Editor to fix the PGRST204 error
+
+-- 1. Ensure the column definitely exists (Idempotent check)
+ALTER TABLE public.content_briefs 
+ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now() NOT NULL;
+
+-- 2. Force PostgREST to refresh its schema cache
+-- This tells the API layer to re-read the table definitions
+NOTIFY pgrst, 'reload config';

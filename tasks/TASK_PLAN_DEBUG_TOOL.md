@@ -1,0 +1,1 @@
+full contents of TASK_PLAN_DEBUG_TOOL.md

@@ -1,0 +1,15 @@
+
+rm PillarDefinitionWizard.tsx
+rm EavDiscoveryWizard.tsx
+rm CompetitorRefinementWizard.tsx
+rm ProjectDashboardContainer.tsx
+rm ProjectDashboard.tsx
+rm MergeSuggestionsModal.tsx
+rm components/TemplateSelectionModal.tsx
+rm components/AdvancedAnalysisPanel.tsx
+rm components/ui/WorkbenchPanel.tsx
+rm components/ui/ActionSuggestionModal.tsx
+rm services/topicalAuthorityService.ts
+rm services/informationGainService.ts
+rm services/semanticDistanceService.ts
+rm services/infranodusService.ts

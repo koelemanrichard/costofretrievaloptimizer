@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm install)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "mcp__ide__getDiagnostics",
+      "Skill(example-skills:skill-creator)",
+      "SlashCommand(/superpowers:brainstorm)",
+      "Bash(npm install:*)",
+      "Bash(supabase --version:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase functions list:*)",
+      "Bash(npx supabase functions:*)",
+      "Bash(curl -X POST \"https://blucvnmncvwzlwxoyoum.supabase.co/functions/v1/anthropic-proxy\" -H \"Content-Type: application/json\" -H \"x-anthropic-api-key: test\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsdWN2bm1uY3Z3emx3eG95b3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjMwOTcyODgsImV4cCI6MjAzODY3MzI4OH0.Hb9K_WbGiRuhROWLU-Ek5ZSsRjQdAT2lOy29pnx1hYs\" -d '{\"\"\"\"model\"\"\"\":\"\"\"\"claude-3-haiku-20240307\"\"\"\",\"\"\"\"messages\"\"\"\":[{\"\"\"\"role\"\"\"\":\"\"\"\"user\"\"\"\",\"\"\"\"content\"\"\"\":\"\"\"\"test\"\"\"\"}]}')",
+      "Bash(curl -X POST \"https://blucvnmncvwzlwxoyoum.supabase.co/functions/v1/fetch-proxy\" -H \"Content-Type: application/json\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsdWN2bm1uY3Z3emx3eG95b3VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjMwOTcyODgsImV4cCI6MjAzODY3MzI4OH0.Hb9K_WbGiRuhROWLU-Ek5ZSsRjQdAT2lOy29pnx1hYs\" -d '{\"\"\"\"url\"\"\"\":\"\"\"\"https://httpbin.org/get\"\"\"\",\"\"\"\"method\"\"\"\":\"\"\"\"GET\"\"\"\"}')",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(npx playwright:*)",
+      "Bash(npm run validate:*)",
+      "Bash(npm run test:e2e:ui:*)",
+      "Bash(git init:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

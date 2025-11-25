@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "linkedom": "https://esm.sh/linkedom@0.18.11"
+  }
+}

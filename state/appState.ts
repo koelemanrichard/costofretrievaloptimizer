@@ -1,0 +1,309 @@
+
+// state/appState.ts
+import React, { createContext, useContext, Dispatch } from 'react';
+import { User } from '@supabase/supabase-js';
+import {
+    AppStep,
+    BusinessInfo,
+    Project,
+    TopicalMap,
+    EnrichedTopic,
+    ContentBrief,
+    KnowledgeGraph as KnowledgeGraphType,
+    GenerationLogEntry,
+    ValidationResult,
+    MapImprovementSuggestion,
+    MergeSuggestion,
+    SemanticAnalysisResult,
+    ContextualCoverageMetrics,
+    InternalLinkAuditResult,
+    TopicalAuthorityScore,
+    PublicationPlan,
+    ContentIntegrityResult,
+    SchemaGenerationResult,
+    GscOpportunity,
+    SEOPillars,
+    SemanticTriple,
+    ExpansionMode,
+    FlowAuditResult,
+    SiteAnalysisProject,
+    DiscoveredPillars,
+} from '../types';
+import { KnowledgeGraph } from '../lib/knowledgeGraph';
+import { defaultBusinessInfo } from '../config/defaults';
+
+export interface AppState {
+    user: User | null;
+    appStep: AppStep;
+    isLoading: { [key: string]: boolean | undefined; };
+    error: string | null;
+    notification: string | null;
+    
+    businessInfo: BusinessInfo;
+    projects: Project[];
+    activeProjectId: string | null;
+    topicalMaps: TopicalMap[];
+    activeMapId: string | null;
+    
+    knowledgeGraph: KnowledgeGraph | null;
+    generationLog: GenerationLogEntry[];
+    
+    activeBriefTopic: EnrichedTopic | null;
+    briefGenerationResult: ContentBrief | null;
+    briefGenerationStatus: string | null;
+
+    // New Expansion State
+    activeExpansionTopic: EnrichedTopic | null;
+    activeExpansionMode: ExpansionMode | null;
+
+    modals: Record<string, boolean>;
+    confirmation: { title: string; message: React.ReactNode; onConfirm: () => void } | null;
+
+    // Analysis results
+    gscOpportunities: GscOpportunity[] | null;
+    validationResult: ValidationResult | null;
+    improvementLog: MapImprovementSuggestion | null;
+    mergeSuggestions: MergeSuggestion[] | null;
+    semanticAnalysisResult: SemanticAnalysisResult | null;
+    contextualCoverageResult: ContextualCoverageMetrics | null;
+    internalLinkAuditResult: InternalLinkAuditResult | null;
+    topicalAuthorityScore: TopicalAuthorityScore | null;
+    publicationPlan: PublicationPlan | null;
+    contentIntegrityResult: ContentIntegrityResult | null;
+    schemaResult: SchemaGenerationResult | null;
+    flowAuditResult: FlowAuditResult | null;
+
+    // Site Analysis V2 state (persisted across tab navigation)
+    siteAnalysis: {
+        viewMode: 'project_list' | 'setup' | 'extracting' | 'pillars' | 'analyzing' | 'results' | 'page_detail';
+        currentProject: SiteAnalysisProject | null;
+        selectedPageId: string | null;
+        discoveredPillars: DiscoveredPillars | null;
+    };
+}
+
+export type AppAction =
+  | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_STEP'; payload: AppStep }
+  | { type: 'SET_LOADING'; payload: { key: string; value: boolean } }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_NOTIFICATION'; payload: string | null }
+  | { type: 'SET_BUSINESS_INFO'; payload: BusinessInfo }
+  | { type: 'SET_PROJECTS'; payload: Project[] }
+  | { type: 'ADD_PROJECT'; payload: Project }
+  | { type: 'DELETE_PROJECT'; payload: { projectId: string } }
+  | { type: 'SET_ACTIVE_PROJECT'; payload: string | null }
+  | { type: 'SET_TOPICAL_MAPS'; payload: TopicalMap[] }
+  | { type: 'ADD_TOPICAL_MAP'; payload: TopicalMap }
+  | { type: 'DELETE_TOPICAL_MAP', payload: { mapId: string } }
+  | { type: 'SET_ACTIVE_MAP'; payload: string | null }
+  | { type: 'UPDATE_MAP_DATA'; payload: { mapId: string; data: Partial<TopicalMap> } }
+  | { type: 'SET_PILLARS'; payload: { mapId: string, pillars: SEOPillars } }
+  | { type: 'SET_EAVS'; payload: { mapId: string, eavs: SemanticTriple[] } }
+  | { type: 'SET_COMPETITORS'; payload: { mapId: string, competitors: string[] } }
+  | { type: 'SET_TOPICS_FOR_MAP'; payload: { mapId: string; topics: EnrichedTopic[] } }
+  | { type: 'ADD_TOPIC'; payload: { mapId: string; topic: EnrichedTopic } }
+  | { type: 'UPDATE_TOPIC'; payload: { mapId: string; topicId: string; updates: Partial<EnrichedTopic> } }
+  | { type: 'DELETE_TOPIC'; payload: { mapId: string; topicId: string } }
+  | { type: 'SET_BRIEFS_FOR_MAP'; payload: { mapId: string; briefs: Record<string, ContentBrief> } }
+  | { type: 'ADD_BRIEF'; payload: { mapId: string; topicId: string; brief: ContentBrief } }
+  | { type: 'UPDATE_BRIEF_LINKS'; payload: { mapId: string, sourceTopicId: string, linkToAdd: any } }
+  | { type: 'SET_KNOWLEDGE_GRAPH'; payload: KnowledgeGraph | null }
+  | { type: 'LOG_EVENT'; payload: GenerationLogEntry }
+  | { type: 'CLEAR_LOG' }
+  | { type: 'SET_ACTIVE_BRIEF_TOPIC'; payload: EnrichedTopic | null }
+  | { type: 'SET_BRIEF_GENERATION_RESULT'; payload: ContentBrief | null }
+  | { type: 'SET_BRIEF_GENERATION_STATUS'; payload: string | null }
+  | { type: 'SET_ACTIVE_EXPANSION_TOPIC'; payload: EnrichedTopic | null }
+  | { type: 'SET_ACTIVE_EXPANSION_MODE'; payload: ExpansionMode | null }
+  | { type: 'SET_MODAL_VISIBILITY'; payload: { modal: string; visible: boolean } }
+  | { type: 'SHOW_CONFIRMATION'; payload: { title: string; message: React.ReactNode; onConfirm: () => void } }
+  | { type: 'HIDE_CONFIRMATION' }
+  | { type: 'SET_GSC_OPPORTUNITIES'; payload: GscOpportunity[] | null }
+  | { type: 'SET_VALIDATION_RESULT'; payload: ValidationResult | null }
+  | { type: 'SET_IMPROVEMENT_LOG'; payload: MapImprovementSuggestion | null }
+  | { type: 'SET_MERGE_SUGGESTIONS'; payload: MergeSuggestion[] | null }
+  | { type: 'SET_SEMANTIC_ANALYSIS_RESULT'; payload: SemanticAnalysisResult | null }
+  | { type: 'SET_CONTEXTUAL_COVERAGE_RESULT'; payload: ContextualCoverageMetrics | null }
+  | { type: 'SET_INTERNAL_LINK_AUDIT_RESULT'; payload: InternalLinkAuditResult | null }
+  | { type: 'SET_TOPICAL_AUTHORITY_SCORE'; payload: TopicalAuthorityScore | null }
+  | { type: 'SET_PUBLICATION_PLAN'; payload: PublicationPlan | null }
+  | { type: 'SET_CONTENT_INTEGRITY_RESULT'; payload: ContentIntegrityResult | null }
+  | { type: 'SET_SCHEMA_RESULT'; payload: SchemaGenerationResult | null }
+  | { type: 'SET_FLOW_AUDIT_RESULT'; payload: FlowAuditResult | null }
+  // Site Analysis V2 actions
+  | { type: 'SET_SITE_ANALYSIS_VIEW_MODE'; payload: AppState['siteAnalysis']['viewMode'] }
+  | { type: 'SET_SITE_ANALYSIS_PROJECT'; payload: SiteAnalysisProject | null }
+  | { type: 'SET_SITE_ANALYSIS_SELECTED_PAGE'; payload: string | null }
+  | { type: 'SET_SITE_ANALYSIS_PILLARS'; payload: DiscoveredPillars | null }
+  | { type: 'RESET_SITE_ANALYSIS' };
+
+export const initialState: AppState = {
+    user: null,
+    appStep: AppStep.AUTH,
+    isLoading: {},
+    error: null,
+    notification: null,
+    businessInfo: defaultBusinessInfo,
+    projects: [],
+    activeProjectId: null,
+    topicalMaps: [],
+    activeMapId: null,
+    knowledgeGraph: null,
+    generationLog: [],
+    activeBriefTopic: null,
+    briefGenerationResult: null,
+    briefGenerationStatus: null,
+    activeExpansionTopic: null,
+    activeExpansionMode: null,
+    modals: {},
+    confirmation: null,
+    gscOpportunities: null,
+    validationResult: null,
+    improvementLog: null,
+    mergeSuggestions: null,
+    semanticAnalysisResult: null,
+    contextualCoverageResult: null,
+    internalLinkAuditResult: null,
+    topicalAuthorityScore: null,
+    publicationPlan: null,
+    contentIntegrityResult: null,
+    schemaResult: null,
+    flowAuditResult: null,
+    siteAnalysis: {
+        viewMode: 'project_list',
+        currentProject: null,
+        selectedPageId: null,
+        discoveredPillars: null,
+    },
+};
+
+export const appReducer = (state: AppState, action: AppAction): AppState => {
+    switch (action.type) {
+        case 'SET_USER': return { ...state, user: action.payload };
+        case 'SET_STEP': return { ...state, appStep: action.payload };
+        case 'SET_LOADING': return { ...state, isLoading: { ...state.isLoading, [action.payload.key]: action.payload.value } };
+        case 'SET_ERROR': return { ...state, error: action.payload };
+        case 'SET_NOTIFICATION': return { ...state, notification: action.payload };
+        case 'SET_BUSINESS_INFO': return { ...state, businessInfo: action.payload };
+        case 'SET_PROJECTS': return { ...state, projects: action.payload };
+        case 'ADD_PROJECT': return { ...state, projects: [...state.projects, action.payload] };
+        case 'DELETE_PROJECT': return { ...state, projects: state.projects.filter(p => p.id !== action.payload.projectId) };
+        case 'SET_ACTIVE_PROJECT': return { ...state, activeProjectId: action.payload, activeMapId: null, topicalMaps: [] };
+        case 'SET_TOPICAL_MAPS': return { ...state, topicalMaps: action.payload };
+        case 'ADD_TOPICAL_MAP': return { ...state, topicalMaps: [...state.topicalMaps, action.payload] };
+        case 'DELETE_TOPICAL_MAP': return { ...state, topicalMaps: state.topicalMaps.filter(m => m.id !== action.payload.mapId) };
+        case 'SET_ACTIVE_MAP': return { ...state, activeMapId: action.payload };
+        case 'UPDATE_MAP_DATA':
+        case 'SET_PILLARS':
+        case 'SET_EAVS':
+        case 'SET_COMPETITORS':
+        case 'SET_TOPICS_FOR_MAP':
+        case 'SET_BRIEFS_FOR_MAP':
+        case 'ADD_TOPIC':
+        case 'UPDATE_TOPIC':
+        case 'DELETE_TOPIC':
+        case 'ADD_BRIEF':
+        case 'UPDATE_BRIEF_LINKS':
+            return {
+                ...state,
+                topicalMaps: state.topicalMaps.map(map => 'mapId' in action.payload && map.id === action.payload.mapId ? mapReducer(map, action) : map)
+            };
+        case 'SET_KNOWLEDGE_GRAPH': return { ...state, knowledgeGraph: action.payload };
+        case 'LOG_EVENT': return { ...state, generationLog: [action.payload, ...state.generationLog].slice(0, 100) };
+        case 'CLEAR_LOG': return { ...state, generationLog: [] };
+        case 'SET_ACTIVE_BRIEF_TOPIC': return { ...state, activeBriefTopic: action.payload };
+        case 'SET_BRIEF_GENERATION_RESULT': return { ...state, briefGenerationResult: action.payload };
+        case 'SET_BRIEF_GENERATION_STATUS': return { ...state, briefGenerationStatus: action.payload };
+        case 'SET_ACTIVE_EXPANSION_TOPIC': return { ...state, activeExpansionTopic: action.payload };
+        case 'SET_ACTIVE_EXPANSION_MODE': return { ...state, activeExpansionMode: action.payload };
+        case 'SET_MODAL_VISIBILITY': return { ...state, modals: { ...state.modals, [action.payload.modal]: action.payload.visible } };
+        case 'SHOW_CONFIRMATION': return { ...state, confirmation: action.payload };
+        case 'HIDE_CONFIRMATION': return { ...state, confirmation: null };
+
+        // Analysis results
+        case 'SET_GSC_OPPORTUNITIES': return { ...state, gscOpportunities: action.payload };
+        case 'SET_VALIDATION_RESULT': return { ...state, validationResult: action.payload };
+        case 'SET_IMPROVEMENT_LOG': return { ...state, improvementLog: action.payload };
+        case 'SET_MERGE_SUGGESTIONS': return { ...state, mergeSuggestions: action.payload };
+        case 'SET_SEMANTIC_ANALYSIS_RESULT': return { ...state, semanticAnalysisResult: action.payload };
+        case 'SET_CONTEXTUAL_COVERAGE_RESULT': return { ...state, contextualCoverageResult: action.payload };
+        case 'SET_INTERNAL_LINK_AUDIT_RESULT': return { ...state, internalLinkAuditResult: action.payload };
+        case 'SET_TOPICAL_AUTHORITY_SCORE': return { ...state, topicalAuthorityScore: action.payload };
+        case 'SET_PUBLICATION_PLAN': return { ...state, publicationPlan: action.payload };
+        case 'SET_CONTENT_INTEGRITY_RESULT': return { ...state, contentIntegrityResult: action.payload };
+        case 'SET_SCHEMA_RESULT': return { ...state, schemaResult: action.payload };
+        case 'SET_FLOW_AUDIT_RESULT': return { ...state, flowAuditResult: action.payload };
+
+        // Site Analysis V2 reducers
+        case 'SET_SITE_ANALYSIS_VIEW_MODE':
+            return { ...state, siteAnalysis: { ...state.siteAnalysis, viewMode: action.payload } };
+        case 'SET_SITE_ANALYSIS_PROJECT':
+            return { ...state, siteAnalysis: { ...state.siteAnalysis, currentProject: action.payload } };
+        case 'SET_SITE_ANALYSIS_SELECTED_PAGE':
+            return { ...state, siteAnalysis: { ...state.siteAnalysis, selectedPageId: action.payload } };
+        case 'SET_SITE_ANALYSIS_PILLARS':
+            return { ...state, siteAnalysis: { ...state.siteAnalysis, discoveredPillars: action.payload } };
+        case 'RESET_SITE_ANALYSIS':
+            return {
+                ...state,
+                siteAnalysis: {
+                    viewMode: 'project_list',
+                    currentProject: null,
+                    selectedPageId: null,
+                    discoveredPillars: null,
+                }
+            };
+
+        default: return state;
+    }
+};
+
+const mapReducer = (map: TopicalMap, action: any): TopicalMap => {
+    switch(action.type) {
+        case 'UPDATE_MAP_DATA': return { ...map, ...action.payload.data };
+        case 'SET_PILLARS': return { ...map, pillars: action.payload.pillars };
+        case 'SET_EAVS': return { ...map, eavs: action.payload.eavs };
+        case 'SET_COMPETITORS': return { ...map, competitors: action.payload.competitors };
+        case 'SET_TOPICS_FOR_MAP': return { ...map, topics: action.payload.topics };
+        case 'ADD_TOPIC': return { ...map, topics: [...(map.topics || []), action.payload.topic] };
+        case 'UPDATE_TOPIC': return { ...map, topics: (map.topics || []).map(t => t.id === action.payload.topicId ? { ...t, ...action.payload.updates } : t) };
+        case 'DELETE_TOPIC': return { ...map, topics: (map.topics || []).filter(t => t.id !== action.payload.topicId) };
+        case 'SET_BRIEFS_FOR_MAP': return { ...map, briefs: action.payload.briefs };
+        case 'ADD_BRIEF': return { ...map, briefs: { ...(map.briefs || {}), [action.payload.topicId]: action.payload.brief } };
+        case 'UPDATE_BRIEF_LINKS': {
+            const { sourceTopicId, linkToAdd } = action.payload;
+            const brief = map.briefs?.[sourceTopicId];
+            if (!brief) return map;
+            
+            let newBridge: typeof brief.contextualBridge;
+            if (Array.isArray(brief.contextualBridge)) {
+                newBridge = [...brief.contextualBridge, linkToAdd];
+            } else if (brief.contextualBridge && typeof brief.contextualBridge === 'object') {
+                // Handle Section Object
+                newBridge = {
+                    ...brief.contextualBridge,
+                    links: [...(brief.contextualBridge.links || []), linkToAdd]
+                };
+            } else {
+                // Default Fallback
+                newBridge = [linkToAdd];
+            }
+            
+            const updatedBrief = { ...brief, contextualBridge: newBridge };
+            return { ...map, briefs: { ...(map.briefs || {}), [sourceTopicId]: updatedBrief } };
+        }
+        default: return map;
+    }
+}
+
+
+export const AppStateContext = createContext<{ state: AppState; dispatch: Dispatch<AppAction> } | undefined>(undefined);
+
+export const useAppState = () => {
+    const context = useContext(AppStateContext);
+    if (context === undefined) {
+        throw new Error('useAppState must be used within a StateProvider');
+    }
+    return context;
+};

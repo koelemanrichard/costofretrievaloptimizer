@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "https://deno.land/std@0.224.0/http/server.ts": "https://deno.land/std@0.224.0/http/server.ts",
+    "https://esm.sh/@google/genai@1.13.0": "https://esm.sh/@google/genai@1.13.0",
+    "https://esm.sh/openai@4.52.7": "https://esm.sh/openai@4.52.7",
+    "https://esm.sh/@anthropic-ai/sdk@0.22.0": "https://esm.sh/@anthropic-ai/sdk@0.22.0"
+  }
+}

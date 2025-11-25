@@ -1,0 +1,10 @@
+
+-- Run this in Supabase SQL Editor to support Holistic SEO schema changes
+
+-- Add metadata column to topics table for storing extended attributes
+-- (topic_class, cluster_role, attribute_focus, canonical_query, decay_score)
+ALTER TABLE public.topics 
+ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;
+
+-- Force schema cache reload
+NOTIFY pgrst, 'reload config';

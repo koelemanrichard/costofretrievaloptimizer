@@ -1,0 +1,7 @@
+
+-- Add analysis_state column to topical_maps table to cache expensive AI reports
+ALTER TABLE public.topical_maps 
+ADD COLUMN IF NOT EXISTS analysis_state jsonb;
+
+-- Force schema cache reload
+NOTIFY pgrst, 'reload config';

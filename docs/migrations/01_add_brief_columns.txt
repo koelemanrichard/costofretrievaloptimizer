@@ -1,0 +1,8 @@
+-- Run this script in your Supabase SQL Editor
+
+ALTER TABLE public.content_briefs 
+ADD COLUMN IF NOT EXISTS outline text,
+ADD COLUMN IF NOT EXISTS serp_analysis jsonb,
+ADD COLUMN IF NOT EXISTS visuals jsonb,
+ADD COLUMN IF NOT EXISTS contextual_vectors jsonb,
+ADD COLUMN IF NOT EXISTS contextual_bridge jsonb;

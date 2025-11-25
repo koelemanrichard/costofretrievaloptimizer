@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Holistic SEO Topical Map Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            typography: {
+              DEFAULT: {
+                css: {
+                  color: '#d1d5db',
+                  a: {
+                    color: '#3b82f6',
+                    '&:hover': {
+                      color: '#60a5fa',
+                    },
+                  },
+                  h1: { color: '#fff' },
+                  h2: { color: '#fff' },
+                  h3: { color: '#fff' },
+                  h4: { color: '#fff' },
+                  strong: { color: '#fff' },
+                  blockquote: {
+                    borderLeftColor: '#3b82f6',
+                    color: '#9ca3af',
+                  },
+                  code: {
+                    color: '#e5e7eb',
+                    backgroundColor: '#1f2937',
+                    padding: '0.25rem',
+                    borderRadius: '0.25rem',
+                    fontWeight: '400',
+                  },
+                  'code::before': { content: '""' },
+                  'code::after': { content: '""' },
+                },
+              },
+            },
+          }
+        },
+        plugins: [
+          // We need to load the typography plugin from CDN or define styles manually if not available via standard CDN easily in this env.
+          // For simplicity in this environment, we rely on standard CSS classes or a simple CDN if possible.
+          // Since full tailwind/typography via CDN is heavy, we will style the prose manually in App.css or inline.
+        ]
+      }
+    </script>
+    <style>
+      /* Custom Prose Styles for Markdown Preview */
+      .prose h1 { font-size: 2em; font-weight: 700; margin-top: 1em; margin-bottom: 0.5em; color: white; }
+      .prose h2 { font-size: 1.5em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; color: white; border-bottom: 1px solid #374151; padding-bottom: 0.2em;}
+      .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; color: white; }
+      .prose p { margin-bottom: 1em; line-height: 1.6; color: #d1d5db; }
+      .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; color: #d1d5db; }
+      .prose ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; color: #d1d5db; }
+      .prose li { margin-bottom: 0.25em; }
+      .prose blockquote { border-left: 4px solid #3b82f6; padding-left: 1em; color: #9ca3af; font-style: italic; margin-bottom: 1em; }
+      .prose table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+      .prose th { text-align: left; padding: 0.5em; border-bottom: 2px solid #4b5563; color: white; }
+      .prose td { padding: 0.5em; border-bottom: 1px solid #374151; color: #d1d5db; }
+      .prose a { color: #60a5fa; text-decoration: underline; }
+      .prose strong { color: white; font-weight: bold; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.13.0",
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "openai": "https://esm.sh/openai@^4.52.7",
+    "@anthropic-ai/sdk": "https://esm.sh/@anthropic-ai/sdk@^0.22.0",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "idb": "https://esm.sh/idb@8.0.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.4",
+    "linkedom": "https://esm.sh/linkedom@^0.18.11",
+    "uuid": "https://aistudiocdn.com/uuid@^12.0.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.0",
+    "xlsx": "https://esm.sh/xlsx@0.18.5"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-900 text-gray-100 font-sans">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

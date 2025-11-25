@@ -1,0 +1,10 @@
+
+-- Run this in Supabase SQL Editor to fix the "Failed to save map settings" error
+
+-- Add metadata column to topics table for storing extended attributes
+-- (topic_class, cluster_role, attribute_focus, canonical_query, decay_score)
+ALTER TABLE public.topics 
+ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;
+
+-- Force schema cache reload to ensure the API sees the new column
+NOTIFY pgrst, 'reload config';
