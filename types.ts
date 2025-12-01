@@ -15,6 +15,7 @@ export enum AppStep {
   PILLAR_WIZARD,
   EAV_WIZARD,
   COMPETITOR_WIZARD,
+  BLUEPRINT_WIZARD, // Website Blueprint (foundation pages & navigation preferences)
   PROJECT_DASHBOARD,
   SITE_ANALYSIS,
   ADMIN // New Admin Step
@@ -385,6 +386,22 @@ export interface ValidationResult {
       hubSpoke: HubSpokeMetric[];
       anchorText: AnchorTextMetric[];
       contentFreshness: FreshnessMetric[];
+  };
+  // Foundation Pages Validation
+  foundationPageIssues?: {
+      missingPages: FoundationPageType[];
+      incompletePages: { pageType: FoundationPageType; missingFields: string[] }[];
+      suggestions: string[];
+  };
+  // Navigation Validation
+  navigationIssues?: {
+      headerLinkCount: number;
+      headerLinkLimit: number;
+      footerLinkCount: number;
+      footerLinkLimit: number;
+      missingInHeader: string[];
+      missingInFooter: string[];
+      suggestions: string[];
   };
 }
 
@@ -1272,17 +1289,34 @@ export type FoundationPageType =
 // Foundation page section specification
 export interface FoundationPageSection {
   heading: string;
-  purpose: string;
-  required: boolean;
+  purpose?: string;
+  required?: boolean;
+  content_type?: 'text' | 'team_grid' | 'faq' | 'contact_form' | 'map' | 'list';
+  order?: number;
+}
+
+// Office location for multi-location support
+export interface OfficeLocation {
+  id: string;
+  name: string;                    // e.g., "Headquarters", "Amsterdam Office"
+  is_headquarters: boolean;
+  address: string;
+  city?: string;
+  country?: string;                // ISO code: "NL", "US", "DE"
+  phone: string;
+  email?: string;
 }
 
 // NAP (Name, Address, Phone) data for E-A-T
 export interface NAPData {
   company_name: string;
+  // Primary location fields (backward compatible)
   address: string;
   phone: string;
   email: string;
   founded_year?: string;
+  // Multi-location support
+  locations?: OfficeLocation[];
 }
 
 // Foundation page specification
@@ -1435,12 +1469,51 @@ export interface InternalLinkingRules {
   qualityNodeThreshold: number;  // Score threshold (0-100)
 }
 
+// Linking audit pass identifiers
+export enum LinkingAuditPass {
+  FUNDAMENTALS = 'fundamentals',
+  NAVIGATION = 'navigation',
+  FLOW_DIRECTION = 'flow_direction',
+  EXTERNAL = 'external',
+  SYMMETRY = 'symmetry'
+}
+
+// Linking issue type - comprehensive list from research
+export type LinkingIssueType =
+  // Pass 1: Fundamentals (PageRank & Anchor Text)
+  | 'page_link_limit_exceeded'       // >150 links per page
+  | 'anchor_repetition_per_target'   // Same anchor >3 times for same target
+  | 'anchor_repetition'              // Legacy: global anchor repetition
+  | 'generic_anchor'                 // "click here", "read more", etc.
+  | 'link_in_first_sentence'         // Link before entity is defined
+  | 'missing_annotation_text'        // No context around anchor
+  // Pass 2: Navigation (Boilerplate)
+  | 'header_link_overflow'           // Too many header links
+  | 'footer_link_overflow'           // Too many footer links
+  | 'duplicate_nav_anchor'           // Same anchor in header AND footer
+  | 'missing_eat_link'               // About/Contact/Privacy not in footer
+  | 'static_navigation'              // Non-dynamic nav warning
+  // Pass 3: Flow Direction (Core ← Author)
+  | 'wrong_flow_direction'           // Core linking TO Author (should be reverse)
+  | 'premature_core_link'            // Core link not in Supplementary Content
+  | 'missing_contextual_bridge'      // No bridge for discordant topics
+  | 'unclosed_loop'                  // No path back to Central Entity
+  | 'orphaned_topic'                 // No incoming links
+  // Pass 4: External E-A-T
+  | 'unvalidated_external'           // External link without E-A-T purpose
+  | 'competitor_link'                // Linking to competitor domain
+  | 'missing_eat_reference'          // No authoritative external refs
+  | 'reference_not_integrated'       // References in bibliography, not text
+  // Legacy types
+  | 'missing_hub_link'
+  | 'missing_spoke_link'
+  | 'link_limit_exceeded'
+  | 'missing_quality_node_link';
+
 // Linking issue detected during audit
 export interface LinkingIssue {
   id: string;
-  type: 'missing_hub_link' | 'missing_spoke_link' | 'anchor_repetition' |
-        'link_limit_exceeded' | 'orphaned_topic' | 'generic_anchor' |
-        'missing_quality_node_link' | 'missing_contextual_bridge';
+  type: LinkingIssueType;
   severity: 'critical' | 'warning' | 'suggestion';
   sourceTopic?: string;
   targetTopic?: string;
@@ -1450,6 +1523,11 @@ export interface LinkingIssue {
   message: string;
   autoFixable: boolean;
   suggestedFix?: string;
+  // Enhanced fields for multi-pass audit
+  pass?: LinkingAuditPass;
+  sources?: string[];       // Topics using this anchor
+  externalUrl?: string;     // For external link issues
+  position?: 'intro' | 'first_paragraph' | 'main_content' | 'supplementary';
 }
 
 // Result of a single linking pass
@@ -1474,7 +1552,78 @@ export interface LinkingAuditResult {
     overLinkedTopics: string[];
     repetitiveAnchors: { text: string; count: number }[];
   };
+  autoFixableCount?: number;
   created_at?: string;
+}
+
+// Input context for linking audit passes
+export interface LinkingAuditContext {
+  mapId: string;
+  topics: EnrichedTopic[];
+  briefs: Record<string, ContentBrief>;
+  foundationPages: FoundationPage[];
+  navigation: NavigationStructure | null;
+  pillars: SEOPillars;
+  rules: InternalLinkingRules;
+  domain?: string;           // For competitor link detection
+  competitors?: string[];    // Competitor domains from topical map
+}
+
+// Auto-fix definition for linking issues
+export interface LinkingAutoFix {
+  issueId: string;
+  fixType: 'add_link' | 'remove_link' | 'update_anchor' | 'add_bridge' | 'reposition_link' | 'add_nav_link';
+  targetTable: 'content_briefs' | 'topics' | 'navigation_structures' | 'foundation_pages';
+  targetId: string;
+  field: string;
+  oldValue: any;
+  newValue: any;
+  confidence: number;        // 0-100, higher = more confident in fix
+  requiresAI: boolean;       // True if fix needs AI generation
+  description?: string;      // Human-readable description of fix
+}
+
+// Fix history entry for undo capability
+export interface LinkingFixHistoryEntry {
+  id: string;
+  auditId: string;
+  issueId: string;
+  fixType: string;
+  changes: {
+    table: string;
+    recordId: string;
+    field: string;
+    oldValue: any;
+    newValue: any;
+  };
+  appliedAt: string;
+  undoneAt?: string;
+  canUndo: boolean;
+}
+
+// Per-target anchor text analysis result
+export interface AnchorTextByTargetMetric {
+  targetTopic: string;
+  targetTopicId?: string;
+  anchorsUsed: {
+    text: string;
+    count: number;
+    sourceTopics: string[];
+  }[];
+  hasRepetition: boolean;
+  maxRepetition: number;
+}
+
+// External link analysis for E-A-T
+export interface ExternalLinkAnalysis {
+  url: string;
+  domain: string;
+  anchorText: string;
+  sourceTopic: string;
+  purpose?: 'authority' | 'reference' | 'citation' | 'social' | 'unknown';
+  isCompetitor: boolean;
+  isIntegratedInText: boolean;
+  eatScore?: number;  // 0-100
 }
 
 // ============================================

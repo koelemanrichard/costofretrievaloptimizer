@@ -1,8 +1,8 @@
 
 // components/ProjectDashboard.tsx
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useAppState } from '../state/appState';
-import { TopicalMap, EnrichedTopic, ContentBrief, BusinessInfo, SEOPillars, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, NAPData } from '../types';
+import { TopicalMap, EnrichedTopic, ContentBrief, BusinessInfo, SEOPillars, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure } from '../types';
 import { KnowledgeGraph as KnowledgeGraphClass } from '../lib/knowledgeGraph';
 import { calculateDashboardMetrics } from '../utils/helpers';
 import { calculateNextSteps, RecommendationType } from '../services/recommendationEngine';
@@ -26,6 +26,7 @@ import MergeSuggestionsModal from './MergeSuggestionsModal';
 import SemanticAnalysisModal from './SemanticAnalysisModal';
 import ContextualCoverageModal from './ContextualCoverageModal';
 import { InternalLinkingAuditModal } from './InternalLinkingAuditModal';
+import { LinkingAuditModal } from './LinkingAuditModal';
 import TopicalAuthorityModal from './TopicalAuthorityModal';
 import PublicationPlanModal from './PublicationPlanModal';
 import ImprovementLogModal from './ImprovementLogModal';
@@ -124,6 +125,13 @@ interface ProjectDashboardProps {
   onDeleteFoundationPage: (pageId: string) => Promise<void>;
   onRestoreFoundationPage: (pageId: string) => Promise<void>;
   onGenerateMissingFoundationPages?: () => Promise<void>;
+  onRepairFoundation?: (missingPages: FoundationPageType[]) => void;
+  isRepairingFoundation?: boolean;
+  onRepairNavigation?: () => void;
+  isRepairingNavigation?: boolean;
+  // Navigation
+  navigation?: NavigationStructure | null;
+  onSaveNavigation?: (navigation: NavigationStructure) => Promise<void>;
 }
 
 
@@ -189,11 +197,24 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     onUpdateFoundationPage,
     onDeleteFoundationPage,
     onRestoreFoundationPage,
-    onGenerateMissingFoundationPages
+    onGenerateMissingFoundationPages,
+    onRepairFoundation,
+    isRepairingFoundation,
+    onRepairNavigation,
+    isRepairingNavigation,
+    // Navigation
+    navigation,
+    onSaveNavigation
 }) => {
     const { state, dispatch } = useAppState();
     const { modals, isLoading, briefGenerationStatus, validationResult } = state;
     const [topicForBrief, setTopicForBrief] = useState<EnrichedTopic | null>(null);
+
+    // Ref for scrolling to Website Structure section
+    const websiteStructureRef = useRef<HTMLDivElement>(null);
+    const scrollToWebsiteStructure = useCallback(() => {
+        websiteStructureRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, []);
 
     const coreTopics = useMemo(() => allTopics.filter(t => t.type === 'core'), [allTopics]);
     const outerTopics = useMemo(() => allTopics.filter(t => t.type === 'outer'), [allTopics]);
@@ -312,6 +333,8 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 onGenerateAllBriefs={onGenerateAllBriefs}
                 onExportData={onExportData}
                 onQuickAudit={onQuickAudit}
+                onScrollToWebsiteStructure={scrollToWebsiteStructure}
+                foundationPagesCount={foundationPages.filter(p => !p.deleted_at).length}
             />
 
             <AnalysisToolsPanel
@@ -320,7 +343,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 onFindMergeOpportunities={onFindMergeOpportunities}
                 onAnalyzeSemanticRelationships={onAnalyzeSemanticRelationships}
                 onAnalyzeContextualCoverage={onAnalyzeContextualCoverage}
-                onAuditInternalLinking={onAuditInternalLinking}
+                onAuditInternalLinking={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'multiPassLinkingAudit', visible: true }})}
                 onCalculateTopicalAuthority={onCalculateTopicalAuthority}
                 onGeneratePublicationPlan={onGeneratePublicationPlan}
             />
@@ -337,21 +360,29 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 canGenerateBriefs={canGenerateBriefs}
                 onGenerateInitialMap={onGenerateInitialMap}
                 onUpdateTopic={onUpdateTopic}
+                onRepairFoundationPages={onGenerateMissingFoundationPages}
+                isRepairingFoundation={isLoadingFoundationPages}
             />
 
             {/* Website Structure - Foundation Pages */}
-            <FoundationPagesPanel
-                foundationPages={foundationPages}
-                napData={napData}
-                isLoading={isLoadingFoundationPages}
-                onSaveNAPData={onSaveNAPData}
-                onUpdatePage={onUpdateFoundationPage}
-                onDeletePage={onDeleteFoundationPage}
-                onRestorePage={onRestoreFoundationPage}
-                onGenerateMissingPages={onGenerateMissingFoundationPages}
-                businessInfo={effectiveBusinessInfo}
-                pillars={topicalMap.pillars}
-            />
+            <div ref={websiteStructureRef}>
+                <FoundationPagesPanel
+                    foundationPages={foundationPages}
+                    napData={napData}
+                    isLoading={isLoadingFoundationPages}
+                    onSaveNAPData={onSaveNAPData}
+                    onUpdatePage={onUpdateFoundationPage}
+                    onDeletePage={onDeleteFoundationPage}
+                    onRestorePage={onRestoreFoundationPage}
+                    onGenerateMissingPages={onGenerateMissingFoundationPages}
+                    businessInfo={effectiveBusinessInfo}
+                    pillars={topicalMap.pillars}
+                    // Navigation props
+                    navigation={navigation}
+                    topics={allTopics}
+                    onSaveNavigation={onSaveNavigation}
+                />
+            </div>
 
             <AddTopicModal
                 isOpen={!!modals.addTopic}
@@ -436,6 +467,10 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 result={state.validationResult}
                 onImproveMap={onImproveMap}
                 isImprovingMap={!!isLoading.improveMap}
+                onRepairFoundation={onRepairFoundation}
+                isRepairingFoundation={isRepairingFoundation}
+                onRepairNavigation={onRepairNavigation}
+                isRepairingNavigation={isRepairingNavigation}
             />
             <ImprovementLogModal
                 isOpen={!!modals.improvementLog}
@@ -463,6 +498,11 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 isOpen={!!modals.linkingAudit}
                 onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'linkingAudit', visible: false }})}
                 result={state.internalLinkAuditResult}
+            />
+            <LinkingAuditModal
+                isOpen={!!modals.multiPassLinkingAudit}
+                onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'multiPassLinkingAudit', visible: false }})}
+                mapId={topicalMap.id}
             />
             <TopicalAuthorityModal
                 isOpen={!!modals.authority}

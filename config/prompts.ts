@@ -1,6 +1,6 @@
 
 // config/prompts.ts
-import { BusinessInfo, SEOPillars, SemanticTriple, EnrichedTopic, ContentBrief, ResponseCode, GscRow, ValidationIssue, ExpansionMode, AuthorProfile, ContextualFlowIssue } from '../types';
+import { BusinessInfo, SEOPillars, SemanticTriple, EnrichedTopic, ContentBrief, ResponseCode, GscRow, ValidationIssue, ExpansionMode, AuthorProfile, ContextualFlowIssue, FoundationPage, NavigationStructure } from '../types';
 import { KnowledgeGraph } from '../lib/knowledgeGraph';
 
 const jsonResponseInstruction = `
@@ -54,9 +54,11 @@ const getStylometryInstructions = (profile?: AuthorProfile): string => {
 };
 
 export const SUGGEST_CENTRAL_ENTITY_CANDIDATES_PROMPT = (info: BusinessInfo): string => `
-You are an expert SEO strategist specializing in semantic content modeling. Based on the following business context, identify 3-5 potential "Central Entities".
+You are an expert SEO strategist specializing in semantic content modeling. Based on the following business context, identify EXACTLY 5 potential "Central Entities".
 
 A Central Entity is the core concept the business wants to be known for. It should be a noun or noun phrase that can be the subject of many articles.
+
+**CRITICAL: You MUST return EXACTLY 5 different candidates. Do not return fewer than 5.**
 
 For each candidate, provide:
 1.  "entity": The candidate entity (e.g., "Contract Management Software").
@@ -66,17 +68,22 @@ For each candidate, provide:
 ${businessContext(info)}
 
 ${jsonResponseInstruction}
-Your output should be an array of objects, like this:
+**IMPORTANT: Return a JSON ARRAY with EXACTLY 5 objects. Example format:**
 [
-  {"entity": "...", "reasoning": "...", "score": 0.9},
-  ...
+  {"entity": "Option 1", "reasoning": "...", "score": 0.95},
+  {"entity": "Option 2", "reasoning": "...", "score": 0.90},
+  {"entity": "Option 3", "reasoning": "...", "score": 0.85},
+  {"entity": "Option 4", "reasoning": "...", "score": 0.80},
+  {"entity": "Option 5", "reasoning": "...", "score": 0.75}
 ]
 `;
 
 export const SUGGEST_SOURCE_CONTEXT_OPTIONS_PROMPT = (info: BusinessInfo, centralEntity: string): string => `
-You are an expert SEO strategist. The chosen Central Entity is "${centralEntity}". Now, create 3 distinct "Source Context" options.
+You are an expert SEO strategist. The chosen Central Entity is "${centralEntity}". Now, create EXACTLY 4 distinct "Source Context" options.
 
 A Source Context is a statement that defines the unique angle, authority, and perspective of the business. It's the "why you should listen to us" statement that will guide all content creation. It should reflect the business's value proposition and expertise.
+
+**CRITICAL: You MUST return EXACTLY 4 different options. Do not return fewer than 4.**
 
 For each option, provide:
 1.  "context": The source context statement.
@@ -86,7 +93,13 @@ For each option, provide:
 ${businessContext(info)}
 
 ${jsonResponseInstruction}
-Your output should be an array of objects.
+**IMPORTANT: Return a JSON ARRAY with EXACTLY 4 objects. Example format:**
+[
+  {"context": "Context statement 1", "reasoning": "...", "score": 0.95},
+  {"context": "Context statement 2", "reasoning": "...", "score": 0.90},
+  {"context": "Context statement 3", "reasoning": "...", "score": 0.85},
+  {"context": "Context statement 4", "reasoning": "...", "score": 0.80}
+]
 `;
 
 export const SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT = (info: BusinessInfo, centralEntity: string, sourceContext: string): string => `
@@ -94,16 +107,28 @@ You are an expert SEO strategist.
 - Central Entity: "${centralEntity}"
 - Source Context: "${sourceContext}"
 
-Based on the above and the full business context, define the "Central Search Intent". This should be a concise phrase representing the primary goal or question a user has when they are searching for the central entity, which this business is best positioned to answer.
+Based on the above and the full business context, suggest EXACTLY 3 different "Central Search Intent" options. A Central Search Intent is a concise phrase representing the primary goal or question a user has when searching for the central entity.
 
-Provide your answer in a JSON object with two keys: "intent" and "reasoning".
+**CRITICAL: You MUST return EXACTLY 3 different intent options. Do not return fewer than 3.**
+
+For each option, provide:
+1. "intent": The search intent phrase
+2. "reasoning": Why this intent is effective
 
 ${businessContext(info)}
 ${jsonResponseInstruction}
+**IMPORTANT: Return a JSON ARRAY with EXACTLY 3 objects. Example format:**
+[
+  {"intent": "Intent phrase 1", "reasoning": "..."},
+  {"intent": "Intent phrase 2", "reasoning": "..."},
+  {"intent": "Intent phrase 3", "reasoning": "..."}
+]
 `;
 
 export const DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT = (info: BusinessInfo, pillars: SEOPillars): string => `
-You are an expert in semantic modeling and knowledge graphs. Based on the SEO Pillars and business context, generate a list of 15-20 fundamental semantic triples (Entity-Attribute-Value, or Subject-Predicate-Object).
+You are an expert in semantic modeling and knowledge graphs. Based on the SEO Pillars and business context, generate EXACTLY 15 fundamental semantic triples (Entity-Attribute-Value, or Subject-Predicate-Object).
+
+**CRITICAL: You MUST return EXACTLY 15 different semantic triples. Do not return fewer than 15.**
 
 These triples represent the core, undisputed facts about the Central Entity. They will form the semantic skeleton of the topical map.
 
@@ -732,10 +757,42 @@ Return a JSON array of opportunity objects.
 `;
 };
 
-export const VALIDATE_TOPICAL_MAP_PROMPT = (topics: EnrichedTopic[], pillars: SEOPillars, info: BusinessInfo): string => {
+export const VALIDATE_TOPICAL_MAP_PROMPT = (
+    topics: EnrichedTopic[],
+    pillars: SEOPillars,
+    info: BusinessInfo,
+    foundationPages?: FoundationPage[],
+    navigation?: NavigationStructure | null
+): string => {
     // Build hierarchy context for validation
     const coreTopics = topics.filter(t => t.type === 'core');
     const outerTopics = topics.filter(t => t.type === 'outer');
+
+    // Foundation pages context
+    const foundationContext = foundationPages ? `
+**FOUNDATION PAGES:**
+${JSON.stringify(foundationPages.map(p => ({
+    type: p.page_type,
+    title: p.title,
+    hasMetaDescription: !!p.meta_description,
+    hasH1Template: !!p.h1_template,
+    hasNAPData: !!p.nap_data,
+    sectionsCount: p.sections?.length || 0,
+    schemaType: p.schema_type,
+    isDeleted: !!p.deleted_at
+})), null, 2)}
+` : '';
+
+    // Navigation context
+    const navigationContext = navigation ? `
+**NAVIGATION STRUCTURE:**
+- Header Links: ${navigation.header?.primary_nav?.length || 0} (max: ${navigation.max_header_links || 10})
+- Footer Sections: ${navigation.footer?.sections?.length || 0}
+- Footer Legal Links: ${navigation.footer?.legal_links?.length || 0}
+- Total Footer Links: ${(navigation.footer?.sections?.reduce((acc: number, s: any) => acc + (s.links?.length || 0), 0) || 0) + (navigation.footer?.legal_links?.length || 0)} (max: ${navigation.max_footer_links || 30})
+- NAP Display Enabled: ${navigation.footer?.nap_display ?? true}
+- Dynamic by Section: ${navigation.dynamic_by_section ?? true}
+` : '';
 
     // Calculate hub-spoke distribution
     const hubSpokeAnalysis = coreTopics.map(core => {
@@ -774,6 +831,9 @@ ${JSON.stringify(topics.map(t => ({
 
 **SEO Pillars:**
 ${JSON.stringify(pillars, null, 2)}
+
+${foundationContext}
+${navigationContext}
 
 ${businessContext(info)}
 
@@ -822,6 +882,23 @@ ${businessContext(info)}
    - Author Section clusters must semantically bridge to Core Section
    - Flag orphaned clusters with no monetization connection
 
+8. **Foundation Page Completeness (Rule H - WARNING):**
+   - Check if foundation pages are provided
+   - Required pages: homepage, about, contact, privacy, terms
+   - Each page should have: title, meta_description, h1_template
+   - Homepage and About pages should have NAP data for local SEO
+   - Pages should have appropriate schema_type (Organization, AboutPage, ContactPage, WebPage)
+   - Flag missing pages or incomplete page data
+
+9. **Navigation Structure (Rule I - SUGGESTION):**
+   - Check if navigation structure is provided
+   - Header should have ≤10 primary navigation links
+   - Footer should have ≤30 total links
+   - Homepage must be in header navigation
+   - Legal pages (privacy, terms) should be in footer
+   - NAP display should be enabled for local businesses
+   - Flag if link limits are exceeded or essential links missing
+
 **Output Format:**
 {
   "overallScore": 0-100,
@@ -848,7 +925,23 @@ ${businessContext(info)}
       "offendingTopics": ["Topic 1", "Topic 2"],
       "suggestedAction": "What should be done to fix this"
     }
-  ]
+  ],
+  "foundationPageIssues": {
+    "missingPages": ["about", "contact"],
+    "incompletePages": [
+      { "pageType": "homepage", "missingFields": ["meta_description", "nap_data"] }
+    ],
+    "suggestions": ["Add NAP data for better local SEO", "Complete meta descriptions"]
+  },
+  "navigationIssues": {
+    "headerLinkCount": 12,
+    "headerLinkLimit": 10,
+    "footerLinkCount": 25,
+    "footerLinkLimit": 30,
+    "missingInHeader": ["homepage"],
+    "missingInFooter": ["privacy", "terms"],
+    "suggestions": ["Reduce header links to 10 or fewer", "Add legal pages to footer"]
+  }
 }
 
 ${jsonResponseInstruction}
@@ -1915,5 +2008,186 @@ Return a JSON object:
     "isConsistent": true|false,
     "issues": ["List of inconsistency issues if any"]
   }
+}
+`;
+
+// ============================================
+// INTERNAL LINKING AUDIT PROMPTS (Phase 5)
+// ============================================
+
+export const GENERATE_ALTERNATIVE_ANCHORS_PROMPT = (
+  originalAnchor: string,
+  targetTopicTitle: string,
+  targetTopicDescription: string,
+  info: BusinessInfo
+): string => `
+You are an SEO expert specializing in internal linking optimization.
+
+${businessContext(info)}
+
+**Task:** Generate 5 alternative anchor text variations for the following link to avoid repetition.
+
+**Original Anchor Text:** "${originalAnchor}"
+**Target Topic:** ${targetTopicTitle}
+**Target Topic Description:** ${targetTopicDescription}
+
+**Rules for Good Anchor Text:**
+1. Must be descriptive and indicate what the target page is about
+2. Avoid generic text like "click here", "read more", "learn more"
+3. Include relevant keywords but don't over-optimize
+4. Keep anchors natural and readable
+5. Vary sentence structure (some can be noun phrases, others action-oriented)
+6. Each variation should be distinctly different
+
+${jsonResponseInstruction}
+Return a JSON object:
+{
+  "originalAnchor": "${originalAnchor}",
+  "alternatives": [
+    {
+      "anchor": "Alternative anchor text 1",
+      "reasoning": "Why this variation works"
+    },
+    {
+      "anchor": "Alternative anchor text 2",
+      "reasoning": "Why this variation works"
+    }
+  ],
+  "recommendedForUsage": "The best alternative anchor text"
+}
+`;
+
+export const GENERATE_CONTEXTUAL_BRIDGE_PROMPT = (
+  sourceTopicTitle: string,
+  sourceTopicDescription: string,
+  targetTopicTitle: string,
+  targetTopicDescription: string,
+  info: BusinessInfo
+): string => `
+You are an expert content strategist specializing in contextual linking.
+
+${businessContext(info)}
+
+**Task:** Create a contextual bridge paragraph that naturally connects two topics.
+This bridge will appear at the end of the source article to create a logical transition.
+
+**Source Topic:**
+- Title: ${sourceTopicTitle}
+- Description: ${sourceTopicDescription}
+
+**Target Topic (to link to):**
+- Title: ${targetTopicTitle}
+- Description: ${targetTopicDescription}
+
+**Requirements for the Bridge:**
+1. The paragraph should be 2-4 sentences
+2. Start by connecting the current topic to a related concept
+3. Naturally introduce why the target topic is relevant
+4. Include a natural anchor text placement (mark with [ANCHOR]text[/ANCHOR])
+5. The transition should feel organic, not forced
+6. Use H4 or H5 heading to introduce the bridge section
+
+**Example structure:**
+"While we've covered [source topic aspect], understanding [related concept] becomes crucial when [connection to target]. [ANCHOR]Target Topic[/ANCHOR] explores this in depth, covering [key aspect of target]."
+
+${jsonResponseInstruction}
+Return a JSON object:
+{
+  "heading": "Related: Heading text",
+  "paragraph": "The bridge paragraph with [ANCHOR]anchor text[/ANCHOR] markup",
+  "anchorText": "The exact anchor text to use",
+  "annotationTextHint": "Surrounding context that reinforces the link relevance"
+}
+`;
+
+export const FIND_LINK_SOURCE_PROMPT = (
+  orphanedTopicTitle: string,
+  orphanedTopicDescription: string,
+  candidateTopics: { title: string; description: string; type: 'core' | 'outer' }[],
+  info: BusinessInfo
+): string => `
+You are an SEO strategist specializing in internal link architecture.
+
+${businessContext(info)}
+
+**Task:** Identify the best topic(s) to link FROM to the orphaned topic below.
+
+**Orphaned Topic (needs incoming links):**
+- Title: ${orphanedTopicTitle}
+- Description: ${orphanedTopicDescription}
+
+**Candidate Source Topics:**
+${candidateTopics.map((t, i) => `${i + 1}. [${t.type.toUpperCase()}] ${t.title}: ${t.description}`).join('\n')}
+
+**Selection Criteria:**
+1. Semantic relevance: Source topic should share related concepts
+2. Link flow direction: Prefer informational to monetization flow (outer to core)
+3. Reader journey: The link should make sense in context
+4. Avoid redundancy: Don't suggest sources already linking to this topic
+5. PageRank consideration: Core topics have more authority to share
+
+${jsonResponseInstruction}
+Return a JSON object:
+{
+  "bestSource": {
+    "topicTitle": "Title of best source topic",
+    "reasoning": "Why this is the best choice",
+    "suggestedAnchor": "Recommended anchor text",
+    "linkContext": "Brief description of where in the article to place the link"
+  },
+  "alternativeSources": [
+    {
+      "topicTitle": "Title of alternative source",
+      "reasoning": "Why this could also work"
+    }
+  ]
+}
+`;
+
+export const VALIDATE_EXTERNAL_LINKS_PROMPT = (
+  externalLinks: { url: string; domain: string; anchorText: string; sourceTopic: string }[],
+  info: BusinessInfo
+): string => `
+You are an E-A-T (Expertise, Authority, Trust) specialist.
+
+${businessContext(info)}
+
+**Task:** Evaluate external links for E-A-T compliance and authority signals.
+
+**External Links to Evaluate:**
+${externalLinks.map((l, i) => `${i + 1}. URL: ${l.url}\n   Domain: ${l.domain}\n   Anchor: "${l.anchorText}"\n   Source: ${l.sourceTopic}`).join('\n\n')}
+
+**Evaluation Criteria:**
+1. **Authority**: Is the domain a recognized authority in its field?
+2. **Relevance**: Does the external content support the claims in your content?
+3. **E-A-T Signal**: Does linking to this source strengthen your E-A-T?
+4. **Competitor Check**: Is this a competitor domain?
+5. **Integration**: Is the link naturally integrated in the text?
+
+**Domain Categories to Identify:**
+- .gov, .edu: High authority
+- Industry associations: High authority
+- Research institutions: High authority
+- News/media: Medium authority
+- Personal blogs: Low authority (unless expert)
+- Competitor sites: Flag as issue
+
+${jsonResponseInstruction}
+Return a JSON object:
+{
+  "evaluations": [
+    {
+      "url": "External URL",
+      "domain": "Domain name",
+      "category": "government|academic|industry|research|news|blog|competitor|other",
+      "authorityScore": 0-100,
+      "eatValue": "HIGH|MEDIUM|LOW|NEGATIVE",
+      "isCompetitor": false,
+      "recommendation": "KEEP|REPLACE|REMOVE",
+      "reasoning": "Why this recommendation"
+    }
+  ],
+  "summary": "Overall assessment of external linking E-A-T value",
+  "missingAuthoritySources": ["List of topic areas that could benefit from authoritative external sources"]
 }
 `;

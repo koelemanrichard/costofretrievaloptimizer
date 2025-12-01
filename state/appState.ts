@@ -32,6 +32,10 @@ import {
     NavigationStructure,
     NavigationSyncStatus,
     FoundationNotification,
+    NAPData,
+    LinkingAuditResult,
+    LinkingAutoFix,
+    LinkingFixHistoryEntry,
 } from '../types';
 import { KnowledgeGraph } from '../lib/knowledgeGraph';
 import { defaultBusinessInfo } from '../config/defaults';
@@ -94,8 +98,18 @@ export interface AppState {
         foundationPages: FoundationPage[];
         navigation: NavigationStructure | null;
         navigationSyncStatus: NavigationSyncStatus | null;
+        napData?: NAPData;
         notifications: FoundationNotification[];
         isGenerating: boolean;
+    };
+
+    // Linking Audit state (Phase 5)
+    linkingAudit: {
+        result: LinkingAuditResult | null;
+        isRunning: boolean;
+        pendingFixes: LinkingAutoFix[];
+        fixHistory: LinkingFixHistoryEntry[];
+        lastAuditId: string | null;
     };
 }
 
@@ -164,10 +178,19 @@ export type AppAction =
   | { type: 'SET_NAVIGATION'; payload: NavigationStructure | null }
   | { type: 'UPDATE_NAVIGATION'; payload: Partial<NavigationStructure> }
   | { type: 'SET_NAV_SYNC_STATUS'; payload: NavigationSyncStatus | null }
+  | { type: 'SET_NAP_DATA'; payload: NAPData }
   | { type: 'ADD_FOUNDATION_NOTIFICATION'; payload: FoundationNotification }
   | { type: 'DISMISS_FOUNDATION_NOTIFICATION'; payload: { notificationId: string } }
   | { type: 'SET_WEBSITE_STRUCTURE_GENERATING'; payload: boolean }
-  | { type: 'RESET_WEBSITE_STRUCTURE' };
+  | { type: 'RESET_WEBSITE_STRUCTURE' }
+  // Linking Audit actions (Phase 5)
+  | { type: 'SET_LINKING_AUDIT_RESULT'; payload: LinkingAuditResult | null }
+  | { type: 'SET_LINKING_AUDIT_RUNNING'; payload: boolean }
+  | { type: 'SET_LINKING_PENDING_FIXES'; payload: LinkingAutoFix[] }
+  | { type: 'ADD_LINKING_FIX_HISTORY'; payload: LinkingFixHistoryEntry }
+  | { type: 'CLEAR_LINKING_FIX_HISTORY' }
+  | { type: 'SET_LINKING_LAST_AUDIT_ID'; payload: string | null }
+  | { type: 'RESET_LINKING_AUDIT' };
 
 export const initialState: AppState = {
     user: null,
@@ -215,6 +238,13 @@ export const initialState: AppState = {
         navigationSyncStatus: null,
         notifications: [],
         isGenerating: false,
+    },
+    linkingAudit: {
+        result: null,
+        isRunning: false,
+        pendingFixes: [],
+        fixHistory: [],
+        lastAuditId: null,
     },
 };
 
@@ -355,6 +385,11 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
                 ...state,
                 websiteStructure: { ...state.websiteStructure, navigationSyncStatus: action.payload }
             };
+        case 'SET_NAP_DATA':
+            return {
+                ...state,
+                websiteStructure: { ...state.websiteStructure, napData: action.payload }
+            };
         case 'ADD_FOUNDATION_NOTIFICATION':
             return {
                 ...state,
@@ -385,6 +420,52 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
                     navigationSyncStatus: null,
                     notifications: [],
                     isGenerating: false,
+                }
+            };
+
+        // Linking Audit reducers (Phase 5)
+        case 'SET_LINKING_AUDIT_RESULT':
+            return {
+                ...state,
+                linkingAudit: { ...state.linkingAudit, result: action.payload }
+            };
+        case 'SET_LINKING_AUDIT_RUNNING':
+            return {
+                ...state,
+                linkingAudit: { ...state.linkingAudit, isRunning: action.payload }
+            };
+        case 'SET_LINKING_PENDING_FIXES':
+            return {
+                ...state,
+                linkingAudit: { ...state.linkingAudit, pendingFixes: action.payload }
+            };
+        case 'ADD_LINKING_FIX_HISTORY':
+            return {
+                ...state,
+                linkingAudit: {
+                    ...state.linkingAudit,
+                    fixHistory: [action.payload, ...state.linkingAudit.fixHistory].slice(0, 100)
+                }
+            };
+        case 'CLEAR_LINKING_FIX_HISTORY':
+            return {
+                ...state,
+                linkingAudit: { ...state.linkingAudit, fixHistory: [] }
+            };
+        case 'SET_LINKING_LAST_AUDIT_ID':
+            return {
+                ...state,
+                linkingAudit: { ...state.linkingAudit, lastAuditId: action.payload }
+            };
+        case 'RESET_LINKING_AUDIT':
+            return {
+                ...state,
+                linkingAudit: {
+                    result: null,
+                    isRunning: false,
+                    pendingFixes: [],
+                    fixHistory: [],
+                    lastAuditId: null,
                 }
             };
 
