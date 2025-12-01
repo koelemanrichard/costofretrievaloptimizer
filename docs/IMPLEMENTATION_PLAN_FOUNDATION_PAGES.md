@@ -1,8 +1,30 @@
 # Implementation Plan: Foundation Pages & Navigation Structure
 
-**Status:** AWAITING APPROVAL
+**Status:** IN PROGRESS - Phases 1-3 Complete
 **Created:** 2025-11-29
+**Last Updated:** 2025-12-01
 **Based on Research:** homepage.md, company pages about us EEAT.md, head header footer.md, Headers H rules.md, html structuur boilerplate en headers in head and footer.md
+
+---
+
+## Progress Summary
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 | ✅ COMPLETE | Smart Defaults - Foundation pages auto-generated with maps |
+| Phase 2 | ✅ COMPLETE | Validation Extension - Foundation page validation integrated |
+| Phase 3 | ✅ COMPLETE | Blueprint Wizard - Pre-generation wizard with NAP, pages, navigation |
+| Phase 4 | ✅ COMPLETE | Navigation Designer - Visual editor (no drag-drop yet) |
+| Phase 5 | 🔲 NOT STARTED | Internal Linking System - Multi-pass optimization |
+| Phase 6 | 🔲 NOT STARTED | Intelligent Audit System - Unified audit with fixes |
+
+### Additional Enhancements Completed (2025-12-01)
+- ✅ Multi-office NAP support (1 to many locations, multi-country)
+- ✅ Founded year field in NAP form
+- ✅ Loading indicator for "Complete & Generate" button
+- ✅ Fixed "Generate Missing Pages" to properly merge new pages
+- ✅ Navigation Designer integrated as third tab in Website Structure panel
+- ✅ Navigation save/load from database
 
 ---
 
@@ -69,32 +91,28 @@ This plan adds foundation pages (Homepage, About Us, Contact, Privacy, Terms) an
 
 ---
 
-## Phase 1: Smart Defaults (Foundation)
+## Phase 1: Smart Defaults (Foundation) ✅ COMPLETE
 
 **Goal:** Auto-generate foundation pages when creating a new topical map.
 **Priority:** HIGH
-**Estimated Tasks:** 15
+**Completed:** 2025-11-29
 
 ### Task 1.1: Add Type Definitions
 **File:** `types.ts`
 **Status:** ✅ COMPLETED
 
-Add the following types:
+Added types including:
 - `FoundationPageType` - enum for page types
 - `FoundationPage` - full page specification
 - `FoundationPageSection` - content section hints
-- `NAPData` - Name, Address, Phone, Email
+- `NAPData` - Name, Address, Phone, Email (+ `OfficeLocation` for multi-office support)
 - `NavigationStructure` - header/footer config
 - `NavigationLink` - link definition
 - `FooterSection` - footer column
-- `NavigationSyncStatus` - change tracking
-- `FoundationNotification` - non-blocking alerts
-- `SitemapView` - computed sitemap
-- `SitemapNode` - hierarchical node
 
 ### Task 1.2: Create Database Migration - Foundation Pages
-**File:** `supabase/migrations/YYYYMMDD_foundation_pages.sql`
-**Status:** PENDING
+**File:** `supabase/migrations/20251129000000_foundation_pages.sql`
+**Status:** ✅ COMPLETED
 
 ```sql
 -- Foundation Pages Table
@@ -189,78 +207,73 @@ CREATE POLICY "Users can view own sync status"
 
 ### Task 1.4: Add Foundation Page Generation Prompt
 **File:** `config/prompts.ts`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Add `GENERATE_FOUNDATION_PAGES_PROMPT` function that:
+Implemented `GENERATE_FOUNDATION_PAGES_PROMPT` function that:
 - Takes BusinessInfo and SEOPillars as input
-- Generates 5 foundation pages (homepage, about, contact, privacy, terms)
+- Generates 5+ foundation pages (homepage, about, contact, privacy, terms, author)
 - Returns JSON with page specs and NAP suggestions
 - Enforces E-A-T principles
 - Uses Central Entity in H1 templates
 
 ### Task 1.5: Create Foundation Pages Service
 **File:** `services/ai/foundationPages.ts`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Functions to implement:
-- `generateFoundationPages(businessInfo, pillars, dispatch)` - AI generation
+Implemented functions:
+- `generateFoundationPages(businessInfo, pillars, dispatch, selectedPages?)` - AI generation with page type filtering
 - `generateDefaultNavigation(foundationPages, coreTopics)` - Create default nav
-- `saveFoundationPages(mapId, userId, pages)` - Database save
+- `saveFoundationPages(mapId, userId, pages)` - Database save with upsert
 - `loadFoundationPages(mapId)` - Database load
 - `updateFoundationPage(pageId, updates)` - Update single page
 - `deleteFoundationPage(pageId, reason)` - Soft delete
+- `restoreFoundationPage(pageId)` - Restore deleted page
 
 ### Task 1.6: Add State Management for Foundation Pages
-**File:** `lib/state.ts` (or appropriate state file)
-**Status:** PENDING
+**File:** `state/appState.ts`
+**Status:** ✅ COMPLETED
 
-Add to AppState:
+Added to AppState:
 - `foundationPages: FoundationPage[]`
 - `navigation: NavigationStructure | null`
-- `navigationSyncStatus: NavigationSyncStatus | null`
-- `foundationNotifications: FoundationNotification[]`
+- `websiteStructure: { napData?: NAPData }`
 
-Add actions:
+Added actions:
 - `SET_FOUNDATION_PAGES`
 - `UPDATE_FOUNDATION_PAGE`
 - `DELETE_FOUNDATION_PAGE`
 - `SET_NAVIGATION`
-- `UPDATE_NAVIGATION`
-- `SET_NAV_SYNC_STATUS`
-- `ADD_FOUNDATION_NOTIFICATION`
-- `DISMISS_FOUNDATION_NOTIFICATION`
+- `SET_NAP_DATA`
 
 ### Task 1.7: Create FoundationPagesPanel Component
 **File:** `components/FoundationPagesPanel.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
 Component features:
 - List of all foundation pages with status badges
-- NAP data input form (shared across pages)
+- NAP data input form with multi-office support
 - Expandable cards for each page
 - Edit title, slug, meta description, H1 template
-- Edit sections (add/remove/reorder)
-- Schema type selector
 - Delete with confirmation (soft delete)
-- "Generate Missing Pages" button
-- Non-blocking notification display
+- "Generate Missing Pages" button (with proper merge logic)
+- Completion counter (X/Y pages)
 
 ### Task 1.8: Add Website Structure Tab to Dashboard
-**File:** `components/ProjectDashboardContainer.tsx`
-**Status:** PENDING
+**File:** `components/ProjectDashboard.tsx`
+**Status:** ✅ COMPLETED
 
 Changes:
-- Add "Website Structure" tab between Briefs and existing tabs
-- Load foundation pages when tab is selected
+- Added "Website Structure" section with scroll-to functionality
+- "Website Structure" button in WorkbenchPanel with badge count
+- Load foundation pages when component mounts
 - Pass props to FoundationPagesPanel
-- Show notification badge if pages need attention
 
 ### Task 1.9: Integrate Foundation Generation into Map Creation
 **File:** `components/ProjectWorkspace.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
 After map generation:
-1. Generate foundation pages via AI
+1. Generate foundation pages via AI (with selectedPages filter from blueprint)
 2. Save to database
 3. Generate default navigation
 4. Save navigation to database
@@ -269,16 +282,16 @@ After map generation:
 
 ### Task 1.10: Update Database Types
 **File:** `database.types.ts`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Add Supabase-generated types for:
+Added Supabase-generated types for:
 - `foundation_pages` table
 - `navigation_structures` table
 - `navigation_sync_status` table
 
 ### Task 1.11: Create Sitemap View Component
 **File:** `components/ui/SitemapView.tsx`
-**Status:** PENDING
+**Status:** 🔲 DEFERRED (lower priority)
 
 Display computed sitemap:
 - Foundation pages section
@@ -332,11 +345,11 @@ Yellow warning banner:
 
 ---
 
-## Phase 2: Validation Extension
+## Phase 2: Validation Extension ✅ COMPLETE
 
 **Goal:** Extend existing Validate Map to check foundation page completeness.
 **Priority:** MEDIUM
-**Estimated Tasks:** 8
+**Completed:** 2025-11-30
 
 ### Task 2.1: Extend Validation Prompt
 **File:** `config/prompts.ts`
@@ -419,26 +432,32 @@ Add buttons near existing "Repair Section Labels":
 
 ---
 
-## Phase 3: Website Blueprint Wizard
+## Phase 3: Website Blueprint Wizard ✅ COMPLETE
 
 **Goal:** Pre-generation wizard for foundation pages and navigation.
 **Priority:** MEDIUM
-**Estimated Tasks:** 7
+**Completed:** 2025-12-01
+
+### Additional Enhancements Added:
+- Multi-office NAP support (1 to many locations)
+- Founded year field
+- Loading indicator for Complete & Generate button
+- Page selection carries through to foundation page generation
 
 ### Task 3.1: Create WebsiteBlueprintWizard Component
 **File:** `components/WebsiteBlueprintWizard.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Multi-step wizard:
-- Step 1: NAP input
-- Step 2: Foundation page selection
+Multi-step wizard implemented:
+- Step 1: NAP input (with multi-office support)
+- Step 2: Foundation page selection (including author page)
 - Step 3: Navigation preferences
-- Back/Next navigation
+- Back/Next navigation with loading states
 - Skip option
 
 ### Task 3.2: Create Industry Blueprint Templates
 **File:** `config/blueprintTemplates.ts`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
 Templates for:
 - E-commerce (+ Shipping, Returns)
@@ -449,48 +468,36 @@ Templates for:
 
 ### Task 3.3: Update Wizard Flow
 **File:** `components/ProjectWorkspace.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Insert blueprint step:
-```typescript
-const WIZARD_STEPS = [
-  'business-info',
-  'pillar-definition',
-  'eav-discovery',
-  'competitor-refinement',
-  'website-blueprint',  // NEW
-  'generate-map'
-];
-```
+Blueprint step inserted after competitor refinement:
+- Added `AppStep.BLUEPRINT_WIZARD` to flow
+- Wizard renders between competitor selection and map generation
 
 ### Task 3.4: Create Template Selector Component
 **File:** `components/ui/BlueprintTemplateSelector.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED (integrated into WebsiteBlueprintWizard)
 
 Visual template selection:
 - Template cards with descriptions
 - Foundation page preview
 - Customization options
-- "Start from scratch" option
 
 ### Task 3.5: Create Navigation Preferences Form
-**File:** `components/ui/NavigationPreferencesForm.tsx`
-**Status:** PENDING
+**File:** Integrated into `components/WebsiteBlueprintWizard.tsx`
+**Status:** ✅ COMPLETED
 
 Configuration options:
-- Max header links slider (5-15)
+- Max header links slider (3-15)
 - Dynamic navigation toggle
 - CTA button toggle
-- Footer columns count
+- Footer columns count (2-5)
 
 ### Task 3.6: Store Blueprint Config in State
-**File:** `lib/state.ts`
-**Status:** PENDING
+**File:** `state/appState.ts`
+**Status:** ✅ COMPLETED
 
-Add to AppState:
-- `blueprintConfig: BlueprintConfig | null`
-
-Interface:
+BlueprintConfig interface defined and exported from WebsiteBlueprintWizard.tsx:
 ```typescript
 interface BlueprintConfig {
   napData: NAPData;
@@ -507,127 +514,114 @@ interface BlueprintConfig {
 
 ### Task 3.7: Use Blueprint Config in Generation
 **File:** `components/ProjectWorkspace.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Modify `handleGenerateMap`:
-1. Read blueprintConfig from state
-2. Pass to foundation page generation
+`handleFinalizeBlueprint` and `generateMapWithBlueprint`:
+1. Read blueprintConfig from wizard completion
+2. Pass selectedPages to foundation page generation
 3. Use NAP data from config
 4. Apply navigation preferences
-5. Only generate selected pages
+5. Only generate selected pages (including author if selected)
 
 ---
 
-## Phase 4: Navigation Designer
+## Phase 4: Navigation Designer ✅ COMPLETE
 
-**Goal:** Visual drag-and-drop navigation editor.
+**Goal:** Visual navigation editor.
 **Priority:** MEDIUM
-**Estimated Tasks:** 10
+**Completed:** 2025-12-01
 
 ### Task 4.1: Create NavigationDesigner Component
 **File:** `components/NavigationDesigner.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
 Main editor layout:
-- Header preview section
-- Header link editor
-- CTA button editor
-- Footer preview section
-- Footer section editor
-- Legal links checkboxes
-- Save/discard buttons
+- Header link editor with add/edit/remove
+- CTA button toggle and configuration
+- Footer section editor with add/remove sections
+- Legal links management
+- NAP display toggle
+- Copyright text field
+- Real-time link counting with warning colors
+- Save/discard buttons with loading states
 
 ### Task 4.2: Create NavigationPreview Component
 **File:** `components/ui/NavigationPreview.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-Live preview showing:
+Preview component showing:
 - Header with logo, nav links, CTA
-- Footer with sections, legal, NAP
-- Updates in real-time
-- Responsive preview toggle
+- Footer with sections, legal links, NAP
+- Responsive design
 
-### Task 4.3: Add Drag-and-Drop for Header Links
+### Task 4.3: Add Reordering for Header Links
 **File:** `components/NavigationDesigner.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED (Arrow buttons instead of DnD)
 
-Use existing DnD library:
+Implemented with up/down arrow buttons:
 - Reorder header links
-- Visual drag handles
-- Drop zone indicators
-- Keyboard accessibility
+- Visual indicators
+- Keyboard accessible via button clicks
 
-### Task 4.4: Add Drag-and-Drop for Footer Sections
+### Task 4.4: Footer Section Management
 **File:** `components/NavigationDesigner.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
-DnD for footer:
-- Reorder sections
-- Reorder links within sections
-- Move links between sections
+Footer management:
 - Add/remove sections
+- Add/remove links within sections
+- Section heading editing
 
-### Task 4.5: Create Link Editor Modal
-**File:** `components/ui/LinkEditorModal.tsx`
-**Status:** PENDING
+### Task 4.5: Inline Link Editing
+**File:** `components/NavigationDesigner.tsx`
+**Status:** ✅ COMPLETED (Inline instead of modal)
 
-Edit individual links:
+Inline link editing:
 - Text input
-- Target selector (topic/foundation page/external)
-- External URL input
-- Prominence selector
-- Delete option
+- Target selector (foundation pages, core topics, external URL)
+- External URL input when needed
+- Delete button
 
-### Task 4.6: Create Topic/Page Selector
-**File:** `components/ui/NavigationTargetSelector.tsx`
-**Status:** PENDING
+### Task 4.6: Target Selection
+**File:** `components/NavigationDesigner.tsx`
+**Status:** ✅ COMPLETED (Integrated into link editor)
 
-Select link targets:
-- Search/filter
-- Foundation pages section
-- Core topics section
-- Outer topics section
+Inline target selection via dropdown:
+- Foundation pages optgroup
+- Core topics optgroup
 - External URL option
 
 ### Task 4.7: Add Real-Time Link Counting
 **File:** `components/NavigationDesigner.tsx`
-**Status:** PENDING
+**Status:** ✅ COMPLETED
 
 Display counters:
 - Header links: X/10
 - Footer links: X/30
 - Total links: X/150
-- Warning colors when approaching limits
+- Color-coded warnings (green → yellow → red)
 
 ### Task 4.8: Add Smart Link Suggestions
 **File:** `services/ai/navigationSuggestions.ts`
-**Status:** PENDING
+**Status:** 🔲 DEFERRED (future enhancement)
 
-AI-powered suggestions:
-- Suggest missing Quality Nodes
-- Suggest hub topics for header
-- Suggest logical footer groupings
-- PageRank optimization hints
+AI-powered suggestions - deferred for Phase 5 or later.
 
 ### Task 4.9: Create Export Functionality
 **File:** `services/navigationExport.ts`
-**Status:** PENDING
+**Status:** 🔲 DEFERRED (future enhancement)
 
-Export formats:
-- HTML with semantic tags
-- Schema markup (SiteNavigationElement)
-- CSS class suggestions
-- Responsive menu structure
+Export formats - deferred for Phase 5 or later.
 
 ### Task 4.10: Add Navigation Tab to Dashboard
-**File:** `components/ProjectDashboardContainer.tsx`
-**Status:** PENDING
+**File:** `components/FoundationPagesPanel.tsx`
+**Status:** ✅ COMPLETED
 
-Add "Navigation" tab:
-- Load navigation structure
-- Show sync status notification
-- NavigationDesigner component
-- Export button
+Added "Navigation" tab to Website Structure panel:
+- Tab alongside Foundation Pages and NAP Data
+- NavigationDesigner component integration
+- Load navigation from state
+- Save navigation to database
 
 ---
 
