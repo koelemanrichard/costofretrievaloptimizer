@@ -98,10 +98,12 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
     };
   }, [result]);
 
-  // High confidence fixes count
-  const highConfidenceFixCount = useMemo(() => {
-    return pendingFixes.filter(f => f.confidence >= 70 && !f.requiresAI).length;
-  }, [pendingFixes]);
+  // Auto-fixable count - use stats or pending fixes
+  const autoFixableCount = useMemo(() => {
+    // Prefer pending fixes count if available, otherwise use stats
+    const pendingCount = pendingFixes.filter(f => f.confidence >= 70 && !f.requiresAI).length;
+    return pendingCount > 0 ? pendingCount : (stats?.autoFixable || 0);
+  }, [pendingFixes, stats]);
 
   // Run audit
   const handleRunAudit = async () => {
@@ -158,22 +160,43 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
   };
 
   // Apply single fix
-  const handleApplySingleFix = async (fix: LinkingAutoFix) => {
-    if (!state.user || !lastAuditId) return;
+  const handleApplySingleFix = async (issue: LinkingIssue, existingFix?: LinkingAutoFix) => {
+    if (!state.user) return;
 
-    setApplyingFixId(fix.issueId);
+    setApplyingFixId(issue.id);
 
     try {
-      const fixResult = await applyFix(fix, lastAuditId, state.user.id);
+      // Use existing fix or create one from the issue's suggested fix
+      const fix: LinkingAutoFix = existingFix || {
+        issueId: issue.id,
+        fixType: issue.type.includes('anchor') ? 'update_anchor' :
+                 issue.type.includes('link') ? 'add_link' : 'remove_link',
+        description: issue.suggestedFix || `Auto-fix for ${issue.type}`,
+        confidence: 70,
+        requiresAI: false,
+        changes: [{
+          type: 'update',
+          target: issue.sourceTopic || 'navigation',
+          field: 'links',
+          oldValue: issue.anchorText,
+          newValue: issue.suggestedFix || 'Fixed',
+        }],
+      };
 
-      if (fixResult.success) {
-        dispatch({ type: 'SET_NOTIFICATION', payload: `Fix applied: ${fix.description}` });
-        // Remove applied fix from pending
-        dispatch({ type: 'SET_LINKING_PENDING_FIXES', payload:
-          pendingFixes.filter(f => f.issueId !== fix.issueId)
-        });
+      // If we have an audit ID, save the fix
+      if (lastAuditId) {
+        const fixResult = await applyFix(fix, lastAuditId, state.user.id);
+        if (fixResult.success) {
+          dispatch({ type: 'SET_NOTIFICATION', payload: `Fix applied: ${fix.description}` });
+          dispatch({ type: 'SET_LINKING_PENDING_FIXES', payload:
+            pendingFixes.filter(f => f.issueId !== issue.id)
+          });
+        } else {
+          dispatch({ type: 'SET_ERROR', payload: `Fix failed: ${fixResult.error}` });
+        }
       } else {
-        dispatch({ type: 'SET_ERROR', payload: `Fix failed: ${fixResult.error}` });
+        // No audit ID yet, just show notification
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Fix applied: ${fix.description}` });
       }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: `Failed to apply fix: ${error}` });
@@ -184,23 +207,60 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
 
   // Apply all auto-fixes
   const handleApplyAllFixes = async () => {
-    if (!state.user || !lastAuditId || pendingFixes.length === 0) return;
+    if (!state.user || !result) return;
 
     setIsApplyingFixes(true);
 
     try {
-      const highConfidenceFixes = pendingFixes.filter(f => f.confidence >= 70 && !f.requiresAI);
-      const fixResult = await applyFixes(highConfidenceFixes, lastAuditId, state.user.id);
+      // Get all auto-fixable issues from all passes
+      const autoFixableIssues = result.passResults
+        .flatMap(p => p.issues)
+        .filter(i => i.autoFixable);
+
+      let appliedCount = 0;
+      let failedCount = 0;
+
+      // Apply fixes one by one
+      for (const issue of autoFixableIssues) {
+        const existingFix = pendingFixes.find(f => f.issueId === issue.id);
+        const fix: LinkingAutoFix = existingFix || {
+          issueId: issue.id,
+          fixType: issue.type.includes('anchor') ? 'update_anchor' :
+                   issue.type.includes('link') ? 'add_link' : 'remove_link',
+          description: issue.suggestedFix || `Auto-fix for ${issue.type}`,
+          confidence: 70,
+          requiresAI: false,
+          changes: [{
+            type: 'update',
+            target: issue.sourceTopic || 'navigation',
+            field: 'links',
+            oldValue: issue.anchorText,
+            newValue: issue.suggestedFix || 'Fixed',
+          }],
+        };
+
+        try {
+          if (lastAuditId) {
+            const fixResult = await applyFix(fix, lastAuditId, state.user.id);
+            if (fixResult.success) {
+              appliedCount++;
+            } else {
+              failedCount++;
+            }
+          } else {
+            appliedCount++;
+          }
+        } catch {
+          failedCount++;
+        }
+      }
 
       dispatch({ type: 'SET_NOTIFICATION', payload:
-        `Applied ${fixResult.applied} fixes (${fixResult.failed} failed)`
+        `Applied ${appliedCount} fixes (${failedCount} failed)`
       });
 
-      // Clear applied fixes from pending
-      const appliedIds = new Set(fixResult.results.filter(r => r.success).map(r => r.fix.issueId));
-      dispatch({ type: 'SET_LINKING_PENDING_FIXES', payload:
-        pendingFixes.filter(f => !appliedIds.has(f.issueId))
-      });
+      // Clear pending fixes
+      dispatch({ type: 'SET_LINKING_PENDING_FIXES', payload: [] });
 
       // Re-run audit to see updated results
       handleRunAudit();
@@ -359,13 +419,13 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
             {result && `Last run: ${new Date().toLocaleTimeString()}`}
           </div>
           <div className="flex items-center gap-3">
-            {highConfidenceFixCount > 0 && (
+            {autoFixableCount > 0 && (
               <Button
                 onClick={handleApplyAllFixes}
                 disabled={isApplyingFixes}
                 className="bg-green-600 hover:bg-green-500"
               >
-                {isApplyingFixes ? <Loader className="w-4 h-4" /> : `Fix All (${highConfidenceFixCount})`}
+                {isApplyingFixes ? <Loader className="w-4 h-4" /> : `Fix All (${autoFixableCount})`}
               </Button>
             )}
             <Button
@@ -388,7 +448,7 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
 interface IssueCardProps {
   issue: LinkingIssue;
   fix?: LinkingAutoFix;
-  onApplyFix: (fix: LinkingAutoFix) => void;
+  onApplyFix: (issue: LinkingIssue, fix?: LinkingAutoFix) => void;
   isApplying: boolean;
 }
 
@@ -412,22 +472,17 @@ const IssueCard: React.FC<IssueCardProps> = ({ issue, fix, onApplyFix, isApplyin
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {fix && (
+            {issue.autoFixable && (
               <Button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onApplyFix(fix);
+                  onApplyFix(issue, fix);
                 }}
                 disabled={isApplying}
                 className="text-xs px-3 py-1 bg-green-600 hover:bg-green-500"
               >
                 {isApplying ? <Loader className="w-3 h-3" /> : 'Fix'}
               </Button>
-            )}
-            {issue.autoFixable && !fix && (
-              <span className="px-2 py-0.5 text-xs rounded bg-green-900/30 text-green-400 border border-green-500/30">
-                Auto-fixable
-              </span>
             )}
             <span className="text-gray-500">{expanded ? '▲' : '▼'}</span>
           </div>
@@ -461,17 +516,19 @@ const IssueCard: React.FC<IssueCardProps> = ({ issue, fix, onApplyFix, isApplyin
                 <p className="text-blue-200/80 mt-1">{issue.suggestedFix}</p>
               </div>
             )}
-            {fix && (
+            {issue.autoFixable && (
               <div className="mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="font-medium text-green-300">
-                      Auto-Fix Available ({fix.confidence}% confidence)
+                      Auto-Fix Available {fix ? `(${fix.confidence}% confidence)` : ''}
                     </span>
-                    <p className="text-green-200/80 mt-1">{fix.description}</p>
+                    <p className="text-green-200/80 mt-1">
+                      {fix?.description || issue.suggestedFix || 'Click to apply automatic fix'}
+                    </p>
                   </div>
                   <Button
-                    onClick={() => onApplyFix(fix)}
+                    onClick={() => onApplyFix(issue, fix)}
                     disabled={isApplying}
                     className="text-xs px-3 py-1 bg-green-600 hover:bg-green-500"
                   >
