@@ -15,9 +15,13 @@ import {
   runLinkingAudit,
   generateAllFixes,
   applyFixes,
+  applyFix,
   saveAuditResults,
   DEFAULT_LINKING_RULES,
 } from '../services/ai/linkingAudit';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Loader } from './ui/Loader';
 
 interface LinkingAuditModalProps {
   isOpen: boolean;
@@ -33,11 +37,11 @@ const PASS_TABS = [
   { id: LinkingAuditPass.EXTERNAL, label: 'External', icon: '4' },
 ] as const;
 
-// Severity badge colors
+// Severity badge colors (dark theme)
 const SEVERITY_COLORS = {
-  critical: 'bg-red-100 text-red-800 border-red-200',
-  warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  suggestion: 'bg-blue-100 text-blue-800 border-blue-200',
+  critical: 'border-red-500 bg-red-900/20 text-red-300',
+  warning: 'border-yellow-500 bg-yellow-900/20 text-yellow-300',
+  suggestion: 'border-blue-500 bg-blue-900/20 text-blue-300',
 } as const;
 
 // Pass status icons
@@ -50,11 +54,11 @@ const getPassStatusIcon = (result: LinkingPassResult | undefined): string => {
 };
 
 const getPassStatusColor = (result: LinkingPassResult | undefined): string => {
-  if (!result) return 'text-gray-400';
-  if (result.status === 'passed') return 'text-green-600';
+  if (!result) return 'text-gray-500';
+  if (result.status === 'passed') return 'text-green-400';
   const critical = result.issues.filter(i => i.severity === 'critical').length;
-  if (critical > 0) return 'text-red-600';
-  return 'text-yellow-600';
+  if (critical > 0) return 'text-red-400';
+  return 'text-yellow-400';
 };
 
 export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
@@ -65,6 +69,7 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
   const { state, dispatch } = useAppState();
   const [activeTab, setActiveTab] = useState<LinkingAuditPass>(LinkingAuditPass.FUNDAMENTALS);
   const [isApplyingFixes, setIsApplyingFixes] = useState(false);
+  const [applyingFixId, setApplyingFixId] = useState<string | null>(null);
 
   const { result, isRunning, pendingFixes, lastAuditId } = state.linkingAudit;
 
@@ -92,6 +97,11 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
       autoFixable: allIssues.filter(i => i.autoFixable).length,
     };
   }, [result]);
+
+  // High confidence fixes count
+  const highConfidenceFixCount = useMemo(() => {
+    return pendingFixes.filter(f => f.confidence >= 70 && !f.requiresAI).length;
+  }, [pendingFixes]);
 
   // Run audit
   const handleRunAudit = async () => {
@@ -126,9 +136,10 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
         }
       }
 
+      const allIssues = auditResult.passResults.flatMap(p => p.issues);
       dispatch({ type: 'LOG_EVENT', payload: {
         service: 'LinkingAudit',
-        message: `Audit complete: Score ${auditResult.overallScore}/100, ${stats?.total || 0} issues found`,
+        message: `Audit complete: Score ${auditResult.overallScore}/100, ${allIssues.length} issues found`,
         status: 'success',
         timestamp: Date.now(),
       }});
@@ -143,6 +154,31 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
       }});
     } finally {
       dispatch({ type: 'SET_LINKING_AUDIT_RUNNING', payload: false });
+    }
+  };
+
+  // Apply single fix
+  const handleApplySingleFix = async (fix: LinkingAutoFix) => {
+    if (!state.user || !lastAuditId) return;
+
+    setApplyingFixId(fix.issueId);
+
+    try {
+      const fixResult = await applyFix(fix, lastAuditId, state.user.id);
+
+      if (fixResult.success) {
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Fix applied: ${fix.description}` });
+        // Remove applied fix from pending
+        dispatch({ type: 'SET_LINKING_PENDING_FIXES', payload:
+          pendingFixes.filter(f => f.issueId !== fix.issueId)
+        });
+      } else {
+        dispatch({ type: 'SET_ERROR', payload: `Fix failed: ${fixResult.error}` });
+      }
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: `Failed to apply fix: ${error}` });
+    } finally {
+      setApplyingFixId(null);
     }
   };
 
@@ -179,45 +215,38 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
+      <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="sticky top-0 bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold">Internal Linking Audit</h2>
+            <h2 className="text-xl font-bold text-white">Internal Linking Audit</h2>
             {result && (
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                result.overallScore >= 80 ? 'bg-green-100 text-green-800' :
-                result.overallScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                result.overallScore >= 80 ? 'bg-green-500/20 text-green-300' :
+                result.overallScore >= 60 ? 'bg-yellow-500/20 text-yellow-300' :
+                'bg-red-500/20 text-red-300'
               }`}>
                 Score: {result.overallScore}/100
-              </div>
+              </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <button onClick={onClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
         </div>
 
         {/* Stats bar */}
         {stats && (
-          <div className="px-6 py-3 bg-gray-50 border-b flex items-center gap-6 text-sm">
-            <span className="text-gray-600">Total Issues: <strong>{stats.total}</strong></span>
-            <span className="text-red-600">Critical: <strong>{stats.critical}</strong></span>
-            <span className="text-yellow-600">Warnings: <strong>{stats.warnings}</strong></span>
-            <span className="text-blue-600">Suggestions: <strong>{stats.suggestions}</strong></span>
-            <span className="text-green-600">Auto-fixable: <strong>{stats.autoFixable}</strong></span>
+          <div className="px-6 py-3 bg-gray-900/50 border-b border-gray-700 flex items-center gap-6 text-sm flex-shrink-0">
+            <span className="text-gray-400">Total: <strong className="text-white">{stats.total}</strong></span>
+            <span className="text-red-400">Critical: <strong>{stats.critical}</strong></span>
+            <span className="text-yellow-400">Warnings: <strong>{stats.warnings}</strong></span>
+            <span className="text-blue-400">Suggestions: <strong>{stats.suggestions}</strong></span>
+            <span className="text-green-400">Auto-fixable: <strong>{stats.autoFixable}</strong></span>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="px-6 py-2 border-b flex items-center gap-2">
+        <div className="px-6 py-3 border-b border-gray-700 flex items-center gap-2 flex-shrink-0">
           {PASS_TABS.map(tab => {
             const passResult = result?.passResults.find(p => p.pass === tab.id);
             const statusIcon = getPassStatusIcon(passResult);
@@ -230,14 +259,14 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
                   isActive
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'hover:bg-gray-100 text-gray-600'
+                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                    : 'hover:bg-gray-700/50 text-gray-400 border border-transparent'
                 }`}
               >
                 <span className={`font-bold ${statusColor}`}>{statusIcon}</span>
                 <span>{tab.label}</span>
                 {passResult && passResult.issues.length > 0 && (
-                  <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200">
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-gray-700 text-gray-300">
                     {passResult.issues.length}
                   </span>
                 )}
@@ -247,58 +276,57 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 280px)' }}>
+        <div className="p-6 overflow-y-auto flex-1">
           {!result && !isRunning && (
             <div className="text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">🔗</div>
-              <h3 className="text-lg font-medium text-gray-700 mb-2">
+              <div className="text-gray-500 text-6xl mb-4">🔗</div>
+              <h3 className="text-lg font-medium text-white mb-2">
                 Run Linking Audit
               </h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              <p className="text-gray-400 mb-6 max-w-md mx-auto">
                 Analyze your internal linking structure across 4 passes:
                 Fundamentals, Navigation, Flow Direction, and External E-A-T.
               </p>
-              <button
-                onClick={handleRunAudit}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
+              <Button onClick={handleRunAudit}>
                 Start Audit
-              </button>
+              </Button>
             </div>
           )}
 
           {isRunning && (
             <div className="text-center py-12">
-              <div className="animate-spin text-4xl mb-4">⚙️</div>
-              <p className="text-gray-600">Running linking audit...</p>
+              <Loader className="w-8 h-8 mx-auto mb-4" />
+              <p className="text-gray-400">Running linking audit...</p>
             </div>
           )}
 
           {result && activePassResult && (
             <div className="space-y-4">
               {/* Pass summary */}
-              <div className={`p-4 rounded-lg border ${
+              <Card className={`p-4 ${
                 activePassResult.status === 'passed'
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-gray-50 border-gray-200'
+                  ? 'bg-green-900/20 border-green-500/30'
+                  : 'bg-gray-900/50'
               }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">
+                    <h3 className={`font-medium ${
+                      activePassResult.status === 'passed' ? 'text-green-300' : 'text-white'
+                    }`}>
                       {activePassResult.status === 'passed'
                         ? '✓ All checks passed'
                         : `${activePassResult.issues.length} issues found`
                       }
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">{activePassResult.summary}</p>
+                    <p className="text-sm text-gray-400 mt-1">{activePassResult.summary}</p>
                   </div>
                   {activePassResult.autoFixable && (
-                    <span className="text-sm text-green-600">
+                    <span className="text-sm text-green-400">
                       {activePassResult.issues.filter(i => i.autoFixable).length} auto-fixable
                     </span>
                   )}
                 </div>
-              </div>
+              </Card>
 
               {/* Issues list */}
               {activePassResult.issues.length > 0 && (
@@ -308,15 +336,17 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
                       key={issue.id}
                       issue={issue}
                       fix={pendingFixes.find(f => f.issueId === issue.id)}
+                      onApplyFix={handleApplySingleFix}
+                      isApplying={applyingFixId === issue.id}
                     />
                   ))}
                 </div>
               )}
 
               {activePassResult.issues.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8">
                   <span className="text-4xl">✨</span>
-                  <p className="mt-2">No issues in this pass!</p>
+                  <p className="mt-2 text-gray-400">No issues in this pass!</p>
                 </div>
               )}
             </div>
@@ -324,30 +354,32 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-gray-700 bg-gray-800 flex items-center justify-between flex-shrink-0">
           <div className="text-sm text-gray-500">
             {result && `Last run: ${new Date().toLocaleTimeString()}`}
           </div>
           <div className="flex items-center gap-3">
-            {pendingFixes.length > 0 && (
-              <button
+            {highConfidenceFixCount > 0 && (
+              <Button
                 onClick={handleApplyAllFixes}
                 disabled={isApplyingFixes}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="bg-green-600 hover:bg-green-500"
               >
-                {isApplyingFixes ? 'Applying...' : `Fix All (${pendingFixes.filter(f => f.confidence >= 70 && !f.requiresAI).length})`}
-              </button>
+                {isApplyingFixes ? <Loader className="w-4 h-4" /> : `Fix All (${highConfidenceFixCount})`}
+              </Button>
             )}
-            <button
+            <Button
               onClick={handleRunAudit}
               disabled={isRunning}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
-              {isRunning ? 'Running...' : 'Run Again'}
-            </button>
+              {isRunning ? <Loader className="w-4 h-4" /> : 'Run Audit'}
+            </Button>
+            <Button onClick={onClose} variant="secondary">
+              Close
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };
@@ -356,66 +388,102 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
 interface IssueCardProps {
   issue: LinkingIssue;
   fix?: LinkingAutoFix;
+  onApplyFix: (fix: LinkingAutoFix) => void;
+  isApplying: boolean;
 }
 
-const IssueCard: React.FC<IssueCardProps> = ({ issue, fix }) => {
+const IssueCard: React.FC<IssueCardProps> = ({ issue, fix, onApplyFix, isApplying }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <Card className="overflow-hidden">
       <div
-        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+        className="p-4 cursor-pointer hover:bg-gray-700/30 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <span className={`px-2 py-0.5 text-xs rounded border ${SEVERITY_COLORS[issue.severity]}`}>
-              {issue.severity}
+            <span className={`px-2 py-0.5 text-xs rounded border-l-2 ${SEVERITY_COLORS[issue.severity]}`}>
+              {issue.severity.toUpperCase()}
             </span>
             <div>
-              <h4 className="font-medium text-gray-900">{formatIssueType(issue.type)}</h4>
-              <p className="text-sm text-gray-600 mt-1">{issue.message}</p>
+              <h4 className="font-medium text-white">{formatIssueType(issue.type)}</h4>
+              <p className="text-sm text-gray-400 mt-1">{issue.message}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {issue.autoFixable && (
-              <span className="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">
-                Auto-fix
+            {fix && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApplyFix(fix);
+                }}
+                disabled={isApplying}
+                className="text-xs px-3 py-1 bg-green-600 hover:bg-green-500"
+              >
+                {isApplying ? <Loader className="w-3 h-3" /> : 'Fix'}
+              </Button>
+            )}
+            {issue.autoFixable && !fix && (
+              <span className="px-2 py-0.5 text-xs rounded bg-green-900/30 text-green-400 border border-green-500/30">
+                Auto-fixable
               </span>
             )}
-            <span className="text-gray-400">{expanded ? '▲' : '▼'}</span>
+            <span className="text-gray-500">{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t bg-gray-50">
+        <div className="px-4 pb-4 border-t border-gray-700 bg-gray-900/30">
           <div className="pt-3 space-y-2 text-sm">
             {issue.sourceTopic && (
-              <div><span className="text-gray-500">Source:</span> {issue.sourceTopic}</div>
+              <div className="text-gray-400">
+                <span className="text-gray-500">Source:</span>{' '}
+                <span className="text-gray-300">{issue.sourceTopic}</span>
+              </div>
             )}
             {issue.targetTopic && (
-              <div><span className="text-gray-500">Target:</span> {issue.targetTopic}</div>
+              <div className="text-gray-400">
+                <span className="text-gray-500">Target:</span>{' '}
+                <span className="text-gray-300">{issue.targetTopic}</span>
+              </div>
             )}
             {issue.anchorText && (
-              <div><span className="text-gray-500">Anchor:</span> "{issue.anchorText}"</div>
+              <div className="text-gray-400">
+                <span className="text-gray-500">Anchor:</span>{' '}
+                <span className="text-yellow-300">"{issue.anchorText}"</span>
+              </div>
             )}
             {issue.suggestedFix && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                <span className="font-medium text-blue-800">Suggested Fix:</span>
-                <p className="text-blue-700 mt-1">{issue.suggestedFix}</p>
+              <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <span className="font-medium text-blue-300">Suggested Fix:</span>
+                <p className="text-blue-200/80 mt-1">{issue.suggestedFix}</p>
               </div>
             )}
             {fix && (
-              <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                <span className="font-medium text-green-800">Auto-Fix Available ({fix.confidence}% confidence)</span>
-                <p className="text-green-700 mt-1">{fix.description}</p>
+              <div className="mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="font-medium text-green-300">
+                      Auto-Fix Available ({fix.confidence}% confidence)
+                    </span>
+                    <p className="text-green-200/80 mt-1">{fix.description}</p>
+                  </div>
+                  <Button
+                    onClick={() => onApplyFix(fix)}
+                    disabled={isApplying}
+                    className="text-xs px-3 py-1 bg-green-600 hover:bg-green-500"
+                  >
+                    {isApplying ? <Loader className="w-3 h-3" /> : 'Apply Fix'}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 
