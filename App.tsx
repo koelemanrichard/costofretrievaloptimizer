@@ -144,11 +144,33 @@ const App: React.FC = () => {
                 onConfirm: async () => {
                     try {
                         const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
-                        const { error } = await supabase.rpc('delete_project', { p_project_id: project.id });
+
+                        // Get all maps for this project
+                        const { data: maps } = await supabase
+                            .from('topical_maps')
+                            .select('id')
+                            .eq('project_id', project.id);
+
+                        const mapIds = (maps || []).map(m => m.id);
+
+                        // Delete related records for each map individually to avoid .in() issues
+                        for (const mapId of mapIds) {
+                            await supabase.from('content_briefs').delete().eq('map_id', mapId);
+                            await supabase.from('topics').delete().eq('map_id', mapId);
+                            await supabase.from('foundation_pages').delete().eq('map_id', mapId);
+                            await supabase.from('navigation_structures').delete().eq('map_id', mapId);
+                            await supabase.from('navigation_sync_status').delete().eq('map_id', mapId);
+                            await supabase.from('topical_maps').delete().eq('id', mapId);
+                        }
+
+                        // Delete the project itself
+                        const { error } = await supabase.from('projects').delete().eq('id', project.id);
                         if (error) throw error;
+
                         dispatch({ type: 'DELETE_PROJECT', payload: { projectId: project.id } });
                         dispatch({ type: 'SET_NOTIFICATION', payload: `Project "${project.project_name}" deleted.` });
                     } catch (e) {
+                        console.error('Delete project error:', e);
                         dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to delete project.' });
                     } finally {
                         dispatch({ type: 'HIDE_CONFIRMATION' });
@@ -189,6 +211,7 @@ const App: React.FC = () => {
             case AppStep.PILLAR_WIZARD:
             case AppStep.EAV_WIZARD:
             case AppStep.COMPETITOR_WIZARD:
+            case AppStep.BLUEPRINT_WIZARD:
             case AppStep.PROJECT_DASHBOARD:
                 return <ProjectWorkspace />;
             default: return <p>Unknown application step.</p>;

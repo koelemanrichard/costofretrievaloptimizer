@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
 // FIX: Changed import to be a relative path.
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
-import { ValidationResult, ValidationIssue } from '../types';
+import { ValidationResult, ValidationIssue, FoundationPageType } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Loader } from './ui/Loader';
@@ -15,6 +15,10 @@ interface ValidationResultModalProps {
   result: ValidationResult | null;
   onImproveMap: (issues: ValidationIssue[], options?: { includeTypeReclassifications?: boolean }) => void;
   isImprovingMap: boolean;
+  onRepairFoundation?: (missingPages: FoundationPageType[]) => void;
+  isRepairingFoundation?: boolean;
+  onRepairNavigation?: () => void;
+  isRepairingNavigation?: boolean;
 }
 
 const getSeverityStyles = (severity: ValidationIssue['severity']) => {
@@ -30,8 +34,18 @@ const getSeverityStyles = (severity: ValidationIssue['severity']) => {
     }
 };
 
-const ValidationResultModal: React.FC<ValidationResultModalProps> = ({ isOpen, onClose, result, onImproveMap, isImprovingMap }) => {
-  const [activeTab, setActiveTab] = useState<'issues' | 'metrics'>('issues');
+const ValidationResultModal: React.FC<ValidationResultModalProps> = ({
+  isOpen,
+  onClose,
+  result,
+  onImproveMap,
+  isImprovingMap,
+  onRepairFoundation,
+  isRepairingFoundation,
+  onRepairNavigation,
+  isRepairingNavigation
+}) => {
+  const [activeTab, setActiveTab] = useState<'issues' | 'metrics' | 'foundation' | 'navigation'>('issues');
   const [includeTypeReclassifications, setIncludeTypeReclassifications] = useState(true);
 
   if (!isOpen) return null;
@@ -52,13 +66,31 @@ const ValidationResultModal: React.FC<ValidationResultModalProps> = ({ isOpen, o
           ) : (
             <div className="space-y-6">
                 <div className="flex items-center justify-between mb-4">
-                     <div className="flex space-x-4">
+                     <div className="flex space-x-4 flex-wrap">
                         <button onClick={() => setActiveTab('issues')} className={`pb-2 border-b-2 transition-colors ${activeTab === 'issues' ? 'border-blue-500 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}>
                             Validation Issues
                         </button>
                         {result.metrics && (
                             <button onClick={() => setActiveTab('metrics')} className={`pb-2 border-b-2 transition-colors ${activeTab === 'metrics' ? 'border-blue-500 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}>
                                 Holistic Quality Metrics
+                            </button>
+                        )}
+                        {result.foundationPageIssues && (
+                            <button onClick={() => setActiveTab('foundation')} className={`pb-2 border-b-2 transition-colors ${activeTab === 'foundation' ? 'border-purple-500 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}>
+                                Foundation Pages
+                                {(result.foundationPageIssues.missingPages.length > 0 || result.foundationPageIssues.incompletePages.length > 0) && (
+                                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-purple-500/30 text-purple-300 rounded-full">
+                                        {result.foundationPageIssues.missingPages.length + result.foundationPageIssues.incompletePages.length}
+                                    </span>
+                                )}
+                            </button>
+                        )}
+                        {result.navigationIssues && (
+                            <button onClick={() => setActiveTab('navigation')} className={`pb-2 border-b-2 transition-colors ${activeTab === 'navigation' ? 'border-teal-500 text-white' : 'border-transparent text-gray-400 hover:text-gray-300'}`}>
+                                Navigation
+                                {(result.navigationIssues.missingInHeader.length > 0 || result.navigationIssues.missingInFooter.length > 0) && (
+                                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-teal-500/30 text-teal-300 rounded-full">!</span>
+                                )}
                             </button>
                         )}
                     </div>
@@ -164,8 +196,8 @@ const ValidationResultModal: React.FC<ValidationResultModalProps> = ({ isOpen, o
                                             </span>
                                         </div>
                                         <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden mt-2">
-                                            <div 
-                                                className={`h-full ${hub.status === 'OPTIMAL' ? 'bg-green-500' : hub.status === 'DILUTED' ? 'bg-yellow-500' : 'bg-red-500'}`} 
+                                            <div
+                                                className={`h-full ${hub.status === 'OPTIMAL' ? 'bg-green-500' : hub.status === 'DILUTED' ? 'bg-yellow-500' : 'bg-red-500'}`}
                                                 style={{ width: `${Math.min(100, (hub.spokeCount / 7) * 100)}%` }}
                                             ></div>
                                         </div>
@@ -230,6 +262,246 @@ const ValidationResultModal: React.FC<ValidationResultModalProps> = ({ isOpen, o
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Foundation Pages Tab */}
+                {activeTab === 'foundation' && result.foundationPageIssues && (
+                    <div className="space-y-6">
+                        <Card className="p-4 bg-gray-900/50">
+                            <p className="text-gray-300">
+                                Foundation pages establish trust, authority, and legal compliance.
+                                These pages are essential for E-E-A-T signals and user experience.
+                            </p>
+                        </Card>
+
+                        {/* Missing Pages */}
+                        {result.foundationPageIssues.missingPages.length > 0 && (
+                            <div>
+                                <h3 className="text-lg font-semibold text-red-400 mb-3">Missing Foundation Pages</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {result.foundationPageIssues.missingPages.map(pageType => (
+                                        <div key={pageType} className="p-3 rounded border border-red-600 bg-red-900/10">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-red-400 text-lg">⚠</span>
+                                                <span className="font-medium text-gray-200 capitalize">{pageType.replace('_', ' ')}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                {pageType === 'homepage' && 'Your main entry point - critical for first impressions and SEO.'}
+                                                {pageType === 'about' && 'Establishes E-E-A-T by showcasing expertise and authority.'}
+                                                {pageType === 'contact' && 'Required for trust signals and local SEO (NAP data).'}
+                                                {pageType === 'privacy' && 'Legal requirement for GDPR/CCPA compliance.'}
+                                                {pageType === 'terms' && 'Protects your business and sets user expectations.'}
+                                                {pageType === 'author' && 'Supports E-E-A-T by highlighting content creators.'}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Incomplete Pages */}
+                        {result.foundationPageIssues.incompletePages.length > 0 && (
+                            <div>
+                                <h3 className="text-lg font-semibold text-yellow-400 mb-3">Incomplete Foundation Pages</h3>
+                                <div className="space-y-3">
+                                    {result.foundationPageIssues.incompletePages.map(page => (
+                                        <div key={page.pageType} className="p-3 rounded border border-yellow-600 bg-yellow-900/10">
+                                            <div className="flex justify-between items-start">
+                                                <span className="font-medium text-gray-200 capitalize">{page.pageType.replace('_', ' ')}</span>
+                                                <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded">
+                                                    {page.missingFields.length} missing field{page.missingFields.length > 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap gap-1">
+                                                {page.missingFields.map(field => (
+                                                    <span key={field} className="text-xs px-2 py-0.5 bg-black/20 rounded text-yellow-300/80">
+                                                        {field.replace('_', ' ')}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Suggestions */}
+                        {result.foundationPageIssues.suggestions.length > 0 && (
+                            <div>
+                                <h3 className="text-lg font-semibold text-blue-400 mb-3">Suggestions</h3>
+                                <ul className="space-y-2">
+                                    {result.foundationPageIssues.suggestions.map((suggestion, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
+                                            <span className="text-blue-400">→</span>
+                                            {suggestion}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* Repair Button */}
+                        {result.foundationPageIssues.missingPages.length > 0 && onRepairFoundation && (
+                            <div className="mt-6 pt-6 border-t border-gray-700">
+                                <h4 className="text-md font-semibold text-white mb-2 text-center">AI-Powered Repair</h4>
+                                <p className="text-sm text-gray-400 mb-4 text-center">
+                                    Generate the missing foundation pages using AI based on your business information.
+                                </p>
+                                <div className="flex justify-center">
+                                    <Button
+                                        onClick={() => onRepairFoundation(result.foundationPageIssues!.missingPages)}
+                                        disabled={isRepairingFoundation}
+                                        className="bg-purple-600 hover:bg-purple-500"
+                                    >
+                                        {isRepairingFoundation ? <Loader className="w-4 h-4" /> : `Generate ${result.foundationPageIssues.missingPages.length} Missing Page${result.foundationPageIssues.missingPages.length > 1 ? 's' : ''}`}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* All Good State */}
+                        {result.foundationPageIssues.missingPages.length === 0 &&
+                         result.foundationPageIssues.incompletePages.length === 0 && (
+                            <div className="p-4 rounded-lg bg-green-900/30 border-l-4 border-green-500 text-center">
+                                <p className="font-semibold text-green-300">Foundation Pages Complete!</p>
+                                <p className="text-green-400/80">All required foundation pages are configured.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Navigation Tab */}
+                {activeTab === 'navigation' && result.navigationIssues && (
+                    <div className="space-y-6">
+                        <Card className="p-4 bg-gray-900/50">
+                            <p className="text-gray-300">
+                                Navigation structure affects crawlability, user experience, and link equity distribution.
+                                Follow best practices for header (max 10 links) and footer (max 30 links) navigation.
+                            </p>
+                        </Card>
+
+                        {/* Header Navigation */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                Header Navigation
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                    result.navigationIssues.headerLinkCount <= result.navigationIssues.headerLinkLimit
+                                        ? 'bg-green-500/20 text-green-300'
+                                        : 'bg-red-500/20 text-red-300'
+                                }`}>
+                                    {result.navigationIssues.headerLinkCount} / {result.navigationIssues.headerLinkLimit}
+                                </span>
+                            </h3>
+                            <div className="mt-3">
+                                <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all ${
+                                            result.navigationIssues.headerLinkCount <= result.navigationIssues.headerLinkLimit
+                                                ? 'bg-green-500'
+                                                : 'bg-red-500'
+                                        }`}
+                                        style={{ width: `${Math.min(100, (result.navigationIssues.headerLinkCount / result.navigationIssues.headerLinkLimit) * 100)}%` }}
+                                    ></div>
+                                </div>
+                                {result.navigationIssues.missingInHeader.length > 0 && (
+                                    <div className="mt-3 p-3 rounded border border-yellow-600 bg-yellow-900/10">
+                                        <p className="text-sm text-yellow-300 mb-2">Missing recommended links:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {result.navigationIssues.missingInHeader.map(link => (
+                                                <span key={link} className="text-xs px-2 py-0.5 bg-yellow-500/20 rounded text-yellow-300">
+                                                    {link}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer Navigation */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                Footer Navigation
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                    result.navigationIssues.footerLinkCount <= result.navigationIssues.footerLinkLimit
+                                        ? 'bg-green-500/20 text-green-300'
+                                        : 'bg-red-500/20 text-red-300'
+                                }`}>
+                                    {result.navigationIssues.footerLinkCount} / {result.navigationIssues.footerLinkLimit}
+                                </span>
+                            </h3>
+                            <div className="mt-3">
+                                <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all ${
+                                            result.navigationIssues.footerLinkCount <= result.navigationIssues.footerLinkLimit
+                                                ? 'bg-green-500'
+                                                : 'bg-red-500'
+                                        }`}
+                                        style={{ width: `${Math.min(100, (result.navigationIssues.footerLinkCount / result.navigationIssues.footerLinkLimit) * 100)}%` }}
+                                    ></div>
+                                </div>
+                                {result.navigationIssues.missingInFooter.length > 0 && (
+                                    <div className="mt-3 p-3 rounded border border-yellow-600 bg-yellow-900/10">
+                                        <p className="text-sm text-yellow-300 mb-2">Missing recommended links:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {result.navigationIssues.missingInFooter.map(link => (
+                                                <span key={link} className="text-xs px-2 py-0.5 bg-yellow-500/20 rounded text-yellow-300">
+                                                    {link}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Navigation Suggestions */}
+                        {result.navigationIssues.suggestions.length > 0 && (
+                            <div>
+                                <h3 className="text-lg font-semibold text-blue-400 mb-3">Suggestions</h3>
+                                <ul className="space-y-2">
+                                    {result.navigationIssues.suggestions.map((suggestion, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
+                                            <span className="text-blue-400">→</span>
+                                            {suggestion}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* Repair Navigation Button */}
+                        {(result.navigationIssues.missingInHeader.length > 0 ||
+                          result.navigationIssues.missingInFooter.length > 0) && onRepairNavigation && (
+                            <div className="mt-6 pt-6 border-t border-gray-700">
+                                <h4 className="text-md font-semibold text-white mb-2 text-center">AI-Powered Repair</h4>
+                                <p className="text-sm text-gray-400 mb-4 text-center">
+                                    Generate an optimized navigation structure based on your foundation pages and topics.
+                                </p>
+                                <div className="flex justify-center">
+                                    <Button
+                                        onClick={onRepairNavigation}
+                                        disabled={isRepairingNavigation}
+                                        className="bg-teal-600 hover:bg-teal-500"
+                                    >
+                                        {isRepairingNavigation ? <Loader className="w-4 h-4" /> : 'Regenerate Navigation Structure'}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* All Good State */}
+                        {result.navigationIssues.missingInHeader.length === 0 &&
+                         result.navigationIssues.missingInFooter.length === 0 &&
+                         result.navigationIssues.headerLinkCount <= result.navigationIssues.headerLinkLimit &&
+                         result.navigationIssues.footerLinkCount <= result.navigationIssues.footerLinkLimit && (
+                            <div className="p-4 rounded-lg bg-green-900/30 border-l-4 border-green-500 text-center">
+                                <p className="font-semibold text-green-300">Navigation Structure Optimal!</p>
+                                <p className="text-green-400/80">Your navigation follows best practices.</p>
                             </div>
                         )}
                     </div>

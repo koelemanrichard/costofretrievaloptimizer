@@ -35,7 +35,8 @@ const PillarDefinitionWizard: React.FC<PillarDefinitionWizardProps> = ({ onFinal
 
     const [entityCandidates, setEntityCandidates] = useState<CandidateEntity[]>([]);
     const [contextOptions, setContextOptions] = useState<SourceContextOption[]>([]);
-    
+    const [intentOptions, setIntentOptions] = useState<{ intent: string; reasoning: string }[]>([]);
+
     const [pillars, setPillars] = useState<Partial<SEOPillars>>(activeMap?.pillars as Partial<SEOPillars> || {});
 
     const fetchEntityCandidates = useCallback(async () => {
@@ -68,14 +69,25 @@ const PillarDefinitionWizard: React.FC<PillarDefinitionWizardProps> = ({ onFinal
         setIsLoading(true);
         setError(null);
         try {
-            const { intent } = await aiService.suggestCentralSearchIntent(effectiveBusinessInfo, entity, context, dispatch);
-            setPillars(p => ({ ...p, centralSearchIntent: intent }));
+            const options = await aiService.suggestCentralSearchIntent(effectiveBusinessInfo, entity, context, dispatch);
+            // Handle both old (single object) and new (array) response formats
+            if (Array.isArray(options)) {
+                setIntentOptions(options);
+            } else if (options && typeof options === 'object' && 'intent' in options) {
+                // Legacy single object response
+                setIntentOptions([options as { intent: string; reasoning: string }]);
+            }
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to get suggestions.');
         } finally {
             setIsLoading(false);
         }
     }, [effectiveBusinessInfo, dispatch]);
+
+    const handleSelectIntent = (intent: string) => {
+        setPillars(p => ({ ...p, centralSearchIntent: intent }));
+        setSubStep('confirmation');
+    };
     
     useEffect(() => {
         if (subStep === 'entity' && entityCandidates.length === 0) {
@@ -123,9 +135,33 @@ const PillarDefinitionWizard: React.FC<PillarDefinitionWizardProps> = ({ onFinal
             );
             case 'intent': return (
                  <div>
-                    <h2 className="text-xl font-bold mb-4">Step 2.3: Define Central Search Intent</h2>
-                    <Textarea value={pillars.centralSearchIntent || ''} onChange={e => setPillars(p => ({ ...p, centralSearchIntent: e.target.value }))} rows={4} />
-                    <div className="mt-4 text-right"><Button onClick={() => setSubStep('confirmation')}>Confirm Intent</Button></div>
+                    <h2 className="text-xl font-bold mb-4">Step 2.3: Select Central Search Intent</h2>
+                    {intentOptions.length > 0 ? (
+                        <div className="space-y-3">
+                            {intentOptions.map((opt, idx) => (
+                                <CandidateCard
+                                    key={idx}
+                                    title={opt.intent}
+                                    reasoning={opt.reasoning}
+                                    onSelect={() => handleSelectIntent(opt.intent)}
+                                    isSelected={pillars.centralSearchIntent === opt.intent}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <p className="text-gray-400">Or enter a custom search intent:</p>
+                            <Textarea value={pillars.centralSearchIntent || ''} onChange={e => setPillars(p => ({ ...p, centralSearchIntent: e.target.value }))} rows={4} placeholder="Enter the primary search intent..."/>
+                            <div className="text-right"><Button onClick={() => setSubStep('confirmation')} disabled={!pillars.centralSearchIntent}>Confirm Intent</Button></div>
+                        </div>
+                    )}
+                    {intentOptions.length > 0 && (
+                        <div className="mt-6 pt-4 border-t border-gray-700">
+                            <p className="text-gray-400 text-sm mb-2">Or customize:</p>
+                            <Textarea value={pillars.centralSearchIntent || ''} onChange={e => setPillars(p => ({ ...p, centralSearchIntent: e.target.value }))} rows={2} placeholder="Edit or enter custom intent..."/>
+                            {pillars.centralSearchIntent && <div className="mt-2 text-right"><Button size="sm" onClick={() => setSubStep('confirmation')}>Use Custom Intent</Button></div>}
+                        </div>
+                    )}
                 </div>
             );
              case 'confirmation': return (

@@ -161,11 +161,10 @@ export const suggestSourceContextOptions = async (businessInfo: BusinessInfo, ce
     return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SourceContextOption>(text, []));
 };
 
-export const suggestCentralSearchIntent = async (businessInfo: BusinessInfo, centralEntity: string, sourceContext: string, dispatch: React.Dispatch<any>): Promise<{ intent: string, reasoning: string }> => {
+export const suggestCentralSearchIntent = async (businessInfo: BusinessInfo, centralEntity: string, sourceContext: string, dispatch: React.Dispatch<any>): Promise<{ intent: string, reasoning: string }[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const prompt = prompts.SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT(businessInfo, centralEntity, sourceContext);
-    const fallback = { intent: '', reasoning: '' };
-    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitize(text, { intent: String, reasoning: String }, fallback));
+    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<{ intent: string, reasoning: string }>(text, []));
 };
 
 export const discoverCoreSemanticTriples = async (businessInfo: BusinessInfo, pillars: SEOPillars, dispatch: React.Dispatch<any>): Promise<SemanticTriple[]> => {

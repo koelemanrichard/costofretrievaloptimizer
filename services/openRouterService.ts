@@ -82,7 +82,7 @@ export const suggestSourceContextOptions = async (info: BusinessInfo, entity: st
 
 export const suggestCentralSearchIntent = async (info: BusinessInfo, entity: string, context: string, dispatch: React.Dispatch<any>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT(info, entity, context), info, dispatch, (text) => sanitizer.sanitize(text, { intent: String, reasoning: String }, { intent: '', reasoning: '' }));
+    return callApi(prompts.SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT(info, entity, context), info, dispatch, (text) => sanitizer.sanitizeArray<{ intent: string, reasoning: string }>(text, []));
 };
 
 export const discoverCoreSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, dispatch: React.Dispatch<any>) => {

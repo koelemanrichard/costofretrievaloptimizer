@@ -85,13 +85,16 @@ interface GeneratedNavigationResponse {
 
 /**
  * Generate foundation pages via AI based on business context and SEO pillars
+ * @param selectedPages - Optional array of page types to generate. If not provided, generates all standard pages.
  */
 export const generateFoundationPages = async (
   businessInfo: BusinessInfo,
   pillars: SEOPillars,
-  dispatch: React.Dispatch<any>
+  dispatch: React.Dispatch<any>,
+  selectedPages?: FoundationPageType[]
 ): Promise<GeneratedFoundationPagesResponse> => {
-  dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: 'Generating foundation pages...', status: 'info', timestamp: Date.now() } });
+  const pagesToGenerate = selectedPages || ['homepage', 'about', 'contact', 'privacy', 'terms'];
+  dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Generating ${pagesToGenerate.length} foundation pages: ${pagesToGenerate.join(', ')}...`, status: 'info', timestamp: Date.now() } });
 
   const sanitizer = new AIResponseSanitizer(dispatch);
   const prompt = prompts.GENERATE_FOUNDATION_PAGES_PROMPT(businessInfo, pillars);
@@ -119,18 +122,75 @@ export const generateFoundationPages = async (
     let result: GeneratedFoundationPagesResponse;
 
     switch (businessInfo.aiProvider) {
+      case 'anthropic':
+        result = await callAnthropicForFoundationPages(prompt, businessInfo, dispatch, sanitizer, fallback);
+        break;
+      case 'openai':
+        result = await callOpenAIForFoundationPages(prompt, businessInfo, dispatch, sanitizer, fallback);
+        break;
       case 'gemini':
       default:
         result = await callGeminiForFoundationPages(prompt, businessInfo, dispatch, sanitizer, fallback);
         break;
     }
 
-    dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Generated ${result.foundationPages.length} foundation pages`, status: 'success', timestamp: Date.now() } });
+    // Filter to only include selected page types
+    const filteredPages = result.foundationPages.filter(page =>
+      pagesToGenerate.includes(page.page_type as FoundationPageType)
+    );
 
-    return result;
+    // If author page is selected but not in AI result, add a default author page
+    if (pagesToGenerate.includes('author') && !filteredPages.some(p => p.page_type === 'author')) {
+      const companyName = businessInfo.domain.replace(/\.(com|nl|org|net)$/, '').replace(/-/g, ' ');
+      const capitalizedName = companyName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      filteredPages.push({
+        page_type: 'author',
+        title: `Our Team | ${capitalizedName}`,
+        slug: '/team',
+        meta_description: `Meet the experts behind ${capitalizedName}. Our team brings years of experience and expertise.`,
+        h1_template: `Meet the ${capitalizedName} Team`,
+        schema_type: 'AboutPage',
+        sections: [
+          { heading: 'Our Expertise', content_type: 'text', order: 1 },
+          { heading: 'Team Members', content_type: 'team_grid', order: 2 },
+          { heading: 'Our Values', content_type: 'text', order: 3 }
+        ]
+      });
+    }
+
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Generated ${filteredPages.length} foundation pages (filtered from ${result.foundationPages.length})`, status: 'success', timestamp: Date.now() } });
+
+    return {
+      ...result,
+      foundationPages: filteredPages
+    };
   } catch (error) {
     dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Error generating foundation pages: ${error}`, status: 'failure', timestamp: Date.now() } });
-    return fallback;
+
+    // Filter fallback to only include selected pages
+    const filteredFallback = {
+      ...fallback,
+      foundationPages: fallback.foundationPages.filter(page =>
+        pagesToGenerate.includes(page.page_type as FoundationPageType)
+      )
+    };
+
+    // Add author page to fallback if selected
+    if (pagesToGenerate.includes('author') && !filteredFallback.foundationPages.some(p => p.page_type === 'author')) {
+      const companyName = businessInfo.domain.replace(/\.(com|nl|org|net)$/, '').replace(/-/g, ' ');
+      const capitalizedName = companyName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      filteredFallback.foundationPages.push({
+        page_type: 'author',
+        title: `Our Team | ${capitalizedName}`,
+        slug: '/team',
+        meta_description: `Meet the experts behind ${capitalizedName}. Our team brings years of experience and expertise.`,
+        h1_template: `Meet the ${capitalizedName} Team`,
+        schema_type: 'AboutPage',
+        sections: []
+      });
+    }
+
+    return filteredFallback;
   }
 };
 
@@ -155,8 +215,21 @@ export const generateDefaultNavigation = async (
   const defaultNav = createDefaultNavigation(foundationPages, coreTopics, businessInfo);
 
   try {
-    // Use Gemini by default
-    const response = await callGeminiForNavigation(prompt, businessInfo, dispatch, sanitizer, defaultNav);
+    // Use the configured AI provider
+    let response: GeneratedNavigationResponse;
+
+    switch (businessInfo.aiProvider) {
+      case 'anthropic':
+        response = await callAnthropicForNavigation(prompt, businessInfo, dispatch, sanitizer, defaultNav);
+        break;
+      case 'openai':
+        response = await callOpenAIForNavigation(prompt, businessInfo, dispatch, sanitizer, defaultNav);
+        break;
+      case 'gemini':
+      default:
+        response = await callGeminiForNavigation(prompt, businessInfo, dispatch, sanitizer, defaultNav);
+        break;
+    }
 
     dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: 'Navigation structure generated', status: 'success', timestamp: Date.now() } });
 
@@ -652,6 +725,27 @@ function createDefaultNavigation(
 /**
  * Call Gemini API for foundation pages generation
  */
+/**
+ * Helper to get the correct model for a provider
+ */
+function getModelForProvider(businessInfo: BusinessInfo, provider: 'gemini' | 'anthropic' | 'openai'): string {
+  // If the current provider matches and model is set, use it
+  if (businessInfo.aiProvider === provider && businessInfo.aiModel) {
+    return businessInfo.aiModel;
+  }
+  // Otherwise return sensible defaults
+  switch (provider) {
+    case 'gemini':
+      return 'gemini-2.0-flash';
+    case 'anthropic':
+      return 'claude-sonnet-4-5-20250929';
+    case 'openai':
+      return 'gpt-4o';
+    default:
+      return 'gemini-2.0-flash';
+  }
+}
+
 async function callGeminiForFoundationPages(
   prompt: string,
   businessInfo: BusinessInfo,
@@ -659,8 +753,6 @@ async function callGeminiForFoundationPages(
   sanitizer: AIResponseSanitizer,
   fallback: GeneratedFoundationPagesResponse
 ): Promise<GeneratedFoundationPagesResponse> {
-  // Use dynamic import or direct gemini service call
-  // For now, we'll implement a basic version
   try {
     const { GoogleGenAI } = await import('@google/genai');
 
@@ -668,9 +760,10 @@ async function callGeminiForFoundationPages(
     if (!apiKey) throw new Error('Gemini API key not configured');
 
     const ai = new GoogleGenAI({ apiKey });
+    const model = getModelForProvider(businessInfo, 'gemini');
 
     const response = await ai.models.generateContent({
-      model: businessInfo.aiModel || 'gemini-2.5-flash',
+      model,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { responseMimeType: 'application/json' }
     });
@@ -685,6 +778,52 @@ async function callGeminiForFoundationPages(
     }, fallback);
   } catch (error) {
     dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Gemini call failed: ${error}`, status: 'failure', timestamp: Date.now() } });
+    return fallback;
+  }
+}
+
+async function callAnthropicForFoundationPages(
+  prompt: string,
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>,
+  sanitizer: AIResponseSanitizer,
+  fallback: GeneratedFoundationPagesResponse
+): Promise<GeneratedFoundationPagesResponse> {
+  try {
+    const responseText = await anthropicService.generateText(prompt, businessInfo, dispatch);
+
+    if (!responseText) throw new Error('Empty response from Anthropic');
+
+    return sanitizer.sanitize(responseText, {
+      foundationPages: Array,
+      napDataSuggestions: Object,
+      navigationSuggestions: Object
+    }, fallback);
+  } catch (error) {
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Anthropic call failed: ${error}`, status: 'failure', timestamp: Date.now() } });
+    return fallback;
+  }
+}
+
+async function callOpenAIForFoundationPages(
+  prompt: string,
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>,
+  sanitizer: AIResponseSanitizer,
+  fallback: GeneratedFoundationPagesResponse
+): Promise<GeneratedFoundationPagesResponse> {
+  try {
+    const responseText = await openAiService.generateText(prompt, businessInfo, dispatch);
+
+    if (!responseText) throw new Error('Empty response from OpenAI');
+
+    return sanitizer.sanitize(responseText, {
+      foundationPages: Array,
+      napDataSuggestions: Object,
+      navigationSuggestions: Object
+    }, fallback);
+  } catch (error) {
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `OpenAI call failed: ${error}`, status: 'failure', timestamp: Date.now() } });
     return fallback;
   }
 }
@@ -706,9 +845,10 @@ async function callGeminiForNavigation(
     if (!apiKey) throw new Error('Gemini API key not configured');
 
     const ai = new GoogleGenAI({ apiKey });
+    const model = getModelForProvider(businessInfo, 'gemini');
 
     const response = await ai.models.generateContent({
-      model: businessInfo.aiModel || 'gemini-2.5-flash',
+      model,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: { responseMimeType: 'application/json' }
     });
@@ -732,6 +872,101 @@ async function callGeminiForNavigation(
   }
 }
 
+async function callAnthropicForNavigation(
+  prompt: string,
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>,
+  sanitizer: AIResponseSanitizer,
+  fallback: NavigationStructure
+): Promise<GeneratedNavigationResponse> {
+  try {
+    const responseText = await anthropicService.generateText(prompt, businessInfo, dispatch);
+
+    if (!responseText) throw new Error('Empty response from Anthropic');
+
+    return sanitizer.sanitize(responseText, {
+      header: Object,
+      footer: Object
+    }, {
+      header: fallback.header,
+      footer: fallback.footer
+    } as GeneratedNavigationResponse);
+  } catch (error) {
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `Anthropic navigation call failed: ${error}`, status: 'failure', timestamp: Date.now() } });
+    return {
+      header: fallback.header,
+      footer: fallback.footer
+    } as GeneratedNavigationResponse;
+  }
+}
+
+async function callOpenAIForNavigation(
+  prompt: string,
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>,
+  sanitizer: AIResponseSanitizer,
+  fallback: NavigationStructure
+): Promise<GeneratedNavigationResponse> {
+  try {
+    const responseText = await openAiService.generateText(prompt, businessInfo, dispatch);
+
+    if (!responseText) throw new Error('Empty response from OpenAI');
+
+    return sanitizer.sanitize(responseText, {
+      header: Object,
+      footer: Object
+    }, {
+      header: fallback.header,
+      footer: fallback.footer
+    } as GeneratedNavigationResponse);
+  } catch (error) {
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: `OpenAI navigation call failed: ${error}`, status: 'failure', timestamp: Date.now() } });
+    return {
+      header: fallback.header,
+      footer: fallback.footer
+    } as GeneratedNavigationResponse;
+  }
+}
+
+// Valid page types that match the database CHECK constraint
+const VALID_PAGE_TYPES: FoundationPageType[] = ['homepage', 'about', 'contact', 'privacy', 'terms', 'author'];
+
+/**
+ * Normalize and validate page_type from AI response
+ * Handles variations like "Homepage", "privacy_policy", "Privacy Policy", etc.
+ */
+const normalizePageType = (rawType: string): FoundationPageType | null => {
+  if (!rawType) return null;
+
+  // Normalize: lowercase, remove underscores/spaces, trim
+  const normalized = rawType.toLowerCase().replace(/[_\s-]+/g, '').trim();
+
+  // Map common variations to valid types
+  const typeMap: Record<string, FoundationPageType> = {
+    'homepage': 'homepage',
+    'home': 'homepage',
+    'index': 'homepage',
+    'about': 'about',
+    'aboutus': 'about',
+    'aboutpage': 'about',
+    'contact': 'contact',
+    'contactus': 'contact',
+    'contactpage': 'contact',
+    'privacy': 'privacy',
+    'privacypolicy': 'privacy',
+    'privacypage': 'privacy',
+    'terms': 'terms',
+    'termsofservice': 'terms',
+    'termsandconditions': 'terms',
+    'tos': 'terms',
+    'author': 'author',
+    'authorpage': 'author',
+    'team': 'author'
+  };
+
+  return typeMap[normalized] || null;
+};
+
 /**
  * Convert foundation pages response to FoundationPage objects ready for saving
  */
@@ -741,18 +976,29 @@ export const prepareFoundationPagesForSave = (
   userId: string,
   napData?: NAPData
 ): FoundationPage[] => {
-  return response.foundationPages.map(page => ({
-    id: uuidv4(),
-    map_id: mapId,
-    user_id: userId,
-    page_type: page.page_type,
-    title: page.title,
-    slug: page.slug,
-    meta_description: page.meta_description,
-    h1_template: page.h1_template,
-    schema_type: page.schema_type,
-    sections: page.sections,
-    nap_data: napData,
-    metadata: {}
-  }));
+  return response.foundationPages
+    .map(page => {
+      const validPageType = normalizePageType(page.page_type);
+
+      if (!validPageType) {
+        console.warn(`Invalid page_type "${page.page_type}" skipped - not in allowed types: ${VALID_PAGE_TYPES.join(', ')}`);
+        return null;
+      }
+
+      return {
+        id: uuidv4(),
+        map_id: mapId,
+        user_id: userId,
+        page_type: validPageType,
+        title: page.title,
+        slug: page.slug,
+        meta_description: page.meta_description,
+        h1_template: page.h1_template,
+        schema_type: page.schema_type,
+        sections: page.sections,
+        nap_data: napData,
+        metadata: {}
+      };
+    })
+    .filter((page): page is NonNullable<typeof page> => page !== null) as FoundationPage[];
 };

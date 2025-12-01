@@ -490,7 +490,7 @@ export const SiteAnalysisToolV2: React.FC<SiteAnalysisToolV2Props> = ({ onClose 
       // CRITICAL: Use site-specific context, NOT the user's global business info
       const siteContext = buildSiteAnalysisContext(currentProject);
 
-      const result = await aiService.suggestCentralSearchIntent(
+      const results = await aiService.suggestCentralSearchIntent(
         siteContext,
         centralEntity,
         sourceContext,
@@ -502,7 +502,8 @@ export const SiteAnalysisToolV2: React.FC<SiteAnalysisToolV2Props> = ({ onClose 
         payload: { service: 'SiteAnalysis', message: 'Central Search Intent generated', status: 'success', timestamp: Date.now() }
       });
 
-      return result.intent;
+      // Use the first (highest confidence) result
+      return results.length > 0 ? results[0].intent : `Find information about ${centralEntity}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate search intent');
       return `Find information about ${centralEntity}`;

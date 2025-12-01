@@ -2,11 +2,12 @@
 // components/ProjectWorkspace.tsx
 import React from 'react';
 import { useAppState } from '../state/appState';
-import { AppStep, SEOPillars, SemanticTriple, TopicalMap, BusinessInfo, EnrichedTopic, FreshnessProfile } from '../types';
+import { AppStep, SEOPillars, SemanticTriple, TopicalMap, BusinessInfo, EnrichedTopic, FreshnessProfile, NAPData } from '../types';
 import BusinessInfoForm from './BusinessInfoForm';
 import PillarDefinitionWizard from './PillarDefinitionWizard';
 import EavDiscoveryWizard from './EavDiscoveryWizard';
 import CompetitorRefinementWizard from './CompetitorRefinementWizard';
+import { WebsiteBlueprintWizard, BlueprintConfig } from './WebsiteBlueprintWizard';
 import ProjectDashboardContainer from './ProjectDashboardContainer';
 import { getSupabaseClient } from '../services/supabaseClient';
 import * as aiService from '../services/aiService';
@@ -59,52 +60,121 @@ const ProjectWorkspace: React.FC = () => {
     
     const handleFinalizeCompetitors = async (competitors: string[]) => {
         if (!activeMapId) return;
+        dispatch({ type: 'SET_COMPETITORS', payload: { mapId: activeMapId, competitors } });
+        // Move to Blueprint Wizard instead of directly generating map
+        dispatch({ type: 'SET_STEP', payload: AppStep.BLUEPRINT_WIZARD });
+    };
+
+    // Blueprint wizard completion - generates the map with blueprint config
+    const handleFinalizeBlueprint = async (blueprintConfig: BlueprintConfig) => {
+        console.log('=== handleFinalizeBlueprint START ===');
+        console.log('blueprintConfig:', blueprintConfig);
+        console.log('activeMapId:', activeMapId);
+        console.log('state.user:', state.user);
+
+        if (!activeMapId) {
+            console.error('No activeMapId - cannot proceed');
+            dispatch({ type: 'SET_ERROR', payload: "No active map selected." });
+            return;
+        }
         const user = state.user;
 
         if (!user) {
+             console.error('No user - cannot proceed');
              dispatch({ type: 'SET_ERROR', payload: "User not authenticated. Cannot save map." });
              return;
         }
 
-        dispatch({ type: 'SET_COMPETITORS', payload: { mapId: activeMapId, competitors } });
-        
-        // This is where we save everything and trigger map generation
+        console.log('Dispatching SET_NAP_DATA...');
+        // Store blueprint config in state for later use
+        dispatch({ type: 'SET_NAP_DATA', payload: blueprintConfig.napData });
+
+        // Continue with map generation
+        console.log('Calling generateMapWithBlueprint...');
+        try {
+            await generateMapWithBlueprint(blueprintConfig);
+            console.log('=== handleFinalizeBlueprint SUCCESS ===');
+        } catch (e) {
+            console.error('Error in generateMapWithBlueprint:', e);
+            dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to generate map.' });
+        }
+    };
+
+    // Skip blueprint - generate map without blueprint config
+    const handleSkipBlueprint = async () => {
+        await generateMapWithBlueprint(undefined);
+    };
+
+    // Shared map generation logic
+    const generateMapWithBlueprint = async (blueprintConfig?: BlueprintConfig) => {
+        console.log('=== generateMapWithBlueprint START ===');
+        console.log('activeMapId:', activeMapId);
+
+        if (!activeMapId) {
+            console.error('No activeMapId in generateMapWithBlueprint');
+            return;
+        }
+        const user = state.user;
+
+        if (!user) {
+             console.error('No user in generateMapWithBlueprint');
+             dispatch({ type: 'SET_ERROR', payload: "User not authenticated. Cannot save map." });
+             return;
+        }
+
+        console.log('Setting loading state...');
         dispatch({ type: 'SET_LOADING', payload: { key: 'map', value: true } });
         try {
+            console.log('Getting supabase client...');
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+            console.log('Finding current map in state.topicalMaps:', state.topicalMaps.length, 'maps');
             const currentMap = state.topicalMaps.find(m => m.id === activeMapId);
-            if (!currentMap) throw new Error("Active map not found");
+            console.log('Found currentMap:', currentMap ? 'yes' : 'no');
+            if (!currentMap) throw new Error("Active map not found in state");
+
+            console.log('currentMap.pillars:', currentMap.pillars);
+            console.log('currentMap.eavs:', currentMap.eavs);
+            console.log('currentMap.competitors:', currentMap.competitors);
 
             // 1. Save Wizard Data
+            console.log('Step 1: Saving wizard data to DB...');
             const { error: updateError } = await supabase
                 .from('topical_maps')
                 .update({
                     business_info: currentMap.business_info as any,
                     pillars: currentMap.pillars as any,
                     eavs: currentMap.eavs as any,
-                    competitors: competitors,
+                    competitors: currentMap.competitors,
                 })
                 .eq('id', activeMapId);
-            
-            if (updateError) throw updateError;
-            
+
+            if (updateError) {
+                console.error('DB update error:', updateError);
+                throw updateError;
+            }
+            console.log('Step 1 complete: Wizard data saved');
+
             // 2. Generate Initial Topics with AI
             // Use effective business info (global keys + map strategy)
             const effectiveBusinessInfo = {
                 ...state.businessInfo,
                 ...(currentMap.business_info as Partial<BusinessInfo> || {})
             };
+            console.log('effectiveBusinessInfo.aiProvider:', effectiveBusinessInfo.aiProvider);
 
             // NOTE: If pillars are missing here (shouldn't happen if flow is followed), we might want to throw.
             if (!currentMap.pillars || !currentMap.eavs) {
-                 throw new Error("Missing pillars or EAVs for generation.");
+                console.error('Missing pillars or eavs:', { pillars: currentMap.pillars, eavs: currentMap.eavs });
+                throw new Error("Missing pillars or EAVs for generation.");
             }
+
+            console.log('Step 2: Generating initial topical map with AI...');
 
             const { coreTopics, outerTopics } = await aiService.generateInitialTopicalMap(
                 effectiveBusinessInfo,
                 currentMap.pillars,
                 currentMap.eavs,
-                competitors,
+                currentMap.competitors || [],
                 dispatch
             );
 
@@ -189,9 +259,13 @@ const ProjectWorkspace: React.FC = () => {
 
             // 6. Generate Foundation Pages (non-blocking)
             try {
+                // Get selected pages from blueprint config, default to standard 5 pages
+                const selectedPages = blueprintConfig?.selectedPages || ['homepage', 'about', 'contact', 'privacy', 'terms'];
+                const napData = blueprintConfig?.napData;
+
                 dispatch({ type: 'LOG_EVENT', payload: {
                     service: 'FoundationPages',
-                    message: 'Generating foundation pages...',
+                    message: `Generating ${selectedPages.length} foundation pages...`,
                     status: 'info',
                     timestamp: Date.now()
                 }});
@@ -199,14 +273,15 @@ const ProjectWorkspace: React.FC = () => {
                 const foundationResult = await foundationPagesService.generateFoundationPages(
                     effectiveBusinessInfo,
                     currentMap.pillars,
-                    dispatch
+                    dispatch,
+                    selectedPages // Pass selected pages to filter generation
                 );
 
                 const pagesToSave = foundationPagesService.prepareFoundationPagesForSave(
                     foundationResult,
                     activeMapId,
                     user.id,
-                    undefined // NAP data will be added later by user
+                    napData // Pass NAP data from blueprint wizard
                 );
 
                 const savedPages = await foundationPagesService.saveFoundationPages(
@@ -273,11 +348,22 @@ const ProjectWorkspace: React.FC = () => {
                 onConfirm: async () => {
                     try {
                         const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
-                        const { error } = await supabase.rpc('delete_topical_map', { p_map_id: map.id });
+
+                        // Delete in order: briefs, topics, foundation_pages, navigation, then map
+                        // These should cascade due to ON DELETE CASCADE, but we'll be explicit
+                        await supabase.from('content_briefs').delete().eq('map_id', map.id);
+                        await supabase.from('topics').delete().eq('map_id', map.id);
+                        await supabase.from('foundation_pages').delete().eq('map_id', map.id);
+                        await supabase.from('navigation_structures').delete().eq('map_id', map.id);
+                        await supabase.from('navigation_sync_status').delete().eq('map_id', map.id);
+
+                        const { error } = await supabase.from('topical_maps').delete().eq('id', map.id);
                         if (error) throw error;
+
                         dispatch({ type: 'DELETE_TOPICAL_MAP', payload: { mapId: map.id } });
                         dispatch({ type: 'SET_NOTIFICATION', payload: `Map "${map.name}" deleted.` });
                     } catch (e) {
+                        console.error('Delete map error:', e);
                         dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to delete map.' });
                     } finally {
                         dispatch({ type: 'HIDE_CONFIRMATION' });
@@ -305,10 +391,26 @@ const ProjectWorkspace: React.FC = () => {
                         onBack={() => dispatch({ type: 'SET_STEP', payload: AppStep.PILLAR_WIZARD })} 
                    />;
         case AppStep.COMPETITOR_WIZARD:
-            return <CompetitorRefinementWizard 
+            return <CompetitorRefinementWizard
                         onFinalize={handleFinalizeCompetitors}
                         onBack={() => dispatch({ type: 'SET_STEP', payload: AppStep.EAV_WIZARD })}
                     />;
+        case AppStep.BLUEPRINT_WIZARD: {
+            const currentMap = state.topicalMaps.find(m => m.id === activeMapId);
+            const effectiveBusinessInfo = {
+                ...state.businessInfo,
+                ...(currentMap?.business_info as Partial<BusinessInfo> || {})
+            };
+            return <WebsiteBlueprintWizard
+                        businessInfo={effectiveBusinessInfo}
+                        pillars={currentMap?.pillars}
+                        existingNAPData={state.websiteStructure?.napData}
+                        isLoading={!!state.isLoading.map}
+                        onComplete={handleFinalizeBlueprint}
+                        onSkip={handleSkipBlueprint}
+                        onBack={() => dispatch({ type: 'SET_STEP', payload: AppStep.COMPETITOR_WIZARD })}
+                    />;
+        }
         case AppStep.PROJECT_DASHBOARD:
         case AppStep.PROJECT_WORKSPACE: // Default to dashboard
         default:

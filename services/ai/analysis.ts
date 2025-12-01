@@ -1,5 +1,5 @@
 
-import { BusinessInfo, GscRow, KnowledgeGraph, GscOpportunity, EnrichedTopic, SEOPillars, ValidationResult, ValidationIssue, MapImprovementSuggestion, SemanticAnalysisResult, ContextualCoverageMetrics, ContentBrief, InternalLinkAuditResult, TopicalAuthorityScore, PublicationPlan, HubSpokeMetric, AnchorTextMetric, FreshnessMetric, ContentIntegrityResult, ContextualBridgeLink } from '../../types';
+import { BusinessInfo, GscRow, KnowledgeGraph, GscOpportunity, EnrichedTopic, SEOPillars, ValidationResult, ValidationIssue, MapImprovementSuggestion, SemanticAnalysisResult, ContextualCoverageMetrics, ContentBrief, InternalLinkAuditResult, TopicalAuthorityScore, PublicationPlan, HubSpokeMetric, AnchorTextMetric, FreshnessMetric, ContentIntegrityResult, ContextualBridgeLink, FoundationPage, NavigationStructure, FoundationPageType } from '../../types';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
@@ -99,6 +99,242 @@ const calculateFreshnessMetrics = (topics: EnrichedTopic[]): FreshnessMetric[] =
     }).filter(m => m.decayScore < 80); // Only return items that are starting to decay
 };
 
+// --- Foundation Pages Validation ---
+
+interface FoundationPageIssue {
+    pageType: FoundationPageType;
+    missingFields: string[];
+}
+
+interface FoundationValidationResult {
+    missingPages: FoundationPageType[];
+    incompletePages: FoundationPageIssue[];
+    suggestions: string[];
+    issues: ValidationIssue[];
+}
+
+const REQUIRED_FOUNDATION_PAGES: FoundationPageType[] = ['homepage', 'about', 'contact', 'privacy', 'terms'];
+
+/**
+ * Validates foundation pages completeness and quality
+ */
+export const validateFoundationPages = (foundationPages: FoundationPage[]): FoundationValidationResult => {
+    const result: FoundationValidationResult = {
+        missingPages: [],
+        incompletePages: [],
+        suggestions: [],
+        issues: []
+    };
+
+    // Filter out deleted pages
+    const activePages = foundationPages.filter(p => !p.deleted_at);
+    const pageTypes = activePages.map(p => p.page_type);
+
+    // Check for missing required pages
+    REQUIRED_FOUNDATION_PAGES.forEach(requiredType => {
+        if (!pageTypes.includes(requiredType)) {
+            result.missingPages.push(requiredType);
+        }
+    });
+
+    if (result.missingPages.length > 0) {
+        result.issues.push({
+            rule: 'Foundation Page Completeness',
+            message: `Missing required foundation pages: ${result.missingPages.join(', ')}`,
+            severity: 'WARNING',
+            offendingTopics: result.missingPages
+        });
+        result.suggestions.push(`Add missing pages: ${result.missingPages.join(', ')}`);
+    }
+
+    // Check each active page for completeness
+    activePages.forEach(page => {
+        const missingFields: string[] = [];
+
+        if (!page.title || page.title.trim() === '') {
+            missingFields.push('title');
+        }
+        if (!page.meta_description || page.meta_description.trim() === '') {
+            missingFields.push('meta_description');
+        }
+        if (!page.h1_template || page.h1_template.trim() === '') {
+            missingFields.push('h1_template');
+        }
+        if (!page.schema_type) {
+            missingFields.push('schema_type');
+        }
+
+        // Homepage and About should have NAP data
+        if ((page.page_type === 'homepage' || page.page_type === 'about') && !page.nap_data) {
+            missingFields.push('nap_data');
+        }
+
+        // Check for sections
+        if (!page.sections || page.sections.length === 0) {
+            missingFields.push('sections');
+        }
+
+        if (missingFields.length > 0) {
+            result.incompletePages.push({
+                pageType: page.page_type as FoundationPageType,
+                missingFields
+            });
+            result.issues.push({
+                rule: 'Foundation Page Completeness',
+                message: `${page.page_type} page is missing: ${missingFields.join(', ')}`,
+                severity: 'SUGGESTION',
+                offendingTopics: [page.page_type]
+            });
+        }
+    });
+
+    // Add suggestions based on issues found
+    if (result.incompletePages.length > 0) {
+        const pagesNeedingNap = result.incompletePages.filter(p => p.missingFields.includes('nap_data'));
+        if (pagesNeedingNap.length > 0) {
+            result.suggestions.push('Add NAP (Name, Address, Phone) data for better local SEO');
+        }
+
+        const pagesNeedingMeta = result.incompletePages.filter(p => p.missingFields.includes('meta_description'));
+        if (pagesNeedingMeta.length > 0) {
+            result.suggestions.push('Complete meta descriptions for all foundation pages');
+        }
+
+        const pagesNeedingSections = result.incompletePages.filter(p => p.missingFields.includes('sections'));
+        if (pagesNeedingSections.length > 0) {
+            result.suggestions.push('Add content sections to define page structure');
+        }
+    }
+
+    return result;
+};
+
+// --- Navigation Validation ---
+
+interface NavigationValidationResult {
+    headerLinkCount: number;
+    headerLinkLimit: number;
+    footerLinkCount: number;
+    footerLinkLimit: number;
+    missingInHeader: string[];
+    missingInFooter: string[];
+    suggestions: string[];
+    issues: ValidationIssue[];
+}
+
+/**
+ * Validates navigation structure against best practices
+ */
+export const validateNavigation = (
+    navigation: NavigationStructure | null,
+    foundationPages: FoundationPage[]
+): NavigationValidationResult => {
+    const result: NavigationValidationResult = {
+        headerLinkCount: 0,
+        headerLinkLimit: 10,
+        footerLinkCount: 0,
+        footerLinkLimit: 30,
+        missingInHeader: [],
+        missingInFooter: [],
+        suggestions: [],
+        issues: []
+    };
+
+    if (!navigation) {
+        result.issues.push({
+            rule: 'Navigation Structure',
+            message: 'No navigation structure defined. Consider creating header and footer navigation.',
+            severity: 'SUGGESTION'
+        });
+        result.suggestions.push('Create navigation structure for better site architecture');
+        return result;
+    }
+
+    // Check header links
+    result.headerLinkLimit = navigation.max_header_links || 10;
+    result.headerLinkCount = navigation.header?.primary_nav?.length || 0;
+
+    if (result.headerLinkCount > result.headerLinkLimit) {
+        result.issues.push({
+            rule: 'Navigation Link Limits',
+            message: `Header has ${result.headerLinkCount} links, exceeding the recommended limit of ${result.headerLinkLimit}`,
+            severity: 'WARNING'
+        });
+        result.suggestions.push(`Reduce header navigation to ${result.headerLinkLimit} or fewer links`);
+    }
+
+    // Check footer links
+    result.footerLinkLimit = navigation.max_footer_links || 30;
+    const footerSectionLinks = navigation.footer?.sections?.reduce((acc: number, section: any) => {
+        return acc + (section.links?.length || 0);
+    }, 0) || 0;
+    const legalLinks = navigation.footer?.legal_links?.length || 0;
+    result.footerLinkCount = footerSectionLinks + legalLinks;
+
+    if (result.footerLinkCount > result.footerLinkLimit) {
+        result.issues.push({
+            rule: 'Navigation Link Limits',
+            message: `Footer has ${result.footerLinkCount} links, exceeding the recommended limit of ${result.footerLinkLimit}`,
+            severity: 'WARNING'
+        });
+        result.suggestions.push(`Reduce footer links to ${result.footerLinkLimit} or fewer`);
+    }
+
+    // Check if homepage is in header
+    const headerLinks = navigation.header?.primary_nav || [];
+    const homepageInHeader = headerLinks.some((link: any) =>
+        link.slug === '/' || link.slug === '' || link.text?.toLowerCase() === 'home'
+    );
+    if (!homepageInHeader && headerLinks.length > 0) {
+        result.missingInHeader.push('homepage');
+        result.issues.push({
+            rule: 'Navigation Essential Links',
+            message: 'Homepage link is missing from header navigation',
+            severity: 'SUGGESTION'
+        });
+    }
+
+    // Check if legal pages are in footer
+    const activePages = foundationPages.filter(p => !p.deleted_at);
+    const hasPrivacyPage = activePages.some(p => p.page_type === 'privacy');
+    const hasTermsPage = activePages.some(p => p.page_type === 'terms');
+    const footerLegalLinks = navigation.footer?.legal_links || [];
+
+    if (hasPrivacyPage) {
+        const privacyInFooter = footerLegalLinks.some((link: any) =>
+            link.slug?.includes('privacy') || link.text?.toLowerCase().includes('privacy')
+        );
+        if (!privacyInFooter) {
+            result.missingInFooter.push('privacy');
+        }
+    }
+
+    if (hasTermsPage) {
+        const termsInFooter = footerLegalLinks.some((link: any) =>
+            link.slug?.includes('terms') || link.text?.toLowerCase().includes('terms')
+        );
+        if (!termsInFooter) {
+            result.missingInFooter.push('terms');
+        }
+    }
+
+    if (result.missingInFooter.length > 0) {
+        result.issues.push({
+            rule: 'Navigation Essential Links',
+            message: `Legal pages missing from footer: ${result.missingInFooter.join(', ')}`,
+            severity: 'SUGGESTION'
+        });
+        result.suggestions.push('Add legal page links (privacy, terms) to footer');
+    }
+
+    // Check NAP display for local businesses
+    if (navigation.footer?.nap_display === false) {
+        result.suggestions.push('Consider enabling NAP display in footer for local SEO');
+    }
+
+    return result;
+};
+
 // --- Main Exported Functions ---
 
 export const analyzeGscDataForOpportunities = (
@@ -116,7 +352,13 @@ export const analyzeGscDataForOpportunities = (
 };
 
 export const validateTopicalMap = async (
-    topics: EnrichedTopic[], pillars: SEOPillars, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>, briefs?: Record<string, ContentBrief>
+    topics: EnrichedTopic[],
+    pillars: SEOPillars,
+    businessInfo: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    briefs?: Record<string, ContentBrief>,
+    foundationPages?: FoundationPage[],
+    navigation?: NavigationStructure | null
 ): Promise<ValidationResult> => {
     // 1. Run AI Validation (Semantic Checks)
     let aiResult: ValidationResult;
@@ -135,7 +377,13 @@ export const validateTopicalMap = async (
     const anchorText = calculateAnchorTextMetrics(briefs);
     const contentFreshness = calculateFreshnessMetrics(topics);
 
-    // 3. Merge Results
+    // 3. Run Foundation Pages and Navigation Validation (if provided)
+    const foundationValidation = foundationPages ? validateFoundationPages(foundationPages) : null;
+    const navigationValidation = (foundationPages && navigation !== undefined)
+        ? validateNavigation(navigation, foundationPages)
+        : null;
+
+    // 4. Merge Results
     // Add algorithmic issues to the AI issues list
     const algorithmicIssues: ValidationIssue[] = [];
 
@@ -147,7 +395,7 @@ export const validateTopicalMap = async (
             offendingTopics: [m.hubTitle]
         });
     });
-    
+
     hubSpoke.filter(m => m.status === 'DILUTED').forEach(m => {
         algorithmicIssues.push({
             rule: 'Hub-Spoke Ratio (1:7)',
@@ -165,11 +413,22 @@ export const validateTopicalMap = async (
         });
     });
 
+    // Add foundation page issues
+    if (foundationValidation) {
+        algorithmicIssues.push(...foundationValidation.issues);
+    }
+
+    // Add navigation issues
+    if (navigationValidation) {
+        algorithmicIssues.push(...navigationValidation.issues);
+    }
+
     // Recalculate score based on algorithmic failures
     let scorePenalty = 0;
     algorithmicIssues.forEach(i => {
         if (i.severity === 'CRITICAL') scorePenalty += 15; // Higher penalty for ratio violation
         if (i.severity === 'WARNING') scorePenalty += 5;
+        if (i.severity === 'SUGGESTION') scorePenalty += 1; // Minor penalty for suggestions
     });
 
     return {
@@ -180,7 +439,22 @@ export const validateTopicalMap = async (
             hubSpoke,
             anchorText,
             contentFreshness
-        }
+        },
+        // Add foundation and navigation validation results
+        foundationPageIssues: foundationValidation ? {
+            missingPages: foundationValidation.missingPages,
+            incompletePages: foundationValidation.incompletePages,
+            suggestions: foundationValidation.suggestions
+        } : undefined,
+        navigationIssues: navigationValidation ? {
+            headerLinkCount: navigationValidation.headerLinkCount,
+            headerLinkLimit: navigationValidation.headerLinkLimit,
+            footerLinkCount: navigationValidation.footerLinkCount,
+            footerLinkLimit: navigationValidation.footerLinkLimit,
+            missingInHeader: navigationValidation.missingInHeader,
+            missingInFooter: navigationValidation.missingInFooter,
+            suggestions: navigationValidation.suggestions
+        } : undefined
     };
 };
 

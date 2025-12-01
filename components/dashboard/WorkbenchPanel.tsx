@@ -16,6 +16,8 @@ interface WorkbenchPanelProps {
     onGenerateAllBriefs: () => void;
     onExportData: (format: 'csv' | 'xlsx') => void;
     onQuickAudit: (url: string) => void;
+    onScrollToWebsiteStructure?: () => void;
+    foundationPagesCount?: number;
 }
 
 const WorkbenchPanel: React.FC<WorkbenchPanelProps> = ({
@@ -28,7 +30,9 @@ const WorkbenchPanel: React.FC<WorkbenchPanelProps> = ({
     onUploadGsc,
     onGenerateAllBriefs,
     onExportData,
-    onQuickAudit
+    onQuickAudit,
+    onScrollToWebsiteStructure,
+    foundationPagesCount = 0
 }) => {
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [auditUrl, setAuditUrl] = useState('');
@@ -71,14 +75,24 @@ const WorkbenchPanel: React.FC<WorkbenchPanelProps> = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <Button onClick={onAnalyzeKnowledgeDomain} disabled={isLoading.knowledgeDomain}>
                     {isLoading.knowledgeDomain ? <Loader className="w-5 h-5 mx-auto" /> : 'Analyze Domain'}
                 </Button>
                 <Button onClick={onAddTopicManually} variant="secondary">Add Topic Manually</Button>
                 <Button onClick={onViewInternalLinking} variant="secondary">View Internal Linking</Button>
                 <Button onClick={onUploadGsc} variant="secondary">Upload GSC CSV</Button>
-                <Button onClick={onGenerateAllBriefs} disabled={isLoading.briefs || !canGenerateBriefs} title={!canGenerateBriefs ? "Define Pillars and Analyze Domain to enable." : ""} className="lg:col-span-1 bg-green-700 hover:bg-green-800">
+                {onScrollToWebsiteStructure && (
+                    <Button onClick={onScrollToWebsiteStructure} variant="secondary" className="relative">
+                        Website Structure
+                        {foundationPagesCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {foundationPagesCount}
+                            </span>
+                        )}
+                    </Button>
+                )}
+                <Button onClick={onGenerateAllBriefs} disabled={isLoading.briefs || !canGenerateBriefs} title={!canGenerateBriefs ? "Define Pillars and Analyze Domain to enable." : ""} className="bg-green-700 hover:bg-green-800">
                         {isLoading.briefs ? <div className="flex items-center justify-center gap-2"><Loader className="h-5 w-5" /> <span>{briefGenerationStatus || 'Generating...'}</span></div> : 'Generate All Briefs'}
                 </Button>
             </div>

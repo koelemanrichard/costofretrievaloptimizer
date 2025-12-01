@@ -30,6 +30,51 @@ export class AIResponseSanitizer {
     }
 
     /**
+     * Helper method to extract JSON using bracket matching.
+     * Works for both arrays ([...]) and objects ({...}).
+     */
+    private extractJsonWithBracketMatching(text: string, startIndex: number, openChar: string, closeChar: string): string | null {
+        let depth = 0;
+        let inString = false;
+        let escapeNext = false;
+
+        for (let i = startIndex; i < text.length; i++) {
+            const char = text[i];
+
+            if (escapeNext) {
+                escapeNext = false;
+                continue;
+            }
+
+            if (char === '\\' && inString) {
+                escapeNext = true;
+                continue;
+            }
+
+            if (char === '"' && !escapeNext) {
+                inString = !inString;
+                continue;
+            }
+
+            if (!inString) {
+                if (char === openChar) depth++;
+                if (char === closeChar) depth--;
+
+                if (depth === 0) {
+                    const candidate = text.substring(startIndex, i + 1);
+                    try {
+                        JSON.parse(candidate);
+                        return candidate;
+                    } catch {
+                        return null;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Extracts a JSON string from a raw AI response, which might be wrapped in markdown.
      * @param rawText The raw text from the AI.
      * @returns The cleaned JSON string.
@@ -86,7 +131,21 @@ export class AIResponseSanitizer {
             }
         }
 
-        // Last resort: Find JSON object using bracket matching even if wrapped
+        // IMPORTANT: Try to extract JSON ARRAY first (before objects) using bracket matching
+        // This ensures arrays are properly extracted when prompts request them
+        const firstBracketIndex = trimmedText.indexOf('[');
+        const firstBraceIndex = trimmedText.indexOf('{');
+
+        // If array starts before object (or no object exists), try array extraction first
+        if (firstBracketIndex !== -1 && (firstBraceIndex === -1 || firstBracketIndex < firstBraceIndex)) {
+            const arrayResult = this.extractJsonWithBracketMatching(trimmedText, firstBracketIndex, '[', ']');
+            if (arrayResult) {
+                this.log('Extracted JSON array from response text.', { extracted: arrayResult.substring(0, 200) + '...' }, 'info');
+                return arrayResult;
+            }
+        }
+
+        // Try to find JSON object using first/last brace positions
         if (trimmedText.includes('{') && trimmedText.includes('}')) {
             const startIdx = trimmedText.indexOf('{');
             const endIdx = trimmedText.lastIndexOf('}');
@@ -102,61 +161,27 @@ export class AIResponseSanitizer {
             }
         }
 
-        // Try to find JSON object - use non-greedy approach to find the FIRST complete JSON object
-        // Look for opening brace and try to find matching closing brace
-        const firstBraceIndex = trimmedText.indexOf('{');
+        // Try to find JSON object using bracket matching
         if (firstBraceIndex !== -1) {
-            // Try to extract JSON starting from first {
-            let depth = 0;
-            let inString = false;
-            let escapeNext = false;
-
-            for (let i = firstBraceIndex; i < trimmedText.length; i++) {
-                const char = trimmedText[i];
-
-                if (escapeNext) {
-                    escapeNext = false;
-                    continue;
-                }
-
-                if (char === '\\' && inString) {
-                    escapeNext = true;
-                    continue;
-                }
-
-                if (char === '"' && !escapeNext) {
-                    inString = !inString;
-                    continue;
-                }
-
-                if (!inString) {
-                    if (char === '{') depth++;
-                    if (char === '}') depth--;
-
-                    if (depth === 0) {
-                        const candidate = trimmedText.substring(firstBraceIndex, i + 1);
-                        try {
-                            JSON.parse(candidate);
-                            this.log('Extracted JSON object from response text.', { extracted: candidate.substring(0, 200) + '...' }, 'info');
-                            return candidate;
-                        } catch {
-                            // Try to continue finding another valid JSON
-                            break;
-                        }
-                    }
-                }
+            const objectResult = this.extractJsonWithBracketMatching(trimmedText, firstBraceIndex, '{', '}');
+            if (objectResult) {
+                this.log('Extracted JSON object from response text.', { extracted: objectResult.substring(0, 200) + '...' }, 'info');
+                return objectResult;
             }
         }
 
-        // Fallback: Try regex for JSON array
-        const jsonArrayMatch = trimmedText.match(/(\[[\s\S]*?\])/);
-        if (jsonArrayMatch && jsonArrayMatch[1]) {
-            try {
-                JSON.parse(jsonArrayMatch[1]);
-                this.log('Extracted JSON array from response text.', { extracted: jsonArrayMatch[1].substring(0, 200) + '...' }, 'info');
-                return jsonArrayMatch[1];
-            } catch {
-                // Continue to return trimmed text
+        // Fallback: Try array extraction using first/last bracket positions
+        if (firstBracketIndex !== -1) {
+            const lastBracketIndex = trimmedText.lastIndexOf(']');
+            if (lastBracketIndex > firstBracketIndex) {
+                const candidate = trimmedText.substring(firstBracketIndex, lastBracketIndex + 1);
+                try {
+                    JSON.parse(candidate);
+                    this.log('Extracted JSON array using first/last bracket positions.', { extracted: candidate.substring(0, 200) + '...' }, 'info');
+                    return candidate;
+                } catch {
+                    // Continue
+                }
             }
         }
 

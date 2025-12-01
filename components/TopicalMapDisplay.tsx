@@ -31,6 +31,10 @@ interface TopicalMapDisplayProps {
   // Migration-specific props (optional)
   onDeleteTopic?: (topicId: string) => void;
   onInventoryDrop?: (inventoryId: string, topicId: string) => void;
+  // Foundation Pages Quick Actions (optional)
+  onRepairFoundationPages?: () => void;
+  isRepairingFoundation?: boolean;
+  onOpenNavigation?: () => void;
 }
 
 export type { TopicalMapDisplayProps };
@@ -45,7 +49,10 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   canExpandTopics,
   canGenerateBriefs,
   onGenerateInitialMap,
-  onUpdateTopic
+  onUpdateTopic,
+  onRepairFoundationPages,
+  isRepairingFoundation,
+  onOpenNavigation
 }) => {
   const { state, dispatch } = useAppState();
   const { activeMapId, businessInfo, isLoading } = state;
@@ -269,7 +276,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                     {isLoading.merge ? 'Analyzing...' : `Merge Selected (${selectedTopicIds.length})`}
                 </Button>
                 {viewMode === 'list' && coreTopics.length > 0 && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Button onClick={handleExpandAll} variant="secondary" className="!py-1 !px-3 text-xs">Expand All</Button>
                         <Button onClick={handleCollapseAll} variant="secondary" className="!py-1 !px-3 text-xs">Collapse All</Button>
                         <div className="flex items-center gap-1">
@@ -283,6 +290,28 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                             </Button>
                             <InfoTooltip text="Uses AI to classify topics into Core Section (monetization/service pages) or Author Section (informational/trust pages). Useful for fixing maps generated before section labels were implemented." />
                         </div>
+                        {onRepairFoundationPages && (
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    onClick={onRepairFoundationPages}
+                                    variant="secondary"
+                                    className="!py-1 !px-3 text-xs bg-purple-900/30 border-purple-700 hover:bg-purple-800/40"
+                                    disabled={isRepairingFoundation}
+                                >
+                                    {isRepairingFoundation ? 'Generating...' : 'Foundation Pages'}
+                                </Button>
+                                <InfoTooltip text="Generate or repair foundation pages (Homepage, About, Contact, Privacy, Terms) for complete website structure." />
+                            </div>
+                        )}
+                        {onOpenNavigation && (
+                            <Button
+                                onClick={onOpenNavigation}
+                                variant="secondary"
+                                className="!py-1 !px-3 text-xs bg-teal-900/30 border-teal-700 hover:bg-teal-800/40"
+                            >
+                                Navigation
+                            </Button>
+                        )}
                     </div>
                 )}
                 <div className="flex rounded-lg bg-gray-700 p-1">

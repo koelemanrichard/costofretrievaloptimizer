@@ -2,7 +2,7 @@
 // components/ProjectDashboardContainer.tsx
 import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useAppState } from '../state/appState';
-import { AppStep, SEOPillars, EnrichedTopic, ContentBrief, BusinessInfo, TopicalMap, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, FreshnessProfile, MapImprovementSuggestion, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, NAPData } from '../types';
+import { AppStep, SEOPillars, EnrichedTopic, ContentBrief, BusinessInfo, TopicalMap, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, FreshnessProfile, MapImprovementSuggestion, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure } from '../types';
 import * as aiService from '../services/ai/index';
 import * as foundationPagesService from '../services/ai/foundationPages';
 import { getSupabaseClient } from '../services/supabaseClient';
@@ -1630,18 +1630,28 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         return pageWithNap?.nap_data;
     }, [foundationPages]);
 
-    // Load foundation pages when map changes
+    // Get navigation structure from state
+    const navigation = useMemo(() => state.websiteStructure?.navigation || null, [state.websiteStructure?.navigation]);
+
+    // Load foundation pages and navigation when map changes
     useEffect(() => {
-        const loadFoundationPages = async () => {
+        const loadFoundationPagesAndNavigation = async () => {
             if (!activeMapId) return;
             try {
+                // Load foundation pages
                 const pages = await foundationPagesService.loadFoundationPages(activeMapId);
                 dispatch({ type: 'SET_FOUNDATION_PAGES', payload: pages });
+
+                // Load navigation structure
+                const nav = await foundationPagesService.loadNavigationStructure(activeMapId);
+                if (nav) {
+                    dispatch({ type: 'SET_NAVIGATION', payload: nav });
+                }
             } catch (error) {
-                console.error('Failed to load foundation pages:', error);
+                console.error('Failed to load foundation pages/navigation:', error);
             }
         };
-        loadFoundationPages();
+        loadFoundationPagesAndNavigation();
     }, [activeMapId, dispatch]);
 
     const handleSaveNAPData = useCallback(async (newNapData: NAPData) => {
@@ -1698,22 +1708,130 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         }
     }, [dispatch]);
 
+    // Save navigation structure
+    const handleSaveNavigation = useCallback(async (updatedNavigation: NavigationStructure) => {
+        if (!activeMapId || !state.user?.id) {
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot save navigation: missing map or user.' });
+            return;
+        }
+
+        try {
+            const savedNavigation = await foundationPagesService.saveNavigationStructure(
+                activeMapId,
+                state.user.id,
+                updatedNavigation
+            );
+            dispatch({ type: 'SET_NAVIGATION', payload: savedNavigation });
+            dispatch({ type: 'SET_NOTIFICATION', payload: 'Navigation saved successfully.' });
+        } catch (error) {
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save navigation.' });
+        }
+    }, [activeMapId, state.user?.id, dispatch]);
+
     const handleGenerateMissingFoundationPages = useCallback(async () => {
+        console.log('=== handleGenerateMissingFoundationPages START ===');
         if (!activeMapId || !state.user?.id || !activeMap?.pillars) {
+            console.error('Missing required data:', { activeMapId, userId: state.user?.id, pillars: !!activeMap?.pillars });
             dispatch({ type: 'SET_ERROR', payload: 'Cannot generate foundation pages: missing map, user, or pillars.' });
+            return;
+        }
+
+        // Determine which page types are missing (active pages only, not deleted ones)
+        const REQUIRED_PAGES: FoundationPageType[] = ['homepage', 'about', 'contact', 'privacy', 'terms'];
+        const existingActivePageTypes = foundationPages
+            .filter(p => !p.deleted_at)
+            .map(p => p.page_type);
+        const missingPageTypes = REQUIRED_PAGES.filter(pt => !existingActivePageTypes.includes(pt));
+
+        console.log('Existing page types:', existingActivePageTypes);
+        console.log('Missing page types:', missingPageTypes);
+
+        if (missingPageTypes.length === 0) {
+            dispatch({ type: 'SET_NOTIFICATION', payload: 'All required foundation pages already exist.' });
             return;
         }
 
         dispatch({ type: 'SET_LOADING', payload: { key: 'foundationPages', value: true } });
         try {
+            console.log('Generating missing pages with AI...');
+            // Generate ONLY the missing page types
+            const result = await foundationPagesService.generateFoundationPages(
+                effectiveBusinessInfo,
+                activeMap.pillars as SEOPillars,
+                dispatch,
+                missingPageTypes // Pass only missing page types
+            );
+            console.log('AI generation result:', result);
+
+            console.log('Preparing pages for save...');
+            const pagesToSave = foundationPagesService.prepareFoundationPagesForSave(
+                result,
+                activeMapId,
+                state.user.id,
+                napData
+            );
+            console.log('Pages to save:', pagesToSave.length);
+
+            console.log('Saving to database...');
+            const savedPages = await foundationPagesService.saveFoundationPages(
+                activeMapId,
+                state.user.id,
+                pagesToSave,
+                effectiveBusinessInfo.supabaseUrl,
+                effectiveBusinessInfo.supabaseAnonKey
+            );
+            console.log('Saved pages:', savedPages.length);
+
+            // MERGE new pages with existing pages instead of replacing
+            const existingPageIds = foundationPages.map(p => p.id);
+            const newPages = savedPages.filter(p => !existingPageIds.includes(p.id));
+            const updatedPages = foundationPages.map(existingPage => {
+                const updated = savedPages.find(p => p.id === existingPage.id);
+                return updated || existingPage;
+            });
+            const mergedPages = [...updatedPages, ...newPages];
+            console.log('Merged pages total:', mergedPages.length);
+
+            dispatch({ type: 'SET_FOUNDATION_PAGES', payload: mergedPages });
+            dispatch({ type: 'SET_NOTIFICATION', payload: `Generated ${savedPages.length} missing foundation pages.` });
+            console.log('=== handleGenerateMissingFoundationPages SUCCESS ===');
+        } catch (error) {
+            console.error('Error generating missing pages:', error);
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to generate foundation pages.' });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: { key: 'foundationPages', value: false } });
+        }
+    }, [activeMapId, state.user?.id, activeMap?.pillars, effectiveBusinessInfo, napData, foundationPages, dispatch]);
+
+    // Repair foundation pages from validation modal
+    const handleRepairFoundation = useCallback(async (missingPageTypes: FoundationPageType[]) => {
+        if (!activeMapId || !state.user?.id || !activeMap?.pillars) {
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot repair foundation pages: missing map, user, or pillars.' });
+            return;
+        }
+
+        dispatch({ type: 'SET_LOADING', payload: { key: 'repairFoundation', value: true } });
+        try {
+            // Generate only the missing pages
             const result = await foundationPagesService.generateFoundationPages(
                 effectiveBusinessInfo,
                 activeMap.pillars as SEOPillars,
                 dispatch
             );
 
+            // Filter to only the missing page types
+            const filteredResult = {
+                ...result,
+                foundationPages: result.foundationPages.filter(p => missingPageTypes.includes(p.page_type))
+            };
+
+            if (filteredResult.foundationPages.length === 0) {
+                dispatch({ type: 'SET_NOTIFICATION', payload: 'All foundation pages already exist.' });
+                return;
+            }
+
             const pagesToSave = foundationPagesService.prepareFoundationPagesForSave(
-                result,
+                filteredResult,
                 activeMapId,
                 state.user.id,
                 napData
@@ -1727,14 +1845,52 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 effectiveBusinessInfo.supabaseAnonKey
             );
 
-            dispatch({ type: 'SET_FOUNDATION_PAGES', payload: savedPages });
-            dispatch({ type: 'SET_NOTIFICATION', payload: `Generated ${savedPages.length} foundation pages.` });
+            // Merge with existing pages
+            const existingPages = state.websiteStructure?.foundationPages || [];
+            const allPages = [...existingPages, ...savedPages];
+            dispatch({ type: 'SET_FOUNDATION_PAGES', payload: allPages });
+            dispatch({ type: 'SET_NOTIFICATION', payload: `Generated ${savedPages.length} missing foundation page${savedPages.length > 1 ? 's' : ''}.` });
         } catch (error) {
-            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to generate foundation pages.' });
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to repair foundation pages.' });
         } finally {
-            dispatch({ type: 'SET_LOADING', payload: { key: 'foundationPages', value: false } });
+            dispatch({ type: 'SET_LOADING', payload: { key: 'repairFoundation', value: false } });
         }
-    }, [activeMapId, state.user?.id, activeMap?.pillars, effectiveBusinessInfo, napData, dispatch]);
+    }, [activeMapId, state.user?.id, activeMap?.pillars, effectiveBusinessInfo, napData, state.websiteStructure?.foundationPages, dispatch]);
+
+    // Repair/regenerate navigation structure
+    const handleRepairNavigation = useCallback(async () => {
+        if (!activeMapId || !state.user?.id) {
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot repair navigation: missing map or user.' });
+            return;
+        }
+
+        dispatch({ type: 'SET_LOADING', payload: { key: 'repairNavigation', value: true } });
+        try {
+            const currentFoundationPages = state.websiteStructure?.foundationPages || [];
+
+            // Generate new navigation structure
+            const navigation = await foundationPagesService.generateDefaultNavigation(
+                currentFoundationPages,
+                allTopics,
+                effectiveBusinessInfo,
+                dispatch
+            );
+
+            // Save the navigation
+            const savedNavigation = await foundationPagesService.saveNavigationStructure(
+                activeMapId,
+                state.user.id,
+                navigation
+            );
+
+            dispatch({ type: 'SET_NAVIGATION', payload: savedNavigation });
+            dispatch({ type: 'SET_NOTIFICATION', payload: 'Navigation structure regenerated.' });
+        } catch (error) {
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to repair navigation.' });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: { key: 'repairNavigation', value: false } });
+        }
+    }, [activeMapId, state.user?.id, state.websiteStructure?.foundationPages, allTopics, effectiveBusinessInfo, dispatch]);
 
     const stateSnapshot = {
         'Active Map Found': !!activeMap,
@@ -1863,6 +2019,13 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 onDeleteFoundationPage={handleDeleteFoundationPage}
                 onRestoreFoundationPage={handleRestoreFoundationPage}
                 onGenerateMissingFoundationPages={handleGenerateMissingFoundationPages}
+                onRepairFoundation={handleRepairFoundation}
+                isRepairingFoundation={!!isLoading.repairFoundation}
+                onRepairNavigation={handleRepairNavigation}
+                isRepairingNavigation={!!isLoading.repairNavigation}
+                // Navigation
+                navigation={navigation}
+                onSaveNavigation={handleSaveNavigation}
             />
             <BriefReviewModal
                 isOpen={!!modals.briefReview}

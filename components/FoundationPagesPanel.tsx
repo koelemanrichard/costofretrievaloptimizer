@@ -5,13 +5,16 @@ import {
   FoundationPageType,
   NAPData,
   BusinessInfo,
-  SEOPillars
+  SEOPillars,
+  NavigationStructure,
+  EnrichedTopic
 } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Loader } from './ui/Loader';
 import { NAPForm } from './ui/NAPForm';
 import { FoundationPageCard } from './ui/FoundationPageCard';
+import NavigationDesigner from './NavigationDesigner';
 
 interface FoundationPagesPanelProps {
   foundationPages: FoundationPage[];
@@ -24,6 +27,10 @@ interface FoundationPagesPanelProps {
   onGenerateMissingPages?: () => Promise<void>;
   businessInfo?: BusinessInfo;
   pillars?: SEOPillars;
+  // Navigation props
+  navigation?: NavigationStructure | null;
+  topics?: EnrichedTopic[];
+  onSaveNavigation?: (navigation: NavigationStructure) => Promise<void>;
 }
 
 // Page type order for consistent display
@@ -42,10 +49,14 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
   onRestorePage,
   onGenerateMissingPages,
   businessInfo,
-  pillars
+  pillars,
+  // Navigation props
+  navigation,
+  topics = [],
+  onSaveNavigation
 }) => {
   const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pages' | 'nap'>('pages');
+  const [activeTab, setActiveTab] = useState<'pages' | 'nap' | 'navigation'>('pages');
   const [editingPage, setEditingPage] = useState<FoundationPage | null>(null);
   const [isSavingNAP, setIsSavingNAP] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -64,8 +75,8 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
   const existingTypes = new Set(activePages.map(p => p.page_type));
   const missingPages = REQUIRED_PAGES.filter(type => !existingTypes.has(type));
 
-  // Calculate completion stats
-  const totalRequired = REQUIRED_PAGES.length;
+  // Calculate completion stats - based on actual active pages, not just required
+  const totalPages = activePages.length;
   const completedCount = activePages.filter(page => {
     return page.title && page.slug && page.meta_description && page.h1_template;
   }).length;
@@ -120,7 +131,7 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
           <div className="text-right">
             <div className="text-sm text-gray-400">Completion</div>
             <div className="text-lg font-semibold text-white">
-              {completedCount}/{totalRequired} pages
+              {completedCount}/{totalPages} pages
             </div>
           </div>
           {/* Generate missing pages button */}
@@ -163,6 +174,16 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
           onClick={() => setActiveTab('nap')}
         >
           NAP Data
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'navigation'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('navigation')}
+        >
+          Navigation
         </button>
       </div>
 
@@ -302,6 +323,26 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
             </ul>
           </div>
         </Card>
+      )}
+
+      {/* Navigation Tab */}
+      {activeTab === 'navigation' && (
+        <div>
+          {onSaveNavigation ? (
+            <NavigationDesigner
+              navigation={navigation || null}
+              foundationPages={foundationPages.filter(p => !p.deleted_at)}
+              topics={topics}
+              onSave={onSaveNavigation}
+              onDiscard={() => setActiveTab('pages')}
+            />
+          ) : (
+            <Card className="p-8 text-center">
+              <p className="text-gray-400">Navigation editing is not available.</p>
+              <p className="text-sm text-gray-500 mt-2">Generate a topical map first to create navigation.</p>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Edit Modal - Simplified inline for now */}

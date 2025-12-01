@@ -39,7 +39,7 @@ export const suggestSourceContextOptions = (
 
 export const suggestCentralSearchIntent = (
     businessInfo: BusinessInfo, centralEntity: string, sourceContext: string, dispatch: React.Dispatch<any>
-): Promise<{ intent: string, reasoning: string }> => {
+): Promise<{ intent: string, reasoning: string }[]> => {
     switch (businessInfo.aiProvider) {
         case 'openai': return openAiService.suggestCentralSearchIntent(businessInfo, centralEntity, sourceContext, dispatch);
         case 'anthropic': return anthropicService.suggestCentralSearchIntent(businessInfo, centralEntity, sourceContext, dispatch);
