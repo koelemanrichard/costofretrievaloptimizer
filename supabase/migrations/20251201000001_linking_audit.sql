@@ -3,7 +3,7 @@
 
 -- Main audit results table
 CREATE TABLE IF NOT EXISTS linking_audit_results (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   map_id UUID NOT NULL REFERENCES topical_maps(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id),
 
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS linking_audit_results (
 
 -- Fix history for undo capability
 CREATE TABLE IF NOT EXISTS linking_fix_history (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   audit_id UUID NOT NULL REFERENCES linking_audit_results(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id),
 
