@@ -1758,3 +1758,97 @@ export interface TelemetryLog {
     tokens_out: number;
     cost_est: number;
 }
+
+// === Multi-Pass Content Generation Types ===
+
+export type JobStatus = 'pending' | 'in_progress' | 'paused' | 'completed' | 'failed' | 'cancelled';
+export type SectionStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+export type PassStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
+export interface PassesStatus {
+  pass_1_draft: PassStatus;
+  pass_2_headers: PassStatus;
+  pass_3_lists: PassStatus;
+  pass_4_visuals: PassStatus;
+  pass_5_microsemantics: PassStatus;
+  pass_6_discourse: PassStatus;
+  pass_7_intro: PassStatus;
+  pass_8_audit: PassStatus;
+}
+
+export interface ContentGenerationJob {
+  id: string;
+  brief_id: string;
+  user_id: string;
+  map_id: string;
+  status: JobStatus;
+  current_pass: number;
+  passes_status: PassesStatus;
+  total_sections: number | null;
+  completed_sections: number;
+  current_section_key: string | null;
+  draft_content: string | null;
+  final_audit_score: number | null;
+  audit_details: AuditDetails | null;
+  last_error: string | null;
+  retry_count: number;
+  max_retries: number;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface AuditDetails {
+  algorithmicResults: AuditRuleResult[];
+  aiAuditResult?: {
+    semanticScore: number;
+    suggestions: string[];
+  };
+  passingRules: number;
+  totalRules: number;
+  timestamp: string;
+}
+
+export interface ContentGenerationSection {
+  id: string;
+  job_id: string;
+  section_key: string;
+  section_heading: string | null;
+  section_order: number;
+  section_level: number;
+  pass_1_content: string | null;
+  pass_2_content: string | null;
+  pass_3_content: string | null;
+  pass_4_content: string | null;
+  pass_5_content: string | null;
+  pass_6_content: string | null;
+  pass_7_content: string | null;
+  pass_8_content: string | null;
+  current_content: string | null;
+  current_pass: number;
+  audit_scores: Record<string, number>;
+  status: SectionStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SectionDefinition {
+  key: string;
+  heading: string;
+  level: number;
+  order: number;
+  subordinateTextHint?: string;
+  methodologyNote?: string;
+}
+
+export const PASS_NAMES: Record<number, string> = {
+  1: 'Draft Generation',
+  2: 'Header Optimization',
+  3: 'Lists & Tables',
+  4: 'Visual Semantics',
+  5: 'Micro Semantics',
+  6: 'Discourse Integration',
+  7: 'Introduction Synthesis',
+  8: 'Final Audit'
+};
