@@ -1,12 +1,14 @@
 
 // components/ContentBriefModal.tsx
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppState } from '../state/appState';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Loader } from './ui/Loader';
 import { EnrichedTopic, ContentBrief, ContextualBridgeLink, BriefSection } from '../types';
 import { safeString } from '../utils/parsers';
+import { useContentGeneration } from '../hooks/useContentGeneration';
+import ContentGenerationProgress from './ContentGenerationProgress';
 
 interface ContentBriefModalProps {
   allTopics: EnrichedTopic[];
@@ -15,7 +17,7 @@ interface ContentBriefModalProps {
 
 const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGenerateDraft }) => {
     const { state, dispatch } = useAppState();
-    const { activeBriefTopic, topicalMaps, activeMapId, isLoading } = state;
+    const { activeBriefTopic, topicalMaps, activeMapId, isLoading, businessInfo, user } = state;
 
     const activeMap = topicalMaps.find(m => m.id === activeMapId);
     const brief = activeBriefTopic ? activeMap?.briefs?.[activeBriefTopic.id] : null;
@@ -23,17 +25,54 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     const isOpen = !!(state.modals.contentBrief && brief);
     const isDrafting = !!isLoading.audit; // 'audit' key is currently reused for drafting in container
 
+    // Multi-pass generation state
+    const [useMultiPass, setUseMultiPass] = useState(true);
+    const [generationLogs, setGenerationLogs] = useState<Array<{ message: string; status: string; timestamp: number }>>([]);
+
+    const handleLog = useCallback((message: string, status: 'info' | 'success' | 'failure' | 'warning') => {
+        setGenerationLogs(prev => [...prev, { message, status, timestamp: Date.now() }]);
+        dispatch({ type: 'LOG_EVENT', payload: { service: 'MultiPass', message, status, timestamp: Date.now() }});
+    }, [dispatch]);
+
+    // Multi-pass generation hook
+    const {
+        job,
+        sections,
+        isGenerating,
+        isPaused,
+        isComplete,
+        progress,
+        currentPassName,
+        startGeneration,
+        pauseGeneration,
+        resumeGeneration,
+        cancelGeneration,
+        error
+    } = useContentGeneration({
+        briefId: brief?.id || '',
+        mapId: activeMapId || '',
+        userId: user?.id || '',
+        businessInfo,
+        brief: brief || {} as ContentBrief,
+        onLog: handleLog
+    });
+
     const handleClose = () => {
         dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'contentBrief', visible: false } });
         dispatch({ type: 'SET_ACTIVE_BRIEF_TOPIC', payload: null });
     };
-    
+
     const handleGenerateDraft = () => {
       if (brief) {
-        onGenerateDraft(brief);
+        if (useMultiPass) {
+          setGenerationLogs([]);
+          startGeneration();
+        } else {
+          onGenerateDraft(brief);
+        }
       }
     };
-    
+
     const handleViewDraft = () => {
         if (brief) {
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'drafting', visible: true } });
@@ -45,9 +84,11 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     }
 
     // Helper to safely extract links whether bridge is array or section object
-    const bridgeLinks: ContextualBridgeLink[] = Array.isArray(brief.contextualBridge) 
-        ? brief.contextualBridge 
+    const bridgeLinks: ContextualBridgeLink[] = Array.isArray(brief.contextualBridge)
+        ? brief.contextualBridge
         : brief.contextualBridge?.links || [];
+
+    const showProgress = isGenerating || isPaused || (job && !isComplete);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={handleClose}>
@@ -59,8 +100,42 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                     </div>
                     <button onClick={handleClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
                 </header>
-                
+
                 <div className="p-6 overflow-y-auto">
+                    {/* Multi-Pass Progress UI */}
+                    {showProgress && job && (
+                        <div className="mb-6">
+                            <ContentGenerationProgress
+                                job={job}
+                                sections={sections}
+                                progress={progress}
+                                currentPassName={currentPassName}
+                                onPause={pauseGeneration}
+                                onResume={resumeGeneration}
+                                onCancel={cancelGeneration}
+                            />
+                            {error && (
+                                <div className="mt-2 p-3 bg-red-900/30 border border-red-700 rounded text-sm text-red-300">
+                                    {error}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Completion Message */}
+                    {isComplete && job && (
+                        <div className="mb-6 p-4 bg-green-900/30 border border-green-700 rounded">
+                            <h3 className="text-green-300 font-semibold mb-2">Generation Complete!</h3>
+                            <p className="text-gray-300 text-sm">
+                                Your article has been generated through 8 optimization passes.
+                                Final audit score: <strong className="text-green-400">{job.final_audit_score}%</strong>
+                            </p>
+                            <Button onClick={handleViewDraft} variant="primary" className="mt-3">
+                                View Generated Draft
+                            </Button>
+                        </div>
+                    )}
+
                     <div className="space-y-6">
                         {/* Meta Info */}
                         <Card className="p-4 bg-gray-900/50">
@@ -73,7 +148,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         {(brief.featured_snippet_target || brief.query_type_format || (brief.discourse_anchors && brief.discourse_anchors.length > 0)) && (
                             <Card className="p-4 bg-indigo-900/20 border border-indigo-700/50">
                                 <h3 className="font-semibold text-lg text-indigo-300 mb-3">Search & Retrieval Strategy</h3>
-                                
+
                                 {brief.query_type_format && (
                                     <div className="mb-3">
                                         <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Target Query Format:</span>
@@ -171,7 +246,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 </div>
                             </Card>
                         )}
-                        
+
                         {/* Key Takeaways */}
                         {brief.keyTakeaways && brief.keyTakeaways.length > 0 && (
                              <Card className="p-4 bg-gray-900/50">
@@ -245,13 +320,34 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                 </div>
 
                 <footer className="p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center flex-shrink-0">
-                    <div>
+                    <div className="flex items-center gap-4">
                         {brief.articleDraft && <span className="text-sm text-green-400">Article draft is ready.</span>}
+                        {!brief.articleDraft && !showProgress && (
+                            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={useMultiPass}
+                                    onChange={(e) => setUseMultiPass(e.target.checked)}
+                                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                                />
+                                <span>Use Multi-Pass Generation (8 passes, resumable)</span>
+                            </label>
+                        )}
                     </div>
                     <div className="flex gap-2">
-                        <Button onClick={brief.articleDraft ? handleViewDraft : handleGenerateDraft} variant="primary" disabled={isDrafting}>
-                            {isDrafting ? <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Generating...</span></div> : (brief.articleDraft ? 'View Draft' : 'Generate Article Draft')}
-                        </Button>
+                        {!showProgress && (
+                            <Button
+                                onClick={brief.articleDraft ? handleViewDraft : handleGenerateDraft}
+                                variant="primary"
+                                disabled={isDrafting || isGenerating}
+                            >
+                                {isDrafting ? (
+                                    <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Generating...</span></div>
+                                ) : (
+                                    brief.articleDraft ? 'View Draft' : (useMultiPass ? 'Generate (Multi-Pass)' : 'Generate Article Draft')
+                                )}
+                            </Button>
+                        )}
                         <Button onClick={handleClose} variant="secondary">Close</Button>
                     </div>
                 </footer>

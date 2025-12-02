@@ -37,7 +37,31 @@ Multi-provider abstraction supporting Gemini, OpenAI, Anthropic, Perplexity, and
   - `analysis.ts` - SEO analysis functions
   - `clustering.ts` - Topic clustering
   - `flowValidator.ts` - Content flow validation
+  - `contentGeneration/` - Multi-pass article generation system
 - Individual provider implementations: `geminiService.ts`, `openAiService.ts`, `anthropicService.ts`, etc.
+
+### Multi-Pass Content Generation
+The `services/ai/contentGeneration/` module implements an 8-pass article generation system:
+
+1. **Pass 1 - Draft Generation**: Section-by-section content creation with resumability
+2. **Pass 2 - Header Optimization**: Heading hierarchy and contextual overlap
+3. **Pass 3 - Lists & Tables**: Structured data optimization for Featured Snippets
+4. **Pass 4 - Visual Semantics**: Image placeholder insertion with vocabulary-extending alt text
+5. **Pass 5 - Micro Semantics**: Linguistic optimization (modality, stop words, subject positioning)
+6. **Pass 6 - Discourse Integration**: Transitions and contextual bridges
+7. **Pass 7 - Introduction Synthesis**: Post-hoc introduction rewriting
+8. **Pass 8 - Final Audit**: Algorithmic content audit with scoring
+
+Key files:
+- `orchestrator.ts` - Job management, Supabase persistence, progress tracking
+- `passes/pass1DraftGeneration.ts` - Section-by-section draft with retry logic
+- `passes/auditChecks.ts` - 10 algorithmic audit rules
+- `hooks/useContentGeneration.ts` - React hook with realtime updates
+- `components/ContentGenerationProgress.tsx` - UI for progress tracking
+
+Database tables (see migrations):
+- `content_generation_jobs` - Job state, pass status, audit results
+- `content_generation_sections` - Per-section content with version history
 
 ### Key Directories
 - `components/` - React components (wizards, modals, dashboard panels)
@@ -60,6 +84,8 @@ Multi-provider abstraction supporting Gemini, OpenAI, Anthropic, Perplexity, and
 - `topical_maps` - Content strategy with `business_info`, `pillars`, `eavs` JSON blobs
 - `topics` - Core and outer topics with parent-child relationships
 - `content_briefs` - AI-generated briefs linked to topics
+- `content_generation_jobs` - Multi-pass article generation job tracking (status, passes, audit score)
+- `content_generation_sections` - Individual section content with version history per pass
 
 ## User Flow
 

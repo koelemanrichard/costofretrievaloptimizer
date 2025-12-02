@@ -2191,3 +2191,258 @@ Return a JSON object:
   "missingAuthoritySources": ["List of topic areas that could benefit from authoritative external sources"]
 }
 `;
+
+// === Multi-Pass Content Generation Prompts ===
+
+export const GENERATE_SECTION_DRAFT_PROMPT = (
+  section: { key: string; heading: string; level: number; subordinateTextHint?: string; methodologyNote?: string },
+  brief: ContentBrief,
+  info: BusinessInfo,
+  allSections: { heading: string }[]
+): string => `
+You are an expert content writer following the Holistic SEO framework.
+
+Write ONLY the content for this specific section. Do NOT include the heading itself - just the body text.
+
+## Section to Write
+Heading: ${section.heading}
+Level: H${section.level}
+${section.subordinateTextHint ? `Subordinate Text Hint: ${section.subordinateTextHint}` : ''}
+${section.methodologyNote ? `Format Requirement: ${section.methodologyNote}` : ''}
+
+## Article Context
+Title: ${brief.title}
+Central Entity: ${info.seedKeyword}
+Meta Description: ${brief.metaDescription}
+Key Takeaways: ${brief.keyTakeaways?.join(', ') || 'N/A'}
+
+## Full Article Structure (for context)
+${allSections.map((s, i) => `${i + 1}. ${s.heading}`).join('\n')}
+
+${businessContext(info)}
+
+## Writing Rules
+1. **First Sentence Rule**: Start with a direct, responsive sentence using "is", "are", or "means"
+2. **EAV Density**: Each sentence must contain an Entity-Attribute-Value triple
+3. **Subject Positioning**: "${info.seedKeyword}" should be the grammatical SUBJECT where relevant
+4. **No Fluff**: Avoid "also", "basically", "very", "maybe", "actually"
+5. **Modality**: Use definitive verbs ("is", "are") not uncertainty ("can be", "might")
+6. **Information Density**: Every sentence must add a new fact
+
+${getStylometryInstructions(info.authorProfile)}
+
+Write 150-300 words of content for this section. Output ONLY the prose content, no headings or metadata.
+`;
+
+export const PASS_2_HEADER_OPTIMIZATION_PROMPT = (
+  draft: string,
+  brief: ContentBrief,
+  info: BusinessInfo
+): string => `
+You are a Holistic SEO editor specializing in heading optimization.
+
+## Current Draft
+${draft}
+
+## Central Entity: ${info.seedKeyword}
+## Title: ${brief.title}
+
+## Header H Rules to Apply:
+1. **H1 contains Central Entity + Main Attribute** - Verify the title reflects the main topic
+2. **Straight Line Flow**: H1→H2→H3 must follow logical, incremental order
+3. **Contextual Overlap**: Each H2/H3 must contain terms linking back to the Central Entity
+4. **No Level Skips**: Never skip from H2 to H4
+5. **Heading Order**: Definition → Types → Benefits → How-to → Risks → Conclusion
+6. **Query Pattern Matching**: Headings should match likely search queries
+
+## Instructions:
+1. Review all headings for hierarchy and flow
+2. Ensure each heading includes a contextual term related to "${info.seedKeyword}"
+3. Reorder sections if they don't follow logical flow
+4. Fix any level skips
+5. Make headings more specific where generic
+
+Return the COMPLETE optimized article with all content preserved. Do not summarize or truncate.
+`;
+
+export const PASS_3_LIST_TABLE_PROMPT = (
+  draft: string,
+  brief: ContentBrief
+): string => `
+You are a Holistic SEO editor specializing in structured data optimization.
+
+## Current Draft
+${draft}
+
+## List & Table Rules to Apply:
+1. **Ordered Lists (<ol>)**: Use ONLY for rankings, steps, or superlatives ("Top 10", "How to")
+2. **Unordered Lists (<ul>)**: Use for types, examples, components where order doesn't matter
+3. **List Preamble**: Every list MUST be preceded by a sentence with exact count ("The 5 main types include:")
+4. **Table Structure**: Columns = attributes (Price, Speed), Rows = entities
+5. **One Fact Per Item**: Each list item delivers ONE unique EAV triple
+6. **Instructional Lists**: Items in how-to lists start with command verbs
+
+## Instructions:
+1. Convert appropriate prose to lists where Featured Snippet opportunity exists
+2. Ensure every list has a proper count preamble
+3. Verify ordered vs unordered is semantically correct
+4. Keep prose where it's more appropriate than lists
+
+Return the COMPLETE optimized article. Do not summarize or truncate.
+`;
+
+export const PASS_4_VISUAL_SEMANTICS_PROMPT = (
+  draft: string,
+  brief: ContentBrief,
+  info: BusinessInfo
+): string => `
+You are a Holistic SEO editor specializing in visual semantics.
+
+## Current Draft
+${draft}
+
+## Central Entity: ${info.seedKeyword}
+## Title: ${brief.title}
+
+## Visual Semantics Rules:
+1. **Alt Tag Vocabulary Extension**: Alt tags must use NEW vocabulary not in H1/Title
+2. **Context Bridging**: Alt text bridges the image to surrounding content
+3. **No Image Between H and Text**: Never place image between heading and its subordinate text
+4. **Textual Qualification**: Sentence before/after image must reference it
+5. **LCP Prominence**: First major image relates directly to Central Entity
+
+## Instructions:
+Insert [IMAGE: description | alt="vocabulary-extending alt text"] placeholders where images would enhance the content. Place them:
+- After the first paragraph (LCP image)
+- After key definitions or explanations
+- In "How-to" sections for visual steps
+- NEVER immediately after a heading
+
+Example: [IMAGE: Diagram showing contract lifecycle stages | alt="contract management workflow phases from creation to renewal"]
+
+Return the COMPLETE article with image placeholders inserted. Do not summarize or truncate.
+`;
+
+export const PASS_5_MICRO_SEMANTICS_PROMPT = (
+  draft: string,
+  brief: ContentBrief,
+  info: BusinessInfo
+): string => `
+You are a Holistic SEO editor specializing in micro-semantic optimization. This is the most comprehensive linguistic optimization pass.
+
+## Current Draft
+${draft}
+
+## Central Entity: ${info.seedKeyword}
+## Title: ${brief.title}
+
+## MICRO SEMANTICS RULES TO APPLY:
+
+### 1. Modality Certainty
+- Replace uncertain language ("can be", "might be", "could be") with definitive verbs ("is", "are")
+- Only keep uncertainty for genuinely uncertain claims backed by science
+- BAD: "Water can be vital for life"
+- GOOD: "Water is vital for life"
+
+### 2. Stop Word Removal
+- Remove fluff words: "also", "basically", "very", "maybe", "actually", "really", "just", "quite"
+- Be ESPECIALLY strict in the first 2 paragraphs
+- BAD: "It also helps with digestion"
+- GOOD: "It helps digestion"
+
+### 3. Subject Positioning
+- The Central Entity ("${info.seedKeyword}") must be the grammatical SUBJECT, not object
+- BAD: "Financial advisors help you achieve financial independence"
+- GOOD: "Financial independence relies on sufficient savings"
+
+### 4. Definition Structure (Is-A Hypernymy)
+- Definitions must follow: "[Entity] is a [Category] that [Function]"
+- BAD: "Penguins swim and don't fly"
+- GOOD: "A penguin is a flightless sea bird native to the Southern Hemisphere"
+
+### 5. Information Density
+- Every sentence must add a NEW fact
+- No entity repetition without new attribute
+- BAD: "The Glock 19 is a gun. The Glock 19 is popular."
+- GOOD: "The Glock 19 weighs 30oz. It has a 15-round capacity."
+
+### 6. Reference Principle
+- Never place links at the START of a sentence
+- Make your declaration first, then cite
+- BAD: "[According to research], the method works"
+- GOOD: "The method works effectively, as [research confirms]"
+
+### 7. Negative Constraints
+- Add "is not" clarifications for disambiguation where helpful
+- Example: "This visa is not for permanent residency"
+
+### 8. Centerpiece Annotation
+- The core answer/definition must appear in the first 400 characters of main content
+- Front-load the most important information
+
+## Instructions:
+Apply ALL rules above. Go sentence by sentence if needed. This pass dramatically impacts search engine comprehension.
+
+Return the COMPLETE optimized article. Do not summarize or truncate.
+`;
+
+export const PASS_6_DISCOURSE_PROMPT = (
+  draft: string,
+  brief: ContentBrief
+): string => `
+You are a Holistic SEO editor specializing in discourse integration.
+
+## Current Draft
+${draft}
+
+## Discourse Anchors (transition words to use)
+${brief.discourse_anchors?.join(', ') || 'contextual, semantic, optimization, framework, methodology'}
+
+## Discourse Rules:
+1. **Paragraph Transitions**: End of paragraph A should hook into start of paragraph B
+2. **Contextual Bridges**: Use bridge sentences when moving between sub-topics
+3. **Anchor Segments**: Include mutual words (discourse anchors) at transitions
+4. **Annotation Text**: Text surrounding links must explain WHY the link exists
+5. **Link Micro-Context**: "For more details on **engine performance**, check our guide on [V8 Engines]"
+
+## Instructions:
+1. Add transitional sentences between major sections
+2. Ensure internal links have proper annotation text
+3. Use discourse anchors naturally at paragraph transitions
+4. Smooth any abrupt topic changes
+
+Return the COMPLETE article with improved flow. Do not summarize or truncate.
+`;
+
+export const PASS_7_INTRO_SYNTHESIS_PROMPT = (
+  draft: string,
+  brief: ContentBrief,
+  info: BusinessInfo
+): string => `
+You are a Holistic SEO editor rewriting the introduction AFTER the full article exists.
+
+## Full Article
+${draft}
+
+## Brief Info
+Title: ${brief.title}
+Central Entity: ${info.seedKeyword}
+Key Takeaways: ${brief.keyTakeaways?.join(', ') || 'N/A'}
+Featured Snippet Target: ${brief.featured_snippet_target?.target || 'N/A'}
+
+## Introduction Synthesis Rules:
+1. **Centerpiece Annotation**: Core answer/definition in FIRST 400 characters
+2. **Summary Alignment**: Synthesize all H2/H3 topics in the SAME ORDER as they appear
+3. **Key Terms**: Include at least one term from each major section
+4. **Featured Snippet**: Address the featured snippet target immediately
+5. **No Fluff**: Maximum information density
+
+## Instructions:
+Write a NEW introduction (150-250 words) that:
+1. Starts with a direct definition/answer (centerpiece annotation)
+2. Previews ALL major sections in order
+3. Includes key terms from each section
+4. Sets reader expectations clearly
+
+Output ONLY the introduction paragraph content. Do not include "## Introduction" heading.
+`;
