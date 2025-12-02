@@ -123,12 +123,17 @@ export function useContentGeneration({
   // Check for existing job on mount
   useEffect(() => {
     const checkExisting = async () => {
-      if (!orchestratorRef.current) return;
-      const existing = await orchestratorRef.current.getExistingJob(briefId);
-      if (existing) {
-        setJob(existing);
-        const existingSections = await orchestratorRef.current.getSections(existing.id);
-        setSections(existingSections);
+      if (!orchestratorRef.current || !briefId) return;
+      try {
+        const existing = await orchestratorRef.current.getExistingJob(briefId);
+        if (existing) {
+          setJob(existing);
+          const existingSections = await orchestratorRef.current.getSections(existing.id);
+          setSections(existingSections);
+        }
+      } catch (err) {
+        // Silently ignore - no existing job
+        console.debug('No existing job found:', err);
       }
     };
     checkExisting();
