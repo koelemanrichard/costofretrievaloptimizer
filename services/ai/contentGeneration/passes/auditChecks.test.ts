@@ -247,3 +247,302 @@ Success depends on commitment, resources, and continuous improvement.`;
     expect(vocabCheck?.isPassing).toBe(true);
   });
 });
+
+// =====================================================
+// Phase B: Structural Enhancements (Checks 15-17)
+// =====================================================
+
+describe('checkMacroMicroBorder', () => {
+  it('should pass when content has supplementary section for related links', () => {
+    const draft = `## Introduction
+
+Water is essential for life. This article covers hydration benefits.
+
+## Main Benefits
+
+Hydration improves health and cognitive function significantly.
+
+## Related Topics
+
+For more on dehydration, see [Dehydration Guide](/dehydration).
+Also check out [Water Quality](/water-quality) for more information.`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const borderCheck = results.find(r => r.ruleName === 'Macro/Micro Border');
+
+    expect(borderCheck).toBeDefined();
+    expect(borderCheck?.isPassing).toBe(true);
+  });
+
+  it('should fail when many links appear in main content without supplementary section', () => {
+    const draft = `## Introduction
+
+Water is essential. Learn about [Dehydration](/dehydration) and [Hydration Tips](/tips).
+Also see [Water Filters](/filters) and [Water Quality](/quality) for context.
+
+## Main Benefits
+
+Check out [More Resources](/more) and [External Guide](/guide) here.
+Hydration improves health significantly.`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const borderCheck = results.find(r => r.ruleName === 'Macro/Micro Border');
+
+    expect(borderCheck).toBeDefined();
+    expect(borderCheck?.isPassing).toBe(false);
+    expect(borderCheck?.details).toContain('link');
+  });
+});
+
+describe('checkExtractiveSummaryAlignment', () => {
+  it('should pass when intro mentions all H2 topics', () => {
+    const draft = `## Introduction
+
+This article covers hydration benefits, dehydration risks, and daily intake guidelines for optimal health.
+
+## Hydration Benefits
+
+Proper hydration improves cognitive function and physical performance.
+
+## Dehydration Risks
+
+Dehydration causes fatigue, headaches, and reduced concentration.
+
+## Daily Intake Guidelines
+
+Adults need 2-3 liters of water daily for optimal function.`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const summaryCheck = results.find(r => r.ruleName === 'Extractive Summary Alignment');
+
+    expect(summaryCheck).toBeDefined();
+    expect(summaryCheck?.isPassing).toBe(true);
+  });
+
+  it('should fail when intro does not preview H2 topics', () => {
+    const draft = `## Introduction
+
+Water is important for health. Everyone should drink water.
+
+## Hydration Benefits
+
+Proper hydration improves function significantly.
+
+## Chemical Composition
+
+H2O contains hydrogen and oxygen atoms.
+
+## Manufacturing Process
+
+Water treatment involves multiple filtration steps.`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const summaryCheck = results.find(r => r.ruleName === 'Extractive Summary Alignment');
+
+    expect(summaryCheck).toBeDefined();
+    expect(summaryCheck?.isPassing).toBe(false);
+    expect(summaryCheck?.details).toContain('does not preview');
+  });
+});
+
+describe('checkQueryFormatAlignment', () => {
+  it('should pass when "types of" query has list format', () => {
+    const draft = `## Types of Water Filters
+
+There are 5 main types of water filters available:
+
+- Activated Carbon filters
+- Reverse Osmosis systems
+- UV Filters for sterilization
+- Ceramic filters
+- Ion Exchange filters`;
+
+    const brief = createMockBrief({ title: 'Types of Water Filters' });
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const formatCheck = results.find(r => r.ruleName === 'Query-Format Alignment');
+
+    expect(formatCheck).toBeDefined();
+    expect(formatCheck?.isPassing).toBe(true);
+  });
+
+  it('should fail when "how to" query lacks ordered list', () => {
+    const draft = `## How to Install a Water Filter
+
+Installing a water filter requires careful preparation. First, you need tools.
+Then you should read the manual. After that, follow instructions.
+The process takes about an hour to complete properly.`;
+
+    const brief = createMockBrief({ title: 'How to Install a Water Filter' });
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const formatCheck = results.find(r => r.ruleName === 'Query-Format Alignment');
+
+    expect(formatCheck).toBeDefined();
+    expect(formatCheck?.isPassing).toBe(false);
+    expect(formatCheck?.details).toContain('numbered');
+  });
+
+  it('should pass when "how to" query has numbered steps', () => {
+    const draft = `## How to Install a Water Filter
+
+Installing a water filter is straightforward:
+
+1. Turn off the water supply
+2. Remove the old filter if present
+3. Install the new filter housing
+4. Connect the water lines
+5. Turn on the water and check for leaks`;
+
+    const brief = createMockBrief({ title: 'How to Install a Water Filter' });
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const formatCheck = results.find(r => r.ruleName === 'Query-Format Alignment');
+
+    expect(formatCheck).toBeDefined();
+    expect(formatCheck?.isPassing).toBe(true);
+  });
+});
+
+// =====================================================
+// Phase C: Link Optimization (Checks 18-20)
+// =====================================================
+
+describe('checkAnchorTextVariety', () => {
+  it('should pass when anchor text is used 3 times or less', () => {
+    const draft = `
+See [water filters](/filters) for options.
+Learn about [water filters](/filters) here.
+More on [water filters](/filters) in this guide.
+`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const anchorCheck = results.find(r => r.ruleName === 'Anchor Text Variety');
+
+    expect(anchorCheck).toBeDefined();
+    expect(anchorCheck?.isPassing).toBe(true);
+  });
+
+  it('should fail when same anchor text used more than 3 times', () => {
+    const draft = `
+See [water filters](/filters) for options.
+Learn about [water filters](/filters) here.
+More on [water filters](/filters) in this guide.
+Check [water filters](/filters) again for details.
+Also see [water filters](/filters) for reference.
+`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const anchorCheck = results.find(r => r.ruleName === 'Anchor Text Variety');
+
+    expect(anchorCheck).toBeDefined();
+    expect(anchorCheck?.isPassing).toBe(false);
+    expect(anchorCheck?.details).toContain('5');
+  });
+});
+
+describe('checkAnnotationTextQuality', () => {
+  it('should pass when links have descriptive surrounding text', () => {
+    const draft = `
+For proper hydration, you should drink adequate amounts of water daily. Learn more about the
+[benefits of hydration](/hydration-benefits) and how it affects your overall health and wellbeing.
+`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const annotationCheck = results.find(r => r.ruleName === 'Annotation Text Quality');
+
+    expect(annotationCheck).toBeDefined();
+    expect(annotationCheck?.isPassing).toBe(true);
+  });
+
+  it('should fail when links have generic anchors', () => {
+    const draft = `
+For more information, [click here](/page).
+
+[Read more](/other) about water.
+
+See [here](/another) for details.
+`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const annotationCheck = results.find(r => r.ruleName === 'Annotation Text Quality');
+
+    expect(annotationCheck).toBeDefined();
+    expect(annotationCheck?.isPassing).toBe(false);
+    expect(annotationCheck?.details).toContain('lack');
+  });
+});
+
+describe('checkSupplementaryLinkPlacement', () => {
+  it('should pass when related links are at the end', () => {
+    const draft = `## Introduction
+
+Main content about the topic without any links in the introduction.
+
+## Topic Details
+
+More details here about the subject matter.
+
+## Related Topics
+
+See [Related Article](/related) for more information.
+`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const placementCheck = results.find(r => r.ruleName === 'Supplementary Link Placement');
+
+    expect(placementCheck).toBeDefined();
+    expect(placementCheck?.isPassing).toBe(true);
+  });
+
+  it('should fail when many links appear in introduction', () => {
+    const draft = `## Introduction
+
+Check out [this guide](/a), [that resource](/b), and [another article](/c) for context before we begin.
+
+## Main Content
+
+The main topic is discussed here without distractions.
+`;
+
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const placementCheck = results.find(r => r.ruleName === 'Supplementary Link Placement');
+
+    expect(placementCheck).toBeDefined();
+    expect(placementCheck?.isPassing).toBe(false);
+    expect(placementCheck?.details).toContain('Introduction contains');
+  });
+});

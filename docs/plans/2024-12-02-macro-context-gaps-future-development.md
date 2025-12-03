@@ -1,7 +1,7 @@
 # Macro Context & Advanced Audit Gaps - Future Development Plan
 
 **Date:** 2024-12-02
-**Status:** Research Complete - Pending Multipass Implementation
+**Status:** IMPLEMENTED (Phases A, B, C Complete - 10 of 12 gaps addressed)
 **Prerequisite:** Complete `2024-12-02-multipass-content-generation-implementation.md` first
 **Author:** Claude Code / User Collaboration
 
@@ -498,18 +498,18 @@ These items require site-wide analysis beyond single-article scope:
 
 | Gap | Category | Priority | Complexity | Prerequisite | Status |
 |-----|----------|----------|------------|--------------|--------|
-| 1.1 Macro/Micro Border | Page Segmentation | HIGH | Medium | Multipass Complete | |
-| 1.2 Predicate Consistency | Page Segmentation | MEDIUM | Low | Multipass Complete | IMPLEMENTED |
-| 1.3 Extractive Summary | Page Segmentation | MEDIUM | Low | Pass 7 Complete | |
-| 1.4 Query-Format Alignment | Page Segmentation | MEDIUM | Medium | Brief Generation | |
-| 2.1 Coverage Weight | Audit | MEDIUM | Low | Pass 8 Complete | IMPLEMENTED |
-| 2.2 Factual Consensus | Audit | LOW | High | Site-wide KG | |
-| 2.3 LLM Phrase Detection | Audit | HIGH | Low | Pass 5 Complete | IMPLEMENTED |
-| 2.4 Vocabulary Richness | Audit | LOW | Low | Pass 8 Complete | IMPLEMENTED |
-| 3.1 Supp. Link Placement | Linking | HIGH | Medium | 1.1 Complete | |
-| 3.2 Anchor Text Variety | Linking | MEDIUM | Low | Pass 8 Complete | |
-| 3.3 Annotation Quality | Linking | MEDIUM | Medium | Pass 6 Complete | |
-| 4.x Site-Wide | Architecture | LOW | High | Future Phase | |
+| 1.1 Macro/Micro Border | Page Segmentation | HIGH | Medium | Multipass Complete | IMPLEMENTED (Check #15) |
+| 1.2 Predicate Consistency | Page Segmentation | MEDIUM | Low | Multipass Complete | IMPLEMENTED (Check #12) |
+| 1.3 Extractive Summary | Page Segmentation | MEDIUM | Low | Pass 7 Complete | IMPLEMENTED (Check #16) |
+| 1.4 Query-Format Alignment | Page Segmentation | MEDIUM | Medium | Brief Generation | IMPLEMENTED (Check #17) |
+| 2.1 Coverage Weight | Audit | MEDIUM | Low | Pass 8 Complete | IMPLEMENTED (Check #13) |
+| 2.2 Factual Consensus | Audit | LOW | High | Site-wide KG | FUTURE |
+| 2.3 LLM Phrase Detection | Audit | HIGH | Low | Pass 5 Complete | IMPLEMENTED (Check #11) |
+| 2.4 Vocabulary Richness | Audit | LOW | Low | Pass 8 Complete | IMPLEMENTED (Check #14) |
+| 3.1 Supp. Link Placement | Linking | HIGH | Medium | 1.1 Complete | IMPLEMENTED (Check #20) |
+| 3.2 Anchor Text Variety | Linking | MEDIUM | Low | Pass 8 Complete | IMPLEMENTED (Check #18) |
+| 3.3 Annotation Quality | Linking | MEDIUM | Medium | Pass 6 Complete | IMPLEMENTED (Check #19) |
+| 4.x Site-Wide | Architecture | LOW | High | Future Phase | FUTURE |
 
 ---
 

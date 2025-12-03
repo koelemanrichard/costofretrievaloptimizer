@@ -99,6 +99,26 @@ export function runAlgorithmicAudit(
   // 14. Vocabulary Richness
   results.push(checkVocabularyRichness(draft));
 
+  // Phase B: Structural Enhancements (15-17)
+  // 15. Macro/Micro Border
+  results.push(checkMacroMicroBorder(draft));
+
+  // 16. Extractive Summary Alignment
+  results.push(checkExtractiveSummaryAlignment(draft));
+
+  // 17. Query-Format Alignment
+  results.push(checkQueryFormatAlignment(draft, brief));
+
+  // Phase C: Link Optimization (18-20)
+  // 18. Anchor Text Variety
+  results.push(checkAnchorTextVariety(draft));
+
+  // 19. Annotation Text Quality
+  results.push(checkAnnotationTextQuality(draft));
+
+  // 20. Supplementary Link Placement
+  results.push(checkSupplementaryLinkPlacement(draft));
+
   return results;
 }
 
@@ -517,5 +537,377 @@ function checkPredicateConsistency(text: string, title: string): AuditRuleResult
     ruleName: 'Predicate Consistency',
     isPassing: true,
     details: `Heading predicates are consistent with ${titleClass} title angle.`
+  };
+}
+
+// =====================================================
+// Phase B: Structural Enhancements (Checks 15-17)
+// =====================================================
+
+// Patterns that indicate supplementary/related content sections
+const SUPPLEMENTARY_HEADING_PATTERNS = [
+  /related/i,
+  /see also/i,
+  /further reading/i,
+  /additional/i,
+  /more on/i,
+  /learn more/i,
+  /what is the (opposite|difference)/i,
+  /how does .+ relate/i
+];
+
+function checkMacroMicroBorder(draft: string): AuditRuleResult {
+  // Find the position of supplementary section (if any)
+  const lines = draft.split('\n');
+  let supplementaryStartLine = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('##') && SUPPLEMENTARY_HEADING_PATTERNS.some(p => p.test(line))) {
+      supplementaryStartLine = i;
+      break;
+    }
+  }
+
+  // If no supplementary section, check if there are links in first 70% of content
+  const mainContentEndLine = supplementaryStartLine > 0
+    ? supplementaryStartLine
+    : Math.floor(lines.length * 0.7);
+
+  const mainContent = lines.slice(0, mainContentEndLine).join('\n');
+
+  // Count links in main content (excluding list items which may be intentional)
+  const linksInMainContent: string[] = [];
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+
+  while ((match = linkPattern.exec(mainContent)) !== null) {
+    // Skip if in a list item (starts with - or *)
+    const lineStart = mainContent.lastIndexOf('\n', match.index);
+    const lineText = mainContent.substring(lineStart + 1, match.index);
+    if (!lineText.trim().match(/^[-*\d.]/)) {
+      linksInMainContent.push(match[1]);
+    }
+  }
+
+  // Allow up to 2 inline links in main content, but flag if more
+  if (linksInMainContent.length > 2 && supplementaryStartLine < 0) {
+    return {
+      ruleName: 'Macro/Micro Border',
+      isPassing: false,
+      details: `Found ${linksInMainContent.length} internal links in main content without a designated supplementary section.`,
+      affectedTextSnippet: linksInMainContent.slice(0, 3).join(', '),
+      remediation: 'Add a "Related Topics" or "See Also" section at the end for tangential links, keeping main content focused.'
+    };
+  }
+
+  return {
+    ruleName: 'Macro/Micro Border',
+    isPassing: true,
+    details: supplementaryStartLine > 0
+      ? 'Content has proper macro/micro segmentation.'
+      : 'Main content has minimal tangential links.'
+  };
+}
+
+function extractKeyTermsFromHeading(heading: string): string[] {
+  // Remove common words and extract meaningful terms
+  const stopWords = ['the', 'a', 'an', 'of', 'and', 'or', 'for', 'to', 'in', 'on', 'with', 'how', 'what', 'why', 'when', 'is', 'are'];
+  const words = heading
+    .toLowerCase()
+    .replace(/^#+\s*/, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopWords.includes(w));
+  return words;
+}
+
+function checkExtractiveSummaryAlignment(draft: string): AuditRuleResult {
+  // Extract introduction
+  const introMatch = draft.match(/## Introduction\n\n([\s\S]*?)(?=\n## )/);
+  if (!introMatch) {
+    return {
+      ruleName: 'Extractive Summary Alignment',
+      isPassing: true,
+      details: 'No introduction section found to validate.'
+    };
+  }
+
+  const intro = introMatch[1].toLowerCase();
+
+  // Extract H2 headings (excluding Introduction)
+  const h2Headings = (draft.match(/^## .+$/gm) || [])
+    .filter(h => !h.toLowerCase().includes('introduction'))
+    .filter(h => !SUPPLEMENTARY_HEADING_PATTERNS.some(p => p.test(h)));
+
+  if (h2Headings.length < 2) {
+    return {
+      ruleName: 'Extractive Summary Alignment',
+      isPassing: true,
+      details: 'Not enough H2 sections to validate alignment.'
+    };
+  }
+
+  // Check if intro mentions key terms from each H2
+  const missingTopics: string[] = [];
+
+  h2Headings.forEach(h2 => {
+    const keyTerms = extractKeyTermsFromHeading(h2);
+    const hasAnyTerm = keyTerms.some(term => intro.includes(term));
+    if (!hasAnyTerm && keyTerms.length > 0) {
+      missingTopics.push(h2.replace(/^## /, ''));
+    }
+  });
+
+  // Allow up to 1 missing topic
+  if (missingTopics.length > 1) {
+    return {
+      ruleName: 'Extractive Summary Alignment',
+      isPassing: false,
+      details: `Introduction does not preview ${missingTopics.length} H2 topics: ${missingTopics.slice(0, 2).join(', ')}`,
+      affectedTextSnippet: missingTopics[0],
+      remediation: 'Rewrite introduction to mention or preview all major sections covered in the article.'
+    };
+  }
+
+  return {
+    ruleName: 'Extractive Summary Alignment',
+    isPassing: true,
+    details: 'Introduction properly previews all major sections.'
+  };
+}
+
+type QueryIntentType = 'list' | 'instructional' | 'comparison' | 'definitional' | 'neutral';
+
+function classifyQueryIntent(title: string): QueryIntentType {
+  const lower = title.toLowerCase();
+
+  // Plural/list queries
+  if (/\b(types of|kinds of|categories of|list of|examples of)\b/.test(lower)) {
+    return 'list';
+  }
+  if (/\b(best|top \d+|ways to)\b/.test(lower)) {
+    return 'list';
+  }
+
+  // Instructional queries
+  if (/^how to\b/.test(lower) || /\b(steps to|guide to|tutorial)\b/.test(lower)) {
+    return 'instructional';
+  }
+
+  // Comparison queries
+  if (/\bvs\.?\b|\bversus\b|\bcompare|\bdifference between\b/.test(lower)) {
+    return 'comparison';
+  }
+
+  // Definitional queries
+  if (/^what is\b|^what are\b|^definition of\b/.test(lower)) {
+    return 'definitional';
+  }
+
+  return 'neutral';
+}
+
+function checkQueryFormatAlignment(draft: string, brief: ContentBrief): AuditRuleResult {
+  const intent = classifyQueryIntent(brief.title);
+
+  if (intent === 'neutral') {
+    return {
+      ruleName: 'Query-Format Alignment',
+      isPassing: true,
+      details: 'Neutral query intent; format is flexible.'
+    };
+  }
+
+  const hasUnorderedList = /(?:^|\n)[-*]\s+.+(?:\n[-*]\s+.+){2,}/m.test(draft);
+  const hasOrderedList = /(?:^|\n)\d+\.\s+.+(?:\n\d+\.\s+.+){2,}/m.test(draft);
+  const hasTable = /\|.+\|.+\|/.test(draft);
+
+  let isPassing = true;
+  let details = '';
+  let remediation = '';
+
+  switch (intent) {
+    case 'list':
+      if (!hasUnorderedList && !hasOrderedList) {
+        isPassing = false;
+        details = `"${brief.title}" implies a list format but no list found in content.`;
+        remediation = 'Add an unordered list to enumerate the types/examples mentioned in the title.';
+      } else {
+        details = 'List query has appropriate list format.';
+      }
+      break;
+
+    case 'instructional':
+      if (!hasOrderedList) {
+        isPassing = false;
+        details = `"How to" query should use numbered steps but no ordered list found.`;
+        remediation = 'Convert steps to a numbered list (1. First step, 2. Second step, etc.).';
+      } else {
+        details = 'Instructional query has numbered steps.';
+      }
+      break;
+
+    case 'comparison':
+      if (!hasTable && !hasUnorderedList) {
+        isPassing = false;
+        details = `Comparison query should use a table or structured comparison.`;
+        remediation = 'Add a comparison table or bullet-point comparison of features.';
+      } else {
+        details = 'Comparison query has structured comparison format.';
+      }
+      break;
+
+    case 'definitional':
+      // Check first 400 chars for definition pattern
+      const first400 = draft.substring(0, 400);
+      const hasDefinition = /\b(is|are|refers to|means|defines)\b/i.test(first400);
+      if (!hasDefinition) {
+        isPassing = false;
+        details = `Definitional query should start with a clear definition.`;
+        remediation = 'Begin with "[Entity] is..." or "[Entity] refers to..." in the first paragraph.';
+      } else {
+        details = 'Definitional query starts with proper definition.';
+      }
+      break;
+  }
+
+  return {
+    ruleName: 'Query-Format Alignment',
+    isPassing,
+    details,
+    remediation: isPassing ? undefined : remediation
+  };
+}
+
+// =====================================================
+// Phase C: Link Optimization (Checks 18-20)
+// =====================================================
+
+function checkAnchorTextVariety(draft: string): AuditRuleResult {
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const anchorCounts = new Map<string, number>();
+
+  let match;
+  while ((match = linkPattern.exec(draft)) !== null) {
+    const anchor = match[1].toLowerCase().trim();
+    anchorCounts.set(anchor, (anchorCounts.get(anchor) || 0) + 1);
+  }
+
+  const violations = Array.from(anchorCounts.entries())
+    .filter(([_, count]) => count > 3)
+    .map(([anchor, count]) => ({ anchor, count }));
+
+  if (violations.length > 0) {
+    const worst = violations[0];
+    return {
+      ruleName: 'Anchor Text Variety',
+      isPassing: false,
+      details: `Anchor text "${worst.anchor}" used ${worst.count} times (max 3).`,
+      affectedTextSnippet: worst.anchor,
+      remediation: 'Use synonyms or phrase variations for repeated anchor texts to appear more natural.'
+    };
+  }
+
+  return {
+    ruleName: 'Anchor Text Variety',
+    isPassing: true,
+    details: 'Anchor text variety is good.'
+  };
+}
+
+const GENERIC_ANCHORS = [
+  'click here',
+  'read more',
+  'learn more',
+  'here',
+  'link',
+  'this',
+  'more',
+  'view',
+  'see'
+];
+
+function checkAnnotationTextQuality(draft: string): AuditRuleResult {
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const issues: string[] = [];
+
+  let match;
+  while ((match = linkPattern.exec(draft)) !== null) {
+    const anchor = match[1].toLowerCase().trim();
+    const fullMatch = match[0];
+
+    // Check for generic anchors
+    if (GENERIC_ANCHORS.some(g => anchor === g || anchor.startsWith(g + ' '))) {
+      issues.push(`Generic anchor: "${match[1]}"`);
+      continue;
+    }
+
+    // Check surrounding text (50 chars before and after)
+    const startPos = Math.max(0, match.index - 50);
+    const endPos = Math.min(draft.length, match.index + fullMatch.length + 50);
+
+    // Context should have at least 20 chars of meaningful text around the link
+    const beforeLink = draft.substring(startPos, match.index).trim();
+    const afterLink = draft.substring(match.index + fullMatch.length, endPos).trim();
+
+    const contextWords = (beforeLink + ' ' + afterLink).split(/\s+/).filter(w => w.length > 2);
+
+    if (contextWords.length < 5) {
+      issues.push(`Insufficient context around "${match[1]}"`);
+    }
+  }
+
+  if (issues.length > 0) {
+    return {
+      ruleName: 'Annotation Text Quality',
+      isPassing: false,
+      details: `${issues.length} link(s) lack proper annotation text.`,
+      affectedTextSnippet: issues[0],
+      remediation: 'Surround links with descriptive text that explains WHY the linked page is relevant. Avoid generic anchors like "click here".'
+    };
+  }
+
+  return {
+    ruleName: 'Annotation Text Quality',
+    isPassing: true,
+    details: 'Links have proper contextual annotation.'
+  };
+}
+
+function checkSupplementaryLinkPlacement(draft: string): AuditRuleResult {
+  // Find introduction section
+  const introMatch = draft.match(/## Introduction\n\n([\s\S]*?)(?=\n## )/);
+  if (!introMatch) {
+    return {
+      ruleName: 'Supplementary Link Placement',
+      isPassing: true,
+      details: 'No introduction section to check.'
+    };
+  }
+
+  const intro = introMatch[1];
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const linksInIntro: string[] = [];
+
+  let match;
+  while ((match = linkPattern.exec(intro)) !== null) {
+    linksInIntro.push(match[1]);
+  }
+
+  // More than 1 link in introduction is suspicious
+  if (linksInIntro.length > 1) {
+    return {
+      ruleName: 'Supplementary Link Placement',
+      isPassing: false,
+      details: `Introduction contains ${linksInIntro.length} links. Links should be delayed until after main context is established.`,
+      affectedTextSnippet: linksInIntro.join(', '),
+      remediation: 'Move related links to a "Related Topics" section at the end. Keep introduction focused on defining the main topic.'
+    };
+  }
+
+  return {
+    ruleName: 'Supplementary Link Placement',
+    isPassing: true,
+    details: 'Links are properly positioned after main content.'
   };
 }
