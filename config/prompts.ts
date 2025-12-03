@@ -2199,15 +2199,24 @@ export const GENERATE_SECTION_DRAFT_PROMPT = (
   brief: ContentBrief,
   info: BusinessInfo,
   allSections: { heading: string }[]
-): string => `
+): string => {
+  // Extract SERP-related data from brief
+  const serpPAA = brief.serpAnalysis?.peopleAlsoAsk || [];
+  const serpHeadings = brief.serpAnalysis?.competitorHeadings || [];
+  const perspectives = brief.perspectives || [];
+  const contextualVectors = brief.contextualVectors || [];
+
+  return `
 You are an expert content writer following the Holistic SEO framework.
+
+**CRITICAL LANGUAGE REQUIREMENT**: Write ALL content in ${info.language || 'English'}. Target market: ${info.targetMarket || 'Global'}. Do NOT write in English unless that is the specified language.
 
 Write ONLY the content for this specific section. Do NOT include the heading itself - just the body text.
 
 ## Section to Write
 Heading: ${section.heading}
 Level: H${section.level}
-${section.subordinateTextHint ? `Subordinate Text Hint: ${section.subordinateTextHint}` : ''}
+${section.subordinateTextHint ? `Content Direction: ${section.subordinateTextHint}` : ''}
 ${section.methodologyNote ? `Format Requirement: ${section.methodologyNote}` : ''}
 
 ## Article Context
@@ -2215,24 +2224,44 @@ Title: ${brief.title}
 Central Entity: ${info.seedKeyword}
 Meta Description: ${brief.metaDescription}
 Key Takeaways: ${brief.keyTakeaways?.join(', ') || 'N/A'}
+Search Intent: ${brief.searchIntent || 'informational'}
+${perspectives.length > 0 ? `Perspectives to Include: ${perspectives.join(', ')}` : ''}
 
-## Full Article Structure (for context)
+## Full Article Structure
 ${allSections.map((s, i) => `${i + 1}. ${s.heading}`).join('\n')}
+
+${serpPAA.length > 0 ? `## Related Questions (SERP "People Also Ask")
+Address these naturally if relevant to this section:
+${serpPAA.slice(0, 5).map(q => `- ${q}`).join('\n')}` : ''}
+
+${serpHeadings.length > 0 ? `## Competitor Angle Insights
+Consider these approaches from top-ranking content:
+${serpHeadings.slice(0, 5).map(h => `- ${h}`).join('\n')}` : ''}
+
+${contextualVectors.length > 0 ? `## Contextual Themes to Weave In
+${contextualVectors.slice(0, 5).join(', ')}` : ''}
 
 ${businessContext(info)}
 
 ## Writing Rules
-1. **First Sentence Rule**: Start with a direct, responsive sentence using "is", "are", or "means"
-2. **EAV Density**: Each sentence must contain an Entity-Attribute-Value triple
-3. **Subject Positioning**: "${info.seedKeyword}" should be the grammatical SUBJECT where relevant
-4. **No Fluff**: Avoid "also", "basically", "very", "maybe", "actually"
-5. **Modality**: Use definitive verbs ("is", "are") not uncertainty ("can be", "might")
-6. **Information Density**: Every sentence must add a new fact
+1. **LANGUAGE**: Write entirely in ${info.language || 'English'}. Match native speaker quality for ${info.targetMarket || 'the target market'}.
+2. **Varied Openings**: Start each section DIFFERENTLY - use questions, statistics, scenarios, comparisons, or direct statements. NEVER repeat the article title verbatim.
+3. **EAV Density**: Each sentence must contain an Entity-Attribute-Value triple
+4. **Subject Positioning**: "${info.seedKeyword}" should be the grammatical SUBJECT in some sentences, but not every opening
+5. **No Fluff**: Avoid filler words like "also", "basically", "very", "maybe", "actually"
+6. **Modality**: Use definitive verbs ("is", "are") not uncertainty ("can be", "might")
+7. **Information Density**: Every sentence must add a new fact
+8. **NO REPETITION**: Each section must have a unique opening pattern
 
 ${getStylometryInstructions(info.authorProfile)}
 
-Write 150-300 words of content for this section. Output ONLY the prose content, no headings or metadata.
+Write 150-300 words of content for this section in ${info.language || 'English'}. Output ONLY the prose content, no headings or metadata.
+
+CRITICAL:
+- Your first sentence MUST be different from typical openings. Avoid patterns like "[Topic] is..." or "[Topic] refers to...".
+- Write in ${info.language || 'English'} with native-level fluency appropriate for ${info.targetMarket || 'the target audience'}.
 `;
+};
 
 export const PASS_2_HEADER_OPTIMIZATION_PROMPT = (
   draft: string,
@@ -2240,6 +2269,8 @@ export const PASS_2_HEADER_OPTIMIZATION_PROMPT = (
   info: BusinessInfo
 ): string => `
 You are a Holistic SEO editor specializing in heading optimization.
+
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Maintain the original language throughout.
 
 ## Current Draft
 ${draft}
@@ -2253,7 +2284,7 @@ ${draft}
 3. **Contextual Overlap**: Each H2/H3 must contain terms linking back to the Central Entity
 4. **No Level Skips**: Never skip from H2 to H4
 5. **Heading Order**: Definition → Types → Benefits → How-to → Risks → Conclusion
-6. **Query Pattern Matching**: Headings should match likely search queries
+6. **Query Pattern Matching**: Headings should match likely search queries in ${info.language || 'English'}
 
 ## Instructions:
 1. Review all headings for hierarchy and flow
@@ -2261,15 +2292,19 @@ ${draft}
 3. Reorder sections if they don't follow logical flow
 4. Fix any level skips
 5. Make headings more specific where generic
+6. **KEEP ALL CONTENT IN ${info.language || 'English'}** - Do not translate or change language
 
-Return the COMPLETE optimized article with all content preserved. Do not summarize or truncate.
+Return the COMPLETE optimized article with all content preserved. Do not summarize or truncate. Maintain ${info.language || 'English'} language.
 `;
 
 export const PASS_3_LIST_TABLE_PROMPT = (
   draft: string,
-  brief: ContentBrief
+  brief: ContentBrief,
+  info: BusinessInfo
 ): string => `
 You are a Holistic SEO editor specializing in structured data optimization.
+
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Maintain the original language throughout.
 
 ## Current Draft
 ${draft}
@@ -2287,8 +2322,9 @@ ${draft}
 2. Ensure every list has a proper count preamble
 3. Verify ordered vs unordered is semantically correct
 4. Keep prose where it's more appropriate than lists
+5. **KEEP ALL CONTENT IN ${info.language || 'English'}** - Do not translate
 
-Return the COMPLETE optimized article. Do not summarize or truncate.
+Return the COMPLETE optimized article in ${info.language || 'English'}. Do not summarize or truncate.
 `;
 
 export const PASS_4_VISUAL_SEMANTICS_PROMPT = (
@@ -2297,6 +2333,8 @@ export const PASS_4_VISUAL_SEMANTICS_PROMPT = (
   info: BusinessInfo
 ): string => `
 You are a Holistic SEO editor specializing in visual semantics.
+
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Maintain the original language. Write alt text in ${info.language || 'English'}.
 
 ## Current Draft
 ${draft}
@@ -2317,10 +2355,11 @@ Insert [IMAGE: description | alt="vocabulary-extending alt text"] placeholders w
 - After key definitions or explanations
 - In "How-to" sections for visual steps
 - NEVER immediately after a heading
+- **Write all descriptions and alt text in ${info.language || 'English'}**
 
 Example: [IMAGE: Diagram showing contract lifecycle stages | alt="contract management workflow phases from creation to renewal"]
 
-Return the COMPLETE article with image placeholders inserted. Do not summarize or truncate.
+Return the COMPLETE article with image placeholders inserted in ${info.language || 'English'}. Do not summarize or truncate.
 `;
 
 export const PASS_5_MICRO_SEMANTICS_PROMPT = (
@@ -2329,6 +2368,8 @@ export const PASS_5_MICRO_SEMANTICS_PROMPT = (
   info: BusinessInfo
 ): string => `
 You are a Holistic SEO editor specializing in micro-semantic optimization. This is the most comprehensive linguistic optimization pass.
+
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Maintain the original language throughout all optimizations.
 
 ## Current Draft
 ${draft}
@@ -2382,15 +2423,19 @@ ${draft}
 
 ## Instructions:
 Apply ALL rules above. Go sentence by sentence if needed. This pass dramatically impacts search engine comprehension.
+**KEEP ALL CONTENT IN ${info.language || 'English'}** - Do not translate.
 
-Return the COMPLETE optimized article. Do not summarize or truncate.
+Return the COMPLETE optimized article in ${info.language || 'English'}. Do not summarize or truncate.
 `;
 
 export const PASS_6_DISCOURSE_PROMPT = (
   draft: string,
-  brief: ContentBrief
+  brief: ContentBrief,
+  info: BusinessInfo
 ): string => `
 You are a Holistic SEO editor specializing in discourse integration.
+
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Maintain the original language throughout.
 
 ## Current Draft
 ${draft}
@@ -2410,8 +2455,9 @@ ${brief.discourse_anchors?.join(', ') || 'contextual, semantic, optimization, fr
 2. Ensure internal links have proper annotation text
 3. Use discourse anchors naturally at paragraph transitions
 4. Smooth any abrupt topic changes
+5. **KEEP ALL CONTENT IN ${info.language || 'English'}** - Do not translate
 
-Return the COMPLETE article with improved flow. Do not summarize or truncate.
+Return the COMPLETE article with improved flow in ${info.language || 'English'}. Do not summarize or truncate.
 `;
 
 export const PASS_7_INTRO_SYNTHESIS_PROMPT = (
@@ -2421,6 +2467,8 @@ export const PASS_7_INTRO_SYNTHESIS_PROMPT = (
 ): string => `
 You are a Holistic SEO editor rewriting the introduction AFTER the full article exists.
 
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Write the introduction in ${info.language || 'English'}.
+
 ## Full Article
 ${draft}
 
@@ -2428,7 +2476,7 @@ ${draft}
 Title: ${brief.title}
 Central Entity: ${info.seedKeyword}
 Key Takeaways: ${brief.keyTakeaways?.join(', ') || 'N/A'}
-Featured Snippet Target: ${brief.featured_snippet_target?.target || 'N/A'}
+Featured Snippet Target: ${brief.featured_snippet_target?.question || 'N/A'}
 
 ## Introduction Synthesis Rules:
 1. **Centerpiece Annotation**: Core answer/definition in FIRST 400 characters
@@ -2438,11 +2486,12 @@ Featured Snippet Target: ${brief.featured_snippet_target?.target || 'N/A'}
 5. **No Fluff**: Maximum information density
 
 ## Instructions:
-Write a NEW introduction (150-250 words) that:
+Write a NEW introduction (150-250 words) in ${info.language || 'English'} that:
 1. Starts with a direct definition/answer (centerpiece annotation)
 2. Previews ALL major sections in order
 3. Includes key terms from each section
 4. Sets reader expectations clearly
+5. **IS WRITTEN ENTIRELY IN ${info.language || 'English'}** for ${info.targetMarket || 'the target market'}
 
-Output ONLY the introduction paragraph content. Do not include "## Introduction" heading.
+Output ONLY the introduction paragraph content in ${info.language || 'English'}. Do not include "## Introduction" heading.
 `;

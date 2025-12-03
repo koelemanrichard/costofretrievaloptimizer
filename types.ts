@@ -62,6 +62,9 @@ export interface BusinessInfo {
   authorCredentials?: string;
   socialProfileUrls?: string[];
 
+  // Business conversion fields
+  conversionGoal?: string; // Primary conversion goal (e.g., "sign up", "purchase", "contact")
+
   dataforseoLogin?: string;
   dataforseoPassword?: string;
   apifyToken?: string;
@@ -231,10 +234,13 @@ export interface ContextualBridgeSection {
 }
 
 export interface BriefSection {
+    key?: string; // Section identifier (e.g., 'section-0', 'section-1')
     heading: string;
     level: number;
-    subordinate_text_hint: string; // Instructions for the first sentence
+    order?: number; // Position in article
+    subordinate_text_hint?: string; // Instructions for the first sentence
     methodology_note?: string; // Formatting instructions
+    subsections?: BriefSection[]; // Nested subsections (H3s under H2s)
 }
 
 export interface VisualSemantics {
@@ -260,6 +266,8 @@ export interface ContentBrief {
   metaDescription: string;
   keyTakeaways: string[];
   outline: string;
+  targetKeyword?: string; // Primary keyword for this content
+  searchIntent?: string; // Search intent (informational, navigational, transactional, commercial)
   serpAnalysis: {
     peopleAlsoAsk: string[];
     competitorHeadings: { title: string; url: string; headings: { level: number; text: string }[] }[];
@@ -290,6 +298,9 @@ export interface ContentBrief {
   featured_snippet_target?: FeaturedSnippetTarget;
   visual_semantics?: VisualSemantics[];
   discourse_anchors?: string[]; // List of mutual words for transitions
+
+  // Business fields
+  cta?: string; // Call to action for business conversion
 }
 
 export interface SerpResult {

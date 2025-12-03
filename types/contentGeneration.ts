@@ -285,9 +285,9 @@ export interface AutoSuggestion {
 }
 
 /**
- * Featured snippet target configuration
+ * Featured snippet target configuration for brief compliance
  */
-export interface FeaturedSnippetTarget {
+export interface BriefFeaturedSnippetTarget {
   type: 'paragraph' | 'ordered_list' | 'unordered_list' | 'table';
   target: string;                   // The query this targets
   format: string;                   // Format instructions

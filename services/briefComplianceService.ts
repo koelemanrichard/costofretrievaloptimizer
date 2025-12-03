@@ -3,7 +3,7 @@ import {
   BriefComplianceCheck,
   MissingField,
   AutoSuggestion,
-  FeaturedSnippetTarget
+  BriefFeaturedSnippetTarget
 } from '../types/contentGeneration';
 
 type Methodology = 'ordered_list' | 'unordered_list' | 'comparison_table' | 'definition_prose' | 'prose';
@@ -76,7 +76,7 @@ export class BriefComplianceService {
   /**
    * Infer featured snippet target from brief data
    */
-  inferFeaturedSnippetTarget(brief: { title: string; targetKeyword?: string }): FeaturedSnippetTarget | null {
+  inferFeaturedSnippetTarget(brief: { title: string; targetKeyword?: string }): BriefFeaturedSnippetTarget | null {
     const title = brief.title.toLowerCase();
 
     // Definition snippet
