@@ -24,7 +24,8 @@ test.describe('Project Management', () => {
     test.skip(isStillOnAuthScreen, 'Authentication required - skipping test');
 
     // Check for create project UI
-    await expect(page.locator('h2:has-text("Create New Project"), text=Create New Project')).toBeVisible({ timeout: 10000 });
+    const createProjectHeader = page.locator('h2').filter({ hasText: 'Create New Project' }).or(page.getByText('Create New Project'));
+    await expect(createProjectHeader.first()).toBeVisible({ timeout: 10000 });
 
     // Should show project name input
     await expect(page.locator('input[placeholder*="Project"], input[placeholder*="project"]')).toBeVisible();
@@ -46,7 +47,8 @@ test.describe('Project Management', () => {
 
       // Should either disable the button or stay on same screen
       // Check that we didn't navigate away (still showing create form)
-      await expect(page.locator('h2:has-text("Create New Project"), text=Create New Project')).toBeVisible({ timeout: 5000 });
+      const createHeader = page.locator('h2').filter({ hasText: 'Create New Project' }).or(page.getByText('Create New Project'));
+      await expect(createHeader.first()).toBeVisible({ timeout: 5000 });
     }
 
     await takeScreenshot(page, 'projects-validation');

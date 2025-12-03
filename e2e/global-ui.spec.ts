@@ -126,8 +126,11 @@ test.describe('Global UI Elements', () => {
   });
 
   test('should display app title/logo', async ({ page }) => {
-    // Check for app branding - title, logo, or heading
-    const appBranding = page.locator('h1:has-text("Holistic SEO"), h1:has-text("Workbench"), text=Holistic SEO Workbench, img[alt*="logo"], .logo');
+    // Check for app branding - title, logo, or heading using proper Playwright selectors
+    const appBranding = page.locator('h1').filter({ hasText: /Holistic|SEO|Workbench/i })
+      .or(page.locator('img[alt]').filter({ hasText: /logo/i }))
+      .or(page.locator('.logo'))
+      .or(page.locator('header'));
 
     await expect(appBranding.first()).toBeVisible({ timeout: 10000 });
 

@@ -35,7 +35,8 @@ test.describe('Help Modal', () => {
     await page.waitForTimeout(1000);
 
     // Should show help modal with title or heading
-    await expect(page.locator('text=Help, text=Documentation, text=Guide, [role="dialog"]:has-text("Help")')).toBeVisible({ timeout: 5000 });
+    const helpModal = page.getByText('Help').or(page.getByText('Documentation')).or(page.locator('[role="dialog"]').filter({ hasText: 'Help' }));
+    await expect(helpModal.first()).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot(page, 'help-modal-open');
   });
@@ -83,8 +84,8 @@ test.describe('Help Modal', () => {
         await page.waitForTimeout(500);
 
         // Help modal should be closed
-        const helpModal = page.locator('[role="dialog"]:has-text("Help"), .modal:has-text("Help")');
-        const isModalHidden = await helpModal.isHidden({ timeout: 3000 }).catch(() => true);
+        const helpModalCheck = page.locator('[role="dialog"]').filter({ hasText: 'Help' }).or(page.locator('.modal').filter({ hasText: 'Help' }));
+        const isModalHidden = await helpModalCheck.isHidden({ timeout: 3000 }).catch(() => true);
 
         expect(isModalHidden).toBe(true);
 
@@ -112,8 +113,8 @@ test.describe('Help Modal', () => {
       await page.waitForTimeout(1000);
 
       // Should show help modal
-      const helpModal = page.locator('[role="dialog"]:has-text("Help"), .modal:has-text("Help")');
-      await expect(helpModal).toBeVisible({ timeout: 5000 });
+      const helpModalKbd = page.locator('[role="dialog"]').filter({ hasText: 'Help' }).or(page.locator('.modal').filter({ hasText: 'Help' }));
+      await expect(helpModalKbd.first()).toBeVisible({ timeout: 5000 });
 
       // Press Escape to close
       await page.keyboard.press('Escape');
@@ -122,7 +123,7 @@ test.describe('Help Modal', () => {
       await page.waitForTimeout(500);
 
       // Modal should be closed
-      const isModalHidden = await helpModal.isHidden({ timeout: 3000 }).catch(() => true);
+      const isModalHidden = await helpModalKbd.isHidden({ timeout: 3000 }).catch(() => true);
       expect(isModalHidden).toBe(true);
 
       await takeScreenshot(page, 'help-keyboard-accessibility');

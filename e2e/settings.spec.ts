@@ -35,7 +35,8 @@ test.describe('Settings Modal', () => {
     await page.waitForTimeout(1000);
 
     // Should show settings modal with title or heading
-    await expect(page.locator('text=Settings, text=User Settings, text=Preferences, [role="dialog"]:has-text("Settings")')).toBeVisible({ timeout: 5000 });
+    const settingsModal = page.getByText('Settings').or(page.getByText('User Settings')).or(page.locator('[role="dialog"]').filter({ hasText: 'Settings' }));
+    await expect(settingsModal.first()).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot(page, 'settings-modal-open');
   });
@@ -53,7 +54,12 @@ test.describe('Settings Modal', () => {
     }
 
     // Check for AI provider options - common providers
-    const providerOptions = page.locator('text=Gemini, text=OpenAI, text=Anthropic, text=Perplexity, text=OpenRouter, text=AI Provider, select, [role="combobox"]');
+    const providerOptions = page.getByText('AI Provider')
+      .or(page.getByText('Gemini'))
+      .or(page.getByText('OpenAI'))
+      .or(page.getByText('Anthropic'))
+      .or(page.locator('select'))
+      .or(page.locator('[role="combobox"]'));
 
     await expect(providerOptions.first()).toBeVisible({ timeout: 5000 });
 
