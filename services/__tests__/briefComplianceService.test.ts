@@ -74,4 +74,40 @@ describe('BriefComplianceService', () => {
       expect(result).toContain('Directly answer');
     });
   });
+
+  describe('inferFeaturedSnippetTarget', () => {
+    it('returns paragraph type for "what is" titles', () => {
+      const result = service.inferFeaturedSnippetTarget({
+        title: 'What is Docker?',
+        targetKeyword: 'docker'
+      } as any);
+      expect(result?.type).toBe('paragraph');
+      expect(result?.maxLength).toBe(50);
+    });
+
+    it('returns ordered_list for "how to" titles', () => {
+      const result = service.inferFeaturedSnippetTarget({
+        title: 'How to Install Docker',
+        targetKeyword: 'docker'
+      } as any);
+      expect(result?.type).toBe('ordered_list');
+      expect(result?.maxItems).toBe(8);
+    });
+
+    it('returns table for comparison titles', () => {
+      const result = service.inferFeaturedSnippetTarget({
+        title: 'Docker vs Kubernetes Comparison',
+        targetKeyword: 'docker'
+      } as any);
+      expect(result?.type).toBe('table');
+    });
+
+    it('returns null for generic titles', () => {
+      const result = service.inferFeaturedSnippetTarget({
+        title: 'Advanced Docker Techniques',
+        targetKeyword: 'docker'
+      } as any);
+      expect(result).toBeNull();
+    });
+  });
 });

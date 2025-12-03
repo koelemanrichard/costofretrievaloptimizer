@@ -72,4 +72,42 @@ export class BriefComplianceService {
     // Default
     return `Directly answer the question implied by "${heading}" in the first sentence. Be definitive, not vague.`;
   }
+
+  /**
+   * Infer featured snippet target from brief data
+   */
+  inferFeaturedSnippetTarget(brief: { title: string; targetKeyword?: string }): FeaturedSnippetTarget | null {
+    const title = brief.title.toLowerCase();
+
+    // Definition snippet
+    if (/^what (is|are)/i.test(title)) {
+      return {
+        type: 'paragraph',
+        target: brief.title,
+        format: 'Under 50 words definition starting with "[Entity] is..."',
+        maxLength: 50
+      };
+    }
+
+    // List snippet
+    if (/^(how to|steps|guide|\d+\s+(ways|tips|methods))/i.test(title)) {
+      return {
+        type: 'ordered_list',
+        target: brief.title,
+        format: 'Numbered steps, each starting with action verb',
+        maxItems: 8
+      };
+    }
+
+    // Table snippet - check for "vs" anywhere in title, or starts with comparison/best/top N
+    if (/\s+vs\.?\s+|^(comparison|best|top \d+)/i.test(title)) {
+      return {
+        type: 'table',
+        target: brief.title,
+        format: 'Comparison table with clear column headers'
+      };
+    }
+
+    return null;
+  }
 }
