@@ -149,3 +149,55 @@ Implementation details.`;
     expect(predicateCheck?.isPassing).toBe(true);
   });
 });
+
+describe('checkCoverageWeight', () => {
+  it('fails when minor section exceeds 50% of content', () => {
+    const draft = `## Introduction
+
+Short intro about test keyword.
+
+## Main Topic
+
+Brief main content.
+
+## Appendix Notes
+
+${'This is appendix content that goes on and on. '.repeat(50)}
+More appendix details that dominate the article.
+${'Additional appendix text filling up space. '.repeat(30)}`;
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const coverageCheck = results.find(r => r.ruleName === 'Content Coverage Weight');
+
+    expect(coverageCheck).toBeDefined();
+    expect(coverageCheck?.isPassing).toBe(false);
+  });
+
+  it('passes when content is well-balanced', () => {
+    const draft = `## Introduction
+
+${'Introduction content with good detail about test keyword. '.repeat(10)}
+
+## Main Topic
+
+${'Main content providing substantial value about the topic. '.repeat(15)}
+
+## Secondary Topic
+
+${'Secondary content with reasonable detail. '.repeat(12)}
+
+## Conclusion
+
+${'Conclusion wrapping up the main points effectively. '.repeat(8)}`;
+    const brief = createMockBrief();
+    const info = createMockBusinessInfo();
+
+    const results = runAlgorithmicAudit(draft, brief, info);
+    const coverageCheck = results.find(r => r.ruleName === 'Content Coverage Weight');
+
+    expect(coverageCheck).toBeDefined();
+    expect(coverageCheck?.isPassing).toBe(true);
+  });
+});

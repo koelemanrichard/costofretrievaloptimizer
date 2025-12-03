@@ -93,6 +93,9 @@ export function runAlgorithmicAudit(
   // 12. Predicate Consistency
   results.push(checkPredicateConsistency(draft, brief.title));
 
+  // 13. Content Coverage Weight
+  results.push(checkCoverageWeight(draft));
+
   return results;
 }
 
@@ -332,6 +335,67 @@ function checkLLMSignaturePhrases(text: string): AuditRuleResult {
     ruleName: 'LLM Phrase Detection',
     isPassing: true,
     details: 'No LLM signature phrases detected.'
+  };
+}
+
+function checkCoverageWeight(text: string): AuditRuleResult {
+  // Split into sections by H2 headings
+  const sections = text.split(/(?=^## )/gm).filter(s => s.trim());
+
+  if (sections.length < 2) {
+    return {
+      ruleName: 'Content Coverage Weight',
+      isPassing: true,
+      details: 'Not enough sections to evaluate balance.'
+    };
+  }
+
+  // Calculate word count per section
+  const sectionStats = sections.map(section => {
+    const lines = section.split('\n');
+    const heading = lines[0]?.replace(/^##\s*/, '').trim() || 'Unknown';
+    const content = lines.slice(1).join(' ');
+    const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+    return { heading, wordCount };
+  });
+
+  const totalWords = sectionStats.reduce((sum, s) => sum + s.wordCount, 0);
+
+  if (totalWords < 100) {
+    return {
+      ruleName: 'Content Coverage Weight',
+      isPassing: true,
+      details: 'Content too short to evaluate balance.'
+    };
+  }
+
+  // Find sections that exceed 50% threshold
+  const violations = sectionStats
+    .map(s => ({
+      ...s,
+      percentage: (s.wordCount / totalWords) * 100
+    }))
+    .filter(s => {
+      // Skip introduction and conclusion from violation check
+      const isBoilerplate = /intro|conclusion|summary/i.test(s.heading);
+      return !isBoilerplate && s.percentage > 50;
+    });
+
+  if (violations.length > 0) {
+    const worst = violations[0];
+    return {
+      ruleName: 'Content Coverage Weight',
+      isPassing: false,
+      details: `Section "${worst.heading}" contains ${worst.percentage.toFixed(0)}% of content (>${50}% threshold).`,
+      affectedTextSnippet: worst.heading,
+      remediation: 'Reduce this section or expand other sections to improve content balance.'
+    };
+  }
+
+  return {
+    ruleName: 'Content Coverage Weight',
+    isPassing: true,
+    details: 'Content weight is balanced across sections.'
   };
 }
 
