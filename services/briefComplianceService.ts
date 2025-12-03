@@ -37,4 +37,39 @@ export class BriefComplianceService {
 
     return 'prose';
   }
+
+  /**
+   * Generate subordinate text hint for a section based on heading pattern
+   */
+  generateSubordinateTextHint(
+    section: { heading: string },
+    brief: { targetKeyword?: string }
+  ): string {
+    const heading = section.heading;
+    const keyword = brief.targetKeyword || 'the topic';
+
+    // Pattern matching for common heading types
+    if (/^what (is|are)/i.test(heading)) {
+      return `Define ${keyword} clearly using the "is-a" structure: "[Entity] is a [category] that [function]"`;
+    }
+
+    if (/^how to/i.test(heading)) {
+      return `Start with the key action verb. State the primary method in one sentence.`;
+    }
+
+    if (/^why/i.test(heading)) {
+      return `State the primary reason directly. Use "because" or causative language.`;
+    }
+
+    if (/^(benefits|advantages)/i.test(heading)) {
+      return `State the number of benefits and the primary benefit first: "The X main benefits include [primary benefit], which..."`;
+    }
+
+    if (/^(types|kinds|categories)/i.test(heading)) {
+      return `State the exact count: "There are X types of ${keyword}:" followed by the list.`;
+    }
+
+    // Default
+    return `Directly answer the question implied by "${heading}" in the first sentence. Be definitive, not vague.`;
+  }
 }

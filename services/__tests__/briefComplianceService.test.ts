@@ -30,4 +30,48 @@ describe('BriefComplianceService', () => {
       expect(result).toBe('prose');
     });
   });
+
+  describe('generateSubordinateTextHint', () => {
+    it('returns definition hint for "what is" headings', () => {
+      const result = service.generateSubordinateTextHint(
+        { heading: 'What is Cloud Computing?' },
+        { targetKeyword: 'cloud computing' } as any
+      );
+      expect(result).toContain('Define');
+      expect(result).toContain('is-a');
+    });
+
+    it('returns action hint for "how to" headings', () => {
+      const result = service.generateSubordinateTextHint(
+        { heading: 'How to Deploy Applications' },
+        { targetKeyword: 'deploy' } as any
+      );
+      expect(result).toContain('action verb');
+    });
+
+    it('returns reason hint for "why" headings', () => {
+      const result = service.generateSubordinateTextHint(
+        { heading: 'Why Use Containers?' },
+        { targetKeyword: 'containers' } as any
+      );
+      expect(result).toContain('reason');
+    });
+
+    it('returns count hint for "benefits" headings', () => {
+      const result = service.generateSubordinateTextHint(
+        { heading: 'Benefits of Automation' },
+        { targetKeyword: 'automation' } as any
+      );
+      expect(result).toContain('number');
+      expect(result).toContain('benefits');
+    });
+
+    it('returns default hint for generic headings', () => {
+      const result = service.generateSubordinateTextHint(
+        { heading: 'Advanced Techniques' },
+        { targetKeyword: 'techniques' } as any
+      );
+      expect(result).toContain('Directly answer');
+    });
+  });
 });
