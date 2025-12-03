@@ -1627,6 +1627,146 @@ export interface ExternalLinkAnalysis {
 }
 
 // ============================================
+// Phase D: Site-Wide Architecture Types
+// ============================================
+
+// Feature 3: Link Count Audit
+export interface PageLinkAudit {
+  pageId: string;
+  pageTitle: string;
+  pageType: 'topic' | 'foundation' | 'pillar';
+  linkCounts: {
+    navigation: number;      // Header + footer nav links
+    content: number;         // Links from contextualBridge
+    hierarchical: number;    // Parent/child links
+    total: number;
+  };
+  isOverLimit: boolean;      // Total > 150
+  dilutionRisk: 'none' | 'low' | 'medium' | 'high';
+  topTargets: { target: string; count: number }[]; // Most linked-to pages
+  recommendations: string[];
+}
+
+export interface SiteLinkAuditResult {
+  pages: PageLinkAudit[];
+  averageLinkCount: number;
+  medianLinkCount: number;
+  pagesOverLimit: number;
+  totalLinks: number;
+  linkDistribution: {
+    range: string;           // e.g., "0-50", "51-100"
+    count: number;
+  }[];
+  overallScore: number;      // 0-100
+}
+
+// Feature 4: PageRank Flow Analysis
+export interface LinkGraphNode {
+  id: string;
+  title: string;
+  topicClass: 'monetization' | 'informational' | 'navigational' | 'foundation';
+  clusterRole: 'pillar' | 'cluster_content' | 'standalone';
+  incomingLinks: number;
+  outgoingLinks: number;
+  pageRankScore?: number;    // Simplified PageRank estimate
+}
+
+export interface LinkGraphEdge {
+  source: string;            // Source page ID
+  target: string;            // Target page ID
+  anchor: string;
+  linkType: 'contextual' | 'hierarchical' | 'navigation';
+}
+
+export interface FlowViolation {
+  type: 'reverse_flow' | 'orphaned' | 'no_cluster_support' | 'link_hoarding' | 'excessive_outbound';
+  sourcePage: string;
+  sourceTitle: string;
+  targetPage?: string;
+  targetTitle?: string;
+  severity: 'warning' | 'critical';
+  recommendation: string;
+}
+
+export interface LinkFlowAnalysis {
+  graph: {
+    nodes: LinkGraphNode[];
+    edges: LinkGraphEdge[];
+  };
+  flowViolations: FlowViolation[];
+  flowScore: number;                    // 0-100
+  centralEntityReachability: number;    // % of pages that can reach CE
+  coreToAuthorRatio: number;            // Links Core→Author vs Author→Core
+  orphanedPages: string[];
+  hubPages: string[];                   // Pages with most incoming links
+}
+
+// Feature 1: N-Gram Consistency
+export interface NGramPresence {
+  term: string;
+  inHeader: boolean;
+  inFooter: boolean;
+  inHomepage: boolean;
+  inPillarPages: string[];              // Pillar titles where present
+  missingFrom: string[];                // Locations where missing
+}
+
+export interface BoilerplateInconsistency {
+  field: string;                        // e.g., "meta_description_template"
+  variations: string[];
+  occurrences: number;
+  recommendation: string;
+}
+
+export interface SiteWideNGramAudit {
+  centralEntityPresence: NGramPresence;
+  sourceContextPresence: NGramPresence;
+  pillarTermPresence: { pillar: string; presence: NGramPresence }[];
+  inconsistentBoilerplate: BoilerplateInconsistency[];
+  overallConsistencyScore: number;      // 0-100
+}
+
+// Feature 2: Dynamic Navigation Rules
+export type NavigationSegment = 'core_section' | 'author_section' | 'pillar' | 'cluster' | 'foundation';
+
+export interface DynamicNavigationRule {
+  segment: NavigationSegment;
+  headerLinks: {
+    include: string[];                  // Topic IDs or foundation page types
+    exclude: string[];
+    maxLinks: number;
+    prioritizeBy: 'relevance' | 'recency' | 'authority';
+  };
+  footerLinks: {
+    include: string[];
+    exclude: string[];
+    prioritizeByProximity: boolean;     // Show topically related pages
+  };
+  sidebarLinks?: {
+    showClusterSiblings: boolean;
+    showParentPillar: boolean;
+    maxLinks: number;
+  };
+}
+
+export interface DynamicNavigationConfig {
+  enabled: boolean;
+  rules: DynamicNavigationRule[];
+  defaultSegment?: NavigationSegment;
+  fallbackToStatic: boolean;
+}
+
+// Combined Site-Wide Audit Result
+export interface SiteWideAuditResult {
+  linkAudit: SiteLinkAuditResult;
+  flowAnalysis: LinkFlowAnalysis;
+  ngramAudit: SiteWideNGramAudit;
+  dynamicNavConfig?: DynamicNavigationConfig;
+  overallScore: number;
+  timestamp: string;
+}
+
+// ============================================
 // UNIFIED AUDIT SYSTEM TYPES
 // ============================================
 

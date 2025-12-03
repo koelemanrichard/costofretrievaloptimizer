@@ -18,6 +18,18 @@ import {
   FoundationPageType,
   NavigationStructure,
   InternalLinkingRules,
+  // Phase D: Site-Wide Types
+  PageLinkAudit,
+  SiteLinkAuditResult,
+  LinkGraphNode,
+  LinkGraphEdge,
+  FlowViolation,
+  LinkFlowAnalysis,
+  NGramPresence,
+  BoilerplateInconsistency,
+  SiteWideNGramAudit,
+  SiteWideAuditResult,
+  SEOPillars,
 } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -1310,4 +1322,455 @@ export const saveAuditResults = async (
       error: error instanceof Error ? error.message : 'Unknown error saving audit',
     };
   }
+};
+
+// ============================================
+// PHASE D: SITE-WIDE AUDIT FUNCTIONS
+// ============================================
+
+/**
+ * Count navigation links from NavigationStructure
+ */
+const countNavigationLinks = (navigation: NavigationStructure | null): number => {
+  if (!navigation) return 0;
+
+  let count = 0;
+
+  // Header links
+  if (navigation.header) {
+    count += navigation.header.primary_nav?.length || 0;
+    // CTA button counts as one link
+    if (navigation.header.cta_button) {
+      count += 1;
+    }
+  }
+
+  // Footer links
+  if (navigation.footer) {
+    navigation.footer.sections?.forEach(section => {
+      count += section.links?.length || 0;
+    });
+    count += navigation.footer.legal_links?.length || 0;
+  }
+
+  return count;
+};
+
+/**
+ * Calculate dilution risk based on link distribution
+ */
+const calculateDilutionRisk = (
+  totalLinks: number,
+  topTargets: { target: string; count: number }[]
+): 'none' | 'low' | 'medium' | 'high' => {
+  if (totalLinks > 150) return 'high';
+  if (totalLinks > 100) return 'medium';
+
+  // Check if links are concentrated on few targets
+  if (topTargets.length > 0) {
+    const topTargetRatio = topTargets[0].count / totalLinks;
+    if (topTargetRatio > 0.3) return 'medium'; // >30% to single target
+  }
+
+  if (totalLinks > 50) return 'low';
+  return 'none';
+};
+
+/**
+ * Feature 3: Run site-wide link count audit
+ */
+export const runSiteLinkCountAudit = (ctx: LinkingAuditContext): SiteLinkAuditResult => {
+  const pages: PageLinkAudit[] = [];
+  const navLinkCount = countNavigationLinks(ctx.navigation);
+
+  // Audit each topic
+  for (const topic of ctx.topics) {
+    const brief = ctx.briefs[topic.id];
+    const bridgeLinks = brief ? getLinksFromBridge(brief.contextualBridge) : [];
+    const childCount = ctx.topics.filter(t => t.parent_topic_id === topic.id).length;
+    const parentLink = topic.parent_topic_id ? 1 : 0;
+
+    // Count links by target
+    const targetCounts = new Map<string, number>();
+    bridgeLinks.forEach(link => {
+      const target = link.targetTopic;
+      targetCounts.set(target, (targetCounts.get(target) || 0) + 1);
+    });
+
+    const topTargets = Array.from(targetCounts.entries())
+      .map(([target, count]) => ({ target, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const linkCounts = {
+      navigation: navLinkCount,
+      content: bridgeLinks.length,
+      hierarchical: childCount + parentLink,
+      total: navLinkCount + bridgeLinks.length + childCount + parentLink,
+    };
+
+    const isOverLimit = linkCounts.total > (ctx.rules.maxLinksPerPage || 150);
+    const dilutionRisk = calculateDilutionRisk(linkCounts.total, topTargets);
+
+    // Generate recommendations
+    const recommendations: string[] = [];
+    if (isOverLimit) {
+      recommendations.push(`Reduce links by ${linkCounts.total - 150} to meet the <150 guideline.`);
+    }
+    if (dilutionRisk === 'high') {
+      recommendations.push('High PageRank dilution risk. Consolidate or remove low-value links.');
+    }
+    if (topTargets.length > 0 && topTargets[0].count > 3) {
+      recommendations.push(`Reduce repeated links to "${topTargets[0].target}" (currently ${topTargets[0].count}x).`);
+    }
+
+    const pageType = topic.cluster_role === 'pillar' ? 'pillar' : 'topic';
+
+    pages.push({
+      pageId: topic.id,
+      pageTitle: topic.title,
+      pageType,
+      linkCounts,
+      isOverLimit,
+      dilutionRisk,
+      topTargets,
+      recommendations,
+    });
+  }
+
+  // Add foundation pages
+  for (const fp of ctx.foundationPages) {
+    pages.push({
+      pageId: fp.id || `fp-${fp.page_type}`,
+      pageTitle: fp.title,
+      pageType: 'foundation',
+      linkCounts: {
+        navigation: navLinkCount,
+        content: 0,
+        hierarchical: 0,
+        total: navLinkCount,
+      },
+      isOverLimit: false,
+      dilutionRisk: 'none',
+      topTargets: [],
+      recommendations: [],
+    });
+  }
+
+  // Calculate statistics
+  const linkCounts = pages.map(p => p.linkCounts.total);
+  const sortedCounts = [...linkCounts].sort((a, b) => a - b);
+  const averageLinkCount = linkCounts.reduce((a, b) => a + b, 0) / linkCounts.length || 0;
+  const medianLinkCount = sortedCounts[Math.floor(sortedCounts.length / 2)] || 0;
+  const totalLinks = linkCounts.reduce((a, b) => a + b, 0);
+  const pagesOverLimit = pages.filter(p => p.isOverLimit).length;
+
+  // Link distribution
+  const linkDistribution = [
+    { range: '0-50', count: linkCounts.filter(c => c <= 50).length },
+    { range: '51-100', count: linkCounts.filter(c => c > 50 && c <= 100).length },
+    { range: '101-150', count: linkCounts.filter(c => c > 100 && c <= 150).length },
+    { range: '151+', count: linkCounts.filter(c => c > 150).length },
+  ];
+
+  // Calculate score (penalize pages over limit)
+  const overLimitPenalty = pagesOverLimit * 10;
+  const highRiskPenalty = pages.filter(p => p.dilutionRisk === 'high').length * 5;
+  const overallScore = Math.max(0, 100 - overLimitPenalty - highRiskPenalty);
+
+  return {
+    pages,
+    averageLinkCount: Math.round(averageLinkCount),
+    medianLinkCount,
+    pagesOverLimit,
+    totalLinks,
+    linkDistribution,
+    overallScore,
+  };
+};
+
+/**
+ * Feature 4: Analyze PageRank flow direction
+ */
+export const analyzePageRankFlow = (ctx: LinkingAuditContext): LinkFlowAnalysis => {
+  const { incomingLinks, outgoingLinks } = buildLinkGraph(ctx.topics, ctx.briefs);
+
+  // Build graph nodes
+  const nodes: LinkGraphNode[] = ctx.topics.map(topic => ({
+    id: topic.id,
+    title: topic.title,
+    topicClass: (topic.topic_class as any) || 'informational',
+    clusterRole: topic.cluster_role || 'standalone',
+    incomingLinks: incomingLinks[topic.id]?.length || 0,
+    outgoingLinks: outgoingLinks[topic.id]?.length || 0,
+  }));
+
+  // Build graph edges
+  const edges: LinkGraphEdge[] = [];
+  for (const sourceId of Object.keys(outgoingLinks)) {
+    const links = outgoingLinks[sourceId];
+    for (const link of links) {
+      edges.push({
+        source: sourceId,
+        target: link.targetId,
+        anchor: link.anchor,
+        linkType: 'contextual', // Can be refined based on parent/child relationships
+      });
+    }
+  }
+
+  // Detect flow violations
+  const flowViolations: FlowViolation[] = [];
+
+  // 1. Reverse flow: Core (monetization) pages linking TO Author (informational) pages
+  for (const topic of ctx.topics) {
+    if (topic.topic_class === 'monetization') {
+      const outgoing = outgoingLinks[topic.id] || [];
+      for (const link of outgoing) {
+        const targetTopic = ctx.topics.find(t => t.id === link.targetId);
+        if (targetTopic && targetTopic.topic_class === 'informational') {
+          flowViolations.push({
+            type: 'reverse_flow',
+            sourcePage: topic.id,
+            sourceTitle: topic.title,
+            targetPage: link.targetId,
+            targetTitle: link.targetTitle,
+            severity: 'warning',
+            recommendation: `Move link from "${topic.title}" to "${link.targetTitle}" to a "Related" section or remove. Money pages should receive links, not distribute them.`,
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Orphaned pages: No incoming links
+  const orphanedPages: string[] = [];
+  for (const topic of ctx.topics) {
+    const incoming = incomingLinks[topic.id] || [];
+    if (incoming.length === 0 && topic.cluster_role !== 'pillar') {
+      orphanedPages.push(topic.title);
+      flowViolations.push({
+        type: 'orphaned',
+        sourcePage: topic.id,
+        sourceTitle: topic.title,
+        severity: 'critical',
+        recommendation: `"${topic.title}" has no incoming links. Add contextual links from related topics to improve discoverability.`,
+      });
+    }
+  }
+
+  // 3. Pillar without cluster support
+  for (const topic of ctx.topics) {
+    if (topic.cluster_role === 'pillar') {
+      const childTopics = ctx.topics.filter(t => t.parent_topic_id === topic.id);
+      const linksFromChildren = childTopics.filter(child => {
+        const childLinks = outgoingLinks[child.id] || [];
+        return childLinks.some(l => l.targetId === topic.id);
+      }).length;
+
+      if (childTopics.length > 0 && linksFromChildren === 0) {
+        flowViolations.push({
+          type: 'no_cluster_support',
+          sourcePage: topic.id,
+          sourceTitle: topic.title,
+          severity: 'warning',
+          recommendation: `Pillar "${topic.title}" has no incoming links from its cluster content. Add links from cluster articles to strengthen topical authority.`,
+        });
+      }
+    }
+  }
+
+  // 4. Link hoarding: Too many outgoing links
+  for (const topic of ctx.topics) {
+    const outgoing = outgoingLinks[topic.id] || [];
+    if (outgoing.length > 20) {
+      flowViolations.push({
+        type: 'excessive_outbound',
+        sourcePage: topic.id,
+        sourceTitle: topic.title,
+        severity: 'warning',
+        recommendation: `"${topic.title}" has ${outgoing.length} outgoing links. Consider consolidating to preserve PageRank.`,
+      });
+    }
+  }
+
+  // Find hub pages (most incoming links)
+  const hubPages = nodes
+    .sort((a, b) => b.incomingLinks - a.incomingLinks)
+    .slice(0, 5)
+    .map(n => n.title);
+
+  // Calculate core-to-author ratio
+  let coreToAuthor = 0;
+  let authorToCore = 0;
+
+  for (const edge of edges) {
+    const sourceNode = nodes.find(n => n.id === edge.source);
+    const targetNode = nodes.find(n => n.id === edge.target);
+
+    if (sourceNode && targetNode) {
+      if (sourceNode.topicClass === 'monetization' && targetNode.topicClass === 'informational') {
+        coreToAuthor++;
+      }
+      if (sourceNode.topicClass === 'informational' && targetNode.topicClass === 'monetization') {
+        authorToCore++;
+      }
+    }
+  }
+
+  const coreToAuthorRatio = authorToCore > 0 ? coreToAuthor / authorToCore : coreToAuthor;
+
+  // Calculate reachability (simplified: percentage of pages with incoming links)
+  const pagesWithIncoming = nodes.filter(n => n.incomingLinks > 0).length;
+  const centralEntityReachability = Math.round((pagesWithIncoming / nodes.length) * 100);
+
+  // Calculate flow score
+  const criticalViolations = flowViolations.filter(v => v.severity === 'critical').length;
+  const warningViolations = flowViolations.filter(v => v.severity === 'warning').length;
+  const flowScore = Math.max(0, 100 - (criticalViolations * 15) - (warningViolations * 5));
+
+  return {
+    graph: { nodes, edges },
+    flowViolations,
+    flowScore,
+    centralEntityReachability,
+    coreToAuthorRatio,
+    orphanedPages,
+    hubPages,
+  };
+};
+
+/**
+ * Feature 1: Check site-wide N-gram consistency
+ */
+export const checkSiteWideNGrams = (ctx: LinkingAuditContext): SiteWideNGramAudit => {
+  const centralEntity = ctx.pillars.centralEntity || '';
+  const sourceContext = ctx.pillars.sourceContext || '';
+
+  // Helper to check if term is present in text
+  const containsTerm = (text: string, term: string): boolean => {
+    if (!text || !term) return false;
+    return text.toLowerCase().includes(term.toLowerCase());
+  };
+
+  // Check header/footer presence
+  const headerText = ctx.navigation?.header?.primary_nav?.map(n => n.text).join(' ') || '';
+  const footerText = ctx.navigation?.footer?.sections?.map(s =>
+    s.links?.map(l => l.text).join(' ')
+  ).join(' ') || '';
+
+  // Check pillar pages
+  const pillarTitles = ctx.topics
+    .filter(t => t.cluster_role === 'pillar')
+    .map(t => t.title);
+
+  // Central entity presence
+  const ceMissingFrom: string[] = [];
+  if (!containsTerm(headerText, centralEntity)) ceMissingFrom.push('header');
+  if (!containsTerm(footerText, centralEntity)) ceMissingFrom.push('footer');
+
+  const cePillarPages = pillarTitles.filter(title => containsTerm(title, centralEntity));
+  if (cePillarPages.length === 0 && pillarTitles.length > 0) {
+    ceMissingFrom.push('pillar pages');
+  }
+
+  const centralEntityPresence: NGramPresence = {
+    term: centralEntity,
+    inHeader: containsTerm(headerText, centralEntity),
+    inFooter: containsTerm(footerText, centralEntity),
+    inHomepage: true, // Assume true - would need homepage content to verify
+    inPillarPages: cePillarPages,
+    missingFrom: ceMissingFrom,
+  };
+
+  // Source context presence
+  const scMissingFrom: string[] = [];
+  if (!containsTerm(headerText, sourceContext)) scMissingFrom.push('header');
+  if (!containsTerm(footerText, sourceContext)) scMissingFrom.push('footer');
+
+  const sourceContextPresence: NGramPresence = {
+    term: sourceContext,
+    inHeader: containsTerm(headerText, sourceContext),
+    inFooter: containsTerm(footerText, sourceContext),
+    inHomepage: true,
+    inPillarPages: pillarTitles.filter(title => containsTerm(title, sourceContext)),
+    missingFrom: scMissingFrom,
+  };
+
+  // Pillar term presence (check each pillar topic's title in various locations)
+  const pillarTopics = ctx.topics.filter(t => t.cluster_role === 'pillar');
+  const pillarTermPresence = pillarTopics.map(pillarTopic => {
+    const pillar = pillarTopic.title;
+    const pillarMissing: string[] = [];
+    if (!containsTerm(headerText, pillar)) pillarMissing.push('header');
+
+    return {
+      pillar,
+      presence: {
+        term: pillar,
+        inHeader: containsTerm(headerText, pillar),
+        inFooter: containsTerm(footerText, pillar),
+        inHomepage: true,
+        inPillarPages: pillarTitles.filter(t => containsTerm(t, pillar)),
+        missingFrom: pillarMissing,
+      },
+    };
+  });
+
+  // Check boilerplate consistency (meta descriptions)
+  const inconsistentBoilerplate: BoilerplateInconsistency[] = [];
+  const metaDescriptions = Object.values(ctx.briefs).map(b => b.metaDescription).filter(Boolean);
+
+  // Check if meta descriptions follow a pattern
+  const uniqueStarts = new Set(metaDescriptions.map(m => m?.substring(0, 50)));
+  if (uniqueStarts.size > metaDescriptions.length * 0.8) {
+    // High variation might be good, but check for CE presence
+    const withoutCE = metaDescriptions.filter(m => !containsTerm(m || '', centralEntity));
+    if (withoutCE.length > metaDescriptions.length * 0.5) {
+      inconsistentBoilerplate.push({
+        field: 'meta_description',
+        variations: [`${withoutCE.length} descriptions missing Central Entity`],
+        occurrences: withoutCE.length,
+        recommendation: `Include "${centralEntity}" in meta descriptions for brand consistency.`,
+      });
+    }
+  }
+
+  // Calculate consistency score
+  let score = 100;
+  if (ceMissingFrom.length > 0) score -= 10 * ceMissingFrom.length;
+  if (scMissingFrom.length > 0) score -= 5 * scMissingFrom.length;
+  score -= inconsistentBoilerplate.length * 5;
+
+  return {
+    centralEntityPresence,
+    sourceContextPresence,
+    pillarTermPresence,
+    inconsistentBoilerplate,
+    overallConsistencyScore: Math.max(0, score),
+  };
+};
+
+/**
+ * Run complete site-wide audit
+ */
+export const runSiteWideAudit = (ctx: LinkingAuditContext): SiteWideAuditResult => {
+  const linkAudit = runSiteLinkCountAudit(ctx);
+  const flowAnalysis = analyzePageRankFlow(ctx);
+  const ngramAudit = checkSiteWideNGrams(ctx);
+
+  // Calculate overall score as weighted average
+  const overallScore = Math.round(
+    (linkAudit.overallScore * 0.4) +
+    (flowAnalysis.flowScore * 0.4) +
+    (ngramAudit.overallConsistencyScore * 0.2)
+  );
+
+  return {
+    linkAudit,
+    flowAnalysis,
+    ngramAudit,
+    overallScore,
+    timestamp: new Date().toISOString(),
+  };
 };

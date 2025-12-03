@@ -9,6 +9,9 @@ import {
   LinkingAuditPass,
   LinkingAutoFix,
   LinkingAuditContext,
+  SiteWideAuditResult,
+  PageLinkAudit,
+  FlowViolation,
 } from '../types';
 import { useAppState } from '../state/appState';
 import {
@@ -18,6 +21,7 @@ import {
   applyFix,
   saveAuditResults,
   DEFAULT_LINKING_RULES,
+  runSiteWideAudit,
 } from '../services/ai/linkingAudit';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -29,13 +33,17 @@ interface LinkingAuditModalProps {
   mapId: string;
 }
 
+// Tab types - includes both pass tabs and site-wide tab
+type AuditTabId = LinkingAuditPass | 'site_overview';
+
 // Pass tab configuration
-const PASS_TABS = [
+const PASS_TABS: { id: AuditTabId; label: string; icon: string }[] = [
   { id: LinkingAuditPass.FUNDAMENTALS, label: 'Fundamentals', icon: '1' },
   { id: LinkingAuditPass.NAVIGATION, label: 'Navigation', icon: '2' },
   { id: LinkingAuditPass.FLOW_DIRECTION, label: 'Flow', icon: '3' },
   { id: LinkingAuditPass.EXTERNAL, label: 'External', icon: '4' },
-] as const;
+  { id: 'site_overview', label: 'Site Overview', icon: '◉' },
+];
 
 // Severity badge colors (dark theme)
 const SEVERITY_COLORS = {
@@ -67,9 +75,10 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
   mapId,
 }) => {
   const { state, dispatch } = useAppState();
-  const [activeTab, setActiveTab] = useState<LinkingAuditPass>(LinkingAuditPass.FUNDAMENTALS);
+  const [activeTab, setActiveTab] = useState<AuditTabId>(LinkingAuditPass.FUNDAMENTALS);
   const [isApplyingFixes, setIsApplyingFixes] = useState(false);
   const [applyingFixId, setApplyingFixId] = useState<string | null>(null);
+  const [siteWideResult, setSiteWideResult] = useState<SiteWideAuditResult | null>(null);
 
   const { result, isRunning, pendingFixes, lastAuditId } = state.linkingAudit;
 
@@ -125,6 +134,10 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
 
       const auditResult = runLinkingAudit(ctx);
       dispatch({ type: 'SET_LINKING_AUDIT_RESULT', payload: auditResult });
+
+      // Run site-wide audit
+      const siteAudit = runSiteWideAudit(ctx);
+      setSiteWideResult(siteAudit);
 
       // Generate fixes
       const fixes = generateAllFixes(auditResult, ctx);
@@ -300,18 +313,30 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
         )}
 
         {/* Tabs */}
-        <div className="px-6 py-3 border-b border-gray-700 flex items-center gap-2 flex-shrink-0">
+        <div className="px-6 py-3 border-b border-gray-700 flex items-center gap-2 flex-shrink-0 overflow-x-auto">
           {PASS_TABS.map(tab => {
-            const passResult = result?.passResults.find(p => p.pass === tab.id);
-            const statusIcon = getPassStatusIcon(passResult);
-            const statusColor = getPassStatusColor(passResult);
+            const isSiteOverview = tab.id === 'site_overview';
+            const passResult = !isSiteOverview ? result?.passResults.find(p => p.pass === tab.id) : undefined;
+
+            // Special handling for site overview tab
+            const statusIcon = isSiteOverview
+              ? (siteWideResult ? (siteWideResult.overallScore >= 70 ? '✓' : '⚠') : '○')
+              : getPassStatusIcon(passResult);
+            const statusColor = isSiteOverview
+              ? (siteWideResult ? (siteWideResult.overallScore >= 70 ? 'text-green-400' : 'text-yellow-400') : 'text-gray-500')
+              : getPassStatusColor(passResult);
             const isActive = activeTab === tab.id;
+
+            // Issue count for site overview = flow violations
+            const issueCount = isSiteOverview
+              ? siteWideResult?.flowAnalysis.flowViolations.length || 0
+              : passResult?.issues.length || 0;
 
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap ${
                   isActive
                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                     : 'hover:bg-gray-700/50 text-gray-400 border border-transparent'
@@ -319,9 +344,9 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
               >
                 <span className={`font-bold ${statusColor}`}>{statusIcon}</span>
                 <span>{tab.label}</span>
-                {passResult && passResult.issues.length > 0 && (
+                {issueCount > 0 && (
                   <span className="px-2 py-0.5 text-xs rounded-full bg-gray-700 text-gray-300">
-                    {passResult.issues.length}
+                    {issueCount}
                   </span>
                 )}
               </button>
@@ -354,55 +379,75 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
             </div>
           )}
 
-          {result && activePassResult && (
-            <div className="space-y-4">
-              {/* Pass summary */}
-              <Card className={`p-4 ${
-                activePassResult.status === 'passed'
-                  ? 'bg-green-900/20 border-green-500/30'
-                  : 'bg-gray-900/50'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className={`font-medium ${
-                      activePassResult.status === 'passed' ? 'text-green-300' : 'text-white'
-                    }`}>
-                      {activePassResult.status === 'passed'
-                        ? '✓ All checks passed'
-                        : `${activePassResult.issues.length} issues found`
-                      }
-                    </h3>
-                    <p className="text-sm text-gray-400 mt-1">{activePassResult.summary}</p>
+          {/* Regular pass content */}
+          {result && activeTab !== 'site_overview' && (() => {
+            const activePassResult = result.passResults.find(p => p.pass === activeTab);
+            if (!activePassResult) return null;
+            return (
+              <div className="space-y-4">
+                {/* Pass summary */}
+                <Card className={`p-4 ${
+                  activePassResult.status === 'passed'
+                    ? 'bg-green-900/20 border-green-500/30'
+                    : 'bg-gray-900/50'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className={`font-medium ${
+                        activePassResult.status === 'passed' ? 'text-green-300' : 'text-white'
+                      }`}>
+                        {activePassResult.status === 'passed'
+                          ? '✓ All checks passed'
+                          : `${activePassResult.issues.length} issues found`
+                        }
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-1">{activePassResult.summary}</p>
+                    </div>
+                    {activePassResult.autoFixable && (
+                      <span className="text-sm text-green-400">
+                        {activePassResult.issues.filter(i => i.autoFixable).length} auto-fixable
+                      </span>
+                    )}
                   </div>
-                  {activePassResult.autoFixable && (
-                    <span className="text-sm text-green-400">
-                      {activePassResult.issues.filter(i => i.autoFixable).length} auto-fixable
-                    </span>
-                  )}
-                </div>
-              </Card>
+                </Card>
 
-              {/* Issues list */}
-              {activePassResult.issues.length > 0 && (
-                <div className="space-y-3">
-                  {activePassResult.issues.map(issue => (
-                    <IssueCard
-                      key={issue.id}
-                      issue={issue}
-                      fix={pendingFixes.find(f => f.issueId === issue.id)}
-                      onApplyFix={handleApplySingleFix}
-                      isApplying={applyingFixId === issue.id}
-                    />
-                  ))}
-                </div>
-              )}
+                {/* Issues list */}
+                {activePassResult.issues.length > 0 && (
+                  <div className="space-y-3">
+                    {activePassResult.issues.map(issue => (
+                      <IssueCard
+                        key={issue.id}
+                        issue={issue}
+                        fix={pendingFixes.find(f => f.issueId === issue.id)}
+                        onApplyFix={handleApplySingleFix}
+                        isApplying={applyingFixId === issue.id}
+                      />
+                    ))}
+                  </div>
+                )}
 
-              {activePassResult.issues.length === 0 && (
-                <div className="text-center py-8">
-                  <span className="text-4xl">✨</span>
-                  <p className="mt-2 text-gray-400">No issues in this pass!</p>
-                </div>
-              )}
+                {activePassResult.issues.length === 0 && (
+                  <div className="text-center py-8">
+                    <span className="text-4xl">✨</span>
+                    <p className="mt-2 text-gray-400">No issues in this pass!</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Site Overview content */}
+          {activeTab === 'site_overview' && siteWideResult && (
+            <SiteOverviewContent
+              result={siteWideResult}
+              topics={topics}
+            />
+          )}
+
+          {activeTab === 'site_overview' && !siteWideResult && result && (
+            <div className="text-center py-8">
+              <Loader className="w-8 h-8 mx-auto mb-4" />
+              <p className="text-gray-400">Loading site-wide analysis...</p>
             </div>
           )}
         </div>
@@ -434,6 +479,359 @@ export const LinkingAuditModal: React.FC<LinkingAuditModalProps> = ({
           </div>
         </div>
       </Card>
+    </div>
+  );
+};
+
+// Site Overview content component
+interface SiteOverviewContentProps {
+  result: SiteWideAuditResult;
+  topics: { id: string; title: string }[];
+}
+
+const SiteOverviewContent: React.FC<SiteOverviewContentProps> = ({ result, topics }) => {
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const getTopicTitle = (id: string) => {
+    const topic = topics.find(t => t.id === id);
+    return topic?.title || id;
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-400';
+    if (score >= 60) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  const getScoreBg = (score: number) => {
+    if (score >= 80) return 'bg-green-900/20 border-green-500/30';
+    if (score >= 60) return 'bg-yellow-900/20 border-yellow-500/30';
+    return 'bg-red-900/20 border-red-500/30';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Overall Score */}
+      <Card className={`p-4 ${getScoreBg(result.overallScore)}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className={`text-lg font-medium ${getScoreColor(result.overallScore)}`}>
+              Site-Wide Score: {result.overallScore}/100
+            </h3>
+            <p className="text-sm text-gray-400 mt-1">
+              Combined analysis of link counts, PageRank flow, and N-gram consistency
+            </p>
+          </div>
+          <div className="text-right text-sm">
+            <div className="text-gray-400">Links: <span className={getScoreColor(result.linkAudit.overallScore)}>{result.linkAudit.overallScore}</span></div>
+            <div className="text-gray-400">Flow: <span className={getScoreColor(result.flowAnalysis.flowScore)}>{result.flowAnalysis.flowScore}</span></div>
+            <div className="text-gray-400">N-grams: <span className={getScoreColor(result.ngramAudit.overallConsistencyScore)}>{result.ngramAudit.overallConsistencyScore}</span></div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Section 1: Link Count Analysis */}
+      <Card className="overflow-hidden">
+        <button
+          onClick={() => setExpandedSection(expandedSection === 'links' ? null : 'links')}
+          className="w-full p-4 text-left hover:bg-gray-700/30 transition-colors flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <h4 className="font-medium text-white">Link Count Analysis</h4>
+              <p className="text-sm text-gray-400">
+                {result.linkAudit.pagesOverLimit} pages over 150 link limit • Avg: {result.linkAudit.averageLinkCount.toFixed(0)} links/page
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-1 rounded text-xs ${result.linkAudit.pagesOverLimit === 0 ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+              {result.linkAudit.pagesOverLimit === 0 ? 'PASS' : `${result.linkAudit.pagesOverLimit} OVER`}
+            </span>
+            <span className="text-gray-500">{expandedSection === 'links' ? '▲' : '▼'}</span>
+          </div>
+        </button>
+
+        {expandedSection === 'links' && (
+          <div className="px-4 pb-4 border-t border-gray-700 bg-gray-900/30">
+            {/* Distribution bars */}
+            <div className="pt-4 space-y-2">
+              <h5 className="text-sm text-gray-400 mb-3">Link Distribution</h5>
+              {result.linkAudit.linkDistribution.map(d => (
+                <div key={d.range} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500 w-20">{d.range}</span>
+                  <div className="flex-1 h-4 bg-gray-800 rounded overflow-hidden">
+                    <div
+                      className={`h-full ${d.range.includes('150+') ? 'bg-red-500' : 'bg-blue-500'}`}
+                      style={{ width: `${(d.count / result.linkAudit.pages.length) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400 w-8">{d.count}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Pages over limit */}
+            {result.linkAudit.pagesOverLimit > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm text-red-400 mb-2">Pages Over Limit</h5>
+                <div className="space-y-2">
+                  {result.linkAudit.pages.filter(p => p.isOverLimit).slice(0, 5).map(page => (
+                    <div key={page.pageId} className="flex items-center justify-between text-sm p-2 bg-red-900/20 rounded">
+                      <span className="text-white truncate max-w-[60%]">{page.pageTitle}</span>
+                      <span className="text-red-300">{page.linkCounts.total} links</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* High dilution risk */}
+            {result.linkAudit.pages.some(p => p.dilutionRisk === 'high') && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm text-yellow-400 mb-2">High PageRank Dilution Risk</h5>
+                <div className="space-y-2">
+                  {result.linkAudit.pages.filter(p => p.dilutionRisk === 'high').slice(0, 5).map(page => (
+                    <div key={page.pageId} className="flex items-center justify-between text-sm p-2 bg-yellow-900/20 rounded">
+                      <span className="text-white truncate max-w-[60%]">{page.pageTitle}</span>
+                      <div className="text-right">
+                        <span className="text-yellow-300">{page.linkCounts.total} links</span>
+                        {page.topTargets[0] && (
+                          <span className="text-gray-500 text-xs ml-2">→ {page.topTargets[0].count}x same target</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Section 2: PageRank Flow Analysis */}
+      <Card className="overflow-hidden">
+        <button
+          onClick={() => setExpandedSection(expandedSection === 'flow' ? null : 'flow')}
+          className="w-full p-4 text-left hover:bg-gray-700/30 transition-colors flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔀</span>
+            <div>
+              <h4 className="font-medium text-white">PageRank Flow Analysis</h4>
+              <p className="text-sm text-gray-400">
+                {result.flowAnalysis.flowViolations.length} flow violations • {(result.flowAnalysis.centralEntityReachability * 100).toFixed(0)}% CE reachability
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-1 rounded text-xs ${result.flowAnalysis.flowViolations.length === 0 ? 'bg-green-900/30 text-green-300' : 'bg-yellow-900/30 text-yellow-300'}`}>
+              {result.flowAnalysis.flowViolations.length === 0 ? 'OPTIMAL' : `${result.flowAnalysis.flowViolations.length} ISSUES`}
+            </span>
+            <span className="text-gray-500">{expandedSection === 'flow' ? '▲' : '▼'}</span>
+          </div>
+        </button>
+
+        {expandedSection === 'flow' && (
+          <div className="px-4 pb-4 border-t border-gray-700 bg-gray-900/30">
+            {/* Flow metrics */}
+            <div className="pt-4 grid grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-gray-800/50 rounded">
+                <div className={`text-2xl font-bold ${getScoreColor(result.flowAnalysis.flowScore)}`}>
+                  {result.flowAnalysis.flowScore}
+                </div>
+                <div className="text-xs text-gray-400">Flow Score</div>
+              </div>
+              <div className="text-center p-3 bg-gray-800/50 rounded">
+                <div className="text-2xl font-bold text-blue-400">
+                  {(result.flowAnalysis.coreToAuthorRatio * 100).toFixed(0)}%
+                </div>
+                <div className="text-xs text-gray-400">Core → Author</div>
+              </div>
+              <div className="text-center p-3 bg-gray-800/50 rounded">
+                <div className="text-2xl font-bold text-purple-400">
+                  {result.flowAnalysis.hubPages.length}
+                </div>
+                <div className="text-xs text-gray-400">Hub Pages</div>
+              </div>
+            </div>
+
+            {/* Orphaned pages */}
+            {result.flowAnalysis.orphanedPages.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm text-red-400 mb-2">Orphaned Pages (No Incoming Links)</h5>
+                <div className="flex flex-wrap gap-2">
+                  {result.flowAnalysis.orphanedPages.slice(0, 10).map(pageId => (
+                    <span key={pageId} className="px-2 py-1 bg-red-900/30 text-red-300 text-xs rounded">
+                      {getTopicTitle(pageId)}
+                    </span>
+                  ))}
+                  {result.flowAnalysis.orphanedPages.length > 10 && (
+                    <span className="px-2 py-1 bg-gray-700 text-gray-400 text-xs rounded">
+                      +{result.flowAnalysis.orphanedPages.length - 10} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Flow violations */}
+            {result.flowAnalysis.flowViolations.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm text-yellow-400 mb-2">Flow Violations</h5>
+                <div className="space-y-2">
+                  {result.flowAnalysis.flowViolations.slice(0, 5).map((v, i) => (
+                    <FlowViolationCard key={i} violation={v} />
+                  ))}
+                  {result.flowAnalysis.flowViolations.length > 5 && (
+                    <div className="text-xs text-gray-500 text-center pt-2">
+                      +{result.flowAnalysis.flowViolations.length - 5} more violations
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Hub pages */}
+            {result.flowAnalysis.hubPages.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm text-green-400 mb-2">Hub Pages (High Connectivity)</h5>
+                <div className="flex flex-wrap gap-2">
+                  {result.flowAnalysis.hubPages.slice(0, 10).map(pageId => (
+                    <span key={pageId} className="px-2 py-1 bg-green-900/30 text-green-300 text-xs rounded">
+                      {getTopicTitle(pageId)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Section 3: N-gram Consistency */}
+      <Card className="overflow-hidden">
+        <button
+          onClick={() => setExpandedSection(expandedSection === 'ngrams' ? null : 'ngrams')}
+          className="w-full p-4 text-left hover:bg-gray-700/30 transition-colors flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📝</span>
+            <div>
+              <h4 className="font-medium text-white">N-gram Consistency</h4>
+              <p className="text-sm text-gray-400">
+                Central Entity and Source Context presence across site
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-1 rounded text-xs ${result.ngramAudit.overallConsistencyScore >= 80 ? 'bg-green-900/30 text-green-300' : 'bg-yellow-900/30 text-yellow-300'}`}>
+              {result.ngramAudit.overallConsistencyScore}%
+            </span>
+            <span className="text-gray-500">{expandedSection === 'ngrams' ? '▲' : '▼'}</span>
+          </div>
+        </button>
+
+        {expandedSection === 'ngrams' && (
+          <div className="px-4 pb-4 border-t border-gray-700 bg-gray-900/30">
+            {/* Central Entity presence */}
+            <div className="pt-4">
+              <h5 className="text-sm text-gray-400 mb-3">Central Entity: "{result.ngramAudit.centralEntityPresence.term}"</h5>
+              <div className="grid grid-cols-4 gap-2">
+                <PresenceIndicator label="Header" present={result.ngramAudit.centralEntityPresence.inHeader} />
+                <PresenceIndicator label="Footer" present={result.ngramAudit.centralEntityPresence.inFooter} />
+                <PresenceIndicator label="Homepage" present={result.ngramAudit.centralEntityPresence.inHomepage} />
+                <PresenceIndicator
+                  label="Pillars"
+                  present={result.ngramAudit.centralEntityPresence.inPillarPages.length > 0}
+                  count={result.ngramAudit.centralEntityPresence.inPillarPages.length}
+                />
+              </div>
+              {result.ngramAudit.centralEntityPresence.missingFrom.length > 0 && (
+                <div className="mt-2 text-xs text-red-400">
+                  Missing from: {result.ngramAudit.centralEntityPresence.missingFrom.join(', ')}
+                </div>
+              )}
+            </div>
+
+            {/* Source Context presence */}
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <h5 className="text-sm text-gray-400 mb-3">Source Context: "{result.ngramAudit.sourceContextPresence.term}"</h5>
+              <div className="grid grid-cols-4 gap-2">
+                <PresenceIndicator label="Header" present={result.ngramAudit.sourceContextPresence.inHeader} />
+                <PresenceIndicator label="Footer" present={result.ngramAudit.sourceContextPresence.inFooter} />
+                <PresenceIndicator label="Homepage" present={result.ngramAudit.sourceContextPresence.inHomepage} />
+                <PresenceIndicator
+                  label="Pillars"
+                  present={result.ngramAudit.sourceContextPresence.inPillarPages.length > 0}
+                  count={result.ngramAudit.sourceContextPresence.inPillarPages.length}
+                />
+              </div>
+            </div>
+
+            {/* Boilerplate inconsistencies */}
+            {result.ngramAudit.inconsistentBoilerplate.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm text-yellow-400 mb-2">Boilerplate Inconsistencies</h5>
+                <div className="space-y-2">
+                  {result.ngramAudit.inconsistentBoilerplate.map((b, i) => (
+                    <div key={i} className="p-2 bg-yellow-900/20 rounded text-sm">
+                      <div className="text-yellow-300">{b.field}</div>
+                      <div className="text-gray-400 text-xs mt-1">
+                        {b.variations.length} variations found
+                      </div>
+                      <div className="text-blue-300 text-xs mt-1">{b.recommendation}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+// Presence indicator mini-component
+const PresenceIndicator: React.FC<{ label: string; present: boolean; count?: number }> = ({ label, present, count }) => (
+  <div className={`p-2 rounded text-center text-xs ${present ? 'bg-green-900/30' : 'bg-red-900/30'}`}>
+    <div className={present ? 'text-green-400' : 'text-red-400'}>
+      {present ? '✓' : '✗'}
+    </div>
+    <div className="text-gray-400">{label}</div>
+    {count !== undefined && <div className="text-gray-500">{count}</div>}
+  </div>
+);
+
+// Flow violation card mini-component
+const FlowViolationCard: React.FC<{ violation: FlowViolation }> = ({ violation }) => {
+  const typeLabels: Record<string, string> = {
+    reverse_flow: '↩ Reverse Flow',
+    orphaned: '🔗 Orphaned',
+    no_cluster_support: '📉 No Cluster Support',
+    link_hoarding: '🏦 Link Hoarding',
+    excessive_outbound: '📤 Excessive Outbound',
+  };
+
+  return (
+    <div className={`p-3 rounded ${violation.severity === 'critical' ? 'bg-red-900/20 border border-red-500/30' : 'bg-yellow-900/20 border border-yellow-500/30'}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <span className={`text-xs font-medium ${violation.severity === 'critical' ? 'text-red-300' : 'text-yellow-300'}`}>
+            {typeLabels[violation.type] || violation.type}
+          </span>
+          <div className="text-sm text-white mt-1">{violation.sourceTitle}</div>
+          {violation.targetTitle && (
+            <div className="text-xs text-gray-400">→ {violation.targetTitle}</div>
+          )}
+        </div>
+        <span className={`px-2 py-0.5 text-xs rounded ${violation.severity === 'critical' ? 'bg-red-500/30 text-red-300' : 'bg-yellow-500/30 text-yellow-300'}`}>
+          {violation.severity}
+        </span>
+      </div>
+      <div className="mt-2 text-xs text-blue-300">{violation.recommendation}</div>
     </div>
   );
 };

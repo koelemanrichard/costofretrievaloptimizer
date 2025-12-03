@@ -13,8 +13,15 @@ import {
   FooterSection,
   FoundationPage,
   EnrichedTopic,
+  NavigationSegment,
+  DynamicNavigationConfig,
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  previewNavigationForAllSegments,
+  createDefaultConfig,
+  GeneratedNavigation,
+} from '../services/navigationService';
 
 interface NavigationDesignerProps {
   navigation: NavigationStructure | null;
@@ -63,6 +70,11 @@ const NavigationDesigner: React.FC<NavigationDesignerProps> = ({
   const [editingLink, setEditingLink] = useState<{ location: string; index: number } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Dynamic navigation state
+  const [showDynamicPreview, setShowDynamicPreview] = useState(false);
+  const [dynamicConfig, setDynamicConfig] = useState<DynamicNavigationConfig>(createDefaultConfig());
+  const [previewSegment, setPreviewSegment] = useState<NavigationSegment>('core_section');
+
   // Update state when navigation prop changes (e.g., when switching maps)
   React.useEffect(() => {
     setHeaderLinks(navigation?.header.primary_nav || []);
@@ -79,6 +91,12 @@ const NavigationDesigner: React.FC<NavigationDesignerProps> = ({
   const headerLinkCount = headerLinks.length + (ctaButton ? 1 : 0);
   const footerLinkCount = footerSections.reduce((sum, section) => sum + section.links.length, 0) + legalLinks.length;
   const totalLinkCount = headerLinkCount + footerLinkCount;
+
+  // Compute dynamic navigation previews
+  const dynamicPreviews = useMemo(() => {
+    if (!navigation || !showDynamicPreview) return null;
+    return previewNavigationForAllSegments(topics, foundationPages, navigation, dynamicConfig);
+  }, [topics, foundationPages, navigation, dynamicConfig, showDynamicPreview]);
 
   // Get available targets for link selection
   const availableTargets = useMemo(() => {
@@ -584,6 +602,175 @@ const NavigationDesigner: React.FC<NavigationDesignerProps> = ({
             placeholder="© 2024 Your Company. All rights reserved."
           />
         </div>
+      </Card>
+
+      {/* Dynamic Navigation Preview */}
+      <Card className="p-6">
+        <button
+          onClick={() => setShowDynamicPreview(!showDynamicPreview)}
+          className="w-full flex justify-between items-center"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔀</span>
+            <div className="text-left">
+              <h3 className="text-lg font-semibold text-white">Dynamic Navigation Preview</h3>
+              <p className="text-sm text-gray-400">
+                Preview how navigation changes based on page context
+              </p>
+            </div>
+          </div>
+          <span className="text-gray-400">{showDynamicPreview ? '▲' : '▼'}</span>
+        </button>
+
+        {showDynamicPreview && (
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            {/* Enable toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dynamicConfig.enabled}
+                  onChange={(e) => setDynamicConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600"
+                />
+                <span className="text-sm font-medium text-white">Enable Dynamic Navigation</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={dynamicConfig.fallbackToStatic}
+                    onChange={(e) => setDynamicConfig(prev => ({ ...prev, fallbackToStatic: e.target.checked }))}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-800"
+                  />
+                  <span className="text-xs text-gray-400">Fallback to static nav</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Segment selector */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-400 mb-2">Preview Segment</label>
+              <div className="flex gap-2">
+                {(['core_section', 'author_section', 'pillar', 'cluster', 'foundation'] as NavigationSegment[]).map(seg => (
+                  <button
+                    key={seg}
+                    onClick={() => setPreviewSegment(seg)}
+                    className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                      previewSegment === seg
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600'
+                    }`}
+                  >
+                    {seg.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview display */}
+            {dynamicPreviews && dynamicPreviews[previewSegment] && (
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Header preview */}
+                <div className="bg-gray-900/50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                    <span className="text-gray-400">📌</span> Header Links ({dynamicPreviews[previewSegment].headerLinks.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {dynamicPreviews[previewSegment].headerLinks.map((link, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <span className={`w-2 h-2 rounded-full ${
+                          link.prominence === 'high' ? 'bg-blue-400' :
+                          link.prominence === 'medium' ? 'bg-gray-400' : 'bg-gray-600'
+                        }`} />
+                        <span className="text-gray-300">{link.text}</span>
+                        {link.target_foundation_page_id && (
+                          <span className="text-xs text-purple-400">[FP]</span>
+                        )}
+                      </div>
+                    ))}
+                    {dynamicPreviews[previewSegment].headerLinks.length === 0 && (
+                      <p className="text-gray-500 text-xs">No header links for this segment</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sidebar preview */}
+                {dynamicPreviews[previewSegment].sidebarLinks && (
+                  <div className="bg-gray-900/50 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                      <span className="text-gray-400">📑</span> Sidebar Links ({dynamicPreviews[previewSegment].sidebarLinks?.length || 0})
+                    </h4>
+                    <div className="space-y-1">
+                      {dynamicPreviews[previewSegment].sidebarLinks?.map((link, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <span className={`w-2 h-2 rounded-full ${
+                            link.prominence === 'high' ? 'bg-green-400' :
+                            link.prominence === 'medium' ? 'bg-gray-400' : 'bg-gray-600'
+                          }`} />
+                          <span className="text-gray-300">{link.text}</span>
+                        </div>
+                      ))}
+                      {(!dynamicPreviews[previewSegment].sidebarLinks || dynamicPreviews[previewSegment].sidebarLinks.length === 0) && (
+                        <p className="text-gray-500 text-xs">No sidebar links for this segment</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer preview */}
+                <div className="bg-gray-900/50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                    <span className="text-gray-400">📋</span> Footer Links ({dynamicPreviews[previewSegment].footerLinks.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {dynamicPreviews[previewSegment].footerLinks.map((link, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-500">•</span>
+                        <span className="text-gray-300">{link.text}</span>
+                        {link.target_foundation_page_id && (
+                          <span className="text-xs text-purple-400">[FP]</span>
+                        )}
+                      </div>
+                    ))}
+                    {dynamicPreviews[previewSegment].footerLinks.length === 0 && (
+                      <p className="text-gray-500 text-xs">No footer links for this segment</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Breadcrumbs preview */}
+                <div className="bg-gray-900/50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                    <span className="text-gray-400">🧭</span> Breadcrumbs
+                  </h4>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    {dynamicPreviews[previewSegment].breadcrumbs.map((crumb, i) => (
+                      <React.Fragment key={i}>
+                        {i > 0 && <span className="text-gray-600">›</span>}
+                        <span className={crumb.url ? 'text-blue-400' : 'text-white'}>
+                          {crumb.text}
+                        </span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Explanation */}
+            <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+              <p className="text-sm text-blue-200/80">
+                <strong className="text-blue-300">How it works:</strong> Dynamic navigation adjusts links based on the visitor's current location.
+                {previewSegment === 'core_section' && ' Core Section pages prioritize monetization topics and show cluster siblings.'}
+                {previewSegment === 'author_section' && ' Author Section pages prioritize informational content and hide monetization links.'}
+                {previewSegment === 'pillar' && ' Pillar pages show all child cluster topics for comprehensive internal linking.'}
+                {previewSegment === 'cluster' && ' Cluster pages show parent pillar and sibling topics for topical relevance.'}
+                {previewSegment === 'foundation' && ' Foundation pages show all pillars and other foundation pages for site-wide navigation.'}
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Action Buttons */}
