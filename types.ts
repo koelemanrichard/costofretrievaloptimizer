@@ -2027,3 +2027,50 @@ export const PASS_NAMES: Record<number, string> = {
   7: 'Introduction Synthesis',
   8: 'Final Audit'
 };
+
+// =============================================================================
+// SEMANTIC ANALYSIS TYPES (Macro/Micro Framework)
+// =============================================================================
+
+export interface CoreEntities {
+  centralEntity: string;
+  searchIntent: string;
+  detectedSourceContext: string;
+}
+
+export interface MacroAnalysis {
+  contextualVector: string;  // H1-H6 flow and linearity analysis
+  hierarchy: string;         // Heading depth and order analysis
+  sourceContext: string;     // Brand alignment and tone analysis
+}
+
+export interface MicroAnalysis {
+  sentenceStructure: string;    // Modality, verbs, subject positioning
+  informationDensity: string;   // Fluff words and fact density
+  htmlSemantics: string;        // Lists, tables, alt tags
+}
+
+export type SemanticActionCategory = 'Low Hanging Fruit' | 'Mid Term' | 'Long Term';
+export type SemanticActionType = 'Micro-Semantics' | 'Macro-Semantics';
+export type SemanticActionImpact = 'High' | 'Medium' | 'Low';
+
+export interface SemanticActionItem {
+  id: string;
+  title: string;
+  description: string;
+  category: SemanticActionCategory;
+  impact: SemanticActionImpact;
+  type: SemanticActionType;
+  ruleReference?: string;
+  smartFix?: string;  // AI-generated fix suggestion
+}
+
+export interface SemanticAuditResult {
+  overallScore: number;
+  summary: string;
+  coreEntities: CoreEntities;
+  macroAnalysis: MacroAnalysis;
+  microAnalysis: MicroAnalysis;
+  actions: SemanticActionItem[];
+  analyzedAt: string;
+}
