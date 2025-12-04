@@ -4,16 +4,12 @@
 import {
   BusinessInfo,
   SemanticAuditResult,
-  CoreEntities,
-  MacroAnalysis,
-  MicroAnalysis,
   SemanticActionItem,
   SemanticActionCategory,
   SemanticActionType,
   SemanticActionImpact
 } from '../../types';
 import { SEMANTIC_FRAMEWORK, SMART_FIX_PROMPT_TEMPLATE } from '../../config/semanticFramework';
-import { AIResponseSanitizer } from '../aiResponseSanitizer';
 import { AppAction } from '../../state/appState';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
@@ -199,67 +195,48 @@ const mapResponseToResult = (response: any): SemanticAuditResult => {
 };
 
 /**
- * Call the appropriate AI provider for semantic analysis
+ * Fallback result when analysis fails
+ */
+const FALLBACK_RESULT: SemanticAuditResult = {
+  overallScore: 0,
+  summary: 'Analysis could not be completed',
+  coreEntities: { centralEntity: 'Unknown', searchIntent: 'Unknown', detectedSourceContext: 'Unknown' },
+  macroAnalysis: { contextualVector: '', hierarchy: '', sourceContext: '' },
+  microAnalysis: { sentenceStructure: '', informationDensity: '', htmlSemantics: '' },
+  actions: [],
+  analyzedAt: new Date().toISOString()
+};
+
+/**
+ * Call the appropriate AI provider for semantic analysis using proper exported API
  */
 const callSemanticAnalysisApi = async (
   prompt: string,
   businessInfo: BusinessInfo,
   dispatch: React.Dispatch<AppAction>
 ): Promise<SemanticAuditResult> => {
-  const sanitizer = new AIResponseSanitizer(dispatch);
-
-  // Provider-agnostic call - delegates to the correct service based on businessInfo.aiProvider
-  const sanitizerFn = (text: string): any => {
-    try {
-      const parsed = JSON.parse(text);
-      return parsed;
-    } catch (error) {
-      dispatch({
-        type: 'LOG_EVENT',
-        payload: {
-          service: 'SemanticAnalysis',
-          message: 'Failed to parse AI response, using fallback',
-          status: 'warning',
-          timestamp: Date.now()
-        }
-      });
-      return {
-        overallScore: 0,
-        summary: 'Failed to analyze content',
-        coreEntities: { centralEntity: 'Unknown', searchIntent: 'Unknown', detectedSourceContext: 'Unknown' },
-        macroAnalysis: { contextualVector: '', hierarchy: '', sourceContext: '' },
-        microAnalysis: { sentenceStructure: '', informationDensity: '', htmlSemantics: '' },
-        actions: []
-      };
-    }
-  };
-
   let rawResponse: any;
 
+  // Use the proper exported generateJson function from each provider
   switch (businessInfo.aiProvider) {
     case 'gemini':
-      // Gemini has its own callApi implementation
-      rawResponse = await (geminiService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn, true);
+      rawResponse = await geminiService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT);
       break;
 
     case 'openai':
-      // OpenAI has its own callApi implementation
-      rawResponse = await (openAiService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn, true);
+      rawResponse = await openAiService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT);
       break;
 
     case 'anthropic':
-      // Anthropic has its own callApi implementation
-      rawResponse = await (anthropicService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn);
+      rawResponse = await anthropicService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT);
       break;
 
     case 'perplexity':
-      // Perplexity has its own callApi implementation
-      rawResponse = await (perplexityService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn);
+      rawResponse = await perplexityService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT);
       break;
 
     case 'openrouter':
-      // OpenRouter has its own callApi implementation
-      rawResponse = await (openRouterService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn);
+      rawResponse = await openRouterService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT);
       break;
 
     default:
@@ -357,32 +334,28 @@ export const generateSmartFix = async (
       .replace('{ruleReference}', action.ruleReference || 'General semantic optimization')
       .replace('{pageContent}', pageContent.substring(0, 4000)); // Limit content to avoid token limits
 
-    const sanitizerFn = (text: string): string => {
-      // For smart fixes, we want the raw text response, not JSON
-      return text.trim();
-    };
-
     let smartFix: string;
 
+    // Use the proper exported generateText function from each provider
     switch (businessInfo.aiProvider) {
       case 'gemini':
-        smartFix = await (geminiService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn, false);
+        smartFix = await geminiService.generateText(prompt, businessInfo, dispatch);
         break;
 
       case 'openai':
-        smartFix = await (openAiService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn, false);
+        smartFix = await openAiService.generateText(prompt, businessInfo, dispatch);
         break;
 
       case 'anthropic':
-        smartFix = await (anthropicService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn);
+        smartFix = await anthropicService.generateText(prompt, businessInfo, dispatch);
         break;
 
       case 'perplexity':
-        smartFix = await (perplexityService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn);
+        smartFix = await perplexityService.generateText(prompt, businessInfo, dispatch);
         break;
 
       case 'openrouter':
-        smartFix = await (openRouterService as any).callApi?.(prompt, businessInfo, dispatch, sanitizerFn);
+        smartFix = await openRouterService.generateText(prompt, businessInfo, dispatch);
         break;
 
       default:
