@@ -1116,6 +1116,25 @@ export interface ExtractedPageData {
 }
 
 // ============================================
+// SCRAPING PROVIDER TYPES
+// ============================================
+
+export type ExtractionType =
+  | 'semantic_only'   // Content, headings, word count - Jina primary
+  | 'technical_only'  // Schema, links, status, performance - Apify primary
+  | 'full_audit'      // Both technical + semantic in parallel
+  | 'auto';           // Smart selection based on available keys (default)
+
+export type ScrapingProvider = 'jina' | 'firecrawl' | 'apify';
+
+export interface ProviderResult {
+  provider: ScrapingProvider;
+  success: boolean;
+  error?: string;
+  duration?: number;
+}
+
+// ============================================
 // PHASE 3: REPORT GENERATION TYPES
 // ============================================
 
