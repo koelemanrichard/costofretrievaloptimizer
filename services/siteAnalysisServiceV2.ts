@@ -541,8 +541,11 @@ export const extractProjectContent = async (
 
   const urls = pendingPages.map(p => p.url);
 
-  // Run extraction
-  const extractions = await extractPages(urls, config, onProgress);
+  // Run extraction with full_audit type (technical + semantic data for site analysis)
+  const extractions = await extractPages(urls, {
+    ...config,
+    extractionType: 'full_audit',
+  }, onProgress);
 
   // Update pages in database
   let crawledCount = 0;
@@ -716,8 +719,11 @@ export const extractSinglePageById = async (
     payload: { service: 'SiteAnalysis', message: `Extracting content for ${page.url}`, status: 'info', timestamp: Date.now() }
   });
 
-  // Run extraction
-  const extraction = await extractSinglePage(page.url, config);
+  // Run extraction with full_audit type (technical + semantic data for site analysis)
+  const extraction = await extractSinglePage(page.url, {
+    ...config,
+    extractionType: 'full_audit',
+  });
   const merged = mergeExtractionData(extraction);
   const hasContent = extraction.technical || extraction.semantic;
 
