@@ -848,7 +848,8 @@ export const generateJson = async <T extends object>(
     prompt: string,
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<any>,
-    fallback: T
+    fallback: T,
+    responseSchema?: any
 ): Promise<T> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompt, businessInfo, dispatch, (text) => {
@@ -857,7 +858,7 @@ export const generateJson = async <T extends object>(
         } catch {
             return sanitizer.sanitize(text, {}, fallback);
         }
-    }, true);
+    }, true, responseSchema);
 };
 
 /**

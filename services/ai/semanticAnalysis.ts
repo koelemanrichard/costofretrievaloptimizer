@@ -16,71 +16,63 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { Type } from '@google/genai';
 import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * JSON Schema for structured semantic analysis output
- * This ensures the AI returns data in the correct format
+ * Gemini-native response schema using Type for structured output
+ * This ensures Gemini returns properly formatted JSON
  */
-const ANALYSIS_SCHEMA = {
-  type: "object",
+const GEMINI_ANALYSIS_SCHEMA = {
+  type: Type.OBJECT,
   properties: {
     overallScore: {
-      type: "number",
-      description: "Overall semantic quality score from 0-100"
+      type: Type.NUMBER,
+      description: "0-100 score based on semantic adherence"
     },
     summary: {
-      type: "string",
-      description: "Brief summary of the semantic audit findings"
+      type: Type.STRING,
+      description: "Executive summary of the audit findings (2-3 sentences)"
     },
     coreEntities: {
-      type: "object",
+      type: Type.OBJECT,
       properties: {
-        centralEntity: { type: "string" },
-        searchIntent: { type: "string" },
-        detectedSourceContext: { type: "string" }
+        centralEntity: { type: Type.STRING, description: "The single main concept or entity of the page" },
+        searchIntent: { type: Type.STRING, description: "User intent: Know, Do, Go, Commercial, etc." },
+        detectedSourceContext: { type: Type.STRING, description: "Who does the text sound like? e.g. Medical Expert, Generic Blogger" }
       },
       required: ["centralEntity", "searchIntent", "detectedSourceContext"]
     },
     macroAnalysis: {
-      type: "object",
+      type: Type.OBJECT,
       properties: {
-        contextualVector: { type: "string", description: "Analysis of H1-H6 flow and linearity" },
-        hierarchy: { type: "string", description: "Heading depth and order analysis" },
-        sourceContext: { type: "string", description: "Brand alignment and tone analysis" }
+        contextualVector: { type: Type.STRING, description: "Analysis of H1-H6 flow and linearity. Use bullet points for issues found." },
+        hierarchy: { type: Type.STRING, description: "Heading depth and order analysis. Use bullet points." },
+        sourceContext: { type: Type.STRING, description: "Brand alignment and tone analysis. Use bullet points." }
       },
       required: ["contextualVector", "hierarchy", "sourceContext"]
     },
     microAnalysis: {
-      type: "object",
+      type: Type.OBJECT,
       properties: {
-        sentenceStructure: { type: "string", description: "Modality, verbs, subject positioning" },
-        informationDensity: { type: "string", description: "Fluff words and fact density" },
-        htmlSemantics: { type: "string", description: "Lists, tables, alt tags" }
+        sentenceStructure: { type: Type.STRING, description: "Modality analysis (is/are vs can/might), stop words, subject positioning. Use bullet points." },
+        informationDensity: { type: Type.STRING, description: "Fluff words and fact density analysis. Use bullet points." },
+        htmlSemantics: { type: Type.STRING, description: "Lists, tables, alt tags analysis. Use bullet points." }
       },
       required: ["sentenceStructure", "informationDensity", "htmlSemantics"]
     },
     actions: {
-      type: "array",
+      type: Type.ARRAY,
       items: {
-        type: "object",
+        type: Type.OBJECT,
         properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          category: {
-            type: "string",
-            enum: ["Low Hanging Fruit", "Mid Term", "Long Term"]
-          },
-          impact: {
-            type: "string",
-            enum: ["High", "Medium", "Low"]
-          },
-          type: {
-            type: "string",
-            enum: ["Micro-Semantics", "Macro-Semantics"]
-          },
-          ruleReference: { type: "string" }
+          title: { type: Type.STRING },
+          description: { type: Type.STRING },
+          category: { type: Type.STRING, enum: ["Low Hanging Fruit", "Mid Term", "Long Term"] },
+          impact: { type: Type.STRING, enum: ["High", "Medium", "Low"] },
+          type: { type: Type.STRING, enum: ["Micro-Semantics", "Macro-Semantics"] },
+          ruleReference: { type: Type.STRING, description: "Which specific rule from the framework does this fix?" }
         },
         required: ["title", "description", "category", "impact", "type"]
       }
@@ -93,66 +85,27 @@ const ANALYSIS_SCHEMA = {
  * Prompt template for semantic analysis
  */
 const SEMANTIC_ANALYSIS_PROMPT = (content: string, url: string, businessInfo: BusinessInfo) => `
-You are a Holistic SEO Semantic Analysis expert following Koray Tugberk GUBUR's methodology.
+You are an elite Semantic SEO Auditor. Your task is to analyze a specific webpage against the high-standards of Micro-Semantics and Macro-Semantics.
 
-FRAMEWORK TO APPLY:
+FRAMEWORK RULES:
 ${SEMANTIC_FRAMEWORK}
 
-BUSINESS CONTEXT:
-- Domain: ${businessInfo.domain}
-- Industry: ${businessInfo.industry}
-- Source Context: ${businessInfo.expertise || businessInfo.model}
-- Value Proposition: ${businessInfo.valueProp}
+INSTRUCTIONS:
+1. **Analyze Macro-Semantics**: Look at the "Skeleton". Is the H1 aligned? Is the H2-H3 hierarchy logical? Does the topic flow linearly or does it jump?
+2. **Analyze Micro-Semantics**: Look at the "Muscles". Are sentences definitive ("is") or weak ("can")? Is there fluff? Are lists used correctly?
+3. **Core Entity Detection**: You MUST explicitly identify the Central Entity, the implicit Source Context (who wrote this?), and the User's Search Intent.
+4. **Generate Action Plan**: Create a COMPREHENSIVE and EXHAUSTIVE action plan. DO NOT LIMIT to 3 items. List EVERYTHING that is wrong or could be improved.
+   - *Low Hanging Fruit*: HTML tags, Title fixes, Fluff removal, First sentence fixes.
+   - *Mid Term*: Paragraph rewriting, Structural re-ordering, Internal linking anchors.
+   - *Long Term*: Brand positioning, Sitewide N-Grams, Content gaps.
 
-PAGE TO ANALYZE:
-URL: ${url}
-CONTENT:
+INPUT CONTENT (URL: ${url}):
 """
-${content}
+${content.substring(0, 60000)}
 """
 
-TASK: Perform a comprehensive semantic audit of this page using the framework above.
-
-Your response MUST be a valid JSON object with this exact structure:
-{
-  "overallScore": <number 0-100>,
-  "summary": "<2-3 sentence summary of findings>",
-  "coreEntities": {
-    "centralEntity": "<main topic/entity of the page>",
-    "searchIntent": "<detected user intent: informational/transactional/navigational/commercial>",
-    "detectedSourceContext": "<detected brand positioning and expertise angle>"
-  },
-  "macroAnalysis": {
-    "contextualVector": "<analysis of H1-H6 flow, linearity, and whether content stays on topic>",
-    "hierarchy": "<heading depth analysis, incremental ordering, feature snippet opportunities>",
-    "sourceContext": "<brand alignment, tone definitiveness, authority signals>"
-  },
-  "microAnalysis": {
-    "sentenceStructure": "<modality analysis (is/are vs can/might), stop words, subject positioning>",
-    "informationDensity": "<fact density per sentence, fluff word identification>",
-    "htmlSemantics": "<proper use of lists/tables, alt text quality, structured data>"
-  },
-  "actions": [
-    {
-      "title": "<specific action title>",
-      "description": "<concrete description of what to fix>",
-      "category": "Low Hanging Fruit" | "Mid Term" | "Long Term",
-      "impact": "High" | "Medium" | "Low",
-      "type": "Micro-Semantics" | "Macro-Semantics",
-      "ruleReference": "<which framework rule this addresses>"
-    }
-  ]
-}
-
-Focus on:
-1. MACRO: Does the H1-H6 structure form a straight contextual vector?
-2. MACRO: Are headings incrementally ordered by importance?
-3. MACRO: Are contextual bridges present between major sections?
-4. MICRO: Is modality definitive (is/are) vs probabilistic (can/might)?
-5. MICRO: Is information density high (facts per sentence)?
-6. MICRO: Are HTML semantics correct (lists, tables, alt text)?
-
-Prioritize "Low Hanging Fruit" actions that have "High" impact.
+OUTPUT FORMAT:
+For text fields (like 'contextualVector', 'sentenceStructure'), use Markdown formatting (bullet points, **bold** terms) to make the analysis readable and detailed.
 `;
 
 /**
@@ -218,9 +171,11 @@ const callSemanticAnalysisApi = async (
   let rawResponse: any;
 
   // Use the proper exported generateJson function from each provider
+  // For Gemini, pass the schema for structured output
   switch (businessInfo.aiProvider) {
     case 'gemini':
-      rawResponse = await geminiService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT);
+      // Pass the Gemini-native schema for structured JSON output
+      rawResponse = await geminiService.generateJson(prompt, businessInfo, dispatch, FALLBACK_RESULT, GEMINI_ANALYSIS_SCHEMA);
       break;
 
     case 'openai':
