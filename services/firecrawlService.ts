@@ -7,6 +7,30 @@ import { ApifyPageData } from '../types';
 const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
 
 /**
+ * Retry configuration for Firecrawl API calls
+ */
+interface RetryConfig {
+  maxRetries: number;
+  initialDelayMs: number;
+  backoffMultiplier: number;
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  backoffMultiplier: 2,
+};
+
+// Helper to sleep for a given duration
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper to determine if an error is retryable
+const isRetryableError = (status: number): boolean => {
+  // Retry on 5xx server errors and 429 rate limiting
+  return status >= 500 || status === 429;
+};
+
+/**
  * Firecrawl scrape response format
  */
 interface FirecrawlScrapeResponse {
@@ -160,9 +184,45 @@ const extractImages = (html: string, baseUrl: string): ApifyPageData['images'] =
 };
 
 /**
- * Extract a single page using Firecrawl API
+ * Extract a single page using Firecrawl API with retry logic
  */
 export const extractPageWithFirecrawl = async (
+  url: string,
+  apiKey: string,
+  retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
+): Promise<ApifyPageData> => {
+  // Retry loop with exponential backoff
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < retryConfig.maxRetries; attempt++) {
+    try {
+      return await doFirecrawlExtraction(url, apiKey);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if error is retryable
+      const statusMatch = lastError.message.match(/(\d{3})/);
+      const status = statusMatch ? parseInt(statusMatch[1], 10) : 0;
+
+      // If not retryable or last attempt, throw immediately
+      if (!isRetryableError(status) || attempt === retryConfig.maxRetries - 1) {
+        throw lastError;
+      }
+
+      // Calculate backoff delay
+      const delayMs = retryConfig.initialDelayMs * Math.pow(retryConfig.backoffMultiplier, attempt);
+      await sleep(delayMs);
+    }
+  }
+
+  // Should never reach here, but TypeScript doesn't know that
+  throw lastError || new Error('Failed to extract page with Firecrawl');
+};
+
+/**
+ * Internal function to perform the actual Firecrawl extraction
+ */
+const doFirecrawlExtraction = async (
   url: string,
   apiKey: string
 ): Promise<ApifyPageData> => {
