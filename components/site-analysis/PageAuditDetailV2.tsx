@@ -793,8 +793,17 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
               <h3 className="text-lg font-semibold text-white">AI Semantic Analysis</h3>
               <Button
                 onClick={() => {
+                  console.log('[PageAuditDetailV2] Run Analysis clicked', {
+                    hasContentMarkdown: !!page?.contentMarkdown,
+                    contentMarkdownLength: page?.contentMarkdown?.length,
+                    url: page?.url,
+                    isAnalyzingSemantic
+                  });
                   if (page?.contentMarkdown) {
+                    console.log('[PageAuditDetailV2] Calling runSemanticAnalysis...');
                     runSemanticAnalysis(page.contentMarkdown, page.url);
+                  } else {
+                    console.log('[PageAuditDetailV2] No contentMarkdown available');
                   }
                 }}
                 disabled={isAnalyzingSemantic || !page?.contentMarkdown}

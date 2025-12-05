@@ -85,8 +85,16 @@ const callApi = async <T>(
 
         const data = await response.json();
 
+        console.log('[Anthropic callApi] Response received:', {
+            hasError: !!data.error,
+            hasContent: !!data.content,
+            contentLength: data.content?.length,
+            stopReason: data.stop_reason
+        });
+
         // Handle error responses from proxy
         if (data.error) {
+            console.error('[Anthropic callApi] Proxy returned error:', data.error);
             throw new Error(data.error);
         }
 
@@ -94,6 +102,12 @@ const callApi = async <T>(
         const textBlock = data.content?.[0];
         const responseText = textBlock?.type === 'text' ? textBlock.text : '';
         const stopReason = data.stop_reason || 'unknown';
+
+        console.log('[Anthropic callApi] Extracted text:', {
+            blockType: textBlock?.type,
+            textLength: responseText?.length,
+            textPreview: responseText?.substring(0, 300)
+        });
 
         // Log stop reason if it indicates truncation
         if (stopReason === 'max_tokens') {
@@ -404,6 +418,135 @@ export const applyBatchFlowRemediation = async (draft: string, issues: Contextua
 // --- Generic AI methods for Migration Service ---
 
 /**
+ * Helper to extract JSON from response that might have markdown code blocks
+ */
+const extractJsonFromText = (text: string): string => {
+    if (!text) return '{}';
+
+    // Try to extract JSON from markdown code blocks
+    const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonBlockMatch) {
+        return jsonBlockMatch[1].trim();
+    }
+
+    // Try to find JSON object directly (starts with { ends with })
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        return jsonMatch[0];
+    }
+
+    return text.trim();
+};
+
+/**
+ * Attempt to repair common JSON issues from LLM responses
+ * - Unescaped newlines in strings
+ * - Unescaped quotes in strings
+ * - Trailing commas
+ */
+const repairJson = (jsonStr: string): string => {
+    // Replace literal newlines inside strings with escaped versions
+    // This regex finds strings and replaces unescaped newlines within them
+    let repaired = jsonStr;
+
+    // First, try to fix unescaped newlines in string values
+    // Match strings and escape any literal newlines inside
+    repaired = repaired.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (match) => {
+        // Replace actual newlines with \n escape sequence
+        return match
+            .replace(/\r\n/g, '\\n')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\n')
+            .replace(/\t/g, '\\t');
+    });
+
+    // Remove trailing commas before ] or }
+    repaired = repaired.replace(/,(\s*[}\]])/g, '$1');
+
+    return repaired;
+};
+
+/**
+ * Try multiple JSON parsing strategies
+ */
+const parseJsonRobust = <T>(text: string, fallback: T): { success: boolean; data: T } => {
+    // Strategy 1: Direct parse
+    try {
+        return { success: true, data: JSON.parse(text) };
+    } catch (e1) {
+        console.log('[parseJsonRobust] Direct parse failed, trying repair...');
+    }
+
+    // Strategy 2: Repair and parse
+    try {
+        const repaired = repairJson(text);
+        return { success: true, data: JSON.parse(repaired) };
+    } catch (e2) {
+        console.log('[parseJsonRobust] Repaired parse failed, trying line-by-line fix...');
+    }
+
+    // Strategy 3: Try to find complete JSON by matching braces
+    try {
+        let depth = 0;
+        let start = -1;
+        let end = -1;
+
+        for (let i = 0; i < text.length; i++) {
+            if (text[i] === '{') {
+                if (start === -1) start = i;
+                depth++;
+            } else if (text[i] === '}') {
+                depth--;
+                if (depth === 0 && start !== -1) {
+                    end = i + 1;
+                    break;
+                }
+            }
+        }
+
+        if (start !== -1 && end !== -1) {
+            const extracted = text.substring(start, end);
+            const repaired = repairJson(extracted);
+            return { success: true, data: JSON.parse(repaired) };
+        }
+    } catch (e3) {
+        console.log('[parseJsonRobust] Brace matching failed');
+    }
+
+    // Strategy 4: Try to parse partial JSON up to the error point
+    try {
+        // Find where JSON might be truncated/broken and try to close it
+        const lines = text.split('\n');
+        for (let i = lines.length; i > 0; i--) {
+            const partial = lines.slice(0, i).join('\n');
+            // Try to close any open structures
+            let attempt = partial;
+            const openBraces = (attempt.match(/\{/g) || []).length;
+            const closeBraces = (attempt.match(/\}/g) || []).length;
+            const openBrackets = (attempt.match(/\[/g) || []).length;
+            const closeBrackets = (attempt.match(/\]/g) || []).length;
+
+            // Add missing closures
+            attempt += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
+            attempt += '}'.repeat(Math.max(0, openBraces - closeBraces));
+
+            try {
+                const repaired = repairJson(attempt);
+                const parsed = JSON.parse(repaired);
+                console.log('[parseJsonRobust] Partial parse succeeded at line', i);
+                return { success: true, data: parsed };
+            } catch {
+                continue;
+            }
+        }
+    } catch (e4) {
+        console.log('[parseJsonRobust] Partial parse strategy failed');
+    }
+
+    return { success: false, data: fallback };
+};
+
+/**
  * Generic JSON generation method for migration workflows
  */
 export const generateJson = async <T extends object>(
@@ -412,25 +555,120 @@ export const generateJson = async <T extends object>(
     dispatch: React.Dispatch<any>,
     fallback: T
 ): Promise<T> => {
-    const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompt, businessInfo, dispatch, (text) => {
-        try {
-            return JSON.parse(text);
-        } catch {
-            return sanitizer.sanitize(text, {}, fallback);
+        // Log the raw response for debugging
+        console.log('[Anthropic generateJson] Raw response length:', text?.length);
+        console.log('[Anthropic generateJson] Raw response preview:', text?.substring(0, 500));
+
+        if (!text || text.trim().length === 0) {
+            console.error('[Anthropic generateJson] Empty response received, returning fallback');
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Anthropic',
+                message: 'Empty response from API, using fallback',
+                status: 'warning',
+                timestamp: Date.now()
+            }});
+            return fallback;
         }
+
+        // Extract JSON from potential markdown code blocks
+        const cleanedText = extractJsonFromText(text);
+        console.log('[Anthropic generateJson] Cleaned text preview:', cleanedText?.substring(0, 300));
+
+        // Use robust JSON parser with multiple strategies
+        const { success, data } = parseJsonRobust<T>(cleanedText, fallback);
+
+        if (success) {
+            console.log('[Anthropic generateJson] Successfully parsed JSON with keys:', Object.keys(data as object));
+            return data;
+        }
+
+        console.error('[Anthropic generateJson] All JSON parse strategies failed');
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Anthropic',
+            message: `JSON parse failed after all repair attempts. Using fallback.`,
+            status: 'warning',
+            timestamp: Date.now()
+        }});
+
+        return fallback;
     });
 };
 
 /**
  * Generic text generation method for migration workflows
+ * This function does NOT request JSON output - returns human-readable text
  */
 export const generateText = async (
     prompt: string,
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<any>
 ): Promise<string> => {
-    // For text generation, we don't want to ask for JSON
-    const textPrompt = prompt.replace(/IMPORTANT:.*JSON.*\./gi, ''); // Remove JSON instructions
-    return callApi(textPrompt, businessInfo, dispatch, (text) => text);
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Generating text response...`, status: 'info', timestamp: Date.now() } });
+
+    if (!businessInfo.anthropicApiKey) {
+        throw new Error("Anthropic API key is not configured.");
+    }
+
+    if (!businessInfo.supabaseUrl) {
+        throw new Error("Supabase URL is not configured. Required for Anthropic proxy.");
+    }
+
+    const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
+
+    const validClaudeModels = [
+        'claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', 'claude-haiku-4-5-20251001',
+        'claude-opus-4-1-20250805', 'claude-sonnet-4-20250514',
+        'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022',
+    ];
+    const defaultModel = 'claude-sonnet-4-5-20250929';
+    const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.includes(businessInfo.aiModel);
+    const modelToUse = isValidClaudeModel ? businessInfo.aiModel : defaultModel;
+
+    try {
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-anthropic-api-key': businessInfo.anthropicApiKey,
+                'apikey': businessInfo.supabaseAnonKey || '',
+            },
+            body: JSON.stringify({
+                model: modelToUse,
+                max_tokens: 4096,
+                messages: [
+                    { role: "user", content: prompt }
+                ],
+                // System prompt for TEXT (not JSON) generation
+                system: "You are a helpful, expert SEO strategist specializing in semantic optimization. Provide clear, actionable recommendations in human-readable format. Use markdown formatting for headings, lists, and code examples. Be specific and reference the actual page content when making suggestions."
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: response.statusText }));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // Extract text from response
+        const content = data.content;
+        if (!content || !Array.isArray(content) || content.length === 0) {
+            throw new Error("Empty response from Anthropic API");
+        }
+
+        const textBlock = content.find((block: any) => block.type === 'text');
+        if (!textBlock?.text) {
+            throw new Error("No text content in response");
+        }
+
+        return textBlock.text;
+    } catch (error) {
+        console.error('[Anthropic generateText] Error:', error);
+        throw error;
+    }
 };

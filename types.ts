@@ -2065,6 +2065,16 @@ export interface SemanticActionItem {
   smartFix?: string;  // AI-generated fix suggestion
 }
 
+// Alignment scores when checking content against user-defined CE/SC/CSI pillars
+export interface AlignmentScores {
+  ceAlignment: number;   // 0-100 alignment with defined Central Entity
+  scAlignment: number;   // 0-100 alignment with defined Source Context
+  csiAlignment: number;  // 0-100 alignment with defined Central Search Intent
+  ceGap: string;         // Explanation of CE gap, or 'Aligned'
+  scGap: string;         // Explanation of SC gap, or 'Aligned'
+  csiGap: string;        // Explanation of CSI gap, or 'Aligned'
+}
+
 export interface SemanticAuditResult {
   overallScore: number;
   summary: string;
@@ -2073,4 +2083,5 @@ export interface SemanticAuditResult {
   microAnalysis: MicroAnalysis;
   actions: SemanticActionItem[];
   analyzedAt: string;
+  alignmentScores?: AlignmentScores;  // Present when pillars are provided
 }

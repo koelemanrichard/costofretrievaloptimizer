@@ -52,7 +52,7 @@ TASK: The user needs to implement the following action on their webpage:
 Action: "{title}"
 Description: "{description}"
 Rule Reference: "{ruleReference}"
-
+{businessContext}
 CONTEXT (The specific webpage content):
 """
 {pageContent}
@@ -64,5 +64,6 @@ Provide a CONCRETE, PRACTICAL example of how to fix this *specifically* for this
 - If it's a heading fix, show the Old Heading vs New Heading.
 - If it's fluff removal, show the sentence before and after.
 - Explain *why* this specific change helps the vector/semantics.
+- All suggestions must be appropriate for the target market/region and audience specified above.
 - Keep it concise but actionable (max 200 words).
 `;

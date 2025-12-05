@@ -851,11 +851,22 @@ export const generateJson = async <T extends object>(
     fallback: T,
     responseSchema?: any
 ): Promise<T> => {
+    console.log('[GeminiService] generateJson called', {
+        promptLength: prompt?.length,
+        hasResponseSchema: !!responseSchema,
+        schemaKeys: responseSchema ? Object.keys(responseSchema) : null
+    });
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompt, businessInfo, dispatch, (text) => {
+        console.log('[GeminiService] generateJson sanitizer called with text length:', text?.length);
+        console.log('[GeminiService] generateJson raw text (first 500 chars):', text?.substring(0, 500));
         try {
-            return JSON.parse(text);
-        } catch {
+            const parsed = JSON.parse(text);
+            console.log('[GeminiService] generateJson JSON.parse SUCCESS, keys:', Object.keys(parsed));
+            return parsed;
+        } catch (e) {
+            console.error('[GeminiService] generateJson JSON.parse FAILED:', e);
+            console.log('[GeminiService] generateJson falling back to sanitizer');
             return sanitizer.sanitize(text, {}, fallback);
         }
     }, true, responseSchema);

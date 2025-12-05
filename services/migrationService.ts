@@ -1,5 +1,5 @@
 import { getSupabaseClient } from './supabaseClient';
-import { scrapeForAudit, scrapeUrl } from './firecrawlService';
+import { extractSinglePage, getExtractionTypeForUseCase } from './pageExtractionService';
 import { BusinessInfo, SiteInventoryItem } from '../types';
 
 /**
@@ -236,13 +236,29 @@ export const runTechnicalCrawl = async (
 
     for (const url of urls) {
         try {
-            const apiKey = businessInfo.firecrawlApiKey || '';
-            const auditResult = await scrapeForAudit(url, apiKey);
+            // Use Jina-Primary architecture with fallback chain
+            const result = await extractSinglePage(url, {
+                jinaApiKey: businessInfo.jinaApiKey,
+                firecrawlApiKey: businessInfo.firecrawlApiKey,
+                apifyToken: businessInfo.apifyToken,
+                extractionType: getExtractionTypeForUseCase('full_seo'),
+                enableFallback: true,
+                proxyConfig: {
+                    supabaseUrl,
+                    supabaseAnonKey
+                }
+            });
 
-            const domSizeKb = auditResult.markdown.length / 1024;
-            const wordCount = auditResult.wordCount;
-            const linkCount = auditResult.internalLinkCount + auditResult.externalLinkCount;
-            const codeRatio = 0.3; // Firecrawl doesn't give us HTML size, use default
+            // Get metrics from semantic or technical data
+            const semantic = result.semantic;
+            const technical = result.technical;
+
+            const wordCount = semantic?.wordCount || technical?.wordCount || 0;
+            const linkCount = (semantic?.links?.length || 0) +
+                             (technical?.internalLinkCount || 0) +
+                             (technical?.externalLinkCount || 0);
+            const domSizeKb = semantic?.content ? semantic.content.length / 1024 : 0;
+            const codeRatio = 0.3; // Default as most providers don't give HTML size
 
             const corScore = calculateCoR({ domSizeKb, wordCount, linkCount, codeRatio });
 
@@ -253,7 +269,7 @@ export const runTechnicalCrawl = async (
                     word_count: wordCount,
                     link_count: linkCount,
                     cor_score: corScore,
-                    status: 'GAP_ANALYSIS', 
+                    status: 'GAP_ANALYSIS',
                     updated_at: new Date().toISOString()
                 })
                 .eq('project_id', projectId)
@@ -262,7 +278,7 @@ export const runTechnicalCrawl = async (
         } catch (e) {
             console.warn(`Failed to audit ${url}:`, e);
         }
-        
+
         processed++;
         if (onProgress) onProgress(processed, urls.length);
     }
@@ -270,38 +286,148 @@ export const runTechnicalCrawl = async (
 
 /**
  * Retrieves the original content for an inventory item.
- * If a snapshot exists, returns it.
- * If not, scrapes the URL, saves the snapshot, and returns it.
+ * If a snapshot exists, returns it (unless forceRefetch is true).
+ * If not, scrapes the URL using Jina-Primary fallback, saves the snapshot, and returns it.
  */
 export const getOriginalContent = async (
-    inventoryItem: SiteInventoryItem, 
+    inventoryItem: SiteInventoryItem,
     businessInfo: BusinessInfo,
     supabaseUrl: string,
-    supabaseAnonKey: string
+    supabaseAnonKey: string,
+    forceRefetch: boolean = false
 ): Promise<string> => {
     const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
 
-    // 1. Check DB for existing snapshot
-    const { data: existing } = await supabase
-        .from('transition_snapshots')
-        .select('content_markdown')
-        .eq('inventory_id', inventoryItem.id)
-        .eq('snapshot_type', 'ORIGINAL_IMPORT')
-        .single();
-        
-    if (existing) return existing.content_markdown || '';
-
-    // 2. Scrape live
-    const apiKey = businessInfo.firecrawlApiKey || '';
-    const { markdown } = await scrapeUrl(inventoryItem.url, apiKey);
-    
-    // 3. Save snapshot
-    await supabase.from('transition_snapshots').insert({
-        inventory_id: inventoryItem.id,
-        content_markdown: markdown,
-        snapshot_type: 'ORIGINAL_IMPORT',
-        created_at: new Date().toISOString()
+    // 1. Check DB for existing snapshot (skip if force refetch)
+    console.log('[MigrationService] Checking for cached snapshot:', {
+        inventoryId: inventoryItem.id,
+        forceRefetch
     });
-    
+
+    if (!forceRefetch) {
+        try {
+            const { data: existing, error } = await supabase
+                .from('transition_snapshots')
+                .select('content_markdown')
+                .eq('inventory_id', inventoryItem.id)
+                .eq('snapshot_type', 'ORIGINAL_IMPORT')
+                .single();
+
+            // If we got data, return it
+            if (existing?.content_markdown) {
+                console.log('[MigrationService] Found cached snapshot, returning cached content:', {
+                    contentLength: existing.content_markdown.length
+                });
+                return existing.content_markdown;
+            }
+
+            // Log error for debugging but continue to scrape
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+                console.warn('[MigrationService] Error fetching snapshot, will try scraping:', error);
+            } else {
+                console.log('[MigrationService] No cached snapshot found, will scrape');
+            }
+        } catch (dbError) {
+            // Handle network/API errors gracefully - just proceed to scraping
+            console.warn('[MigrationService] Database query failed, proceeding to scrape:', dbError);
+        }
+    } else {
+        // Delete old snapshot if force refetching
+        try {
+            await supabase
+                .from('transition_snapshots')
+                .delete()
+                .eq('inventory_id', inventoryItem.id)
+                .eq('snapshot_type', 'ORIGINAL_IMPORT');
+        } catch (deleteError) {
+            console.warn('Failed to delete old snapshot:', deleteError);
+        }
+    }
+
+    // 2. Scrape live using Jina-Primary architecture with fallback
+    console.log('[MigrationService] Scraping URL:', inventoryItem.url);
+    console.log('[MigrationService] Using provider config:', {
+        hasJinaKey: !!businessInfo.jinaApiKey,
+        hasFirecrawlKey: !!businessInfo.firecrawlApiKey,
+        hasApifyToken: !!businessInfo.apifyToken
+    });
+
+    const result = await extractSinglePage(inventoryItem.url, {
+        jinaApiKey: businessInfo.jinaApiKey,
+        firecrawlApiKey: businessInfo.firecrawlApiKey,
+        apifyToken: businessInfo.apifyToken,
+        extractionType: getExtractionTypeForUseCase('content_quality'),
+        enableFallback: true,
+        proxyConfig: {
+            supabaseUrl,
+            supabaseAnonKey
+        }
+    });
+
+    console.log('[MigrationService] Extraction result:', {
+        hasSemanticData: !!result.semantic,
+        hasTechnicalData: !!result.technical,
+        markdownLength: result.semantic?.content?.length || 0,
+        primaryProvider: result.primaryProvider,
+        fallbackUsed: result.fallbackUsed,
+        errors: result.errors
+    });
+
+    const markdown = result.semantic?.content || '';
+
+    if (!markdown) {
+        console.warn('[MigrationService] No markdown content extracted');
+        if (result.errors?.length) {
+            throw new Error(`Extraction failed: ${result.errors.join(', ')}`);
+        }
+    }
+
+    // 3. Save snapshot using select-then-insert/update pattern
+    // This works with or without the unique constraint on (inventory_id, snapshot_type)
+    try {
+        // First check if a snapshot already exists
+        const { data: existingSnapshot } = await supabase
+            .from('transition_snapshots')
+            .select('id')
+            .eq('inventory_id', inventoryItem.id)
+            .eq('snapshot_type', 'ORIGINAL_IMPORT')
+            .maybeSingle();
+
+        if (existingSnapshot) {
+            // Update existing snapshot
+            const { error: updateError } = await supabase
+                .from('transition_snapshots')
+                .update({
+                    content_markdown: markdown,
+                    created_at: new Date().toISOString()
+                })
+                .eq('id', existingSnapshot.id);
+
+            if (updateError) {
+                console.warn('[MigrationService] Update error:', updateError);
+            } else {
+                console.log('[MigrationService] Snapshot updated successfully');
+            }
+        } else {
+            // Insert new snapshot
+            const { error: insertError } = await supabase
+                .from('transition_snapshots')
+                .insert({
+                    inventory_id: inventoryItem.id,
+                    content_markdown: markdown,
+                    snapshot_type: 'ORIGINAL_IMPORT',
+                    created_at: new Date().toISOString()
+                });
+
+            if (insertError) {
+                console.warn('[MigrationService] Insert error:', insertError);
+            } else {
+                console.log('[MigrationService] Snapshot inserted successfully');
+            }
+        }
+    } catch (saveError) {
+        console.warn('[MigrationService] Failed to save snapshot (will still return content):', saveError);
+    }
+
     return markdown;
 };
