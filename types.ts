@@ -2085,3 +2085,129 @@ export interface SemanticAuditResult {
   analyzedAt: string;
   alignmentScores?: AlignmentScores;  // Present when pillars are provided
 }
+
+// =============================================================================
+// TOPICAL MAP MERGE TYPES
+// =============================================================================
+
+export type MergeWizardStep = 'select' | 'context' | 'eavs' | 'topics' | 'review';
+
+export interface ContextConflict {
+  field: string;
+  values: { mapId: string; mapName: string; value: any }[];
+  aiSuggestion: { value: any; reasoning: string } | null;
+  resolution: 'mapA' | 'mapB' | 'ai' | 'custom' | null;
+  customValue?: any;
+}
+
+export interface EavDecision {
+  eavId: string;
+  sourceMapId: string;
+  action: 'include' | 'exclude' | 'merge';
+  conflictWith?: string;
+  resolvedValue?: string;
+}
+
+export interface TopicSimilarityResult {
+  id: string;
+  topicA: EnrichedTopic;
+  topicB: EnrichedTopic;
+  similarityScore: number;
+  matchType: 'exact' | 'semantic' | 'parent_child';
+  aiSuggestedAction: 'merge' | 'parent_child' | 'keep_separate';
+  aiSuggestedTitle?: string;
+  aiSuggestedParent?: string;
+  reasoning: string;
+}
+
+export interface TopicMergeDecision {
+  id: string;
+  topicAId: string | null;
+  topicBId: string | null;
+  userDecision: 'merge' | 'keep_both' | 'keep_a' | 'keep_b' | 'delete' | 'pending';
+  finalTitle: string;
+  finalDescription: string;
+  finalType: 'core' | 'outer';
+  finalParentId: string | null;
+}
+
+export interface MapMergeAnalysis {
+  contextRecommendations: {
+    field: string;
+    recommendation: any;
+    reasoning: string;
+    confidence: number;
+  }[];
+  eavAnalysis: {
+    unique: { mapId: string; eav: SemanticTriple }[];
+    duplicates: { eavs: SemanticTriple[]; keep: SemanticTriple }[];
+    conflicts: {
+      subject: string;
+      predicate: string;
+      values: { mapId: string; value: any }[];
+      recommendation: any;
+      reasoning: string;
+    }[];
+  };
+  topicSimilarities: TopicSimilarityResult[];
+}
+
+export interface ImportHistoryEntry {
+  timestamp: string;
+  filename: string;
+  changes: {
+    topicsAdded: number;
+    topicsDeleted: number;
+    topicsModified: number;
+    decisionsChanged: number;
+  };
+}
+
+export interface MapMergeState {
+  step: MergeWizardStep;
+  selectedMapIds: string[];
+  sourceMaps: TopicalMap[];
+
+  // Step 2: Context
+  resolvedContext: {
+    businessInfo: Partial<BusinessInfo>;
+    pillars: SEOPillars | null;
+  };
+  contextConflicts: ContextConflict[];
+
+  // Step 3: EAVs
+  resolvedEavs: SemanticTriple[];
+  eavDecisions: EavDecision[];
+
+  // Step 4: Topics
+  topicSimilarities: TopicSimilarityResult[];
+  topicDecisions: TopicMergeDecision[];
+  newTopics: EnrichedTopic[];
+  excludedTopicIds: string[];
+
+  // Step 5: Review
+  finalTopics: EnrichedTopic[];
+  newMapName: string;
+
+  // Import/Export
+  importHistory: ImportHistoryEntry[];
+
+  // Analysis state
+  isAnalyzing: boolean;
+  analysisError: string | null;
+}
+
+// Export row for Excel/CSV
+export interface MergeExportTopicRow {
+  id: string;
+  sourceMap: string;
+  title: string;
+  description: string;
+  type: 'core' | 'outer';
+  parentTitle: string | null;
+  mergeDecision: 'keep' | 'merge' | 'delete' | 'new';
+  mergePartnerTitle: string | null;
+  finalTitle: string | null;
+  include: 'yes' | 'no';
+  notes: string;
+}

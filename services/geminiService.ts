@@ -28,7 +28,11 @@ import {
   TopicViabilityResult,
   TopicBlueprint,
   FlowAuditResult,
-  ContextualFlowIssue
+  ContextualFlowIssue,
+  MapMergeAnalysis,
+  TopicSimilarityResult,
+  TopicMergeDecision,
+  TopicalMap,
 } from '../types';
 import * as prompts from '../config/prompts';
 import { CONTENT_BRIEF_SCHEMA, CONTENT_BRIEF_FALLBACK } from '../config/schemas';
@@ -925,4 +929,196 @@ export const classifyTopicSections = async (
     }});
 
     return validResults;
+};
+
+// ============================================
+// MAP MERGE ANALYSIS
+// ============================================
+
+export const analyzeMapMerge = async (
+  mapsToMerge: TopicalMap[],
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>
+): Promise<MapMergeAnalysis> => {
+  const sanitizer = new AIResponseSanitizer(dispatch);
+
+  const mapSummaries = mapsToMerge.map(map => ({
+    id: map.id,
+    name: map.name,
+    pillars: map.pillars,
+    businessInfo: map.business_info,
+    eavCount: map.eavs?.length || 0,
+    topics: (map.topics || []).map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      type: t.type,
+      parentId: t.parent_topic_id,
+    })),
+  }));
+
+  const prompt = `You are an SEO expert analyzing multiple topical maps for a potential merge.
+
+## Maps to Analyze:
+${JSON.stringify(mapSummaries, null, 2)}
+
+## Your Task:
+Analyze these maps and provide recommendations for merging them into a single unified map.
+
+### 1. Context Recommendations
+For each business context field that differs between maps, recommend which value to use and why.
+Fields to check: industry, audience, expertise, valueProp, targetMarket, language
+
+### 2. Pillar Recommendations
+For SEO pillars (centralEntity, sourceContext, centralSearchIntent), recommend the best value if they differ.
+
+### 3. Topic Similarity Analysis
+Identify topics across maps that are:
+- EXACT matches (same or very similar titles)
+- SEMANTIC matches (different titles but same topic - similarity > 80%)
+- PARENT_CHILD candidates (one topic could be a subtopic of another)
+
+For each match, provide:
+- Similarity score (0-100)
+- Suggested action: "merge", "parent_child", or "keep_separate"
+- If merge: suggested combined title
+- Reasoning for your suggestion
+
+Return a JSON object with this exact structure:
+{
+  "contextRecommendations": [
+    { "field": "industry", "recommendation": "value", "reasoning": "why", "confidence": 85 }
+  ],
+  "eavAnalysis": {
+    "unique": [{ "mapId": "map1", "eav": {...} }],
+    "duplicates": [{ "eavs": [...], "keep": {...} }],
+    "conflicts": [{ "subject": "x", "predicate": "y", "values": [...], "recommendation": "value", "reasoning": "why" }]
+  },
+  "topicSimilarities": [
+    {
+      "id": "sim_1",
+      "topicA": { "id": "...", "title": "...", "description": "...", "type": "core" },
+      "topicB": { "id": "...", "title": "...", "description": "...", "type": "core" },
+      "similarityScore": 92,
+      "matchType": "semantic",
+      "aiSuggestedAction": "merge",
+      "aiSuggestedTitle": "Combined Title",
+      "reasoning": "Both topics cover..."
+    }
+  ]
+}`;
+
+  dispatch({
+    type: 'LOG_EVENT',
+    payload: {
+      service: 'Gemini',
+      message: `Analyzing ${mapsToMerge.length} maps for merge opportunities`,
+      status: 'info',
+      timestamp: Date.now(),
+    },
+  });
+
+  try {
+    const fallback: MapMergeAnalysis = {
+      contextRecommendations: [],
+      eavAnalysis: { unique: [], duplicates: [], conflicts: [] },
+      topicSimilarities: [],
+    };
+    const result = await callApi(
+      prompt,
+      businessInfo,
+      dispatch,
+      (text) => sanitizer.sanitize(text, {}, fallback),
+      true
+    );
+
+    dispatch({
+      type: 'LOG_EVENT',
+      payload: {
+        service: 'Gemini',
+        message: `Found ${result.topicSimilarities?.length || 0} topic similarities`,
+        status: 'success',
+        timestamp: Date.now(),
+      },
+    });
+
+    return result as MapMergeAnalysis;
+  } catch (error) {
+    dispatch({
+      type: 'LOG_EVENT',
+      payload: {
+        service: 'Gemini',
+        message: `Map merge analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'failure',
+        timestamp: Date.now(),
+      },
+    });
+    throw error;
+  }
+};
+
+export const reanalyzeTopicSimilarity = async (
+  topicsA: EnrichedTopic[],
+  topicsB: EnrichedTopic[],
+  existingDecisions: TopicMergeDecision[],
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>
+): Promise<TopicSimilarityResult[]> => {
+  const sanitizer = new AIResponseSanitizer(dispatch);
+
+  const prompt = `Analyze topic similarities between two sets of topics.
+
+## Topics from Map A:
+${JSON.stringify(topicsA.map(t => ({ id: t.id, title: t.title, description: t.description, type: t.type })), null, 2)}
+
+## Topics from Map B:
+${JSON.stringify(topicsB.map(t => ({ id: t.id, title: t.title, description: t.description, type: t.type })), null, 2)}
+
+## Existing Decisions (for context):
+${JSON.stringify(existingDecisions, null, 2)}
+
+Find topic pairs that are similar (>70% similarity). For each pair provide:
+- id: unique identifier for this similarity pair (e.g., "sim_1", "sim_2", etc.)
+- topicA: the full topic object from Map A
+- topicB: the full topic object from Map B
+- similarityScore (0-100)
+- matchType: "exact", "semantic", or "parent_child"
+- aiSuggestedAction: "merge", "parent_child", or "keep_separate"
+- aiSuggestedTitle (if merge)
+- reasoning
+
+Return a JSON array of TopicSimilarityResult objects.`;
+
+  dispatch({
+    type: 'LOG_EVENT',
+    payload: {
+      service: 'Gemini',
+      message: `Re-analyzing topic similarities between ${topicsA.length} and ${topicsB.length} topics`,
+      status: 'info',
+      timestamp: Date.now(),
+    },
+  });
+
+  try {
+    const result = await callApi(
+      prompt,
+      businessInfo,
+      dispatch,
+      (text) => sanitizer.sanitizeArray(text, []),
+      true
+    );
+
+    return Array.isArray(result) ? result : [];
+  } catch (error) {
+    dispatch({
+      type: 'LOG_EVENT',
+      payload: {
+        service: 'Gemini',
+        message: `Topic reanalysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'failure',
+        timestamp: Date.now(),
+      },
+    });
+    throw error;
+  }
 };
