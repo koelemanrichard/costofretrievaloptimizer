@@ -7,7 +7,7 @@ import {
     ContextualCoverageMetrics, InternalLinkAuditResult, TopicalAuthorityScore,
     PublicationPlan, ContentIntegrityResult, SchemaGenerationResult,
     TopicViabilityResult, TopicBlueprint, FlowAuditResult, ContextualFlowIssue,
-    KnowledgeGraph
+    KnowledgeGraph, MapMergeAnalysis, TopicSimilarityResult, TopicMergeDecision, TopicalMap
 } from '../types';
 import * as prompts from '../config/prompts';
 import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
@@ -433,4 +433,30 @@ export const generateText = async (
     // For text generation, we don't want to ask for JSON
     const textPrompt = prompt.replace(/IMPORTANT:.*JSON.*\./gi, ''); // Remove JSON instructions
     return callApi(textPrompt, businessInfo, dispatch, (text) => text);
+};
+
+// ============================================
+// MAP MERGE ANALYSIS - Stubs (delegates to Gemini)
+// ============================================
+
+export const analyzeMapMerge = async (
+  mapsToMerge: TopicalMap[],
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>
+): Promise<MapMergeAnalysis> => {
+  // Delegate to Gemini implementation for now
+  const geminiService = await import('./geminiService');
+  return geminiService.analyzeMapMerge(mapsToMerge, { ...businessInfo, aiProvider: 'gemini' }, dispatch);
+};
+
+export const reanalyzeTopicSimilarity = async (
+  topicsA: EnrichedTopic[],
+  topicsB: EnrichedTopic[],
+  existingDecisions: TopicMergeDecision[],
+  businessInfo: BusinessInfo,
+  dispatch: React.Dispatch<any>
+): Promise<TopicSimilarityResult[]> => {
+  // Delegate to Gemini implementation for now
+  const geminiService = await import('./geminiService');
+  return geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, { ...businessInfo, aiProvider: 'gemini' }, dispatch);
 };
