@@ -14,7 +14,7 @@ import { useMapData } from '../hooks/useMapData';
 import { useKnowledgeGraph } from '../hooks/useKnowledgeGraph';
 import { useTopicEnrichment } from '../hooks/useTopicEnrichment';
 import { sanitizeTopicFromDb, sanitizeBriefFromDb, safeString, normalizeRpcData, parseTopicalMap } from '../utils/parsers';
-import { generateMasterExport } from '../utils/exportUtils';
+import { generateMasterExport, generateFullZipExport } from '../utils/exportUtils';
 
 // Import Screens
 import MapSelectionScreen from './MapSelectionScreen';
@@ -1614,24 +1614,32 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     }, [activeMapId, state.activeBriefTopic, briefs, effectiveBusinessInfo, dispatch, businessInfo, handleAnalyzeFlow]);
 
 
-    const handleExportData = (format: 'csv' | 'xlsx') => {
+    const handleExportData = async (format: 'csv' | 'xlsx' | 'zip') => {
         if (!activeMap) return;
         dispatch({ type: 'SET_LOADING', payload: { key: 'export', value: true } });
         try {
-            // Assuming briefs contains only fetched briefs.
-            // If we want ALL briefs, we might need to fetch them all first if not loaded.
-            // For now, export what is in state.
             const filename = `${activeProject?.project_name || 'Project'}_${activeMap.name}_HolisticMap`;
-
-            // Use state analysis result if available
             const metrics = state.validationResult;
 
-            generateMasterExport({
-                topics: allTopics,
-                briefs: briefs,
-                pillars: activeMap.pillars as SEOPillars, // safe cast
-                metrics
-            }, format, filename);
+            if (format === 'zip') {
+                // Full ZIP export with all data
+                await generateFullZipExport({
+                    topics: allTopics,
+                    briefs: briefs,
+                    pillars: activeMap.pillars as SEOPillars,
+                    metrics,
+                    businessInfo: effectiveBusinessInfo,
+                    mapName: activeMap.name
+                }, filename);
+            } else {
+                // Standard CSV/XLSX export
+                generateMasterExport({
+                    topics: allTopics,
+                    briefs: briefs,
+                    pillars: activeMap.pillars as SEOPillars,
+                    metrics
+                }, format, filename);
+            }
 
             dispatch({ type: 'SET_NOTIFICATION', payload: 'Export generated successfully.' });
         } catch (e) {

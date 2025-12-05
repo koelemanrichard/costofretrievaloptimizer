@@ -23,9 +23,9 @@ export function buildContentGenerationContext(
 ): ContentGenerationContext {
   // Extract pillars with fallbacks
   const pillars = topicalMap.pillars || {
-    centralEntity: businessInfo.seedKeyword || '',
-    sourceContext: businessInfo.valueProp || '',
-    centralSearchIntent: `${businessInfo.seedKeyword || ''} ${topic.title}`,
+    centralEntity: businessInfo?.seedKeyword || '',
+    sourceContext: businessInfo?.valueProp || '',
+    centralSearchIntent: `${businessInfo?.seedKeyword || ''} ${topic.title}`,
   };
 
   // Get EAVs from topical map
@@ -105,12 +105,12 @@ ${ctx.pillars.auxiliaryVerb ? `- Auxiliary Verb: ${ctx.pillars.auxiliaryVerb}` :
 - Topical Map: ${ctx.topicalMap.name} (${ctx.topicalMap.totalTopics} total topics)
 
 ## Business Context
-- Domain: ${ctx.businessInfo.domain || 'N/A'}
-- Industry: ${ctx.businessInfo.industry || 'N/A'}
-- Target Audience: ${ctx.businessInfo.audience || 'N/A'}
-- Value Proposition: ${ctx.businessInfo.valueProp || 'N/A'}
-- Language: ${ctx.businessInfo.language || 'English'}
-- Target Market: ${ctx.businessInfo.targetMarket || 'Global'}
+- Domain: ${ctx.businessInfo?.domain || 'N/A'}
+- Industry: ${ctx.businessInfo?.industry || 'N/A'}
+- Target Audience: ${ctx.businessInfo?.audience || 'N/A'}
+- Value Proposition: ${ctx.businessInfo?.valueProp || 'N/A'}
+- Language: ${ctx.businessInfo?.language || 'English'}
+- Target Market: ${ctx.businessInfo?.targetMarket || 'Global'}
 
 ## Semantic Foundation (Key EAV Terms)
 ${ctx.knowledgeGraphTerms?.slice(0, 15).join(', ') || 'No EAV data available'}
@@ -130,9 +130,9 @@ export function buildMinimalContext(
 ): ContentGenerationContext {
   return {
     pillars: {
-      centralEntity: businessInfo.seedKeyword || brief.targetKeyword || brief.title,
-      sourceContext: businessInfo.valueProp || '',
-      centralSearchIntent: brief.searchIntent || 'informational',
+      centralEntity: businessInfo?.seedKeyword || brief?.targetKeyword || brief?.title || '',
+      sourceContext: businessInfo?.valueProp || '',
+      centralSearchIntent: brief?.searchIntent || 'informational',
     },
     eavs: [],
     businessInfo,

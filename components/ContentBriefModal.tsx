@@ -9,6 +9,13 @@ import { EnrichedTopic, ContentBrief, ContextualBridgeLink, BriefSection } from 
 import { safeString } from '../utils/parsers';
 import { useContentGeneration } from '../hooks/useContentGeneration';
 import ContentGenerationProgress from './ContentGenerationProgress';
+import { ContentGenerationSettingsPanel } from './ContentGenerationSettingsPanel';
+import { PassControlPanel } from './PassControlPanel';
+import {
+  ContentGenerationSettings,
+  PRIORITY_PRESETS,
+  DEFAULT_CONTENT_GENERATION_SETTINGS
+} from '../types/contentGeneration';
 
 interface ContentBriefModalProps {
   allTopics: EnrichedTopic[];
@@ -28,6 +35,16 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     // Multi-pass generation state
     const [useMultiPass, setUseMultiPass] = useState(true);
     const [generationLogs, setGenerationLogs] = useState<Array<{ message: string; status: string; timestamp: number }>>([]);
+
+    // Settings panel state
+    const [showSettings, setShowSettings] = useState(false);
+    const [contentSettings, setContentSettings] = useState<ContentGenerationSettings>({
+        ...DEFAULT_CONTENT_GENERATION_SETTINGS,
+        id: 'temp',
+        userId: user?.id || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
 
     const handleLog = useCallback((message: string, status: 'info' | 'success' | 'failure' | 'warning') => {
         setGenerationLogs(prev => [...prev, { message, status, timestamp: Date.now() }]);
@@ -319,19 +336,51 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                     </div>
                 </div>
 
+                {/* Collapsible Settings Panel */}
+                {!showProgress && !brief.articleDraft && useMultiPass && (
+                    <div className={`border-t border-gray-700 overflow-hidden transition-all duration-300 ${showSettings ? 'max-h-[500px]' : 'max-h-0'}`}>
+                        <div className="p-4 bg-gray-850 grid md:grid-cols-2 gap-4">
+                            <ContentGenerationSettingsPanel
+                                settings={contentSettings}
+                                onChange={setContentSettings}
+                                presets={PRIORITY_PRESETS}
+                            />
+                            <PassControlPanel
+                                passes={contentSettings.passes}
+                                onChange={(passes) => setContentSettings(prev => ({ ...prev, passes }))}
+                                disabled={isGenerating}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <footer className="p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center flex-shrink-0">
                     <div className="flex items-center gap-4">
                         {brief.articleDraft && <span className="text-sm text-green-400">Article draft is ready.</span>}
                         {!brief.articleDraft && !showProgress && (
-                            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={useMultiPass}
-                                    onChange={(e) => setUseMultiPass(e.target.checked)}
-                                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                                />
-                                <span>Use Multi-Pass Generation (8 passes, resumable)</span>
-                            </label>
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={useMultiPass}
+                                        onChange={(e) => setUseMultiPass(e.target.checked)}
+                                        className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                                    />
+                                    <span>Use Multi-Pass Generation</span>
+                                </label>
+                                {useMultiPass && (
+                                    <button
+                                        onClick={() => setShowSettings(!showSettings)}
+                                        className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                            showSettings
+                                                ? 'bg-blue-900/50 border-blue-600 text-blue-200'
+                                                : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                                        }`}
+                                    >
+                                        {showSettings ? 'Hide Settings' : 'Settings'}
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
                     <div className="flex gap-2">

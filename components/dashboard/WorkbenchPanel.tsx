@@ -14,7 +14,7 @@ interface WorkbenchPanelProps {
     onViewInternalLinking: () => void;
     onUploadGsc: () => void;
     onGenerateAllBriefs: () => void;
-    onExportData: (format: 'csv' | 'xlsx') => void;
+    onExportData: (format: 'csv' | 'xlsx' | 'zip') => void;
     onQuickAudit: (url: string) => void;
     onScrollToWebsiteStructure?: () => void;
     foundationPagesCount?: number;
@@ -57,7 +57,14 @@ const WorkbenchPanel: React.FC<WorkbenchPanelProps> = ({
                         {isLoading.export ? <Loader className="w-4 h-4" /> : 'Export Data ▼'}
                     </Button>
                     {showExportMenu && (
-                        <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-20">
+                        <div className="absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-20">
+                            <button
+                                onClick={() => { onExportData('zip'); setShowExportMenu(false); }}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white border-b border-gray-700"
+                            >
+                                Full Export (.zip)
+                                <span className="block text-xs text-gray-500">Topics, briefs, articles</span>
+                            </button>
                             <button
                                 onClick={() => { onExportData('xlsx'); setShowExportMenu(false); }}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"

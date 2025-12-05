@@ -56,7 +56,14 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   onOpenNavigation
 }) => {
   const { state, dispatch } = useAppState();
-  const { activeMapId, businessInfo, isLoading } = state;
+  const { activeMapId, businessInfo, isLoading, briefGenerationStatus } = state;
+
+  // Parse the generating topic title from status string like 'Generating 1/5: "Topic Title"'
+  const generatingTopicTitle = useMemo(() => {
+    if (!briefGenerationStatus) return null;
+    const match = briefGenerationStatus.match(/"([^"]+)"$/);
+    return match ? match[1] : null;
+  }, [briefGenerationStatus]);
 
   const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
@@ -397,7 +404,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                             </span>
                                         )}
                                     </div>
-                                    <TopicItem 
+                                    <TopicItem
                                         topic={core}
                                         hasBrief={!!briefs[core.id]}
                                         onHighlight={() => onSelectTopicForBrief(core)}
@@ -416,13 +423,14 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                         canGenerateBriefs={canGenerateBriefs}
                                         allCoreTopics={coreTopics}
                                         onReparent={handleReparent}
+                                        isGeneratingBrief={generatingTopicTitle === core.title}
                                     />
                                 </div>
                             </div>
                             {!isCollapsed && (
                                 <div className="pl-4 sm:pl-8 mt-2 space-y-2 border-l-2 border-gray-700 ml-6">
                                 {childTopics.map(outer => (
-                                    <TopicItem 
+                                    <TopicItem
                                             key={outer.id}
                                             topic={outer}
                                             hasBrief={!!briefs[outer.id]}
@@ -440,6 +448,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                             canGenerateBriefs={canGenerateBriefs}
                                             allCoreTopics={coreTopics}
                                             onReparent={handleReparent}
+                                            isGeneratingBrief={generatingTopicTitle === outer.title}
                                         />
                                 ))}
                                 </div>

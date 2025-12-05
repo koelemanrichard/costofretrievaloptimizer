@@ -32,6 +32,7 @@ interface TopicItemProps {
   canGenerateBriefs: boolean;
   allCoreTopics?: EnrichedTopic[]; // Added for reparenting
   onReparent?: (topicId: string, newParentId: string) => void; // Added for reparenting
+  isGeneratingBrief?: boolean; // Pulsing indicator when brief is being generated
 }
 
 const ActionButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode }> = ({ icon, ...props }) => (
@@ -48,13 +49,13 @@ const ActionButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { i
 );
 
 
-const TopicItem: React.FC<TopicItemProps> = ({ 
-    topic, 
+const TopicItem: React.FC<TopicItemProps> = ({
+    topic,
     onHighlight,
     onGenerateBrief,
-    onDelete, 
-    hasBrief, 
-    onExpand, 
+    onDelete,
+    hasBrief,
+    onExpand,
     isExpanding,
     onUpdateTopic,
     onDropOnTopic,
@@ -67,6 +68,7 @@ const TopicItem: React.FC<TopicItemProps> = ({
     canGenerateBriefs,
     allCoreTopics = [],
     onReparent = () => {},
+    isGeneratingBrief = false,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     
@@ -195,8 +197,8 @@ const TopicItem: React.FC<TopicItemProps> = ({
 
     return (
         <>
-            <div 
-                className={`group p-4 bg-gray-800 rounded-lg hover:bg-gray-700/80 transition-all duration-200 border flex items-start gap-3 cursor-pointer ${topicTypeColor} ${isHighlighted || isEditing ? 'ring-2 ring-blue-500' : ''} ${isDragOver ? 'ring-2 ring-blue-500 border-blue-400' : ''}`}
+            <div
+                className={`group p-4 bg-gray-800 rounded-lg hover:bg-gray-700/80 transition-all duration-200 border flex items-start gap-3 cursor-pointer ${topicTypeColor} ${isHighlighted || isEditing ? 'ring-2 ring-blue-500' : ''} ${isDragOver ? 'ring-2 ring-blue-500 border-blue-400' : ''} ${isGeneratingBrief ? 'ring-2 ring-blue-400 animate-pulse' : ''}`}
                 onClick={handleContainerClick}
                 draggable={topic.type === 'outer'}
                 onDragStart={(e) => onDragStart(e, topic.id)}
@@ -229,7 +231,14 @@ const TopicItem: React.FC<TopicItemProps> = ({
                                     placeholder="Topic Title"
                                 />
                             ) : (
-                                <h4 className="font-semibold text-white">{title}</h4>
+                                <h4 className="font-semibold text-white flex items-center gap-2">
+                                    {title}
+                                    {isGeneratingBrief && (
+                                        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full animate-pulse">
+                                            Generating...
+                                        </span>
+                                    )}
+                                </h4>
                             )}
                             
                              <div className="flex items-center gap-1 mt-1">

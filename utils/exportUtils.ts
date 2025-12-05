@@ -1,6 +1,7 @@
 
 import * as XLSX from 'xlsx';
-import { EnrichedTopic, ContentBrief, SEOPillars, ValidationResult, ContextualBridgeLink, BriefSection } from '../types';
+import JSZip from 'jszip';
+import { EnrichedTopic, ContentBrief, SEOPillars, ValidationResult, ContextualBridgeLink, BriefSection, BusinessInfo } from '../types';
 import { safeString } from './parsers';
 
 interface ExportDataInput {
@@ -128,4 +129,135 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
 
     // Trigger Download
     XLSX.writeFile(workbook, `${filename}.${format}`);
+};
+
+/**
+ * Full Export ZIP - Contains all data in structured format
+ */
+interface FullExportInput {
+    topics: EnrichedTopic[];
+    briefs: Record<string, ContentBrief>;
+    pillars: SEOPillars | undefined;
+    metrics?: ValidationResult | null;
+    businessInfo?: Partial<BusinessInfo>;
+    mapName?: string;
+}
+
+export const generateFullZipExport = async (input: FullExportInput, filename: string) => {
+    const { topics, briefs, pillars, metrics, businessInfo, mapName } = input;
+    const zip = new JSZip();
+
+    // 1. Add Master Export as XLSX
+    const masterRows = topics.map(topic => {
+        const brief = briefs[topic.id];
+        const blueprint = topic.blueprint;
+        const bridgeData = brief?.contextualBridge;
+        let bridgeLinks: ContextualBridgeLink[] = [];
+        if (Array.isArray(bridgeData)) {
+            bridgeLinks = bridgeData;
+        } else if (bridgeData && typeof bridgeData === 'object' && 'links' in bridgeData) {
+            bridgeLinks = bridgeData.links;
+        }
+        const spokeCount = topics.filter(t => t.parent_topic_id === topic.id).length;
+        const metadata = topic.metadata || {};
+
+        return {
+            'Topic Title': topic.title,
+            'Slug': topic.slug,
+            'Type': topic.type,
+            'Description': topic.description,
+            'Canonical Query': metadata.canonical_query || '',
+            'Query Type': metadata.query_type || '',
+            'Has Brief': brief ? 'Yes' : 'No',
+            'Has Draft': brief?.articleDraft ? 'Yes' : 'No',
+            'Meta Description': brief?.metaDescription || '',
+            'Outline': formatContextualVector(brief?.outline || '', brief?.structured_outline) || '',
+            'Hub-Spoke Ratio': topic.type === 'core' ? `1:${spokeCount}` : 'N/A',
+            'Parent ID': topic.parent_topic_id || 'ROOT'
+        };
+    });
+
+    const masterWorksheet = XLSX.utils.json_to_sheet(masterRows);
+    const masterWorkbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(masterWorkbook, masterWorksheet, "Topics");
+    const xlsxBuffer = XLSX.write(masterWorkbook, { type: 'array', bookType: 'xlsx' });
+    zip.file('topics-master.xlsx', xlsxBuffer);
+
+    // 2. Create folders and add content
+    const articlesFolder = zip.folder('articles');
+    const briefsFolder = zip.folder('briefs');
+
+    // 3. Add article drafts as Markdown files
+    Object.entries(briefs).forEach(([topicId, brief]) => {
+        const topic = topics.find(t => t.id === topicId);
+        const safeSlug = safeString(topic?.slug || topicId).replace(/[^a-z0-9-]/gi, '-');
+
+        if (brief.articleDraft) {
+            const mdContent = [
+                `# ${safeString(brief.title)}`,
+                '',
+                `> **Meta Description:** ${safeString(brief.metaDescription)}`,
+                '',
+                '---',
+                '',
+                safeString(brief.articleDraft)
+            ].join('\n');
+            articlesFolder?.file(`${safeSlug}.md`, mdContent);
+        }
+
+        // Add brief as JSON
+        const briefData = {
+            title: brief.title,
+            metaDescription: brief.metaDescription,
+            slug: brief.slug,
+            keyTakeaways: brief.keyTakeaways,
+            outline: brief.outline,
+            structured_outline: brief.structured_outline,
+            perspectives: brief.perspectives,
+            methodology_note: brief.methodology_note,
+            featured_snippet_target: brief.featured_snippet_target,
+            discourse_anchors: brief.discourse_anchors,
+            contextualBridge: brief.contextualBridge,
+            visual_semantics: brief.visual_semantics,
+            serpAnalysis: brief.serpAnalysis
+        };
+        briefsFolder?.file(`${safeSlug}-brief.json`, JSON.stringify(briefData, null, 2));
+    });
+
+    // 4. Add project metadata
+    const projectMeta = {
+        exportDate: new Date().toISOString(),
+        mapName: mapName || 'Topical Map',
+        pillars: pillars,
+        businessContext: {
+            industry: businessInfo?.industry,
+            targetMarket: businessInfo?.targetMarket,
+            language: businessInfo?.language,
+            seedKeyword: businessInfo?.seedKeyword
+        },
+        stats: {
+            totalTopics: topics.length,
+            coreTopics: topics.filter(t => t.type === 'core').length,
+            outerTopics: topics.filter(t => t.type === 'outer').length,
+            briefsGenerated: Object.keys(briefs).length,
+            draftsGenerated: Object.values(briefs).filter(b => b.articleDraft).length
+        }
+    };
+    zip.file('project-metadata.json', JSON.stringify(projectMeta, null, 2));
+
+    // 5. Add validation metrics if available
+    if (metrics) {
+        zip.file('validation-report.json', JSON.stringify(metrics, null, 2));
+    }
+
+    // Generate and download
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };
