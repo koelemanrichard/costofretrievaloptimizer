@@ -1,9 +1,10 @@
 // components/MapSelectionScreen.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { TopicalMap } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Loader } from './ui/Loader';
+import MergeMapWizard from './merge/MergeMapWizard';
 
 interface MapSelectionScreenProps {
   projectName: string;
@@ -15,16 +16,17 @@ interface MapSelectionScreenProps {
   onInitiateDeleteMap: (map: TopicalMap) => void;
 }
 
-const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({ 
-    projectName, 
-    topicalMaps, 
-    onSelectMap, 
-    onCreateNewMap, 
+const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
+    projectName,
+    topicalMaps,
+    onSelectMap,
+    onCreateNewMap,
     onStartAnalysis,
     onBackToProjects,
     onInitiateDeleteMap
 }) => {
     const { state } = useAppState(); // Get state for loading status
+    const [isMergeWizardOpen, setIsMergeWizardOpen] = useState(false);
     
     return (
         <div className="max-w-6xl w-full mx-auto space-y-8">
@@ -48,6 +50,21 @@ const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         <h2 className="text-2xl font-bold text-white">Analyze Existing Website</h2>
                         <p className="text-gray-400 mt-2 flex-grow">Crawl your live website to automatically discover its current topical map and get AI-powered improvement suggestions.</p>
                         <Button onClick={onStartAnalysis} variant="secondary" className="mt-6 w-full">Start Analysis</Button>
+                    </Card>
+                    <Card className="p-8 flex flex-col items-center justify-center text-center">
+                        <h2 className="text-2xl font-bold text-white">Merge Topical Maps</h2>
+                        <p className="text-gray-400 mt-2 flex-grow">Combine two or more maps into one, with AI-assisted topic matching and full control over the merge.</p>
+                        <Button
+                            onClick={() => setIsMergeWizardOpen(true)}
+                            variant="secondary"
+                            className="mt-6 w-full"
+                            disabled={topicalMaps.length < 2}
+                        >
+                            Merge Maps
+                        </Button>
+                        {topicalMaps.length < 2 && (
+                            <p className="text-xs text-gray-500 mt-2">Requires at least 2 maps</p>
+                        )}
                     </Card>
                 </div>
 
@@ -79,6 +96,13 @@ const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                     </Card>
                 </div>
             </div>
+
+            {/* Merge Wizard Modal */}
+            <MergeMapWizard
+                isOpen={isMergeWizardOpen}
+                onClose={() => setIsMergeWizardOpen(false)}
+                availableMaps={topicalMaps}
+            />
         </div>
     );
 };
