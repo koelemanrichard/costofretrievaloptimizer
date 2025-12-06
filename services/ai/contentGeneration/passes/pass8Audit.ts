@@ -35,8 +35,7 @@ export async function executePass8(
     final_audit_score: finalScore,
     audit_details: auditDetails,
     passes_status: { ...job.passes_status, pass_8_audit: 'completed' },
-    status: 'completed',
-    completed_at: new Date().toISOString()
+    current_pass: 9 // Transition to Pass 9 (Schema Generation)
   });
 
   // Sync the final draft to the content_briefs table so it's available in Article Draft Workspace

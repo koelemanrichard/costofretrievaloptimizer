@@ -7,4 +7,5 @@ export { executePass5 } from './pass5MicroSemantics';
 export { executePass6 } from './pass6Discourse';
 export { executePass7 } from './pass7Introduction';
 export { executePass8 } from './pass8Audit';
+export { executePass9, canExecutePass9, getPass9Status, regenerateSchema } from './pass9SchemaGeneration';
 export { runAlgorithmicAudit } from './auditChecks';

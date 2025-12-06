@@ -41,7 +41,7 @@ Multi-provider abstraction supporting Gemini, OpenAI, Anthropic, Perplexity, and
 - Individual provider implementations: `geminiService.ts`, `openAiService.ts`, `anthropicService.ts`, etc.
 
 ### Multi-Pass Content Generation
-The `services/ai/contentGeneration/` module implements an 8-pass article generation system:
+The `services/ai/contentGeneration/` module implements a 9-pass article generation system:
 
 1. **Pass 1 - Draft Generation**: Section-by-section content creation with resumability
 2. **Pass 2 - Header Optimization**: Heading hierarchy and contextual overlap
@@ -51,17 +51,22 @@ The `services/ai/contentGeneration/` module implements an 8-pass article generat
 6. **Pass 6 - Discourse Integration**: Transitions and contextual bridges
 7. **Pass 7 - Introduction Synthesis**: Post-hoc introduction rewriting
 8. **Pass 8 - Final Audit**: Algorithmic content audit with scoring
+9. **Pass 9 - Schema Generation**: JSON-LD structured data with entity resolution (Wikidata), page type detection, validation, and auto-fix
 
 Key files:
 - `orchestrator.ts` - Job management, Supabase persistence, progress tracking
 - `passes/pass1DraftGeneration.ts` - Section-by-section draft with retry logic
+- `passes/pass9SchemaGeneration.ts` - JSON-LD schema generation with entity resolution
 - `passes/auditChecks.ts` - 10 algorithmic audit rules
+- `schemaGeneration/` - Schema generator, validator, auto-fix, and templates
+- `progressiveSchemaCollector.ts` - Collects schema-relevant data during passes 1-8
 - `hooks/useContentGeneration.ts` - React hook with realtime updates
 - `components/ContentGenerationProgress.tsx` - UI for progress tracking
 
 Database tables (see migrations):
-- `content_generation_jobs` - Job state, pass status, audit results
+- `content_generation_jobs` - Job state, pass status, audit results, schema data
 - `content_generation_sections` - Per-section content with version history
+- `entity_resolution_cache` - Cached Wikidata entity resolutions
 
 ### Key Directories
 - `components/` - React components (wizards, modals, dashboard panels)

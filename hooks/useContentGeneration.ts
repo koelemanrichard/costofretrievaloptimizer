@@ -6,6 +6,9 @@ import {
   ContentGenerationSection,
   ContentBrief,
   BusinessInfo,
+  SEOPillars,
+  EnrichedTopic,
+  EnhancedSchemaResult,
   PASS_NAMES
 } from '../types';
 import {
@@ -17,8 +20,14 @@ import {
   executePass5,
   executePass6,
   executePass7,
-  executePass8
+  executePass8,
+  executePass9
 } from '../services/ai/contentGeneration';
+import {
+  createEmptyProgressiveData,
+  collectFromPass,
+  collectFromPass8
+} from '../services/ai/contentGeneration/progressiveSchemaCollector';
 
 interface UseContentGenerationProps {
   briefId: string;
@@ -26,8 +35,10 @@ interface UseContentGenerationProps {
   userId: string;
   businessInfo: BusinessInfo;
   brief: ContentBrief;
+  pillars?: SEOPillars;
+  topic?: EnrichedTopic;
   onLog: (message: string, status: 'info' | 'success' | 'failure' | 'warning') => void;
-  onComplete?: (draft: string, auditScore: number) => void;
+  onComplete?: (draft: string, auditScore: number, schemaResult?: EnhancedSchemaResult) => void;
 }
 
 interface UseContentGenerationReturn {
@@ -51,6 +62,8 @@ export function useContentGeneration({
   userId,
   businessInfo,
   brief,
+  pillars,
+  topic,
   onLog,
   onComplete
 }: UseContentGenerationProps): UseContentGenerationReturn {
@@ -174,6 +187,24 @@ export function useContentGeneration({
       aiProvider: businessInfo?.aiProvider || 'gemini',
     };
 
+    // Helper to collect and save progressive schema data
+    const collectProgressiveData = async (passNumber: number, draftContent: string) => {
+      try {
+        const existingData = updatedJob.progressive_schema_data || createEmptyProgressiveData();
+        const newData = collectFromPass(existingData, passNumber, draftContent, brief);
+
+        await orchestrator.updateJob(updatedJob.id, {
+          progressive_schema_data: newData
+        });
+
+        // Update local job state
+        updatedJob = { ...updatedJob, progressive_schema_data: newData };
+      } catch (err) {
+        console.warn(`[Progressive] Failed to collect data for pass ${passNumber}:`, err);
+        // Don't fail the pass if progressive collection fails
+      }
+    };
+
     try {
       // Pass 1: Draft Generation
       if (updatedJob.current_pass === 1) {
@@ -191,6 +222,8 @@ export function useContentGeneration({
         if (shouldAbort()) return;
         // Refresh job state
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Collect progressive schema data from Pass 1
+        await collectProgressiveData(1, updatedJob.draft_content || '');
       }
 
       // Pass 2: Headers
@@ -207,6 +240,8 @@ export function useContentGeneration({
         await executePass3(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Collect progressive schema data from Pass 3
+        await collectProgressiveData(3, updatedJob.draft_content || '');
       }
 
       // Pass 4: Visuals
@@ -215,6 +250,8 @@ export function useContentGeneration({
         await executePass4(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Collect progressive schema data from Pass 4 (images)
+        await collectProgressiveData(4, updatedJob.draft_content || '');
       }
 
       // Pass 5: Micro Semantics
@@ -223,6 +260,8 @@ export function useContentGeneration({
         await executePass5(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Collect progressive schema data from Pass 5 (keywords, entities)
+        await collectProgressiveData(5, updatedJob.draft_content || '');
       }
 
       // Pass 6: Discourse
@@ -239,18 +278,81 @@ export function useContentGeneration({
         await executePass7(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Collect progressive schema data from Pass 7 (abstract)
+        await collectProgressiveData(7, updatedJob.draft_content || '');
       }
 
       // Pass 8: Audit
       if (updatedJob.current_pass === 8) {
         onLog('Pass 8: Running final audit...', 'info');
         const result = await executePass8(orchestrator, updatedJob, brief, safeBusinessInfo);
-        onLog(`Complete! Audit score: ${result.score}%`, 'success');
+        onLog(`Audit score: ${result.score}%`, 'success');
+        if (shouldAbort()) return;
+        updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
 
-        // Notify parent of completion so it can update local state
-        if (onComplete) {
-          onComplete(result.draft, result.score);
+        // Collect progressive schema data from Pass 8 (audit scores)
+        try {
+          const existingData = updatedJob.progressive_schema_data || createEmptyProgressiveData();
+          const newData = collectFromPass8(existingData, result.score);
+          await orchestrator.updateJob(updatedJob.id, {
+            progressive_schema_data: newData
+          });
+          updatedJob = { ...updatedJob, progressive_schema_data: newData };
+        } catch (err) {
+          console.warn('[Progressive] Failed to collect data for pass 8:', err);
         }
+      }
+
+      // Pass 9: Schema Generation
+      if (updatedJob.current_pass === 9) {
+        onLog('Pass 9: Generating JSON-LD schema...', 'info');
+
+        // Build SEO pillars with defaults if not provided
+        const safePillars: SEOPillars = pillars || {
+          centralEntity: brief.targetKeyword || '',
+          sourceContext: safeBusinessInfo.industry || '',
+          centralSearchIntent: brief.searchIntent || 'informational'
+        };
+
+        const pass9Result = await executePass9(
+          updatedJob.id,
+          brief,
+          safeBusinessInfo,
+          safePillars,
+          updatedJob.draft_content || '',
+          topic,
+          updatedJob.progressive_schema_data,
+          safeBusinessInfo.supabaseUrl,
+          safeBusinessInfo.supabaseAnonKey,
+          userId,
+          undefined, // Use default config
+          (message) => onLog(message, 'info')
+        );
+
+        if (pass9Result.success && pass9Result.schemaResult) {
+          onLog(`Schema generated! Validation: ${pass9Result.schemaResult.validation.overallScore}%`, 'success');
+
+          // Notify parent of completion with schema result
+          if (onComplete) {
+            onComplete(
+              updatedJob.draft_content || '',
+              updatedJob.final_audit_score || 0,
+              pass9Result.schemaResult
+            );
+          }
+        } else {
+          onLog(`Schema generation failed: ${pass9Result.error}`, 'warning');
+          // Still complete the job, but without schema
+          if (onComplete) {
+            onComplete(updatedJob.draft_content || '', updatedJob.final_audit_score || 0);
+          }
+        }
+
+        // Mark job as completed
+        await orchestrator.updateJob(updatedJob.id, {
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        });
       }
 
     } catch (err) {

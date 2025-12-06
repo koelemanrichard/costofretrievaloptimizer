@@ -565,9 +565,249 @@ export interface ContentIntegrityResult {
     tripleAnalysis?: TripleAuditResult;
 }
 
+// Legacy schema result (kept for backward compatibility)
 export interface SchemaGenerationResult {
     schema: string;
     reasoning: string;
+}
+
+// =============================================================================
+// SCHEMA GENERATION TYPES (Pass 9 - Comprehensive JSON-LD Generation)
+// =============================================================================
+
+// Page type detection for schema selection
+export type SchemaPageType =
+  | 'HomePage'
+  | 'Article'
+  | 'BlogPosting'
+  | 'NewsArticle'
+  | 'Product'
+  | 'ProfilePage'      // Author profile
+  | 'CollectionPage'   // Category/tag page
+  | 'FAQPage'
+  | 'HowTo'
+  | 'WebPage';         // Generic fallback
+
+// Entity type for resolution
+export type SchemaEntityType = 'Person' | 'Organization' | 'Place' | 'Thing' | 'Event' | 'CreativeWork';
+
+// Resolved external entity (Wikidata/Wikipedia)
+export interface ResolvedEntity {
+  id?: string;
+  name: string;
+  type: SchemaEntityType;
+  wikidataId?: string;
+  wikipediaUrl?: string;
+  sameAs: string[];
+  description?: string;
+  properties: Record<string, unknown>;
+  confidenceScore: number;
+  source: 'wikidata' | 'ai_inferred' | 'user_provided';
+  lastVerifiedAt?: string;
+}
+
+// Entity candidate extracted from content
+export interface EntityCandidate {
+  name: string;
+  type: SchemaEntityType;
+  context: string;        // Surrounding text for disambiguation
+  mentions: number;       // How many times mentioned
+  isMainEntity: boolean;  // Is this the central entity of the content
+  role: 'subject' | 'author' | 'publisher' | 'mentioned' | 'about';
+}
+
+// Validation error in schema
+export interface SchemaValidationError {
+  path: string;
+  message: string;
+  severity: 'error' | 'warning';
+  category: 'syntax' | 'schema_org' | 'content_parity' | 'eav_consistency' | 'entity' | 'freshness';
+  suggestion?: string;
+  autoFixable: boolean;
+}
+
+// Validation warning
+export interface SchemaValidationWarning {
+  path: string;
+  message: string;
+  recommendation: string;
+  category: string;
+}
+
+// Full schema validation result
+export interface SchemaValidationResult {
+  isValid: boolean;
+  overallScore: number;  // 0-100
+
+  // Categorized errors
+  syntaxErrors: SchemaValidationError[];
+  schemaOrgErrors: SchemaValidationError[];
+  contentParityErrors: SchemaValidationError[];
+  eavConsistencyErrors: SchemaValidationError[];
+  entityErrors: SchemaValidationError[];
+
+  // Warnings
+  warnings: SchemaValidationWarning[];
+
+  // Auto-fix tracking
+  autoFixApplied: boolean;
+  autoFixChanges: string[];
+  autoFixIterations: number;
+
+  // External validation (optional)
+  externalValidationRun: boolean;
+  externalValidationResult?: {
+    source: string;
+    isValid: boolean;
+    errors: string[];
+  };
+}
+
+// Progressive schema data collected during passes 1-8
+export interface ProgressiveSchemaData {
+  // From Pass 1 (Draft Generation)
+  mainEntity?: string;
+  headline?: string;
+  description?: string;
+  wordCount?: number;
+  sections?: Array<{
+    name: string;
+    about: string;
+    order: number;
+  }>;
+
+  // From Pass 3 (Lists & Tables)
+  hasPart?: Array<{
+    type: 'ItemList' | 'HowToStep' | 'FAQPage' | 'Table';
+    name?: string;
+    items: unknown[];
+  }>;
+
+  // From Pass 4 (Visual Semantics)
+  images?: Array<{
+    description: string;
+    caption: string;
+    contentUrl?: string;
+    altText?: string;
+  }>;
+
+  // From Pass 5 (Micro Semantics)
+  keywords?: string[];
+  entities?: string[];
+
+  // From Pass 7 (Introduction)
+  abstractText?: string;
+
+  // From Pass 8 (Audit)
+  qualityScore?: number;
+  readabilityScore?: number;
+
+  // Collection metadata
+  lastUpdatedAt?: string;
+  passesContributed?: number[];
+}
+
+// Pass 9 configuration
+export interface Pass9Config {
+  pageType?: SchemaPageType;        // Override auto-detection
+  includeEntities: boolean;         // Resolve external entities
+  maxEntityResolutions: number;     // Limit API calls
+  validationLevel: 'basic' | 'standard' | 'strict';
+  autoFix: boolean;                 // Apply auto-fixes
+  maxAutoFixIterations: number;     // Max fix iterations
+  externalValidation: boolean;      // Use external validators
+  includeOrganizationSchema: boolean;
+  includeAuthorSchema: boolean;
+  includeBreadcrumb: boolean;
+  includeWebPage: boolean;
+}
+
+// Default Pass 9 configuration
+export const DEFAULT_PASS9_CONFIG: Pass9Config = {
+  includeEntities: true,
+  maxEntityResolutions: 10,
+  validationLevel: 'standard',
+  autoFix: true,
+  maxAutoFixIterations: 3,
+  externalValidation: false,
+  includeOrganizationSchema: true,
+  includeAuthorSchema: true,
+  includeBreadcrumb: true,
+  includeWebPage: true
+};
+
+// Enhanced schema generation result
+export interface EnhancedSchemaResult {
+  // The generated schema
+  schema: object;              // The full JSON-LD @graph
+  schemaString: string;        // Stringified for display/export
+
+  // Metadata
+  pageType: SchemaPageType;
+  detectedPageType: SchemaPageType;  // What was auto-detected
+  pageTypeOverridden: boolean;
+
+  // Entity resolution
+  resolvedEntities: ResolvedEntity[];
+  entityCandidates: EntityCandidate[];
+  entitiesSkipped: string[];   // Entities that couldn't be resolved
+
+  // Validation
+  validation: SchemaValidationResult;
+
+  // Generation metadata
+  reasoning: string;           // AI reasoning for schema choices
+  generatedAt: string;
+  version: number;
+  configUsed: Pass9Config;
+
+  // Rich result eligibility
+  richResultTypes: string[];   // Eligible rich result types
+  richResultWarnings: string[];
+}
+
+// Site-wide schema entity (Organization, Author defined once)
+export interface SiteSchemaEntity {
+  id: string;
+  mapId: string;
+  entityType: 'Organization' | 'Person' | 'WebSite';
+  entityId: string;           // The @id value (e.g., "#organization")
+  schemaData: object;         // Full schema JSON
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Schema template structure
+export interface SchemaTemplate {
+  type: SchemaPageType;
+  requiredProperties: string[];
+  recommendedProperties: string[];
+  optionalProperties: string[];
+  nestedTypes: Record<string, string[]>;  // Nested schema types and their properties
+}
+
+// Schema @id reference
+export interface SchemaIdReference {
+  '@type': string;
+  '@id': string;
+}
+
+// Entity resolution cache entry
+export interface EntityCacheEntry {
+  id: string;
+  userId: string;
+  entityName: string;
+  entityType: SchemaEntityType;
+  wikidataId?: string;
+  wikipediaUrl?: string;
+  resolvedData?: Record<string, unknown>;
+  sameAsUrls: string[];
+  confidenceScore: number;
+  resolutionSource: 'wikidata' | 'ai_inferred' | 'user_provided';
+  lastVerifiedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // --- Contextual Flow Audit Types (New) ---
@@ -1949,6 +2189,7 @@ export interface PassesStatus {
   pass_6_discourse: PassStatus;
   pass_7_intro: PassStatus;
   pass_8_audit: PassStatus;
+  pass_9_schema: PassStatus;
 }
 
 export interface ContentGenerationJob {
@@ -1972,6 +2213,13 @@ export interface ContentGenerationJob {
   updated_at: string;
   started_at: string | null;
   completed_at: string | null;
+
+  // Schema generation fields (Pass 9)
+  schema_data: EnhancedSchemaResult | null;
+  schema_validation_results: SchemaValidationResult | null;
+  schema_entities: ResolvedEntity[] | null;
+  schema_page_type: SchemaPageType | null;
+  progressive_schema_data: ProgressiveSchemaData | null;
 }
 
 export interface AuditDetails {
@@ -2000,6 +2248,7 @@ export interface ContentGenerationSection {
   pass_6_content: string | null;
   pass_7_content: string | null;
   pass_8_content: string | null;
+  pass_9_content: string | null;  // Schema-related section content
   current_content: string | null;
   current_pass: number;
   audit_scores: Record<string, number>;
@@ -2025,7 +2274,8 @@ export const PASS_NAMES: Record<number, string> = {
   5: 'Micro Semantics',
   6: 'Discourse Integration',
   7: 'Introduction Synthesis',
-  8: 'Final Audit'
+  8: 'Final Audit',
+  9: 'Schema Generation'
 };
 
 // =============================================================================

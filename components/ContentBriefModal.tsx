@@ -5,7 +5,7 @@ import { useAppState } from '../state/appState';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Loader } from './ui/Loader';
-import { EnrichedTopic, ContentBrief, ContextualBridgeLink, BriefSection } from '../types';
+import { EnrichedTopic, ContentBrief, ContextualBridgeLink, BriefSection, EnhancedSchemaResult } from '../types';
 import { safeString } from '../utils/parsers';
 import { useContentGeneration } from '../hooks/useContentGeneration';
 import ContentGenerationProgress from './ContentGenerationProgress';
@@ -51,11 +51,12 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         dispatch({ type: 'LOG_EVENT', payload: { service: 'MultiPass', message, status, timestamp: Date.now() }});
     }, [dispatch]);
 
-    // Handle completion - update local state with the generated draft
-    const handleGenerationComplete = useCallback((draft: string, auditScore: number) => {
+    // Handle completion - update local state with the generated draft and schema
+    const handleGenerationComplete = useCallback((draft: string, auditScore: number, schemaResult?: EnhancedSchemaResult) => {
         console.log('[ContentBriefModal] handleGenerationComplete called:', {
             draftLength: draft?.length || 0,
             auditScore,
+            hasSchema: !!schemaResult,
             activeBriefTopic: activeBriefTopic?.id,
             activeMapId
         });
@@ -75,6 +76,10 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                 }
             });
             handleLog(`Draft synced to workspace (${draft.length} chars)`, 'success');
+
+            if (schemaResult) {
+                handleLog(`Schema generated: ${schemaResult.pageType} with ${schemaResult.resolvedEntities.length} entities`, 'success');
+            }
         }
     }, [activeBriefTopic, activeMapId, dispatch, handleLog]);
 
@@ -98,6 +103,8 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         userId: user?.id || '',
         businessInfo,
         brief: brief || {} as ContentBrief,
+        pillars: activeMap?.pillars,
+        topic: activeBriefTopic || undefined,
         onLog: handleLog,
         onComplete: handleGenerationComplete
     });
@@ -210,8 +217,11 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         <div className="mb-6 p-4 bg-green-900/30 border border-green-700 rounded">
                             <h3 className="text-green-300 font-semibold mb-2">Generation Complete!</h3>
                             <p className="text-gray-300 text-sm">
-                                Your article has been generated through 8 optimization passes.
+                                Your article has been generated through 9 optimization passes including schema generation.
                                 Final audit score: <strong className="text-green-400">{job.final_audit_score}%</strong>
+                                {job.schema_data && (
+                                    <span className="ml-2">| Schema: <strong className="text-blue-400">{(job.schema_data as EnhancedSchemaResult).pageType}</strong></span>
+                                )}
                             </p>
                             <Button onClick={handleViewDraft} variant="primary" className="mt-3">
                                 View Generated Draft
@@ -414,7 +424,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                     onChange={(e) => setUseMultiPass(e.target.checked)}
                                     className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
                                 />
-                                <span>Use Multi-Pass Generation (8 passes)</span>
+                                <span>Use Multi-Pass Generation (9 passes)</span>
                             </label>
                         )}
                     </div>

@@ -152,7 +152,7 @@ export class ContentGenerationOrchestrator {
   }
 
   calculateProgress(job: ContentGenerationJob): number {
-    const passWeight = 100 / 8;
+    const passWeight = 100 / 9; // 9 passes total including schema generation
     let progress = 0;
 
     // Count completed passes
