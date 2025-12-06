@@ -1,7 +1,11 @@
 // services/ai/contentGeneration/passes/pass1DraftGeneration.ts
-import { ContentBrief, ContentGenerationJob, SectionDefinition, BusinessInfo } from '../../../../types';
+import { ContentBrief, ContentGenerationJob, SectionDefinition, BusinessInfo, BriefSection, SectionGenerationContext, DiscourseContext } from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { GENERATE_SECTION_DRAFT_PROMPT } from '../../../../config/prompts';
+import { ContextChainer } from '../rulesEngine/contextChainer';
+import { AttributeRanker } from '../rulesEngine/attributeRanker';
+import { RulesValidator } from '../rulesEngine/validators';
+import { SectionPromptBuilder } from '../rulesEngine/prompts/sectionPromptBuilder';
+import { YMYLValidator } from '../rulesEngine/validators/ymylValidator';
 import * as geminiService from '../../../geminiService';
 import * as openAiService from '../../../openAiService';
 import * as anthropicService from '../../../anthropicService';
@@ -42,9 +46,26 @@ export async function executePass1(
   shouldAbort: () => boolean
 ): Promise<string> {
   // 1. Parse sections from brief
-  const sections = orchestrator.parseSectionsFromBrief(brief);
+  let sections = orchestrator.parseSectionsFromBrief(brief);
 
-  // 2. Find where to resume (if any sections already completed)
+  // 2. Order sections using AttributeRanker (ROOT → UNIQUE → RARE → COMMON)
+  // Convert to BriefSection for ordering, then convert back
+  const briefSections: BriefSection[] = sections.map(s => ({
+    key: s.key,
+    heading: s.heading,
+    level: s.level,
+    order: s.order,
+    subordinate_text_hint: s.subordinateTextHint,
+  }));
+
+  const orderedBriefSections = AttributeRanker.orderSections(briefSections);
+
+  // Convert back to SectionDefinition maintaining the order
+  sections = orderedBriefSections.map(bs =>
+    sections.find(s => s.key === bs.key)!
+  );
+
+  // 3. Find where to resume (if any sections already completed)
   const existingSections = await orchestrator.getSections(job.id);
   const completedKeys = new Set(
     existingSections
@@ -55,7 +76,7 @@ export async function executePass1(
   // Use actual completed count from DB, not stale job value
   let completedCount = completedKeys.size;
 
-  // 3. Update job with section count and current progress
+  // 4. Update job with section count and current progress
   await orchestrator.updateJob(job.id, {
     total_sections: sections.length,
     completed_sections: completedCount, // Sync with actual completed count
@@ -64,7 +85,10 @@ export async function executePass1(
     passes_status: { ...job.passes_status, pass_1_draft: 'in_progress' }
   });
 
-  // 4. Generate each section
+  // 5. Track discourse context for S-P-O chaining
+  let previousContent: string | null = null;
+
+  // 6. Generate each section
   for (const section of sections) {
     // Check for abort
     if (shouldAbort()) {
@@ -73,18 +97,29 @@ export async function executePass1(
 
     // Skip already completed sections
     if (completedKeys.has(section.key)) {
+      // Load completed content to maintain discourse chain
+      const existingSection = existingSections.find(s => s.section_key === section.key);
+      if (existingSection?.pass_1_content) {
+        previousContent = existingSection.pass_1_content;
+      }
       continue;
     }
 
     // Update current section
     await orchestrator.updateJob(job.id, { current_section_key: section.key });
 
-    // Generate with retry
+    // Build discourse context from previous section
+    const discourseContext = previousContent
+      ? ContextChainer.extractForNext(previousContent)
+      : null;
+
+    // Generate with retry and validation
     const content = await generateSectionWithRetry(
       section,
       brief,
       businessInfo,
       sections,
+      discourseContext,
       3
     );
 
@@ -101,6 +136,9 @@ export async function executePass1(
       status: 'completed'
     });
 
+    // Update discourse context for next section
+    previousContent = content;
+
     // Update progress
     completedCount++;
     await orchestrator.updateJob(job.id, {
@@ -114,10 +152,10 @@ export async function executePass1(
     await delay(500);
   }
 
-  // 5. Assemble full draft
+  // 7. Assemble full draft
   const fullDraft = await orchestrator.assembleDraft(job.id);
 
-  // 6. Mark pass complete
+  // 8. Mark pass complete
   await orchestrator.updateJob(job.id, {
     draft_content: fullDraft,
     passes_status: { ...job.passes_status, pass_1_draft: 'completed' },
@@ -133,29 +171,91 @@ async function generateSectionWithRetry(
   brief: ContentBrief,
   businessInfo: BusinessInfo,
   allSections: SectionDefinition[],
+  discourseContext: DiscourseContext | null,
   maxRetries: number
 ): Promise<string> {
   let lastError: Error | null = null;
+  let fixInstructions: string | undefined = undefined;
+
+  // Convert SectionDefinition to BriefSection for Rules Engine
+  const briefSection: BriefSection = {
+    key: section.key,
+    heading: section.heading,
+    level: section.level,
+    order: section.order,
+    subordinate_text_hint: section.subordinateTextHint,
+  };
+
+  // Convert allSections to BriefSection array
+  const allBriefSections: BriefSection[] = allSections.map(s => ({
+    key: s.key,
+    heading: s.heading,
+    level: s.level,
+    order: s.order,
+    subordinate_text_hint: s.subordinateTextHint,
+  }));
+
+  // Detect YMYL content
+  const ymylDetection = YMYLValidator.detectYMYL(
+    `${brief.title} ${section.heading} ${businessInfo.industry}`
+  );
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const prompt = GENERATE_SECTION_DRAFT_PROMPT(
-        section,
+      // Build SectionGenerationContext
+      const context: SectionGenerationContext = {
+        section: briefSection,
         brief,
         businessInfo,
-        allSections
-      );
+        discourseContext: discourseContext || undefined,
+        allSections: allBriefSections,
+        isYMYL: ymylDetection.isYMYL,
+        ymylCategory: ymylDetection.category,
+      };
+
+      // Use SectionPromptBuilder instead of legacy prompt
+      const prompt = SectionPromptBuilder.build(context, fixInstructions);
 
       const response = await callProviderWithPrompt(
         businessInfo,
         prompt
       );
 
-      if (typeof response === 'string') {
-        return response.trim();
+      if (typeof response !== 'string') {
+        throw new Error('AI returned non-string response');
       }
 
-      throw new Error('AI returned non-string response');
+      const content = response.trim();
+
+      // Validate generated content
+      const validationResult = RulesValidator.validate(content, context);
+
+      // Log warnings (non-blocking)
+      const warnings = validationResult.violations.filter(v => v.severity === 'warning');
+      if (warnings.length > 0) {
+        console.warn(`[Pass1] Section "${section.heading}" has ${warnings.length} validation warnings:`, warnings);
+      }
+
+      // If validation failed with errors, retry with fix instructions
+      if (!validationResult.passed) {
+        const errors = validationResult.violations.filter(v => v.severity === 'error');
+        console.warn(`[Pass1] Section "${section.heading}" validation failed (attempt ${attempt}/${maxRetries}):`, errors);
+
+        if (attempt < maxRetries) {
+          fixInstructions = validationResult.fixInstructions;
+          // Exponential backoff before retry
+          await delay(1000 * Math.pow(2, attempt - 1));
+          continue; // Retry with fix instructions
+        } else {
+          // Max retries reached, return content with errors logged
+          console.error(`[Pass1] Section "${section.heading}" failed validation after ${maxRetries} attempts. Proceeding with last attempt.`);
+          return content;
+        }
+      }
+
+      // Validation passed
+      return content;
+
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
