@@ -474,6 +474,21 @@ ${businessContext(info)}
 #### **V. INTERLINKING**
 1.  **Post-Definition Linking (Rule V.C):** In the 'contextualBridge' instructions, specify that links must be placed *after* the entity has been defined, never in the first sentence of a paragraph.
 
+#### **VI. FORMAT CODE ASSIGNMENT**
+1.  **[FS] Featured Snippet**: Assign to the primary definition/answer section. 40-50 words max.
+2.  **[PAA] People Also Ask**: Assign to FAQ-style questions.
+3.  **[LISTING]**: Assign when listing features, steps, benefits, etc.
+4.  **[DEFINITIVE]**: Assign to comprehensive explanations.
+5.  **[TABLE]**: Assign to comparative data sections.
+6.  **[PROSE]**: Default for standard prose sections.
+
+#### **VII. ATTRIBUTE CATEGORY CLASSIFICATION**
+For each section in 'structured_outline', classify using 'attribute_category':
+- **ROOT**: Core defining attributes (definitions, what is, overview)
+- **UNIQUE**: Differentiating features (vs competitors, unique aspects)
+- **RARE**: Specific/technical details (specifications, advanced usage)
+- **COMMON**: General/shared attributes (general info, context)
+
 ---
 
 ### **OUTPUT JSON STRUCTURE**
@@ -491,8 +506,13 @@ Respond with a SINGLE valid JSON object matching this schema exactly:
     {
       "heading": "string",
       "level": number,
+      "format_code": "FS | PAA | LISTING | DEFINITIVE | TABLE | PROSE",
+      "attribute_category": "ROOT | UNIQUE | RARE | COMMON",
+      "content_zone": "MAIN | SUPPLEMENTARY",
       "subordinate_text_hint": "string (Specific first-sentence syntax instruction)",
-      "methodology_note": "string"
+      "methodology_note": "string (Include [FS], [PAA], etc. codes and [\"required phrases\"])",
+      "required_phrases": ["string"],
+      "anchor_texts": [{ "phrase": "string", "target_topic_id": "string" }]
     }
   ],
   "perspectives": ["string", "string"],
@@ -2216,8 +2236,8 @@ Write ONLY the content for this specific section. Do NOT include the heading its
 ## Section to Write
 Heading: ${section.heading}
 Level: H${section.level}
-${section.subordinateTextHint ? `Content Direction: ${section.subordinateTextHint}` : ''}
-${section.methodologyNote ? `Format Requirement: ${section.methodologyNote}` : ''}
+${section.subordinateTextHint ? `**MANDATORY FIRST SENTENCE STRUCTURE**: ${section.subordinateTextHint}` : ''}
+${section.methodologyNote ? `**FORMAT REQUIREMENT**: ${section.methodologyNote}` : ''}
 
 ## Article Context
 Title: ${brief.title}
@@ -2227,39 +2247,42 @@ Key Takeaways: ${brief.keyTakeaways?.join(', ') || 'N/A'}
 Search Intent: ${brief.searchIntent || 'informational'}
 ${perspectives.length > 0 ? `Perspectives to Include: ${perspectives.join(', ')}` : ''}
 
-## Full Article Structure
+## Full Article Structure (for context only - stay focused on YOUR section)
 ${allSections.map((s, i) => `${i + 1}. ${s.heading}`).join('\n')}
 
-${serpPAA.length > 0 ? `## Related Questions (SERP "People Also Ask")
-Address these naturally if relevant to this section:
-${serpPAA.slice(0, 5).map(q => `- ${q}`).join('\n')}` : ''}
+${serpPAA.length > 0 ? `## Related Questions (Optional - ONLY if directly relevant to "${section.heading}")
+${serpPAA.slice(0, 3).map(q => `- ${q}`).join('\n')}` : ''}
 
-${serpHeadings.length > 0 ? `## Competitor Angle Insights
-Consider these approaches from top-ranking content:
-${serpHeadings.slice(0, 5).map(h => `- ${h}`).join('\n')}` : ''}
+${serpHeadings.length > 0 ? `## Competitor Angles (Optional reference only)
+${serpHeadings.slice(0, 3).map(h => `- ${h}`).join('\n')}` : ''}
 
-${contextualVectors.length > 0 ? `## Contextual Themes to Weave In
-${contextualVectors.slice(0, 5).join(', ')}` : ''}
+${contextualVectors.length > 0 ? `## Contextual Themes (weave in naturally)
+${contextualVectors.slice(0, 3).join(', ')}` : ''}
 
 ${businessContext(info)}
 
-## Writing Rules
-1. **LANGUAGE**: Write entirely in ${info.language || 'English'}. Match native speaker quality for ${info.targetMarket || 'the target market'}.
-2. **Varied Openings**: Start each section DIFFERENTLY - use questions, statistics, scenarios, comparisons, or direct statements. NEVER repeat the article title verbatim.
-3. **EAV Density**: Each sentence must contain an Entity-Attribute-Value triple
-4. **Subject Positioning**: "${info.seedKeyword}" should be the grammatical SUBJECT in some sentences, but not every opening
-5. **No Fluff**: Avoid filler words like "also", "basically", "very", "maybe", "actually"
-6. **Modality**: Use definitive verbs ("is", "are") not uncertainty ("can be", "might")
-7. **Information Density**: Every sentence must add a new fact
-8. **NO REPETITION**: Each section must have a unique opening pattern
+## STRICT WRITING RULES
+1. **STAY ON TOPIC**: Write ONLY about "${section.heading}". Do NOT introduce topics covered in other sections. Do NOT add tangential information.
+2. **FOLLOW THE BRIEF**: If a "MANDATORY FIRST SENTENCE STRUCTURE" is provided, your first sentence MUST follow that exact pattern.
+3. **COMPLETE YOUR THOUGHTS**: Every sentence must be complete. Never end mid-sentence or trail off.
+4. **LANGUAGE**: Write entirely in ${info.language || 'English'}. Match native speaker quality for ${info.targetMarket || 'the target market'}.
+5. **Varied Openings**: Start the section DIFFERENTLY from typical patterns - use questions, statistics, scenarios, comparisons, or direct statements.
+6. **EAV Density**: Each sentence must contain an Entity-Attribute-Value triple about "${section.heading}"
+7. **Subject Positioning**: "${info.seedKeyword}" should be the grammatical SUBJECT in some sentences
+8. **No Fluff**: Avoid filler words like "also", "basically", "very", "maybe", "actually"
+9. **Modality**: Use definitive verbs ("is", "are") not uncertainty ("can be", "might")
+10. **Information Density**: Every sentence must add a new fact relevant to this section
 
 ${getStylometryInstructions(info.authorProfile)}
 
 Write 150-300 words of content for this section in ${info.language || 'English'}. Output ONLY the prose content, no headings or metadata.
 
-CRITICAL:
-- Your first sentence MUST be different from typical openings. Avoid patterns like "[Topic] is..." or "[Topic] refers to...".
-- Write in ${info.language || 'English'} with native-level fluency appropriate for ${info.targetMarket || 'the target audience'}.
+CRITICAL CONSTRAINTS:
+- Write ONLY about the topic indicated by the heading "${section.heading}"
+- Do NOT mention schema markup, structured data, or technical SEO unless the heading specifically covers those topics
+- Do NOT preview or discuss content from other sections in the article structure
+- COMPLETE every sentence - never leave thoughts unfinished
+- Write in ${info.language || 'English'} with native-level fluency
 `;
 };
 
