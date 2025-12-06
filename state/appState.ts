@@ -152,6 +152,7 @@ export type AppAction =
   | { type: 'DELETE_TOPIC'; payload: { mapId: string; topicId: string } }
   | { type: 'SET_BRIEFS_FOR_MAP'; payload: { mapId: string; briefs: Record<string, ContentBrief> } }
   | { type: 'ADD_BRIEF'; payload: { mapId: string; topicId: string; brief: ContentBrief } }
+  | { type: 'UPDATE_BRIEF'; payload: { mapId: string; topicId: string; updates: Partial<ContentBrief> } }
   | { type: 'UPDATE_BRIEF_LINKS'; payload: { mapId: string, sourceTopicId: string, linkToAdd: any } }
   | { type: 'SET_KNOWLEDGE_GRAPH'; payload: KnowledgeGraph | null }
   | { type: 'LOG_EVENT'; payload: GenerationLogEntry }
@@ -558,6 +559,11 @@ const mapReducer = (map: TopicalMap, action: any): TopicalMap => {
         case 'DELETE_TOPIC': return { ...map, topics: (map.topics || []).filter(t => t.id !== action.payload.topicId) };
         case 'SET_BRIEFS_FOR_MAP': return { ...map, briefs: action.payload.briefs };
         case 'ADD_BRIEF': return { ...map, briefs: { ...(map.briefs || {}), [action.payload.topicId]: action.payload.brief } };
+        case 'UPDATE_BRIEF': {
+            const existingBrief = map.briefs?.[action.payload.topicId];
+            if (!existingBrief) return map;
+            return { ...map, briefs: { ...(map.briefs || {}), [action.payload.topicId]: { ...existingBrief, ...action.payload.updates } } };
+        }
         case 'UPDATE_BRIEF_LINKS': {
             const { sourceTopicId, linkToAdd } = action.payload;
             const brief = map.briefs?.[sourceTopicId];

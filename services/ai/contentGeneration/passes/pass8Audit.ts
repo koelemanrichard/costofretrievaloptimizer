@@ -39,5 +39,10 @@ export async function executePass8(
     completed_at: new Date().toISOString()
   });
 
+  // Sync the final draft to the content_briefs table so it's available in Article Draft Workspace
+  if (brief.id && draft) {
+    await orchestrator.syncDraftToBrief(brief.id, draft);
+  }
+
   return { draft, score: finalScore, details: auditDetails };
 }

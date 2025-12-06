@@ -34,15 +34,22 @@ const calculateHierarchyDepth = (structured: BriefSection[] | undefined): string
     return `H2-H${maxDepth}`;
 };
 
+// Truncate text for Excel cells (max ~32k chars)
+const truncateForExcel = (text: string | undefined, maxLen: number = 30000): string => {
+    if (!text) return '';
+    if (text.length <= maxLen) return text;
+    return text.substring(0, maxLen) + '... [TRUNCATED - see ZIP export for full content]';
+};
+
 export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xlsx', filename: string) => {
     const { topics, briefs, pillars, metrics } = input;
 
-    // Flatten data into "Master View" rows
-    const rows = topics.map(topic => {
+    const workbook = XLSX.utils.book_new();
+
+    // === TAB 1: Topics Master View ===
+    const topicRows = topics.map(topic => {
         const brief = briefs[topic.id];
         const blueprint = topic.blueprint;
-        
-        // Handle Contextual Bridge (Array vs Object legacy issue)
         const bridgeData = brief?.contextualBridge;
         let bridgeLinks: ContextualBridgeLink[] = [];
         if (Array.isArray(bridgeData)) {
@@ -50,81 +57,155 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
         } else if (bridgeData && typeof bridgeData === 'object' && 'links' in bridgeData) {
             bridgeLinks = bridgeData.links;
         }
-
-        // Calculate Hub-Spoke Ratio (naive calculation based on direct children)
         const spokeCount = topics.filter(t => t.parent_topic_id === topic.id).length;
-        
-        // Format Interlinking Strategy
-        const formattedLinks = bridgeLinks.length > 0 
-            ? bridgeLinks.map(l => `[${l.anchorText}] -> ${l.targetTopic} (Hint: ${l.annotation_text_hint || 'N/A'})`).join(' | ')
-            : (blueprint?.interlinking_strategy || '');
-
-        // Metadata Extraction - Defensive Check
-        // Check both the root topic properties (where parsers might put them) and the nested metadata object
         const metadata = topic.metadata || {};
-        
+
         const getMeta = (key: string, rootKey?: keyof EnrichedTopic) => {
-            // Priority 1: Root property (if exists and is truthy)
             if (rootKey && (topic as any)[rootKey]) return (topic as any)[rootKey];
-            // Priority 2: Nested metadata property
             if (metadata[key]) return metadata[key];
             return '';
         };
 
         return {
-            // I. Foundational Components & Node Identification
-            'Central Entity (CE)': pillars?.centralEntity || '',
-            'Topical Map Section': topic.topic_class === 'monetization' || topic.type === 'core' ? 'Core Section (CS)' : 'Author Section (AS)',
-            'Attribute (Subtopic)': getMeta('attribute_focus', 'attribute_focus'),
-            'Target Query Network': (topic.query_network || metadata.query_network || []).join(', '),
-            'Canonical Query (CQ)': getMeta('canonical_query', 'canonical_query'),
-            'Query Type': getMeta('query_type', 'query_type'),
-
-            // II. Content Structure
-            'Macro Context / H1': topic.title,
-            'Contextual Vector (Outline)': formatContextualVector(brief?.outline || '', brief?.structured_outline) || blueprint?.contextual_vector || '',
-            'Contextual Hierarchy': calculateHierarchyDepth(brief?.structured_outline),
-            'Article Methodology': brief?.methodology_note || blueprint?.methodology || '', 
-            'Subordinate Text Hint': (brief?.structured_outline && brief.structured_outline.length > 0) 
-                ? brief.structured_outline.map(s => `${s.heading}: ${s.subordinate_text_hint}`).join('\n')
-                : (blueprint?.subordinate_hint || ''),
-            'Image Alt Text': brief?.visuals?.imageAltText || `${topic.title} - ${pillars?.centralEntity || ''}`,
-            'URL Hint': getMeta('url_slug_hint', 'url_slug_hint'),
-            'Perspective Requirement': (brief?.perspectives && brief.perspectives.length > 0) ? brief.perspectives.join(', ') : (blueprint?.perspective || ''),
-            
-            // III. Interlinking
-            'Interlinking Strategy': formattedLinks,
-            'Anchor Text': bridgeLinks.length > 0 ? bridgeLinks.map(l => l.anchorText).join(', ') : (blueprint?.anchor_text || ''),
-            'Annotation Text Hints': bridgeLinks.length > 0 ? bridgeLinks.map(l => l.annotation_text_hint || '').filter(Boolean).join(' | ') : (blueprint?.annotation_hint || ''),
-            'Contextual Bridge Link': JSON.stringify(bridgeLinks), 
-
-            // IV. Logistics & Metrics
-            'Publication Date': getMeta('planned_publication_date', 'planned_publication_date'),
-            'Hub-Spoke Ratio': topic.type === 'core' ? `1:${spokeCount}` : 'N/A',
-            'Semantic Compliance Score': 'Pending Audit', 
-            'Context Coherence Score': 'Pending Audit', 
-            'Topical Borders Note': getMeta('topical_border_note', 'topical_border_note'),
-            
-            // Technical / System
+            'Topic Title': topic.title,
             'Slug': topic.slug,
-            'Topic ID': topic.id,
-            'Parent ID': topic.parent_topic_id || 'ROOT'
+            'Type': topic.type,
+            'Section': topic.topic_class === 'monetization' || topic.type === 'core' ? 'Core' : 'Author',
+            'Description': truncateForExcel(topic.description, 500),
+            'Canonical Query': getMeta('canonical_query', 'canonical_query'),
+            'Query Type': getMeta('query_type', 'query_type'),
+            'Has Brief': brief ? 'Yes' : 'No',
+            'Has Draft': brief?.articleDraft ? 'Yes' : 'No',
+            'Hub-Spoke Ratio': topic.type === 'core' ? `1:${spokeCount}` : 'N/A',
+            'Parent ID': topic.parent_topic_id || 'ROOT',
+            'Topic ID': topic.id
         };
     });
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(topicRows), "Topics");
 
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Master View");
+    // === TAB 2: Content Briefs (truncated) ===
+    const briefRows = topics.filter(t => briefs[t.id]).map(topic => {
+        const brief = briefs[topic.id];
+        return {
+            'Topic': topic.title,
+            'Meta Description': truncateForExcel(brief.metaDescription, 500),
+            'Key Takeaways': truncateForExcel(brief.keyTakeaways?.join(' | '), 1000),
+            'Outline': truncateForExcel(formatContextualVector(brief.outline || '', brief.structured_outline), 2000),
+            'Methodology': truncateForExcel(brief.methodology_note, 500),
+            'Perspectives': brief.perspectives?.join(', ') || '',
+            'Featured Snippet Q': brief.featured_snippet_target?.question || '',
+            'Discourse Anchors': truncateForExcel(brief.discourse_anchors?.join(' | '), 500)
+        };
+    });
+    if (briefRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(briefRows), "Content Briefs");
+    }
 
-    // Optional: Add a separate sheet for Metrics if available
+    // === TAB 3: Structured Outlines ===
+    const outlineRows: any[] = [];
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        if (brief?.structured_outline) {
+            brief.structured_outline.forEach((section, idx) => {
+                outlineRows.push({
+                    'Topic': topic.title,
+                    'Section Order': idx + 1,
+                    'Heading': section.heading,
+                    'Level': `H${section.level}`,
+                    'Subordinate Hint': truncateForExcel(section.subordinate_text_hint, 500),
+                    'Methodology': section.methodology_note || ''
+                });
+            });
+        }
+    });
+    if (outlineRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(outlineRows), "Outlines");
+    }
+
+    // === TAB 4: Internal Linking ===
+    const linkRows: any[] = [];
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        const bridgeData = brief?.contextualBridge;
+        let bridgeLinks: ContextualBridgeLink[] = [];
+        if (Array.isArray(bridgeData)) {
+            bridgeLinks = bridgeData;
+        } else if (bridgeData && typeof bridgeData === 'object' && 'links' in bridgeData) {
+            bridgeLinks = bridgeData.links;
+        }
+        bridgeLinks.forEach(link => {
+            linkRows.push({
+                'Source Topic': topic.title,
+                'Target Topic': link.targetTopic,
+                'Anchor Text': link.anchorText,
+                'Context Hint': truncateForExcel(link.annotation_text_hint, 300)
+            });
+        });
+    });
+    if (linkRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(linkRows), "Internal Links");
+    }
+
+    // === TAB 5: SERP Analysis ===
+    const serpRows: any[] = [];
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        if (brief?.serpAnalysis) {
+            const serp = brief.serpAnalysis;
+            serpRows.push({
+                'Topic': topic.title,
+                'Avg Word Count': serp.avgWordCount || '',
+                'Avg Headings': serp.avgHeadings || '',
+                'Common Structure': truncateForExcel(serp.commonStructure, 500),
+                'People Also Ask': truncateForExcel(serp.peopleAlsoAsk?.join(' | '), 500),
+                'Content Gaps': truncateForExcel(serp.contentGaps?.join(' | '), 500)
+            });
+        }
+    });
+    if (serpRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(serpRows), "SERP Analysis");
+    }
+
+    // === TAB 6: Visual Semantics ===
+    const visualRows: any[] = [];
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        if (brief?.visual_semantics) {
+            brief.visual_semantics.forEach(visual => {
+                visualRows.push({
+                    'Topic': topic.title,
+                    'Type': visual.type,
+                    'Description': truncateForExcel(visual.description, 300),
+                    'Caption/Data': truncateForExcel(visual.caption_data, 200),
+                    'Size Hint': `${visual.width_hint || '?'} x ${visual.height_hint || '?'}`
+                });
+            });
+        }
+    });
+    if (visualRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(visualRows), "Visual Semantics");
+    }
+
+    // === TAB 7: Hub-Spoke Metrics (if available) ===
     if (metrics && metrics.metrics) {
         const hubSpokeRows = metrics.metrics.hubSpoke.map(m => ({
             'Hub Topic': m.hubTitle,
             'Spoke Count': m.spokeCount,
             'Status': m.status
         }));
-        const hubWorksheet = XLSX.utils.json_to_sheet(hubSpokeRows);
-        XLSX.utils.book_append_sheet(workbook, hubWorksheet, "Hub-Spoke Metrics");
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(hubSpokeRows), "Hub-Spoke Metrics");
+    }
+
+    // === TAB 8: Pillars & Strategy ===
+    if (pillars) {
+        const pillarRows = [{
+            'Central Entity': pillars.centralEntity || '',
+            'Source Context': truncateForExcel(pillars.sourceContext, 1000),
+            'Central Search Intent': pillars.centralSearchIntent || '',
+            'Primary Verb': pillars.primary_verb || '',
+            'Auxiliary Verb': pillars.auxiliary_verb || ''
+        }];
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(pillarRows), "SEO Pillars");
     }
 
     // Trigger Download

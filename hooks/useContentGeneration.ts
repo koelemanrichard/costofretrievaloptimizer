@@ -27,6 +27,7 @@ interface UseContentGenerationProps {
   businessInfo: BusinessInfo;
   brief: ContentBrief;
   onLog: (message: string, status: 'info' | 'success' | 'failure' | 'warning') => void;
+  onComplete?: (draft: string, auditScore: number) => void;
 }
 
 interface UseContentGenerationReturn {
@@ -50,7 +51,8 @@ export function useContentGeneration({
   userId,
   businessInfo,
   brief,
-  onLog
+  onLog,
+  onComplete
 }: UseContentGenerationProps): UseContentGenerationReturn {
   const [job, setJob] = useState<ContentGenerationJob | null>(null);
   const [sections, setSections] = useState<ContentGenerationSection[]>([]);
@@ -103,7 +105,8 @@ export function useContentGeneration({
         setSections(prev => {
           const updated = [...prev];
           const newSection = payload.new as ContentGenerationSection;
-          const idx = updated.findIndex(s => s.id === newSection.id);
+          // Use section_key for deduplication, not id (sections are unique by job_id + section_key)
+          const idx = updated.findIndex(s => s.section_key === newSection.section_key);
           if (idx >= 0) {
             updated[idx] = newSection;
           } else {
@@ -120,16 +123,36 @@ export function useContentGeneration({
     };
   }, [job?.id, supabase]);
 
-  // Check for existing job on mount
+  // Check for existing job on mount (including completed jobs)
   useEffect(() => {
     const checkExisting = async () => {
       if (!orchestratorRef.current || !briefId) return;
       try {
-        const existing = await orchestratorRef.current.getExistingJob(briefId);
-        if (existing) {
-          setJob(existing);
-          const existingSections = await orchestratorRef.current.getSections(existing.id);
+        // First check for ANY job (including completed) to restore state
+        const latestJob = await orchestratorRef.current.getLatestJob(briefId);
+        if (latestJob) {
+          setJob(latestJob);
+          const existingSections = await orchestratorRef.current.getSections(latestJob.id);
           setSections(existingSections);
+
+          // If job is completed and has a draft, sync it to the brief
+          // Also try to assemble from sections if draft_content is empty
+          if (latestJob.status === 'completed' && onComplete) {
+            let draftToSync = latestJob.draft_content;
+
+            // If draft_content is empty but we have sections, assemble from them
+            if (!draftToSync && existingSections.length > 0) {
+              console.log('[useContentGeneration] Assembling draft from sections...');
+              draftToSync = await orchestratorRef.current.assembleDraft(latestJob.id);
+            }
+
+            if (draftToSync) {
+              console.log('[useContentGeneration] Syncing draft to brief:', draftToSync.length, 'chars');
+              onComplete(draftToSync, latestJob.final_audit_score || 0);
+            } else {
+              console.warn('[useContentGeneration] No draft content found in completed job');
+            }
+          }
         }
       } catch (err) {
         // Silently ignore - no existing job
@@ -137,11 +160,19 @@ export function useContentGeneration({
       }
     };
     checkExisting();
-  }, [briefId]);
+  }, [briefId, onComplete]);
 
   const runPasses = async (orchestrator: ContentGenerationOrchestrator, currentJob: ContentGenerationJob) => {
     let updatedJob = currentJob;
     const shouldAbort = () => abortRef.current;
+
+    // Ensure businessInfo has required fields with defaults
+    const safeBusinessInfo: BusinessInfo = {
+      ...businessInfo,
+      language: businessInfo?.language || 'English',
+      targetMarket: businessInfo?.targetMarket || 'Global',
+      aiProvider: businessInfo?.aiProvider || 'gemini',
+    };
 
     try {
       // Pass 1: Draft Generation
@@ -151,7 +182,7 @@ export function useContentGeneration({
           orchestrator,
           updatedJob,
           brief,
-          businessInfo,
+          safeBusinessInfo,
           (key, heading, current, total) => {
             onLog(`Section ${current}/${total}: ${heading}`, 'success');
           },
@@ -165,7 +196,7 @@ export function useContentGeneration({
       // Pass 2: Headers
       if (updatedJob.current_pass === 2) {
         onLog('Pass 2: Optimizing headers...', 'info');
-        await executePass2(orchestrator, updatedJob, brief, businessInfo);
+        await executePass2(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
@@ -173,7 +204,7 @@ export function useContentGeneration({
       // Pass 3: Lists & Tables
       if (updatedJob.current_pass === 3) {
         onLog('Pass 3: Optimizing lists and tables...', 'info');
-        await executePass3(orchestrator, updatedJob, brief, businessInfo);
+        await executePass3(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
@@ -181,7 +212,7 @@ export function useContentGeneration({
       // Pass 4: Visuals
       if (updatedJob.current_pass === 4) {
         onLog('Pass 4: Adding visual semantics...', 'info');
-        await executePass4(orchestrator, updatedJob, brief, businessInfo);
+        await executePass4(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
@@ -189,7 +220,7 @@ export function useContentGeneration({
       // Pass 5: Micro Semantics
       if (updatedJob.current_pass === 5) {
         onLog('Pass 5: Applying micro semantics rules...', 'info');
-        await executePass5(orchestrator, updatedJob, brief, businessInfo);
+        await executePass5(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
@@ -197,7 +228,7 @@ export function useContentGeneration({
       // Pass 6: Discourse
       if (updatedJob.current_pass === 6) {
         onLog('Pass 6: Integrating discourse flow...', 'info');
-        await executePass6(orchestrator, updatedJob, brief, businessInfo);
+        await executePass6(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
@@ -205,7 +236,7 @@ export function useContentGeneration({
       // Pass 7: Introduction
       if (updatedJob.current_pass === 7) {
         onLog('Pass 7: Synthesizing introduction...', 'info');
-        await executePass7(orchestrator, updatedJob, brief, businessInfo);
+        await executePass7(orchestrator, updatedJob, brief, safeBusinessInfo);
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
@@ -213,8 +244,13 @@ export function useContentGeneration({
       // Pass 8: Audit
       if (updatedJob.current_pass === 8) {
         onLog('Pass 8: Running final audit...', 'info');
-        const result = await executePass8(orchestrator, updatedJob, brief, businessInfo);
+        const result = await executePass8(orchestrator, updatedJob, brief, safeBusinessInfo);
         onLog(`Complete! Audit score: ${result.score}%`, 'success');
+
+        // Notify parent of completion so it can update local state
+        if (onComplete) {
+          onComplete(result.draft, result.score);
+        }
       }
 
     } catch (err) {
@@ -234,6 +270,30 @@ export function useContentGeneration({
     setError(null);
 
     try {
+      // Check for existing job first - resume it or delete failed ones
+      let existingJob = await orchestratorRef.current.getExistingJob(briefId);
+
+      if (existingJob) {
+        // If existing job failed or is paused, delete it and start fresh
+        if (existingJob.status === 'failed' || existingJob.status === 'cancelled') {
+          await orchestratorRef.current.deleteJob(existingJob.id);
+          existingJob = null;
+        } else if (existingJob.status === 'paused' || existingJob.status === 'pending') {
+          // Resume the existing job
+          onLog('Resuming existing job...', 'info');
+          await orchestratorRef.current.updateJob(existingJob.id, { status: 'in_progress' });
+          setJob({ ...existingJob, status: 'in_progress' });
+          await runPasses(orchestratorRef.current, { ...existingJob, status: 'in_progress' });
+          return;
+        } else if (existingJob.status === 'in_progress') {
+          // Already running, don't start another
+          onLog('Generation already in progress', 'warning');
+          setJob(existingJob);
+          return;
+        }
+      }
+
+      // Create new job
       const newJob = await orchestratorRef.current.createJob(briefId, mapId, userId);
       setJob(newJob);
       await runPasses(orchestratorRef.current, newJob);

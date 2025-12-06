@@ -438,30 +438,32 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
     const onGenerateBrief = useCallback(async (topic: EnrichedTopic, responseCode: ResponseCode, overrideSettings?: { provider: string, model: string }) => {
         const safeKG = knowledgeGraph || new KnowledgeGraph();
-        
+
         if (!topic || !activeMap || !activeMap.pillars) {
             dispatch({ type: 'SET_ERROR', payload: "Cannot generate brief: critical context is missing." });
             return;
         }
-        
+
         dispatch({ type: 'SET_LOADING', payload: { key: 'briefs', value: true } });
         dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'responseCode', visible: false } });
+        // Set status for pulsing indicator on topic
+        dispatch({ type: 'SET_BRIEF_GENERATION_STATUS', payload: `Generating brief: "${topic.title}"` });
 
-        const configToUse = overrideSettings 
+        const configToUse = overrideSettings
             ? { ...effectiveBusinessInfo, aiProvider: overrideSettings.provider as any, aiModel: overrideSettings.model }
             : effectiveBusinessInfo;
-        
+
         try {
             const briefData = await aiService.generateContentBrief(configToUse, topic, allTopics, activeMap.pillars, safeKG, responseCode, dispatch);
-            
+
             // MERGE STRATEGY: Fix "Untitled Topic" Bug
-            const newBrief: ContentBrief = { 
-                ...briefData, 
-                id: uuidv4(), 
+            const newBrief: ContentBrief = {
+                ...briefData,
+                id: uuidv4(),
                 topic_id: topic.id,
                 title: topic.title // FORCE the known title from the topic object
             };
-            
+
             // Decoupled workflow: Set result in temp state and open review modal
             dispatch({ type: 'SET_BRIEF_GENERATION_RESULT', payload: newBrief });
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'briefReview', visible: true } });
@@ -470,6 +472,7 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             dispatch({ type: 'SET_ERROR', payload: message });
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { key: 'briefs', value: false } });
+            dispatch({ type: 'SET_BRIEF_GENERATION_STATUS', payload: null }); // Clear status
         }
     }, [activeMap, knowledgeGraph, dispatch, effectiveBusinessInfo, allTopics]);
 

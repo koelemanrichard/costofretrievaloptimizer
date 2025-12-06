@@ -1,6 +1,6 @@
 
 // components/DraftingModal.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ContentBrief, BusinessInfo, EnrichedTopic, FreshnessProfile } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -27,27 +27,148 @@ interface DraftingModalProps {
   onAnalyzeFlow: (draft: string) => void;
 }
 
-const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief, onAudit, onGenerateSchema, isLoading, businessInfo, onAnalyzeFlow }) => {
+const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: briefProp, onAudit, onGenerateSchema, isLoading, businessInfo, onAnalyzeFlow }) => {
   const { state, dispatch } = useAppState();
+
+  // Read brief from state for UI display
+  const { activeBriefTopic, topicalMaps, activeMapId } = state;
+  const activeMap = topicalMaps.find(m => m.id === activeMapId);
+  const briefFromState = activeBriefTopic ? activeMap?.briefs?.[activeBriefTopic.id] : null;
+  const brief = briefFromState || briefProp;
+
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [draftContent, setDraftContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showRail, setShowRail] = useState(true); // Toggle for Requirements Rail
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
 
   // Dynamic Model Selection State
   const [overrideSettings, setOverrideSettings] = useState<{ provider: string, model: string } | null>(null);
   const [showModelSelector, setShowModelSelector] = useState(false);
 
+  // Track which brief we've loaded to avoid re-fetching
+  const loadedBriefIdRef = useRef<string | null>(null);
+
+  // ROBUST FIX: Fetch draft directly from database when modal opens
+  // This bypasses React state timing issues entirely
   useEffect(() => {
-    if (brief) {
-      setDraftContent(safeString(brief.articleDraft));
-      // Default to edit mode if no draft
-      setActiveTab('edit');
-      setHasUnsavedChanges(false);
+    const fetchDraftFromDatabase = async () => {
+      if (!isOpen || !brief?.id || brief.id.startsWith('transient-')) {
+        return;
+      }
+
+      // Don't re-fetch if we already loaded this brief AND have content
+      if (loadedBriefIdRef.current === brief.id && draftContent) {
+        console.log('[DraftingModal] Already loaded draft for this brief, skipping fetch');
+        return;
+      }
+
+      // If we have a draft in state/prop already, use it
+      const existingDraft = safeString(brief.articleDraft);
+      if (existingDraft) {
+        console.log('[DraftingModal] Using existing draft from state:', existingDraft.length, 'chars');
+        setDraftContent(existingDraft);
+        loadedBriefIdRef.current = brief.id;
+        return;
+      }
+
+      // No draft in state - fetch from database (handles race condition)
+      console.log('[DraftingModal] No draft in state, fetching from database for brief:', brief.id);
+      setIsLoadingDraft(true);
+
+      try {
+        const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+
+        // First try content_briefs table (primary storage)
+        const { data: briefData, error: briefError } = await supabase
+          .from('content_briefs')
+          .select('article_draft')
+          .eq('id', brief.id)
+          .single();
+
+        if (!briefError && briefData?.article_draft) {
+          console.log('[DraftingModal] Loaded draft from content_briefs:', briefData.article_draft.length, 'chars');
+          setDraftContent(briefData.article_draft);
+          loadedBriefIdRef.current = brief.id;
+
+          // Also update React state so it stays in sync
+          if (activeMapId && brief.topic_id) {
+            dispatch({
+              type: 'UPDATE_BRIEF',
+              payload: {
+                mapId: activeMapId,
+                topicId: brief.topic_id,
+                updates: { articleDraft: briefData.article_draft }
+              }
+            });
+          }
+          return;
+        }
+
+        // Fallback: try content_generation_jobs table
+        const { data: jobData, error: jobError } = await supabase
+          .from('content_generation_jobs')
+          .select('draft_content')
+          .eq('brief_id', brief.id)
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!jobError && jobData?.draft_content) {
+          console.log('[DraftingModal] Loaded draft from content_generation_jobs:', jobData.draft_content.length, 'chars');
+          setDraftContent(jobData.draft_content);
+          loadedBriefIdRef.current = brief.id;
+
+          // Sync to content_briefs and React state
+          await supabase
+            .from('content_briefs')
+            .update({ article_draft: jobData.draft_content })
+            .eq('id', brief.id);
+
+          if (activeMapId && brief.topic_id) {
+            dispatch({
+              type: 'UPDATE_BRIEF',
+              payload: {
+                mapId: activeMapId,
+                topicId: brief.topic_id,
+                updates: { articleDraft: jobData.draft_content }
+              }
+            });
+          }
+          return;
+        }
+
+        console.log('[DraftingModal] No draft found in database');
+        loadedBriefIdRef.current = brief.id;
+
+      } catch (err) {
+        console.error('[DraftingModal] Error fetching draft:', err);
+      } finally {
+        setIsLoadingDraft(false);
+      }
+    };
+
+    fetchDraftFromDatabase();
+  }, [isOpen, brief?.id, brief?.articleDraft, businessInfo.supabaseUrl, businessInfo.supabaseAnonKey, activeMapId, brief?.topic_id, dispatch]);
+
+  // Reset loaded ref when brief changes
+  useEffect(() => {
+    if (brief?.id && loadedBriefIdRef.current !== brief.id) {
+      loadedBriefIdRef.current = null;
     }
-  }, [brief]);
+  }, [brief?.id]);
+
+  // Also watch for state updates (in case UPDATE_BRIEF fires after initial load)
+  useEffect(() => {
+    const stateDraft = safeString(brief?.articleDraft);
+    if (stateDraft && stateDraft !== draftContent && !hasUnsavedChanges) {
+      console.log('[DraftingModal] State updated with new draft:', stateDraft.length, 'chars');
+      setDraftContent(stateDraft);
+    }
+  }, [brief?.articleDraft, draftContent, hasUnsavedChanges]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setDraftContent(e.target.value);
@@ -321,7 +442,14 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief, o
 
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col h-full overflow-hidden relative`}>
-                {activeTab === 'edit' ? (
+                {isLoadingDraft ? (
+                    <div className="flex-1 flex items-center justify-center bg-gray-900">
+                        <div className="text-center">
+                            <Loader className="w-8 h-8 mx-auto mb-4 text-blue-500" />
+                            <p className="text-gray-400">Loading draft from database...</p>
+                        </div>
+                    </div>
+                ) : activeTab === 'edit' ? (
                     <>
                         <Textarea
                             value={draftContent}

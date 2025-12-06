@@ -33,7 +33,7 @@ export async function executePass6(
     passes_status: { ...job.passes_status, pass_6_discourse: 'in_progress' }
   });
 
-  const prompt = PASS_6_DISCOURSE_PROMPT(draft, brief);
+  const prompt = PASS_6_DISCOURSE_PROMPT(draft, brief, businessInfo);
   const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
   const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
 

@@ -51,6 +51,33 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         dispatch({ type: 'LOG_EVENT', payload: { service: 'MultiPass', message, status, timestamp: Date.now() }});
     }, [dispatch]);
 
+    // Handle completion - update local state with the generated draft
+    const handleGenerationComplete = useCallback((draft: string, auditScore: number) => {
+        console.log('[ContentBriefModal] handleGenerationComplete called:', {
+            draftLength: draft?.length || 0,
+            auditScore,
+            activeBriefTopic: activeBriefTopic?.id,
+            activeMapId
+        });
+
+        if (!draft) {
+            console.warn('[ContentBriefModal] Empty draft received, not updating');
+            return;
+        }
+
+        if (activeBriefTopic && activeMapId) {
+            dispatch({
+                type: 'UPDATE_BRIEF',
+                payload: {
+                    mapId: activeMapId,
+                    topicId: activeBriefTopic.id,
+                    updates: { articleDraft: draft }
+                }
+            });
+            handleLog(`Draft synced to workspace (${draft.length} chars)`, 'success');
+        }
+    }, [activeBriefTopic, activeMapId, dispatch, handleLog]);
+
     // Multi-pass generation hook
     const {
         job,
@@ -71,7 +98,8 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         userId: user?.id || '',
         businessInfo,
         brief: brief || {} as ContentBrief,
-        onLog: handleLog
+        onLog: handleLog,
+        onComplete: handleGenerationComplete
     });
 
     const handleClose = () => {
@@ -105,7 +133,12 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         ? brief.contextualBridge
         : brief.contextualBridge?.links || [];
 
-    const showProgress = isGenerating || isPaused || (job && !isComplete);
+    // Show progress UI when actively generating OR paused (to show pass status)
+    const showProgressUI = isGenerating || isPaused || (job && !isComplete);
+
+    // Allow settings when: multi-pass enabled, no draft yet, and NOT actively generating
+    // Settings should be accessible even when paused or with a failed job
+    const canShowSettings = useMultiPass && !brief.articleDraft && !isGenerating;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={handleClose}>
@@ -115,12 +148,45 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         <h2 className="text-xl font-bold text-white">Content Brief</h2>
                         <p className="text-sm text-gray-400">{safeString(brief.title) || 'Untitled Topic'}</p>
                     </div>
-                    <button onClick={handleClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
+                    <div className="flex items-center gap-3">
+                        {/* Settings toggle in header - show when multi-pass and no draft */}
+                        {canShowSettings && (
+                            <button
+                                onClick={() => setShowSettings(!showSettings)}
+                                className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+                                    showSettings
+                                        ? 'bg-blue-900/50 border-blue-600 text-blue-200'
+                                        : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                                }`}
+                            >
+                                {showSettings ? '▲ Hide Settings' : '▼ Show Settings'}
+                            </button>
+                        )}
+                        <button onClick={handleClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
+                    </div>
                 </header>
 
-                <div className="p-6 overflow-y-auto">
+                {/* Collapsible Settings Panel - visible when settings toggled on */}
+                {canShowSettings && showSettings && (
+                    <div className="border-b border-gray-700 bg-gray-850 p-4 flex-shrink-0">
+                        <div className="grid md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
+                            <ContentGenerationSettingsPanel
+                                settings={contentSettings}
+                                onChange={setContentSettings}
+                                presets={PRIORITY_PRESETS}
+                            />
+                            <PassControlPanel
+                                passes={contentSettings.passes}
+                                onChange={(passes) => setContentSettings(prev => ({ ...prev, passes }))}
+                                disabled={isGenerating}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                <div className="p-6 overflow-y-auto flex-grow">
                     {/* Multi-Pass Progress UI */}
-                    {showProgress && job && (
+                    {showProgressUI && job && (
                         <div className="mb-6">
                             <ContentGenerationProgress
                                 job={job}
@@ -336,55 +402,25 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                     </div>
                 </div>
 
-                {/* Collapsible Settings Panel */}
-                {!showProgress && !brief.articleDraft && useMultiPass && (
-                    <div className={`border-t border-gray-700 overflow-hidden transition-all duration-300 ${showSettings ? 'max-h-[500px]' : 'max-h-0'}`}>
-                        <div className="p-4 bg-gray-850 grid md:grid-cols-2 gap-4">
-                            <ContentGenerationSettingsPanel
-                                settings={contentSettings}
-                                onChange={setContentSettings}
-                                presets={PRIORITY_PRESETS}
-                            />
-                            <PassControlPanel
-                                passes={contentSettings.passes}
-                                onChange={(passes) => setContentSettings(prev => ({ ...prev, passes }))}
-                                disabled={isGenerating}
-                            />
-                        </div>
-                    </div>
-                )}
-
                 <footer className="p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center flex-shrink-0">
                     <div className="flex items-center gap-4">
                         {brief.articleDraft && <span className="text-sm text-green-400">Article draft is ready.</span>}
-                        {!brief.articleDraft && !showProgress && (
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={useMultiPass}
-                                        onChange={(e) => setUseMultiPass(e.target.checked)}
-                                        className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
-                                    />
-                                    <span>Use Multi-Pass Generation</span>
-                                </label>
-                                {useMultiPass && (
-                                    <button
-                                        onClick={() => setShowSettings(!showSettings)}
-                                        className={`text-xs px-2 py-1 rounded border transition-colors ${
-                                            showSettings
-                                                ? 'bg-blue-900/50 border-blue-600 text-blue-200'
-                                                : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                                        }`}
-                                    >
-                                        {showSettings ? 'Hide Settings' : 'Settings'}
-                                    </button>
-                                )}
-                            </div>
+                        {/* Show multi-pass toggle when: no draft and not actively generating */}
+                        {!brief.articleDraft && !isGenerating && (
+                            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={useMultiPass}
+                                    onChange={(e) => setUseMultiPass(e.target.checked)}
+                                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                                />
+                                <span>Use Multi-Pass Generation (8 passes)</span>
+                            </label>
                         )}
                     </div>
                     <div className="flex gap-2">
-                        {!showProgress && (
+                        {/* Show generate button when not actively generating */}
+                        {!isGenerating && (
                             <Button
                                 onClick={brief.articleDraft ? handleViewDraft : handleGenerateDraft}
                                 variant="primary"

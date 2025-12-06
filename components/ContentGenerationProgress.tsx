@@ -31,7 +31,7 @@ const CircleIcon = () => (
   </svg>
 );
 
-const getPassStatus = (job: ContentGenerationJob, passNum: number): 'completed' | 'in_progress' | 'pending' => {
+const getPassStatus = (job: ContentGenerationJob, passNum: number): 'completed' | 'in_progress' | 'pending' | 'failed' => {
   const passKeys: (keyof PassesStatus)[] = [
     'pass_1_draft', 'pass_2_headers', 'pass_3_lists', 'pass_4_visuals',
     'pass_5_microsemantics', 'pass_6_discourse', 'pass_7_intro', 'pass_8_audit'
@@ -75,8 +75,8 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
           <p className="text-sm text-gray-400 mb-2">
             Section {job.completed_sections || 0} of {job.total_sections || '?'}
           </p>
-          {sections.map((section) => (
-            <div key={section.section_key} className="flex items-center gap-2 text-sm">
+          {sections.map((section, idx) => (
+            <div key={`${section.section_key}-${section.id || idx}`} className="flex items-center gap-2 text-sm">
               {section.status === 'completed' ? (
                 <CheckIcon />
               ) : section.section_key === job.current_section_key ? (

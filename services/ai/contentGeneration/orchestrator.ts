@@ -60,6 +60,23 @@ export class ContentGenerationOrchestrator {
     return data as ContentGenerationJob | null;
   }
 
+  /**
+   * Get the most recent job for a brief, including completed ones
+   * Used to restore draft from a previously completed generation
+   */
+  async getLatestJob(briefId: string): Promise<ContentGenerationJob | null> {
+    const { data, error } = await this.supabase
+      .from('content_generation_jobs')
+      .select('*')
+      .eq('brief_id', briefId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to get latest job: ${error.message}`);
+    return data as ContentGenerationJob | null;
+  }
+
   async updateJob(jobId: string, updates: Partial<ContentGenerationJob>): Promise<void> {
     const { error } = await this.supabase
       .from('content_generation_jobs')
@@ -116,6 +133,22 @@ export class ContentGenerationOrchestrator {
   async cancelJob(jobId: string): Promise<void> {
     await this.updateJob(jobId, { status: 'cancelled' });
     this.abortController.abort();
+  }
+
+  /**
+   * Sync the generated draft to the content_briefs table
+   * This makes the draft available in the Article Draft Workspace
+   */
+  async syncDraftToBrief(briefId: string, draft: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('content_briefs')
+      .update({ article_draft: draft })
+      .eq('id', briefId);
+
+    if (error) {
+      console.error('[Orchestrator] Failed to sync draft to brief:', error);
+      // Don't throw - this is not critical to the generation process
+    }
   }
 
   calculateProgress(job: ContentGenerationJob): number {

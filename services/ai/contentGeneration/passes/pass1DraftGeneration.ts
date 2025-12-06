@@ -44,23 +44,25 @@ export async function executePass1(
   // 1. Parse sections from brief
   const sections = orchestrator.parseSectionsFromBrief(brief);
 
-  // 2. Update job with section count
-  await orchestrator.updateJob(job.id, {
-    total_sections: sections.length,
-    status: 'in_progress',
-    started_at: new Date().toISOString(),
-    passes_status: { ...job.passes_status, pass_1_draft: 'in_progress' }
-  });
-
-  let completedCount = job.completed_sections || 0;
-
-  // 3. Find where to resume (if any sections already completed)
+  // 2. Find where to resume (if any sections already completed)
   const existingSections = await orchestrator.getSections(job.id);
   const completedKeys = new Set(
     existingSections
       .filter(s => s.status === 'completed' && s.pass_1_content)
       .map(s => s.section_key)
   );
+
+  // Use actual completed count from DB, not stale job value
+  let completedCount = completedKeys.size;
+
+  // 3. Update job with section count and current progress
+  await orchestrator.updateJob(job.id, {
+    total_sections: sections.length,
+    completed_sections: completedCount, // Sync with actual completed count
+    status: 'in_progress',
+    started_at: job.started_at || new Date().toISOString(), // Don't overwrite if resuming
+    passes_status: { ...job.passes_status, pass_1_draft: 'in_progress' }
+  });
 
   // 4. Generate each section
   for (const section of sections) {

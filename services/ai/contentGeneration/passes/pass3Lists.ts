@@ -33,7 +33,7 @@ export async function executePass3(
     passes_status: { ...job.passes_status, pass_3_lists: 'in_progress' }
   });
 
-  const prompt = PASS_3_LIST_TABLE_PROMPT(draft, brief);
+  const prompt = PASS_3_LIST_TABLE_PROMPT(draft, brief, businessInfo);
   const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
   const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
 
