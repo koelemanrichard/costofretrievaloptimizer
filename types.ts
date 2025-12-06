@@ -233,13 +233,38 @@ export interface ContextualBridgeSection {
     links: ContextualBridgeLink[];
 }
 
+export type FormatCode = 'FS' | 'PAA' | 'LISTING' | 'DEFINITIVE' | 'TABLE' | 'PROSE';
+export type ContentZone = 'MAIN' | 'SUPPLEMENTARY';
+
 export interface BriefSection {
     key?: string; // Section identifier (e.g., 'section-0', 'section-1')
     heading: string;
     level: number;
     order?: number; // Position in article
+
+    // NEW: Content Brief Codes
+    format_code?: FormatCode;
+
+    // NEW: Attribute classification for ordering
+    attribute_category?: AttributeCategory; // Uses existing type: 'ROOT' | 'UNIQUE' | 'RARE' | 'COMMON'
+
+    // NEW: Query priority from GSC/DataForSEO
+    query_priority?: number;
+    related_queries?: string[];
+
+    // Existing fields (enhanced)
     subordinate_text_hint?: string; // Instructions for the first sentence
     methodology_note?: string; // Formatting instructions
+
+    // NEW: Required phrases from ["..."] codes
+    required_phrases?: string[];
+
+    // NEW: Internal linking targets
+    anchor_texts?: { phrase: string; target_topic_id?: string }[];
+
+    // NEW: Section classification
+    content_zone?: ContentZone;
+
     subsections?: BriefSection[]; // Nested subsections (H3s under H2s)
 }
 
@@ -566,8 +591,9 @@ export interface ContentIntegrityResult {
 }
 
 // Legacy schema result (kept for backward compatibility)
+// Note: schema can be string (JSON-LD string) or object (when AI response is parsed as JSON)
 export interface SchemaGenerationResult {
-    schema: string;
+    schema: string | object;
     reasoning: string;
 }
 
