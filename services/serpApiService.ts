@@ -385,3 +385,64 @@ export const discoverInitialCompetitors = async (
 
     return filteredResults;
 };
+
+/**
+ * Fetch search volume data from DataForSEO Keywords API
+ * Used for Query Priority ordering in content generation
+ */
+export const fetchKeywordSearchVolume = async (
+  keywords: string[],
+  login: string,
+  password: string,
+  locationCode: string = '2840', // US default
+  languageCode: string = 'en'
+): Promise<Map<string, number>> => {
+  const fetchFn = async () => {
+    const postData = [{
+      keywords: keywords.slice(0, 100), // API limit
+      location_code: parseInt(locationCode) || 2840,
+      language_code: languageCode,
+    }];
+
+    const url = 'https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live';
+    const credentials = btoa(`${login}:${password}`);
+
+    try {
+      const response = await fetchWithProxy(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(postData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`DataForSEO Keywords API HTTP Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status_code !== 20000) {
+        throw new Error(`DataForSEO Keywords API Error: ${data.status_message}`);
+      }
+
+      const result = new Map<string, number>();
+      const items = data.tasks?.[0]?.result || [];
+
+      for (const item of items) {
+        if (item.keyword && item.search_volume !== undefined) {
+          result.set(item.keyword.toLowerCase(), item.search_volume);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Failed to fetch keyword search volume:", error);
+      return new Map();
+    }
+  };
+
+  const cacheKey = keywords.slice(0, 5).join(',');
+  return cacheService.cacheThrough('keywords:volume', { cacheKey }, fetchFn, 86400); // Cache 24h
+};
