@@ -1,13 +1,17 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useMapMerge } from '../../hooks/useMapMerge';
 import { useAppState } from '../../state/appState';
-import { TopicalMap, TopicMergeDecision, EnrichedTopic } from '../../types';
+import { TopicalMap, TopicMergeDecision, EnrichedTopic, SemanticTriple, BusinessInfo } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import MergeMapSelectStep from './MergeMapSelectStep';
 import MergeContextStep from './MergeContextStep';
 import MergeTopicsStep from './MergeTopicsStep';
+import MergeEavsStep from './MergeEavsStep';
+import MergeReviewStep from './MergeReviewStep';
 import * as mapMergeService from '../../services/ai/mapMerge';
+import { executeMerge } from '../../services/mapMergeExecution';
+import { getSupabaseClient } from '../../services/supabaseClient';
 
 interface MergeMapWizardProps {
   isOpen: boolean;
@@ -31,6 +35,9 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
     updateTopicDecision,
     addNewTopic,
     toggleExcludedTopic,
+    setNewMapName,
+    bulkEavAction,
+    setCreating,
     reset,
   } = useMapMerge();
 
@@ -38,14 +45,6 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
     reset();
     onClose();
   }, [reset, onClose]);
-
-  const handleNext = useCallback(() => {
-    const steps: Array<typeof mergeState.step> = ['select', 'context', 'eavs', 'topics', 'review'];
-    const currentIndex = steps.indexOf(mergeState.step);
-    if (currentIndex < steps.length - 1) {
-      setStep(steps[currentIndex + 1]);
-    }
-  }, [mergeState.step, setStep]);
 
   const handleBack = useCallback(() => {
     const steps: Array<typeof mergeState.step> = ['select', 'context', 'eavs', 'topics', 'review'];
@@ -156,6 +155,157 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
     input.click();
   }, [mergeDispatch]);
 
+  const getValidationErrors = useCallback((): string[] => {
+    const errors: string[] = [];
+
+    if (!mergeState.newMapName.trim()) {
+      errors.push('Map name is required');
+    }
+
+    const pendingDecisions = mergeState.topicDecisions.filter(d => d.userDecision === 'pending');
+    if (pendingDecisions.length > 0) {
+      errors.push(`${pendingDecisions.length} topic pair(s) have pending decisions`);
+    }
+
+    // Check that at least one topic will be in the new map
+    const allTopics = mergeState.sourceMaps.flatMap(m => m.topics || []);
+    const inDecision = new Set<string>();
+    mergeState.topicDecisions.forEach(d => {
+      if (d.topicAId) inDecision.add(d.topicAId);
+      if (d.topicBId) inDecision.add(d.topicBId);
+    });
+    const uniqueTopics = allTopics.filter(t => !inDecision.has(t.id));
+    const uniqueIncluded = uniqueTopics.filter(t => !mergeState.excludedTopicIds.includes(t.id));
+
+    const fromDecisions = mergeState.topicDecisions.filter(d => d.userDecision !== 'delete').length;
+    const totalTopics = fromDecisions + uniqueIncluded.length + mergeState.newTopics.length;
+
+    if (totalTopics === 0) {
+      errors.push('The merged map would have no topics');
+    }
+
+    return errors;
+  }, [mergeState]);
+
+  const handleCreateMergedMap = useCallback(async () => {
+    const errors = getValidationErrors();
+    if (errors.length > 0) return;
+
+    setCreating(true);
+    try {
+      // Build resolved EAVs from decisions
+      const resolvedEavs: SemanticTriple[] = [];
+      const seenEavKeys = new Set<string>();
+
+      mergeState.sourceMaps.forEach((map) => {
+        (map.eavs || []).forEach((eav, eavIdx) => {
+          const eavId = `${map.id}_${eavIdx}`;
+          const decision = mergeState.eavDecisions.find(d => d.eavId === eavId);
+          if (!decision || decision.action === 'include') {
+            const key = `${eav.subject.label}|${eav.predicate.relation}|${eav.object.value}`;
+            if (!seenEavKeys.has(key)) {
+              seenEavKeys.add(key);
+              resolvedEavs.push(eav);
+            }
+          }
+        });
+      });
+
+      // Build resolved context from conflict resolutions
+      const resolvedBusinessInfo: Partial<BusinessInfo> = {};
+      const basePillars = mergeState.sourceMaps[0]?.pillars;
+      const resolvedPillars = basePillars ? { ...basePillars } : null;
+
+      mergeState.contextConflicts.forEach(conflict => {
+        let value: any;
+        if (conflict.resolution === 'mapA') {
+          value = conflict.values[0]?.value;
+        } else if (conflict.resolution === 'mapB') {
+          value = conflict.values[1]?.value;
+        } else if (conflict.resolution === 'ai' && conflict.aiSuggestion) {
+          value = conflict.aiSuggestion.value;
+        } else if (conflict.resolution === 'custom') {
+          value = conflict.customValue;
+        }
+
+        if (value !== undefined) {
+          // Determine if it's a pillar or business field
+          const pillarFields = ['centralEntity', 'sourceContext', 'centralSearchIntent'];
+          if (pillarFields.includes(conflict.field) && resolvedPillars) {
+            (resolvedPillars as any)[conflict.field] = value;
+          } else {
+            (resolvedBusinessInfo as any)[conflict.field] = value;
+          }
+        }
+      });
+
+      // Get competitors from first map (could be enhanced later)
+      const resolvedCompetitors = mergeState.sourceMaps[0]?.competitors || [];
+
+      const result = await executeMerge(
+        {
+          sourceMaps: mergeState.sourceMaps,
+          newMapName: mergeState.newMapName,
+          projectId: appState.activeProjectId!,
+          userId: appState.user!.id,
+          resolvedContext: {
+            businessInfo: resolvedBusinessInfo,
+            pillars: resolvedPillars,
+          },
+          resolvedEavs,
+          resolvedCompetitors,
+          topicDecisions: mergeState.topicDecisions,
+          excludedTopicIds: mergeState.excludedTopicIds,
+          newTopics: mergeState.newTopics,
+        },
+        appState.businessInfo.supabaseUrl,
+        appState.businessInfo.supabaseAnonKey
+      );
+
+      // Add to app state
+      appDispatch({ type: 'ADD_TOPICAL_MAP', payload: result.newMap });
+      appDispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: result.newMap.id, topics: result.newMap.topics || [] } });
+      appDispatch({ type: 'SET_NOTIFICATION', payload: `Created merged map "${result.newMap.name}" with ${result.topicsCreated} topics` });
+
+      if (result.warnings.length > 0) {
+        console.warn('Merge warnings:', result.warnings);
+      }
+
+      handleClose();
+    } catch (error) {
+      console.error('Merge failed:', error);
+      mergeDispatch({
+        type: 'SET_ANALYSIS_ERROR',
+        payload: error instanceof Error ? error.message : 'Failed to create merged map',
+      });
+    } finally {
+      setCreating(false);
+    }
+  }, [
+    getValidationErrors,
+    setCreating,
+    mergeState,
+    appState,
+    appDispatch,
+    handleClose,
+    mergeDispatch,
+  ]);
+
+  const handleNext = useCallback(() => {
+    const steps: Array<typeof mergeState.step> = ['select', 'context', 'eavs', 'topics', 'review'];
+    const currentIndex = steps.indexOf(mergeState.step);
+
+    // On review step, create the map instead of going next
+    if (mergeState.step === 'review') {
+      handleCreateMergedMap();
+      return;
+    }
+
+    if (currentIndex < steps.length - 1) {
+      setStep(steps[currentIndex + 1]);
+    }
+  }, [mergeState.step, setStep, handleCreateMergedMap]);
+
   if (!isOpen) return null;
 
   const stepTitles: Record<typeof mergeState.step, string> = {
@@ -188,7 +338,14 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
           />
         );
       case 'eavs':
-        return <div className="text-gray-400 p-8 text-center">EAV consolidation step coming soon...</div>;
+        return (
+          <MergeEavsStep
+            sourceMaps={mergeState.sourceMaps}
+            eavDecisions={mergeState.eavDecisions}
+            onDecisionChange={(decision) => mergeDispatch({ type: 'UPDATE_EAV_DECISION', payload: decision })}
+            onBulkAction={bulkEavAction}
+          />
+        );
       case 'topics':
         return (
           <MergeTopicsStep
@@ -208,16 +365,19 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
         );
       case 'review':
         return (
-          <div className="space-y-4">
-            <p className="text-gray-400">Review your merge decisions before creating the new map.</p>
-            <div className="p-4 bg-gray-800 rounded">
-              <p className="text-white"><strong>Maps to merge:</strong> {mergeState.sourceMaps.map(m => m.name).join(', ')}</p>
-              <p className="text-white mt-2"><strong>Topic similarities:</strong> {mergeState.topicSimilarities.length}</p>
-              <p className="text-white"><strong>Merge decisions:</strong> {mergeState.topicDecisions.filter(d => d.userDecision === 'merge').length}</p>
-              <p className="text-white"><strong>Excluded topics:</strong> {mergeState.excludedTopicIds.length}</p>
-              <p className="text-white"><strong>New topics:</strong> {mergeState.newTopics.length}</p>
-            </div>
-          </div>
+          <MergeReviewStep
+            sourceMaps={mergeState.sourceMaps}
+            newMapName={mergeState.newMapName}
+            onMapNameChange={setNewMapName}
+            contextConflicts={mergeState.contextConflicts}
+            resolvedEavs={mergeState.resolvedEavs}
+            topicSimilarities={mergeState.topicSimilarities}
+            topicDecisions={mergeState.topicDecisions}
+            excludedTopicIds={mergeState.excludedTopicIds}
+            newTopics={mergeState.newTopics}
+            isCreating={mergeState.isCreating}
+            validationErrors={getValidationErrors()}
+          />
         );
       default:
         return null;
@@ -229,8 +389,13 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
       case 'select':
         return mergeState.selectedMapIds.length >= 2;
       case 'context':
-        // Check if all conflicts are resolved
-        return mergeState.contextConflicts.every(c => c.resolution !== undefined);
+        return mergeState.contextConflicts.every(c => c.resolution !== null);
+      case 'eavs':
+        return true; // EAVs are optional
+      case 'topics':
+        return true; // Can proceed with pending decisions (warning shown in review)
+      case 'review':
+        return getValidationErrors().length === 0 && !mergeState.isCreating;
       default:
         return true;
     }
@@ -287,9 +452,11 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
           </Button>
           <Button
             onClick={handleNext}
-            disabled={!canProceed() || mergeState.isAnalyzing}
+            disabled={!canProceed() || mergeState.isAnalyzing || mergeState.isCreating}
           >
-            {mergeState.step === 'review' ? 'Create Merged Map' : 'Next'}
+            {mergeState.step === 'review'
+              ? (mergeState.isCreating ? 'Creating...' : 'Create Merged Map')
+              : 'Next'}
           </Button>
         </div>
       </Card>
