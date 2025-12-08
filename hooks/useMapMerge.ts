@@ -34,6 +34,7 @@ const initialState: MapMergeState = {
   importHistory: [],
   isAnalyzing: false,
   analysisError: null,
+  isCreating: false,
 };
 
 type MapMergeAction =

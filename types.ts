@@ -2505,6 +2505,7 @@ export interface MapMergeState {
   // Analysis state
   isAnalyzing: boolean;
   analysisError: string | null;
+  isCreating: boolean;
 }
 
 // Export row for Excel/CSV
@@ -2520,4 +2521,27 @@ export interface MergeExportTopicRow {
   finalTitle: string | null;
   include: 'yes' | 'no';
   notes: string;
+}
+
+// Merge execution types
+export interface MergeExecutionInput {
+  sourceMaps: TopicalMap[];
+  newMapName: string;
+  projectId: string;
+  userId: string;
+  resolvedContext: {
+    businessInfo: Partial<BusinessInfo>;
+    pillars: SEOPillars | null;
+  };
+  resolvedEavs: SemanticTriple[];
+  resolvedCompetitors: string[];
+  topicDecisions: TopicMergeDecision[];
+  excludedTopicIds: string[];
+  newTopics: EnrichedTopic[];
+}
+
+export interface MergeExecutionResult {
+  newMap: TopicalMap;
+  topicsCreated: number;
+  warnings: string[];
 }
