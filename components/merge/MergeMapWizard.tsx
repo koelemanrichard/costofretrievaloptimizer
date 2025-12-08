@@ -60,6 +60,52 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
     setSourceMaps(maps);
   }, [selectMaps, setSourceMaps, availableMaps]);
 
+  // Load full topic data for selected maps
+  useEffect(() => {
+    const loadFullTopics = async () => {
+      if (mergeState.sourceMaps.length === 0) return;
+
+      const mapIds = mergeState.sourceMaps.map(m => m.id);
+      const mapsNeedingFullData = mergeState.sourceMaps.filter(
+        m => !m.topics?.some(t => t.description !== undefined)
+      );
+
+      if (mapsNeedingFullData.length === 0) return;
+
+      try {
+        const supabase = getSupabaseClient(
+          appState.businessInfo.supabaseUrl,
+          appState.businessInfo.supabaseAnonKey
+        );
+
+        const { data: topicsData, error } = await supabase
+          .from('topics')
+          .select('*')
+          .in('map_id', mapIds);
+
+        if (error) throw error;
+
+        // Group by map and update source maps
+        const topicsByMap = (topicsData || []).reduce((acc, topic) => {
+          if (!acc[topic.map_id]) acc[topic.map_id] = [];
+          acc[topic.map_id].push(topic);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        const updatedMaps = mergeState.sourceMaps.map(map => ({
+          ...map,
+          topics: (topicsByMap[map.id] || []) as EnrichedTopic[],
+        }));
+
+        setSourceMaps(updatedMaps);
+      } catch (error) {
+        console.error('Failed to load full topic data:', error);
+      }
+    };
+
+    loadFullTopics();
+  }, [mergeState.sourceMaps.length, appState.businessInfo.supabaseUrl, appState.businessInfo.supabaseAnonKey, setSourceMaps]); // Only run when source maps count changes
+
   const handleAnalyzeContext = useCallback(async () => {
     if (mergeState.sourceMaps.length < 2) return;
 
