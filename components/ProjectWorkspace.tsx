@@ -29,17 +29,27 @@ const ProjectWorkspace: React.FC = () => {
     const handleSaveBusinessInfo = async (formData: Partial<BusinessInfo>) => {
         if (!activeMapId) return;
 
-        // Whitelist only the strategic fields to be saved with the map.
+        // Whitelist strategic fields to be saved with the map.
         // This prevents sensitive data like API keys from being saved in the map's JSON.
+        // Include brandKit and authorProfile for content generation context.
         const strategicInfo: Partial<BusinessInfo> = {
+            // Core business context
             seedKeyword: formData.seedKeyword,
             industry: formData.industry,
             valueProp: formData.valueProp,
             audience: formData.audience,
             language: formData.language,
             targetMarket: formData.targetMarket,
+            // AI provider settings
             aiProvider: formData.aiProvider,
             aiModel: formData.aiModel,
+            // Brand kit for content/image generation
+            brandKit: formData.brandKit,
+            // Author profile for E-E-A-T signals
+            authorProfile: formData.authorProfile,
+            // Domain info
+            domain: formData.domain,
+            projectName: formData.projectName,
         };
 
         dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: activeMapId, data: { business_info: strategicInfo } } });

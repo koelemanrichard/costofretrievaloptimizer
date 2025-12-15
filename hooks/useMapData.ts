@@ -52,7 +52,7 @@ export const useMapData = (
             dispatch({ type: 'SET_LOADING', payload: { key: 'mapDetails', value: true } });
             try {
                 const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
-                const { data: topicsData, error: topicsError } = await supabase.from('topics').select('*').eq('map_id', activeMapId);
+                const { data: topicsData, error: topicsError } = await supabase.from('topics').select('*').eq('map_id', activeMapId).order('created_at', { ascending: false });
                 if (topicsError) throw topicsError;
 
                 const rawTopics = (topicsData || []);

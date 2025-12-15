@@ -192,6 +192,28 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
                 <Input id="neo4jPassword" name="neo4jPassword" value={settings.neo4jPassword || ''} onChange={handleChange} type="password" placeholder="Database Password" />
             </div>
         </div>
+
+        <h3 className="text-lg font-semibold text-amber-400 pt-4 border-t border-gray-700">Image Generation</h3>
+        <p className="text-sm text-gray-400 -mt-3">Configure API credentials for hero image generation and optimization.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <Label htmlFor="cloudinaryCloudName">Cloudinary Cloud Name</Label>
+                <Input id="cloudinaryCloudName" name="cloudinaryCloudName" value={settings.cloudinaryCloudName || ''} onChange={handleChange} placeholder="your-cloud-name" />
+            </div>
+            <div>
+                <Label htmlFor="cloudinaryApiKey">Cloudinary API Key</Label>
+                <Input id="cloudinaryApiKey" name="cloudinaryApiKey" value={settings.cloudinaryApiKey || ''} onChange={handleChange} type="password" placeholder="Cloudinary API Key" />
+            </div>
+            <div>
+                <Label htmlFor="cloudinaryUploadPreset">Cloudinary Upload Preset</Label>
+                <Input id="cloudinaryUploadPreset" name="cloudinaryUploadPreset" value={settings.cloudinaryUploadPreset || ''} onChange={handleChange} placeholder="ml_default (create unsigned preset in Cloudinary)" />
+                <p className="text-xs text-gray-500 mt-1">Create an unsigned upload preset in your Cloudinary dashboard</p>
+            </div>
+            <div>
+                <Label htmlFor="markupGoApiKey">MarkupGo API Key</Label>
+                <Input id="markupGoApiKey" name="markupGoApiKey" value={settings.markupGoApiKey || ''} onChange={handleChange} type="password" placeholder="MarkupGo API Key for image generation" />
+            </div>
+        </div>
     </div>
 );
 

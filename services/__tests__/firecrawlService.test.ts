@@ -30,7 +30,7 @@ describe('firecrawlService', () => {
         }),
       } as Response);
 
-      const result = await extractPageWithFirecrawl('https://example.com', 'test-key', { maxRetries: 3 });
+      const result = await extractPageWithFirecrawl('https://example.com', 'test-key', { maxRetries: 3, initialDelayMs: 100, backoffMultiplier: 2 });
       expect(fetchSpy).toHaveBeenCalledTimes(2);
       expect(result.title).toBe('Test');
     });
@@ -44,7 +44,7 @@ describe('firecrawlService', () => {
       } as Response);
 
       await expect(
-        extractPageWithFirecrawl('https://example.com', 'test-key', { maxRetries: 2 })
+        extractPageWithFirecrawl('https://example.com', 'test-key', { maxRetries: 2, initialDelayMs: 100, backoffMultiplier: 2 })
       ).rejects.toThrow('503');
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });

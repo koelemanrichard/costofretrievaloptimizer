@@ -2,12 +2,13 @@
 // Orchestrates multi-pass content brief regeneration
 // Breaks regeneration into manageable chunks to handle large briefs reliably
 
-import { BusinessInfo, ContentBrief, EnrichedTopic, SEOPillars, BriefSection } from '../../../types';
+import { BusinessInfo, ContentBrief, EnrichedTopic, SEOPillars, BriefSection, SemanticTriple } from '../../../types';
 import { AppAction } from '../../../state/appState';
 import { RegenerationProgress, RegenerationResult, ProgressCallback } from './index';
 import { regenerateMetaAndStrategy } from './passes/metaStrategy';
 import { regenerateSectionsBatch } from './passes/sectionsBatch';
 import { regenerateLinkingAndBridge } from './passes/linkingBridge';
+import { generateSectionsFromScratch } from './passes/sectionsGeneration';
 import { assembleFinalBrief } from './passes/assembly';
 import React from 'react';
 
@@ -31,7 +32,8 @@ export async function regenerateBriefMultiPass(
   pillars: SEOPillars,
   allTopics: EnrichedTopic[],
   dispatch: React.Dispatch<AppAction>,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  eavs?: SemanticTriple[]  // Optional EAVs for section generation when structured_outline is empty
 ): Promise<RegenerationResult> {
   const sectionCount = currentBrief.structured_outline?.length || 0;
   const sectionBatches = Math.ceil(sectionCount / SECTION_BATCH_SIZE);
@@ -106,59 +108,104 @@ export async function regenerateBriefMultiPass(
     }
 
     // ========================================
-    // PASS 2+: Section Batches
+    // PASS 2+: Section Batches (or Generation if empty)
     // ========================================
     const currentSections = currentBrief.structured_outline || [];
-    const regeneratedSections: BriefSection[] = [];
+    let regeneratedSections: BriefSection[] = [];
 
-    for (let batchIndex = 0; batchIndex < Math.max(1, sectionBatches); batchIndex++) {
-      const startIdx = batchIndex * SECTION_BATCH_SIZE;
-      const endIdx = Math.min(startIdx + SECTION_BATCH_SIZE, currentSections.length);
-      const batchSections = currentSections.slice(startIdx, endIdx);
-
-      if (batchSections.length === 0) {
-        // If no sections, just log and continue
-        logProgress(
-          `Sections (batch ${batchIndex + 1}/${Math.max(1, sectionBatches)})`,
-          'No sections to process',
-          0
-        );
-        continue;
-      }
-
+    // CRITICAL: If no sections exist, generate them from scratch first
+    if (currentSections.length === 0) {
       logProgress(
-        `Sections (batch ${batchIndex + 1}/${sectionBatches})`,
-        `Processing sections ${startIdx + 1}-${endIdx} of ${sectionCount}`,
-        endIdx
+        'Section Generation',
+        'No sections exist - generating structured outline from scratch',
+        0
       );
 
-      const batchResult = await regenerateSectionsBatch(
+      dispatch({
+        type: 'LOG_EVENT',
+        payload: {
+          service: 'BriefRegeneration',
+          message: 'structured_outline is empty. Generating sections from scratch using topic context and EAVs.',
+          status: 'info',
+          timestamp: Date.now()
+        }
+      });
+
+      const generationResult = await generateSectionsFromScratch(
         businessInfo,
         topic,
-        batchSections,
         currentBrief,
         userInstructions,
         pillars,
         allTopics,
-        dispatch,
-        startIdx, // context: where in the outline we are
-        sectionCount
+        eavs || [], // Use provided EAVs or empty array
+        dispatch
       );
 
-      if (!batchResult.success) {
-        // On failure, preserve original sections for this batch
+      if (generationResult.success && generationResult.sections && generationResult.sections.length > 0) {
+        regeneratedSections = generationResult.sections;
         dispatch({
           type: 'LOG_EVENT',
           payload: {
             service: 'BriefRegeneration',
-            message: `Warning: Batch ${batchIndex + 1} failed. Preserving original sections.`,
-            status: 'warning',
+            message: `Generated ${regeneratedSections.length} sections from scratch.`,
+            status: 'success',
             timestamp: Date.now()
           }
         });
-        regeneratedSections.push(...batchSections);
       } else {
-        regeneratedSections.push(...(batchResult.sections || batchSections));
+        dispatch({
+          type: 'LOG_EVENT',
+          payload: {
+            service: 'BriefRegeneration',
+            message: `Failed to generate sections: ${generationResult.error || 'Unknown error'}`,
+            status: 'failure',
+            timestamp: Date.now()
+          }
+        });
+        // Continue without sections - the brief will be incomplete but won't crash
+      }
+    } else {
+      // Process existing sections in batches
+      for (let batchIndex = 0; batchIndex < sectionBatches; batchIndex++) {
+        const startIdx = batchIndex * SECTION_BATCH_SIZE;
+        const endIdx = Math.min(startIdx + SECTION_BATCH_SIZE, currentSections.length);
+        const batchSections = currentSections.slice(startIdx, endIdx);
+
+        logProgress(
+          `Sections (batch ${batchIndex + 1}/${sectionBatches})`,
+          `Processing sections ${startIdx + 1}-${endIdx} of ${sectionCount}`,
+          endIdx
+        );
+
+        const batchResult = await regenerateSectionsBatch(
+          businessInfo,
+          topic,
+          batchSections,
+          currentBrief,
+          userInstructions,
+          pillars,
+          allTopics,
+          dispatch,
+          startIdx, // context: where in the outline we are
+          sectionCount
+        );
+
+        if (!batchResult.success) {
+          // On failure, preserve original sections for this batch
+          dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+              service: 'BriefRegeneration',
+              message: `Warning: Batch ${batchIndex + 1} failed. Preserving original sections.`,
+              status: 'warning',
+              timestamp: Date.now()
+            }
+          });
+          regeneratedSections.push(...batchSections);
+        } else {
+          regeneratedSections.push(...(batchResult.sections || batchSections));
+        }
       }
     }
 

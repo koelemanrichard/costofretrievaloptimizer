@@ -18,7 +18,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-import { ContentBrief, BriefSection, EnrichedTopic, SEOPillars } from '../../types';
+import { ContentBrief, BriefSection, EnrichedTopic, SEOPillars, BusinessInfo } from '../../types';
 import { useBriefEditor } from '../../hooks/useBriefEditor';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -26,6 +26,7 @@ import { SectionEditor } from './SectionEditor';
 import { AIPreviewModal } from './AIPreviewModal';
 import { AddSectionModal } from './AddSectionModal';
 import { RegenerateBriefPanel } from './RegenerateBriefPanel';
+import { BriefHealthOverview } from './BriefHealthOverview';
 
 interface BriefEditModalProps {
     isOpen: boolean;
@@ -34,8 +35,11 @@ interface BriefEditModalProps {
     pillars: SEOPillars;
     allTopics: EnrichedTopic[];
     mapId: string;
+    businessInfo?: BusinessInfo;
     onClose: () => void;
     onSaved?: () => void;
+    onRepairMissing?: (missingFields: string[]) => Promise<void>;
+    isRepairing?: boolean;
 }
 
 type TabType = 'sections' | 'meta' | 'strategy' | 'regenerate';
@@ -47,8 +51,11 @@ export const BriefEditModal: React.FC<BriefEditModalProps> = ({
     pillars,
     allTopics,
     mapId,
+    businessInfo,
     onClose,
-    onSaved
+    onSaved,
+    onRepairMissing,
+    isRepairing = false
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('sections');
     const [showAddSection, setShowAddSection] = useState<{ index: number } | null>(null);
@@ -79,15 +86,17 @@ export const BriefEditModal: React.FC<BriefEditModalProps> = ({
         regenerateBrief,
         saveToDB,
         discardChanges,
-        setEditedBrief
+        setEditedBrief,
+        initializeBrief,
+        clearError
     } = useBriefEditor(brief, mapId, brief.topic_id);
 
-    // Initialize edited brief when modal opens
+    // Initialize edited brief when modal opens (use initializeBrief to sync original)
     React.useEffect(() => {
         if (isOpen && brief) {
-            setEditedBrief(brief);
+            initializeBrief(brief);
         }
-    }, [isOpen, brief, setEditedBrief]);
+    }, [isOpen, brief, initializeBrief]);
 
     // DnD sensors
     const sensors = useSensors(
@@ -227,7 +236,10 @@ export const BriefEditModal: React.FC<BriefEditModalProps> = ({
                                     ? 'text-emerald-400 border-b-2 border-emerald-400'
                                     : 'text-slate-400 hover:text-white'
                             }`}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => {
+                                setActiveTab(tab);
+                                clearError(); // Clear errors when switching tabs
+                            }}
                         >
                             {tab === 'regenerate' ? 'Regenerate Brief' : tab}
                         </button>
@@ -243,6 +255,19 @@ export const BriefEditModal: React.FC<BriefEditModalProps> = ({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4">
+                    {/* Brief Health Overview - Always visible at top */}
+                    {editedBrief && (
+                        <div className="mb-6">
+                            <BriefHealthOverview
+                                brief={editedBrief}
+                                onRepairMissing={onRepairMissing}
+                                onRegenerateBrief={() => setActiveTab('regenerate')}
+                                isRepairing={isRepairing}
+                                isRegenerating={isRegenerating}
+                            />
+                        </div>
+                    )}
+
                     {activeTab === 'sections' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center mb-4">

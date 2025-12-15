@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Help - Holistic SEO Topical Map Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            typography: {
+              DEFAULT: {
+                css: {
+                  maxWidth: 'none',
+                },
+              },
+            },
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      /* Custom Prose Styles for Help Documentation */
+      .prose h1 { font-size: 2em; font-weight: 700; margin-top: 1em; margin-bottom: 0.5em; color: white; }
+      .prose h2 { font-size: 1.5em; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: white; border-bottom: 1px solid #374151; padding-bottom: 0.2em;}
+      .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; color: white; }
+      .prose h4 { font-size: 1.1em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; color: #e5e7eb; }
+      .prose p { margin-bottom: 1em; line-height: 1.75; color: #d1d5db; }
+      .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; color: #d1d5db; }
+      .prose ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; color: #d1d5db; }
+      .prose li { margin-bottom: 0.5em; line-height: 1.6; }
+      .prose li > ul, .prose li > ol { margin-top: 0.5em; margin-bottom: 0.5em; }
+      .prose blockquote { border-left: 4px solid #3b82f6; padding-left: 1em; color: #9ca3af; font-style: italic; margin: 1em 0; background-color: rgba(59, 130, 246, 0.1); padding: 1em; border-radius: 0 0.5rem 0.5rem 0; }
+      .prose table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
+      .prose th { text-align: left; padding: 0.75em 1em; border-bottom: 2px solid #4b5563; color: white; background-color: rgba(55, 65, 81, 0.5); }
+      .prose td { padding: 0.75em 1em; border-bottom: 1px solid #374151; color: #d1d5db; }
+      .prose tr:hover td { background-color: rgba(55, 65, 81, 0.3); }
+      .prose a { color: #60a5fa; text-decoration: underline; text-underline-offset: 2px; }
+      .prose a:hover { color: #93c5fd; }
+      .prose strong { color: #fff; font-weight: 600; }
+      .prose em { font-style: italic; }
+      .prose code { background-color: rgba(0,0,0,0.4); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; color: #f472b6; font-family: 'Fira Code', 'JetBrains Mono', monospace; }
+      .prose pre { background-color: #1f2937; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1em 0; }
+      .prose pre code { background-color: transparent; padding: 0; color: #e5e7eb; }
+      .prose img { max-width: 100%; border-radius: 0.5rem; margin: 1.5em 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
+      .prose hr { border-color: #374151; margin: 2em 0; }
+
+      /* Callout boxes */
+      .prose .callout-info { background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; margin: 1em 0; }
+      .prose .callout-warning { background-color: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; margin: 1em 0; }
+      .prose .callout-danger { background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; margin: 1em 0; }
+      .prose .callout-success { background-color: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0; margin: 1em 0; }
+
+      /* Screenshot figure styling */
+      .prose figure { margin: 1.5em 0; }
+      .prose figcaption { text-align: center; color: #9ca3af; font-size: 0.875em; margin-top: 0.5em; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.13.0",
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "openai": "https://esm.sh/openai@^4.52.7",
+    "@anthropic-ai/sdk": "https://esm.sh/@anthropic-ai/sdk@^0.22.0",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "idb": "https://esm.sh/idb@8.0.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.4",
+    "linkedom": "https://esm.sh/linkedom@^0.18.11",
+    "uuid": "https://aistudiocdn.com/uuid@^12.0.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.0",
+    "xlsx": "https://esm.sh/xlsx@0.18.5"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-900 text-gray-100 font-sans">
+    <div id="help-root"></div>
+  <script type="module" src="/HelpApp.tsx"></script>
+</body>
+</html>

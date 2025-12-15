@@ -11,6 +11,8 @@ interface ContentGenerationProgressProps {
   onPause: () => void;
   onResume: () => void;
   onCancel: () => void;
+  onRetry?: () => void;
+  error?: string | null;
 }
 
 const CheckIcon = () => (
@@ -48,7 +50,9 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
   currentPassName,
   onPause,
   onResume,
-  onCancel
+  onCancel,
+  onRetry,
+  error
 }) => {
   const [showLivePreview, setShowLivePreview] = useState(false);
 
@@ -143,9 +147,22 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
       </div>
 
       {/* Error Display */}
-      {job.last_error && (
-        <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded text-sm text-red-300">
-          {job.last_error}
+      {(job.last_error || error) && (
+        <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-red-300 font-medium mb-1">Generation Error</p>
+              <p className="text-xs text-red-400">{job.last_error || error}</p>
+              {(job.last_error || error)?.includes('503') || (job.last_error || error)?.includes('overloaded') ? (
+                <p className="text-xs text-amber-400 mt-2">
+                  Tip: The model is overloaded. Try resuming in a few seconds or switch to a different AI provider in Settings.
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
       )}
 
@@ -159,7 +176,7 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
       )}
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {job.status === 'in_progress' && (
           <button
             onClick={onPause}
@@ -176,7 +193,18 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
             Resume
           </button>
         )}
-        {(job.status === 'in_progress' || job.status === 'paused') && (
+        {job.status === 'failed' && onRetry && (
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Retry
+          </button>
+        )}
+        {(job.status === 'in_progress' || job.status === 'paused' || job.status === 'failed') && (
           <button
             onClick={onCancel}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm"

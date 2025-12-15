@@ -69,3 +69,67 @@ export const calculateDashboardMetrics = ({ briefs, knowledgeGraph, allTopics }:
         contextualFlowScore: Math.min(100, Math.round(contextualFlowScore)),
     };
 };
+
+export interface TopicSimilarityPair {
+    topicA: string;
+    topicB: string;
+    similarity: number;
+}
+
+/**
+ * Calculate similarity between topics based on their hierarchical relationships.
+ * Returns pairs sorted by relevance (highest similarity first).
+ */
+export function calculateTopicSimilarityPairs(topics: EnrichedTopic[]): TopicSimilarityPair[] {
+    const pairs: TopicSimilarityPair[] = [];
+
+    // Create a map for quick parent lookup
+    const topicMap = new Map(topics.map(t => [t.id, t]));
+
+    // Calculate similarity for each pair of topics
+    for (let i = 0; i < topics.length; i++) {
+        for (let j = i + 1; j < topics.length; j++) {
+            const topicA = topics[i];
+            const topicB = topics[j];
+
+            let similarity = 0.1; // Default: weakly related (same map = some relation)
+
+            // Direct parent-child relationship = very high similarity
+            if (topicA.parent_topic_id === topicB.id || topicB.parent_topic_id === topicA.id) {
+                similarity = 0.95;
+            }
+            // Siblings (same parent) = high similarity
+            else if (topicA.parent_topic_id && topicA.parent_topic_id === topicB.parent_topic_id) {
+                similarity = 0.85;
+            }
+            // Cousins (share grandparent) = medium-high similarity
+            else if (topicA.parent_topic_id && topicB.parent_topic_id) {
+                const parentA = topicMap.get(topicA.parent_topic_id);
+                const parentB = topicMap.get(topicB.parent_topic_id);
+                if (parentA?.parent_topic_id && parentA.parent_topic_id === parentB?.parent_topic_id) {
+                    similarity = 0.6;
+                } else if (parentA?.parent_topic_id === topicB.id || parentB?.parent_topic_id === topicA.id) {
+                    // Uncle/aunt relationship
+                    similarity = 0.7;
+                }
+            }
+            // Same type = moderate similarity
+            else if (topicA.type === topicB.type) {
+                similarity = 0.4;
+            }
+            // Both are core topics = some similarity
+            else if (topicA.type === 'core' && topicB.type === 'core') {
+                similarity = 0.35;
+            }
+
+            pairs.push({
+                topicA: topicA.title,
+                topicB: topicB.title,
+                similarity
+            });
+        }
+    }
+
+    // Sort by similarity (highest first) so AI focuses on most relevant pairs
+    return pairs.sort((a, b) => b.similarity - a.similarity);
+}

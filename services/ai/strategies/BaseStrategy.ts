@@ -12,7 +12,7 @@ Business Context:
 - Domain: ${this.info.domain}
 - Industry: ${this.info.industry}
 - Business Model: ${this.info.model}
-- Website Type: ${this.info.websiteType || 'SERVICE'}
+- Website Type: ${this.info.websiteType || 'INFORMATIONAL'}
 - Target Audience: ${this.info.audience}
 - Unique Value Proposition: ${this.info.valueProp}
 - Expertise Level: ${this.info.expertise}
@@ -46,8 +46,8 @@ ${this.info.authorProfile ? `- Author: ${this.info.authorProfile.name} (${this.i
         return prompts.DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT(this.info, pillars);
     }
 
-    getEavExpansionPrompt(pillars: SEOPillars, existingTriples: SemanticTriple[]): string {
-        return prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(this.info, pillars, existingTriples);
+    getEavExpansionPrompt(pillars: SEOPillars, existingTriples: SemanticTriple[], count: number = 15): string {
+        return prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(this.info, pillars, existingTriples, count);
     }
 
     getValidationPrompt(topics: EnrichedTopic[], pillars: SEOPillars): string {

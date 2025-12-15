@@ -1,7 +1,7 @@
 
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import { EnrichedTopic, ContentBrief, SEOPillars, ValidationResult, ContextualBridgeLink, BriefSection, BusinessInfo } from '../types';
+import { EnrichedTopic, ContentBrief, SEOPillars, ValidationResult, ContextualBridgeLink, BriefSection, BusinessInfo, FoundationPage, NAPData, NavigationStructure, BrandKit, SemanticTriple } from '../types';
 import { safeString } from './parsers';
 
 interface ExportDataInput {
@@ -9,6 +9,12 @@ interface ExportDataInput {
     briefs: Record<string, ContentBrief>;
     pillars: SEOPillars | undefined;
     metrics?: ValidationResult | null;
+    // NEW: Additional data for comprehensive export
+    foundationPages?: FoundationPage[];
+    napData?: NAPData;
+    navigation?: NavigationStructure | null;
+    brandKit?: BrandKit;
+    eavs?: SemanticTriple[];
 }
 
 // Helper to flatten structured outline into a readable vector string
@@ -208,6 +214,136 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
         XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(pillarRows), "SEO Pillars");
     }
 
+    // === TAB 9: Foundation Pages ===
+    if (input.foundationPages && input.foundationPages.length > 0) {
+        const foundationRows = input.foundationPages.map(page => ({
+            'Page Type': page.page_type,
+            'Title': page.title,
+            'Slug': page.slug,
+            'Meta Description': truncateForExcel(page.meta_description, 300),
+            'H1 Template': page.h1_template || '',
+            'Schema Type': page.schema_type || '',
+            'Status': page.status || 'draft',
+            'Sections': page.sections?.map(s => s.heading).join(', ') || ''
+        }));
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(foundationRows), "Foundation Pages");
+    }
+
+    // === TAB 10: NAP Data ===
+    if (input.napData) {
+        const napRows = [{
+            'Company Name': input.napData.company_name || '',
+            'Primary Address': input.napData.address || '',
+            'Phone': input.napData.phone || '',
+            'Email': input.napData.email || '',
+            'Founded Year': input.napData.founded_year || ''
+        }];
+        // Add additional locations if present
+        if (input.napData.locations && input.napData.locations.length > 0) {
+            input.napData.locations.forEach((loc, idx) => {
+                napRows.push({
+                    'Company Name': `Location ${idx + 1}: ${loc.name}`,
+                    'Primary Address': loc.address,
+                    'Phone': loc.phone,
+                    'Email': loc.email || '',
+                    'Founded Year': loc.is_headquarters ? '(Headquarters)' : ''
+                });
+            });
+        }
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(napRows), "NAP Data");
+    }
+
+    // === TAB 11: Navigation Structure ===
+    if (input.navigation) {
+        const navRows: any[] = [];
+        // Header links
+        input.navigation.header.primary_nav.forEach((link, idx) => {
+            navRows.push({
+                'Location': 'Header',
+                'Order': idx + 1,
+                'Text': link.text,
+                'Prominence': link.prominence || 'medium',
+                'Target Type': link.target_topic_id ? 'Topic' : link.target_foundation_page_id ? 'Foundation Page' : 'External',
+                'Target ID/URL': link.target_topic_id || link.target_foundation_page_id || link.external_url || '',
+                'Section': ''
+            });
+        });
+        // CTA button
+        if (input.navigation.header.cta_button) {
+            navRows.push({
+                'Location': 'Header CTA',
+                'Order': 0,
+                'Text': input.navigation.header.cta_button.text,
+                'Prominence': 'high',
+                'Target Type': 'CTA',
+                'Target ID/URL': input.navigation.header.cta_button.url || '',
+                'Section': ''
+            });
+        }
+        // Footer sections
+        input.navigation.footer.sections.forEach((section, sIdx) => {
+            section.links.forEach((link, idx) => {
+                navRows.push({
+                    'Location': 'Footer',
+                    'Order': idx + 1,
+                    'Text': link.text,
+                    'Prominence': link.prominence || 'low',
+                    'Target Type': link.target_topic_id ? 'Topic' : link.target_foundation_page_id ? 'Foundation Page' : 'External',
+                    'Target ID/URL': link.target_topic_id || link.target_foundation_page_id || link.external_url || '',
+                    'Section': section.heading
+                });
+            });
+        });
+        // Legal links
+        input.navigation.footer.legal_links.forEach((link, idx) => {
+            navRows.push({
+                'Location': 'Footer Legal',
+                'Order': idx + 1,
+                'Text': link.text,
+                'Prominence': 'low',
+                'Target Type': link.target_foundation_page_id ? 'Foundation Page' : 'External',
+                'Target ID/URL': link.target_foundation_page_id || link.external_url || '',
+                'Section': 'Legal'
+            });
+        });
+        if (navRows.length > 0) {
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(navRows), "Navigation");
+        }
+    }
+
+    // === TAB 12: Brand Kit ===
+    if (input.brandKit) {
+        const brandRows = [{
+            'Primary Color': input.brandKit.colors?.primary || '',
+            'Secondary Color': input.brandKit.colors?.secondary || '',
+            'Text on Image Color': input.brandKit.colors?.textOnImage || '',
+            'Heading Font': input.brandKit.fonts?.heading || '',
+            'Body Font': input.brandKit.fonts?.body || '',
+            'Logo Placement': input.brandKit.logoPlacement || '',
+            'Logo Opacity': input.brandKit.logoOpacity || '',
+            'Copyright Holder': input.brandKit.copyright?.holder || '',
+            'License URL': input.brandKit.copyright?.licenseUrl || '',
+            'Hero Templates': input.brandKit.heroTemplates?.map(t => t.name).join(', ') || ''
+        }];
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(brandRows), "Brand Kit");
+    }
+
+    // === TAB 13: Semantic Triples (EAVs) ===
+    if (input.eavs && input.eavs.length > 0) {
+        const eavRows = input.eavs.map(eav => ({
+            'Subject': eav.subject?.label || '',
+            'Subject Type': eav.subject?.type || '',
+            'Predicate (Relation)': eav.predicate?.relation || '',
+            'Category': eav.predicate?.category || '',
+            'Classification': eav.predicate?.classification || '',
+            'Object (Value)': String(eav.object?.value || ''),
+            'Object Type': eav.object?.type || '',
+            'Synonyms': eav.lexical?.synonyms?.join(', ') || '',
+            'Antonyms': eav.lexical?.antonyms?.join(', ') || ''
+        }));
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(eavRows), "Semantic Triples");
+    }
+
     // Trigger Download
     XLSX.writeFile(workbook, `${filename}.${format}`);
 };
@@ -222,6 +358,12 @@ interface FullExportInput {
     metrics?: ValidationResult | null;
     businessInfo?: Partial<BusinessInfo>;
     mapName?: string;
+    // NEW: Additional data for comprehensive export
+    foundationPages?: FoundationPage[];
+    napData?: NAPData;
+    navigation?: NavigationStructure | null;
+    brandKit?: BrandKit;
+    eavs?: SemanticTriple[];
 }
 
 export const generateFullZipExport = async (input: FullExportInput, filename: string) => {
@@ -329,6 +471,63 @@ export const generateFullZipExport = async (input: FullExportInput, filename: st
     // 5. Add validation metrics if available
     if (metrics) {
         zip.file('validation-report.json', JSON.stringify(metrics, null, 2));
+    }
+
+    // 6. Add Foundation Pages
+    if (input.foundationPages && input.foundationPages.length > 0) {
+        const foundationFolder = zip.folder('foundation-pages');
+        input.foundationPages.forEach(page => {
+            const safeSlug = safeString(page.slug || page.page_type).replace(/[^a-z0-9-]/gi, '-');
+            foundationFolder?.file(`${safeSlug}.json`, JSON.stringify({
+                page_type: page.page_type,
+                title: page.title,
+                slug: page.slug,
+                meta_description: page.meta_description,
+                h1_template: page.h1_template,
+                schema_type: page.schema_type,
+                sections: page.sections,
+                nap_data: page.nap_data,
+                status: page.status
+            }, null, 2));
+        });
+    }
+
+    // 7. Add NAP Data
+    if (input.napData) {
+        zip.file('nap-data.json', JSON.stringify(input.napData, null, 2));
+    }
+
+    // 8. Add Navigation Structure
+    if (input.navigation) {
+        zip.file('navigation.json', JSON.stringify({
+            header: {
+                logo_alt_text: input.navigation.header.logo_alt_text,
+                primary_nav: input.navigation.header.primary_nav,
+                cta_button: input.navigation.header.cta_button
+            },
+            footer: {
+                sections: input.navigation.footer.sections,
+                legal_links: input.navigation.footer.legal_links,
+                nap_display: input.navigation.footer.nap_display,
+                copyright_text: input.navigation.footer.copyright_text
+            },
+            settings: {
+                max_header_links: input.navigation.max_header_links,
+                max_footer_links: input.navigation.max_footer_links,
+                dynamic_by_section: input.navigation.dynamic_by_section,
+                sticky: input.navigation.sticky
+            }
+        }, null, 2));
+    }
+
+    // 9. Add Brand Kit
+    if (input.brandKit) {
+        zip.file('brand-kit.json', JSON.stringify(input.brandKit, null, 2));
+    }
+
+    // 10. Add Semantic Triples (EAVs)
+    if (input.eavs && input.eavs.length > 0) {
+        zip.file('semantic-triples.json', JSON.stringify(input.eavs, null, 2));
     }
 
     // Generate and download

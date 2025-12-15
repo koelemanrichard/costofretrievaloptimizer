@@ -29,7 +29,9 @@
     "@google/genai": "^1.13.0",
     "@supabase/supabase-js": "2.44.4",
     "exceljs": "^4.4.0",
+    "html2canvas": "^1.4.1",
     "idb": "8.0.0",
+    "jspdf": "^3.0.4",
     "jszip": "3.10.1",
     "linkedom": "^0.18.11",
     "neo4j-driver": "^6.0.1",
@@ -37,6 +39,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.5.1",
     "remark-gfm": "^4.0.0",
     "uuid": "^12.0.0",
     "xlsx": "0.18.5"

@@ -15,13 +15,64 @@ interface ContextualCoverageModalProps {
   onAddTopic: (title: string, description?: string) => Promise<void>;
 }
 
+/**
+ * Generate a specific topic title from a contextual gap.
+ * Extracts key topic suggestion from the reasoning or creates a descriptive title.
+ */
+function generateTopicTitle(gap: ContextualCoverageGap): string {
+  const reasoning = gap.reasoning || '';
+
+  // Try to extract a quoted topic suggestion from reasoning
+  // e.g., 'Consider adding "Advanced VPN Configuration Guide"' -> 'Advanced VPN Configuration Guide'
+  const quotedMatch = reasoning.match(/["""]([^"""]+)["""]/);
+  if (quotedMatch && quotedMatch[1].length > 5 && quotedMatch[1].length < 80) {
+    return quotedMatch[1];
+  }
+
+  // Try to extract topic from "add/create/cover X" patterns
+  const actionMatch = reasoning.match(/(?:add|create|cover|include|write about|need)\s+(?:a\s+)?(?:topic\s+(?:on|about)\s+)?[""]?([^.,""\n]+)[""]?/i);
+  if (actionMatch && actionMatch[1].length > 5 && actionMatch[1].length < 80) {
+    // Capitalize first letter
+    return actionMatch[1].charAt(0).toUpperCase() + actionMatch[1].slice(1).trim();
+  }
+
+  // Try to extract from "missing X" patterns
+  const missingMatch = reasoning.match(/missing\s+(?:coverage\s+(?:of|for)\s+)?[""]?([^.,""\n]+)[""]?/i);
+  if (missingMatch && missingMatch[1].length > 5 && missingMatch[1].length < 80) {
+    return missingMatch[1].charAt(0).toUpperCase() + missingMatch[1].slice(1).trim();
+  }
+
+  // Fallback: Create a descriptive title from context type
+  const contextLower = gap.context.toLowerCase();
+  if (contextLower.includes('temporal')) {
+    return `${gap.type === 'TEMPORAL' ? 'Historical & Temporal' : gap.context} Coverage`;
+  }
+  if (contextLower.includes('micro')) {
+    return `Detailed ${gap.context} Analysis`;
+  }
+  if (contextLower.includes('macro')) {
+    return `Broader ${gap.context} Perspective`;
+  }
+  if (contextLower.includes('intentional')) {
+    return `User Intent: ${gap.context}`;
+  }
+
+  // Last fallback: Use context with "Guide" suffix
+  return `${gap.context} Guide`;
+}
+
 const ContextualCoverageModal: React.FC<ContextualCoverageModalProps> = ({ isOpen, onClose, result, onAddTopic }) => {
   const [loadingGaps, setLoadingGaps] = useState<string[]>([]);
+  const [addedGaps, setAddedGaps] = useState<string[]>([]);
 
   const handleAddGap = async (gap: ContextualCoverageGap) => {
     setLoadingGaps(prev => [...prev, gap.context]);
     try {
-        await onAddTopic(gap.context, gap.reasoning);
+        // Generate a specific topic title instead of using the generic gap.context
+        const topicTitle = generateTopicTitle(gap);
+        await onAddTopic(topicTitle, gap.reasoning);
+        // Mark as successfully added
+        setAddedGaps(prev => [...prev, gap.context]);
     } catch (error) {
         console.error("Failed to add topic from gap:", error);
     } finally {
@@ -62,9 +113,22 @@ const ContextualCoverageModal: React.FC<ContextualCoverageModalProps> = ({ isOpe
                                         <p className="font-semibold text-white">{gap.context}</p>
                                         <p className="text-sm text-gray-400">{gap.reasoning}</p>
                                       </div>
-                                      <Button onClick={() => handleAddGap(gap)} disabled={loadingGaps.includes(gap.context)} className="text-xs py-1 px-3">
-                                        {loadingGaps.includes(gap.context) ? <Loader className="w-4 h-4" /> : 'Add as Topic'}
-                                      </Button>
+                                      {addedGaps.includes(gap.context) ? (
+                                        <span className="flex items-center gap-1.5 text-green-400 text-xs font-medium py-1 px-3">
+                                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                          </svg>
+                                          Added
+                                        </span>
+                                      ) : (
+                                        <Button
+                                          onClick={() => handleAddGap(gap)}
+                                          disabled={loadingGaps.includes(gap.context)}
+                                          className="text-xs py-1 px-3"
+                                        >
+                                          {loadingGaps.includes(gap.context) ? <Loader className="w-4 h-4" /> : 'Add as Topic'}
+                                        </Button>
+                                      )}
                                     </Card>
                                 ))}
                             </div>

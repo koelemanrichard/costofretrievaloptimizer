@@ -28,6 +28,7 @@ import {
   collectFromPass,
   collectFromPass8
 } from '../services/ai/contentGeneration/progressiveSchemaCollector';
+import { extractPlaceholdersFromDraft } from '../services/ai/imageGeneration/placeholderParser';
 
 interface UseContentGenerationProps {
   briefId: string;
@@ -39,6 +40,7 @@ interface UseContentGenerationProps {
   topic?: EnrichedTopic;
   onLog: (message: string, status: 'info' | 'success' | 'failure' | 'warning') => void;
   onComplete?: (draft: string, auditScore: number, schemaResult?: EnhancedSchemaResult) => void;
+  externalRefreshTrigger?: number; // From global state - triggers re-check when incremented
 }
 
 interface UseContentGenerationReturn {
@@ -47,12 +49,15 @@ interface UseContentGenerationReturn {
   isGenerating: boolean;
   isPaused: boolean;
   isComplete: boolean;
+  isFailed: boolean;
   progress: number;
   currentPassName: string;
   startGeneration: () => Promise<void>;
   pauseGeneration: () => Promise<void>;
   resumeGeneration: () => Promise<void>;
   cancelGeneration: () => Promise<void>;
+  retryGeneration: () => Promise<void>;
+  triggerJobRefresh: () => void; // Trigger re-check of job state (for re-run scenarios)
   error: string | null;
 }
 
@@ -65,7 +70,8 @@ export function useContentGeneration({
   pillars,
   topic,
   onLog,
-  onComplete
+  onComplete,
+  externalRefreshTrigger
 }: UseContentGenerationProps): UseContentGenerationReturn {
   const [job, setJob] = useState<ContentGenerationJob | null>(null);
   const [sections, setSections] = useState<ContentGenerationSection[]>([]);
@@ -136,6 +142,15 @@ export function useContentGeneration({
     };
   }, [job?.id, supabase]);
 
+  // Track external refresh requests (e.g., from DraftingModal after re-run configuration)
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Expose a function to trigger job refresh (for external callers like DraftingModal)
+  const triggerJobRefresh = useCallback(() => {
+    console.log('[useContentGeneration] External refresh triggered');
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
   // Check for existing job on mount (including completed jobs) and auto-resume if needed
   useEffect(() => {
     const checkExisting = async () => {
@@ -149,18 +164,31 @@ export function useContentGeneration({
           setSections(existingSections);
 
           // If job is completed and has a draft, sync it to the brief
-          // Also try to assemble from sections if draft_content is empty
+          // CRITICAL: Always compare with assembled sections and use the LONGER one
+          // This prevents truncated AI output from overwriting full content
           if (latestJob.status === 'completed' && onComplete) {
-            let draftToSync = latestJob.draft_content;
+            const jobDraftContent = latestJob.draft_content || '';
 
-            // If draft_content is empty but we have sections, assemble from them
-            if (!draftToSync && existingSections.length > 0) {
-              console.log('[useContentGeneration] Assembling draft from sections...');
-              draftToSync = await orchestratorRef.current.assembleDraft(latestJob.id);
+            // Always assemble sections to compare lengths
+            let assembledDraft = '';
+            if (existingSections.length > 0) {
+              assembledDraft = await orchestratorRef.current.assembleDraft(latestJob.id);
+              console.log('[useContentGeneration] Content comparison - job.draft_content:', jobDraftContent.length, 'chars, assembled sections:', assembledDraft.length, 'chars');
+            }
+
+            // Use the LONGER content to prevent data loss from AI truncation
+            let draftToSync = jobDraftContent;
+            let source = 'job.draft_content';
+
+            if (assembledDraft.length > jobDraftContent.length) {
+              // Assembled sections are longer - likely AI truncated the optimization
+              draftToSync = assembledDraft;
+              source = 'assembled_sections (raw but complete)';
+              console.warn('[useContentGeneration] WARNING: AI optimization may have truncated content. Using complete raw sections instead.');
             }
 
             if (draftToSync) {
-              console.log('[useContentGeneration] Syncing draft to brief:', draftToSync.length, 'chars');
+              console.log('[useContentGeneration] Syncing draft to brief from', source + ':', draftToSync.length, 'chars');
               // Pass schema data if available (for jobs completed with Pass 9)
               const schemaResult = latestJob.schema_data as EnhancedSchemaResult | undefined;
               onComplete(draftToSync, latestJob.final_audit_score || 0, schemaResult);
@@ -192,7 +220,7 @@ export function useContentGeneration({
       }
     };
     checkExisting();
-  }, [briefId]); // Removed onComplete to prevent re-running on every render
+  }, [briefId, refreshTrigger, externalRefreshTrigger]); // Added refreshTrigger and externalRefreshTrigger for re-check requests
 
   const runPasses = async (orchestrator: ContentGenerationOrchestrator, currentJob: ContentGenerationJob) => {
     let updatedJob = currentJob;
@@ -245,56 +273,97 @@ export function useContentGeneration({
         await collectProgressiveData(1, updatedJob.draft_content || '');
       }
 
-      // Pass 2: Headers
+      // Helper for section progress callbacks
+      const makeSectionProgressCallback = (passNum: number, passName: string) =>
+        (sectionKey: string, current: number, total: number) => {
+          onLog(`Pass ${passNum} (${passName}): Section ${current}/${total}`, 'info');
+        };
+
+      // Pass 2: Headers (section-by-section with holistic context)
       if (updatedJob.current_pass === 2) {
-        onLog('Pass 2: Optimizing headers...', 'info');
-        await executePass2(orchestrator, updatedJob, brief, safeBusinessInfo);
+        onLog('Pass 2: Optimizing headers section-by-section...', 'info');
+        await executePass2(
+          orchestrator, updatedJob, brief, safeBusinessInfo,
+          makeSectionProgressCallback(2, 'Headers'),
+          shouldAbort
+        );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
 
-      // Pass 3: Lists & Tables
+      // Pass 3: Lists & Tables (section-by-section with holistic context)
       if (updatedJob.current_pass === 3) {
-        onLog('Pass 3: Optimizing lists and tables...', 'info');
-        await executePass3(orchestrator, updatedJob, brief, safeBusinessInfo);
+        onLog('Pass 3: Optimizing lists section-by-section...', 'info');
+        await executePass3(
+          orchestrator, updatedJob, brief, safeBusinessInfo,
+          makeSectionProgressCallback(3, 'Lists'),
+          shouldAbort
+        );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 3
         await collectProgressiveData(3, updatedJob.draft_content || '');
       }
 
-      // Pass 4: Visuals
+      // Pass 4: Visuals (section-by-section with holistic context)
       if (updatedJob.current_pass === 4) {
-        onLog('Pass 4: Adding visual semantics...', 'info');
-        await executePass4(orchestrator, updatedJob, brief, safeBusinessInfo);
+        onLog('Pass 4: Adding visual semantics section-by-section...', 'info');
+        await executePass4(
+          orchestrator, updatedJob, brief, safeBusinessInfo,
+          makeSectionProgressCallback(4, 'Visuals'),
+          shouldAbort
+        );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 4 (images)
         await collectProgressiveData(4, updatedJob.draft_content || '');
+
+        // Extract and save image placeholders from Pass 4 output
+        try {
+          const placeholders = extractPlaceholdersFromDraft(updatedJob.draft_content || '');
+          if (placeholders.length > 0) {
+            await orchestrator.updateImagePlaceholders(updatedJob.id, placeholders);
+            onLog(`Found ${placeholders.length} image placeholder(s)`, 'info');
+          }
+        } catch (err) {
+          console.warn('[Pass 4] Failed to extract image placeholders:', err);
+        }
       }
 
-      // Pass 5: Micro Semantics
+      // Pass 5: Micro Semantics (section-by-section with holistic context)
       if (updatedJob.current_pass === 5) {
-        onLog('Pass 5: Applying micro semantics rules...', 'info');
-        await executePass5(orchestrator, updatedJob, brief, safeBusinessInfo);
+        onLog('Pass 5: Applying micro semantics section-by-section...', 'info');
+        await executePass5(
+          orchestrator, updatedJob, brief, safeBusinessInfo,
+          makeSectionProgressCallback(5, 'MicroSemantics'),
+          shouldAbort
+        );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 5 (keywords, entities)
         await collectProgressiveData(5, updatedJob.draft_content || '');
       }
 
-      // Pass 6: Discourse
+      // Pass 6: Discourse (section-by-section with holistic context)
       if (updatedJob.current_pass === 6) {
-        onLog('Pass 6: Integrating discourse flow...', 'info');
-        await executePass6(orchestrator, updatedJob, brief, safeBusinessInfo);
+        onLog('Pass 6: Integrating discourse section-by-section...', 'info');
+        await executePass6(
+          orchestrator, updatedJob, brief, safeBusinessInfo,
+          makeSectionProgressCallback(6, 'Discourse'),
+          shouldAbort
+        );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
       }
 
-      // Pass 7: Introduction
+      // Pass 7: Introduction (only intro section with holistic context)
       if (updatedJob.current_pass === 7) {
-        onLog('Pass 7: Synthesizing introduction...', 'info');
-        await executePass7(orchestrator, updatedJob, brief, safeBusinessInfo);
+        onLog('Pass 7: Synthesizing introduction with full article context...', 'info');
+        await executePass7(
+          orchestrator, updatedJob, brief, safeBusinessInfo,
+          makeSectionProgressCallback(7, 'Introduction'),
+          shouldAbort
+        );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 7 (abstract)
@@ -458,6 +527,23 @@ export function useContentGeneration({
     onLog('Generation cancelled', 'info');
   }, [job, onLog]);
 
+  const retryGeneration = useCallback(async () => {
+    if (!orchestratorRef.current || !job) return;
+    abortRef.current = false;
+    setError(null);
+
+    // Clear error and reset status to in_progress
+    await orchestratorRef.current.updateJob(job.id, {
+      status: 'in_progress',
+      last_error: null as unknown as string
+    });
+    const updatedJob = { ...job, status: 'in_progress' as const, last_error: undefined };
+    setJob(updatedJob);
+
+    onLog('Retrying generation...', 'info');
+    await runPasses(orchestratorRef.current, updatedJob);
+  }, [job, brief, businessInfo, onLog]);
+
   const progress = job ? orchestratorRef.current?.calculateProgress(job) || 0 : 0;
   const currentPassName = job ? PASS_NAMES[job.current_pass] || 'Unknown' : '';
 
@@ -467,12 +553,15 @@ export function useContentGeneration({
     isGenerating: job?.status === 'in_progress',
     isPaused: job?.status === 'paused',
     isComplete: job?.status === 'completed',
+    isFailed: job?.status === 'failed',
     progress,
     currentPassName,
     startGeneration,
     pauseGeneration,
     resumeGeneration,
     cancelGeneration,
+    retryGeneration,
+    triggerJobRefresh, // Allows external components to trigger a re-check of job state
     error
   };
 }

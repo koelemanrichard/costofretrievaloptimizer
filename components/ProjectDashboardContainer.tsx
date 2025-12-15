@@ -15,7 +15,7 @@ import { BatchProcessor } from '../services/batchProcessor';
 import { useMapData } from '../hooks/useMapData';
 import { useKnowledgeGraph } from '../hooks/useKnowledgeGraph';
 import { useTopicEnrichment } from '../hooks/useTopicEnrichment';
-import { sanitizeTopicFromDb, sanitizeBriefFromDb, safeString, normalizeRpcData, parseTopicalMap } from '../utils/parsers';
+import { sanitizeTopicFromDb, sanitizeBriefFromDb, safeString, normalizeRpcData, parseTopicalMap, repairBriefsInMap } from '../utils/parsers';
 import { generateMasterExport, generateFullZipExport } from '../utils/exportUtils';
 import { ExportSettingsModal, ExportSettings } from './ExportSettingsModal';
 import { generateEnhancedExport, EnhancedExportInput } from '../utils/enhancedExportUtils';
@@ -31,6 +31,9 @@ import DebugStatePanel from './ui/DebugStatePanel';
 import BriefReviewModal from './BriefReviewModal';
 import FlowAuditModal from './FlowAuditModal';
 import AuditDashboard from './AuditDashboard';
+import BulkGenerationSummary from './BulkGenerationSummary';
+import BulkBriefProgress from './BulkBriefProgress';
+import ImprovementConfirmationModal from './ImprovementConfirmationModal';
 import { runUnifiedAudit, UnifiedAuditContext, AuditProgress } from '../services/ai/unifiedAudit';
 import { applyFix, generateFix, generateBatchFixes, FixContext } from '../services/ai/auditFixes';
 
@@ -41,7 +44,19 @@ interface ProjectDashboardContainerProps {
 
 const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ onInitiateDeleteMap, onBackToProjects }) => {
     const { state, dispatch } = useAppState();
-    const { activeProjectId, activeMapId, topicalMaps, knowledgeGraph, businessInfo, modals, isLoading, viewMode } = state;
+    const {
+        activeProjectId,
+        activeMapId,
+        topicalMaps,
+        knowledgeGraph,
+        businessInfo,
+        modals,
+        isLoading,
+        viewMode,
+        briefGenerationCurrent,
+        briefGenerationTotal,
+        briefGenerationStatus
+    } = state;
 
     // Use a ref to track the latest state for long-running processes like batch generation
     const stateRef = useRef(state);
@@ -51,6 +66,14 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
     // Export settings modal state
     const [showExportSettings, setShowExportSettings] = useState(false);
+
+    // Bulk generation summary modal state
+    const [showBulkSummary, setShowBulkSummary] = useState(false);
+
+    // Improvement confirmation modal state
+    const [showImprovementConfirmation, setShowImprovementConfirmation] = useState(false);
+    const [pendingImprovementOptions, setPendingImprovementOptions] = useState<{ includeTypeReclassifications: boolean }>({ includeTypeReclassifications: true });
+    const [isApplyingImprovement, setIsApplyingImprovement] = useState(false);
 
     const activeProject = useMemo(() => state.projects.find(p => p.id === activeProjectId), [state.projects, activeProjectId]);
     const activeMap = useMemo(() => topicalMaps.find(m => m.id === activeMapId), [topicalMaps, activeMapId]);
@@ -83,11 +106,12 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     
     // REFACTOR 03 & Task 05: Use custom hook for Enrichment & Blueprints
     const { handleEnrichData, isEnriching, handleGenerateBlueprints, isGeneratingBlueprints } = useTopicEnrichment(
-        activeMapId, 
-        effectiveBusinessInfo, 
-        allTopics, 
+        activeMapId,
+        effectiveBusinessInfo,
+        allTopics,
         activeMap?.pillars as SEOPillars | undefined,
-        dispatch
+        dispatch,
+        activeMap?.eavs as SemanticTriple[] | undefined // Pass EAVs for semantic matching
     );
 
     const canGenerateBriefs = useMemo(() => {
@@ -486,7 +510,13 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     const onGenerateAllBriefs = useCallback(async () => {
         const processor = new BatchProcessor(dispatch, () => stateRef.current);
         await processor.generateAllBriefs(allTopics);
+        // Show bulk generation summary modal after completion
+        setShowBulkSummary(true);
     }, [dispatch, allTopics]);
+
+    const onCancelBriefGeneration = useCallback(() => {
+        dispatch({ type: 'CANCEL_BRIEF_GENERATION' });
+    }, [dispatch]);
 
     const onSavePillars = useCallback(async (newPillars: SEOPillars) => {
         if (!activeMapId) return;
@@ -536,12 +566,41 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         }
     }, [activeMapId, activeMap, dispatch, businessInfo, handleGenerateInitialMap]);
 
+    // First confirmation step for regenerate map
     const handleRegenerateMap = useCallback(async () => {
         if (!activeMapId || !activeMap?.pillars) return;
-        
-        if ((activeMap.topics || []).length > 0) {
-             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarConfirmation', visible: true } });
-             return;
+
+        const topicCount = (activeMap.topics || []).length;
+        const briefCount = Object.keys(activeMap.briefs || {}).length;
+
+        if (topicCount > 0) {
+            // Show first confirmation with clear warning about what will be lost
+            dispatch({
+                type: 'SHOW_CONFIRMATION',
+                payload: {
+                    title: '⚠️ Regenerate Topical Map?',
+                    message: (
+                        <div className="space-y-3">
+                            <p className="text-red-400 font-semibold">This is a destructive action that cannot be undone.</p>
+                            <div className="bg-red-900/30 border border-red-600 rounded p-3">
+                                <p className="text-sm text-gray-300">The following will be permanently deleted:</p>
+                                <ul className="mt-2 text-sm text-red-300 list-disc list-inside">
+                                    <li>{topicCount} topics</li>
+                                    <li>{briefCount} content briefs</li>
+                                    <li>All associated data and customizations</li>
+                                </ul>
+                            </div>
+                            <p className="text-sm text-gray-400">A new topical map will be generated based on your current SEO pillars and business information.</p>
+                        </div>
+                    ),
+                    onConfirm: () => {
+                        dispatch({ type: 'HIDE_CONFIRMATION' });
+                        // Show second confirmation modal
+                        dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarConfirmation', visible: true } });
+                    }
+                }
+            });
+            return;
         }
         // If empty, just generate
         await handleGenerateInitialMap();
@@ -749,7 +808,12 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
         try {
             const newTopicSuggestions = await aiService.expandCoreTopic(configToUse, activeMap.pillars, coreTopic, allTopics, safeKG, dispatch, mode, userContext);
-            
+
+            if (!newTopicSuggestions || newTopicSuggestions.length === 0) {
+                dispatch({ type: 'SET_NOTIFICATION', payload: `No new topics generated for "${coreTopic.title}". The AI may not have found relevant expansions.` });
+                return;
+            }
+
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
             const topicsToAdd = newTopicSuggestions.map(suggestion => ({
                 id: uuidv4(),
@@ -759,17 +823,17 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 title: suggestion.title,
                 slug: `${coreTopic.slug}/${cleanSlug(coreTopic.slug, suggestion.title)}`, // Use Clean Slug
                 description: suggestion.description,
-                type: 'outer' as 'core' | 'outer', 
+                type: 'outer' as 'core' | 'outer',
                 freshness: 'STANDARD'
             }));
 
             const { data, error } = await supabase.from('topics').insert(topicsToAdd).select();
+
             if (error) throw error;
 
-            (data || []).forEach(dbTopic => {
-                const safeTopic = sanitizeTopicFromDb(dbTopic);
-                dispatch({ type: 'ADD_TOPIC', payload: { mapId: activeMapId, topic: safeTopic }});
-            });
+            // Batch add all topics at once to prevent HMR-related state issues
+            const safeTopics = (data || []).map(dbTopic => sanitizeTopicFromDb(dbTopic));
+            dispatch({ type: 'ADD_TOPICS', payload: { mapId: activeMapId, topics: safeTopics }});
             dispatch({ type: 'SET_NOTIFICATION', payload: `Successfully expanded "${coreTopic.title}" with ${topicsToAdd.length} new topics.` });
         } catch(e) {
              dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to expand topic.' });
@@ -782,15 +846,20 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     const onValidateMap = useCallback(async () => {
         if (!activeMap || !activeMap.pillars) return;
         dispatch({ type: 'SET_LOADING', payload: { key: 'validation', value: true } });
+        dispatch({ type: 'SET_NOTIFICATION', payload: 'Validating map structure... This may take a moment.' });
         try {
             const result = await aiService.validateTopicalMap(allTopics, activeMap.pillars, effectiveBusinessInfo, dispatch, briefs);
             dispatch({ type: 'SET_VALIDATION_RESULT', payload: result });
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'validation', visible: true } });
             saveAnalysisState('validationResult', result);
-        } catch(e) { 
-            dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Validation failed' }); 
-        } finally { 
-            dispatch({ type: 'SET_LOADING', payload: { key: 'validation', value: false } }); 
+            const issueCount = result.issues?.length || 0;
+            dispatch({ type: 'SET_NOTIFICATION', payload: issueCount > 0
+                ? `Validation complete: ${issueCount} issue${issueCount > 1 ? 's' : ''} found.`
+                : 'Validation complete: No issues found!' });
+        } catch(e) {
+            dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Validation failed' });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: { key: 'validation', value: false } });
         }
     }, [activeMap, allTopics, effectiveBusinessInfo, dispatch, saveAnalysisState, briefs]);
 
@@ -957,12 +1026,14 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         dispatch({ type: 'SET_NOTIFICATION', payload: `Applied fixes for ${issues.length} issues` });
     }, [handleApplyUnifiedFix, dispatch]);
 
+    // Phase 1: Generate improvement suggestions and show confirmation modal
     const onImproveMap = useCallback(async (issues: ValidationIssue[], options?: { includeTypeReclassifications?: boolean }) => {
         if (!activeMapId || !activeMap?.pillars) return;
         const user = state.user;
         if (!user) return;
 
         const includeTypeReclassifications = options?.includeTypeReclassifications ?? true;
+        setPendingImprovementOptions({ includeTypeReclassifications });
 
         dispatch({ type: 'SET_LOADING', payload: { key: 'improveMap', value: true } });
 
@@ -970,6 +1041,29 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             const suggestion = await aiService.improveTopicalMap(allTopics, issues, effectiveBusinessInfo, dispatch);
             dispatch({ type: 'SET_IMPROVEMENT_LOG', payload: suggestion });
 
+            // Show confirmation modal instead of immediately applying
+            setShowImprovementConfirmation(true);
+            dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'validation', visible: false } });
+
+        } catch (e) {
+             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Map improvement analysis failed.' });
+        } finally {
+             dispatch({ type: 'SET_LOADING', payload: { key: 'improveMap', value: false } });
+        }
+    }, [activeMapId, activeMap, allTopics, effectiveBusinessInfo, dispatch, state.user]);
+
+    // Phase 2: Apply the confirmed improvements
+    const onApplyImprovement = useCallback(async () => {
+        if (!activeMapId || !state.improvementLog) return;
+        const user = state.user;
+        if (!user) return;
+
+        const suggestion = state.improvementLog;
+        const includeTypeReclassifications = pendingImprovementOptions.includeTypeReclassifications;
+
+        setIsApplyingImprovement(true);
+
+        try {
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
 
             // Build a lookup of core topics by title for parent assignment
@@ -1188,15 +1282,17 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 }
             }
 
+            // Close confirmation modal and show success log
+            setShowImprovementConfirmation(false);
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'improvementLog', visible: true } });
-            dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'validation', visible: false } });
+            dispatch({ type: 'SET_NOTIFICATION', payload: 'Map improvements applied successfully.' });
 
         } catch (e) {
              dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Map improvement failed.' });
         } finally {
-             dispatch({ type: 'SET_LOADING', payload: { key: 'improveMap', value: false } });
+             setIsApplyingImprovement(false);
         }
-    }, [activeMapId, activeMap, allTopics, effectiveBusinessInfo, dispatch, businessInfo, state.user]);
+    }, [activeMapId, allTopics, dispatch, businessInfo, state.user, state.improvementLog, pendingImprovementOptions]);
 
     const onExecuteMerge = useCallback(async (suggestion: MergeSuggestion) => {
         if (!activeMapId) return;
@@ -1464,20 +1560,56 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
     const handleUpdateEavs = useCallback(async (newEavs: SemanticTriple[]) => {
         if (!activeMapId) return;
-        
+
         dispatch({ type: 'SET_LOADING', payload: { key: 'map', value: true } });
         try {
-            const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
-            const { error } = await supabase.from('topical_maps').update({ eavs: newEavs as any }).eq('id', activeMapId);
-            if (error) throw error;
+            // Log the EAVs being saved for debugging
+            console.log('[handleUpdateEavs] Saving EAVs:', {
+                count: newEavs.length,
+                firstFew: newEavs.slice(0, 3).map(e => e.subject?.label || 'unknown'),
+                lastFew: newEavs.slice(-3).map(e => e.subject?.label || 'unknown'),
+                totalSize: JSON.stringify(newEavs).length
+            });
 
-            dispatch({ type: 'SET_EAVS', payload: { mapId: activeMapId, eavs: newEavs } });
+            const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+
+            // First, verify what we're about to save
+            const dataToSave = { eavs: newEavs as unknown as any };
+            console.log('[handleUpdateEavs] Data payload size:', JSON.stringify(dataToSave).length, 'bytes');
+
+            const { error, data } = await supabase
+                .from('topical_maps')
+                .update(dataToSave)
+                .eq('id', activeMapId)
+                .select('eavs');
+
+            if (error) {
+                console.error('[handleUpdateEavs] Supabase error:', error);
+                throw error;
+            }
+
+            // Verify what was actually saved
+            const savedEavs = data?.[0]?.eavs as unknown as SemanticTriple[] | undefined;
+            const savedCount = Array.isArray(savedEavs) ? savedEavs.length : 0;
+            console.log('[handleUpdateEavs] Verified saved count:', savedCount);
+
+            if (savedCount !== newEavs.length) {
+                console.warn('[handleUpdateEavs] MISMATCH! Sent:', newEavs.length, 'Saved:', savedCount);
+                // If there's a mismatch, show a warning but still update local state with what was actually saved
+                if (savedEavs) {
+                    dispatch({ type: 'SET_EAVS', payload: { mapId: activeMapId, eavs: savedEavs } });
+                    dispatch({ type: 'SET_NOTIFICATION', payload: `Warning: Only ${savedCount} of ${newEavs.length} EAVs were saved. Check console for details.` });
+                }
+            } else {
+                dispatch({ type: 'SET_EAVS', payload: { mapId: activeMapId, eavs: newEavs } });
+                dispatch({ type: 'SET_NOTIFICATION', payload: `${newEavs.length} Semantic Triples saved successfully.` });
+            }
+
             // Clear KG to force rebuild on next render/hook trigger
             dispatch({ type: 'SET_KNOWLEDGE_GRAPH', payload: null });
-            
-            dispatch({ type: 'SET_NOTIFICATION', payload: 'Semantic Triples updated successfully.' });
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eavManager', visible: false } });
         } catch (e) {
+            console.error('[handleUpdateEavs] Error:', e);
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to update EAVs.' });
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { key: 'map', value: false } });
@@ -1728,6 +1860,12 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
         dispatch({ type: 'SET_LOADING', payload: { key: 'export', value: true } });
         try {
+            // Get foundation pages, NAP data, navigation, and brand kit for comprehensive export
+            const currentFoundationPages = state.websiteStructure?.foundationPages || [];
+            const currentNapData = currentFoundationPages.find(p => p.nap_data)?.nap_data || undefined;
+            const currentNavigation = state.websiteStructure?.navigation || null;
+            const currentBrandKit = (activeMap.business_info as any)?.brandKit || undefined;
+
             const input: EnhancedExportInput = {
                 topics: allTopics,
                 briefs: briefs,
@@ -1737,7 +1875,12 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 metrics: state.validationResult,
                 businessInfo: effectiveBusinessInfo,
                 mapName: activeMap.name,
-                projectName: activeProject?.project_name
+                projectName: activeProject?.project_name,
+                // NEW: Additional data for comprehensive export
+                foundationPages: currentFoundationPages,
+                napData: currentNapData,
+                navigation: currentNavigation,
+                brandKit: currentBrandKit
             };
 
             const filename = `${activeProject?.project_name || 'project'}_${activeMap.name || 'map'}_${new Date().toISOString().split('T')[0]}`;
@@ -1846,7 +1989,36 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     }, [activeMapId, dispatch]);
 
     const handleSaveNAPData = useCallback(async (newNapData: NAPData) => {
-        if (!activeMapId || !state.user?.id) return;
+        if (!activeMapId || !state.user?.id) {
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot save NAP data: missing map or user session.' });
+            return;
+        }
+
+        // If no foundation pages exist yet, store NAP data in map's business_info temporarily
+        if (foundationPages.length === 0) {
+            try {
+                const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+                const currentBusinessInfo = activeMap?.business_info || {};
+                const updatedBusinessInfo = {
+                    ...currentBusinessInfo,
+                    napData: newNapData,
+                };
+
+                const { error } = await supabase
+                    .from('topical_maps')
+                    .update({ business_info: updatedBusinessInfo as any })
+                    .eq('id', activeMapId);
+
+                if (error) throw error;
+
+                // Update local state
+                dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: activeMapId, data: { business_info: updatedBusinessInfo } } });
+                dispatch({ type: 'SET_NOTIFICATION', payload: 'NAP data saved. Generate foundation pages to apply it.' });
+            } catch (error) {
+                dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save NAP data.' });
+            }
+            return;
+        }
 
         // Update NAP data on all foundation pages
         const updatedPages = foundationPages.map(page => ({
@@ -1867,7 +2039,7 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         } catch (error) {
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save NAP data.' });
         }
-    }, [activeMapId, state.user?.id, foundationPages, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch]);
+    }, [activeMapId, state.user?.id, foundationPages, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch, activeMap?.business_info]);
 
     const handleUpdateFoundationPage = useCallback(async (pageId: string, updates: Partial<FoundationPage>) => {
         try {
@@ -1918,6 +2090,42 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save navigation.' });
         }
     }, [activeMapId, state.user?.id, dispatch]);
+
+    // Business Info save handler
+    const handleSaveBusinessInfo = useCallback(async (updates: Partial<BusinessInfo>) => {
+        if (!activeMapId) {
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot save business info: no active map.' });
+            return;
+        }
+
+        try {
+            const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+
+            // Merge updates with existing business info
+            const updatedBusinessInfo = { ...effectiveBusinessInfo, ...updates };
+
+            const { error } = await supabase
+                .from('topical_maps')
+                .update({ business_info: updatedBusinessInfo as any })
+                .eq('id', activeMapId);
+
+            if (error) throw error;
+
+            // Update local state
+            dispatch({
+                type: 'UPDATE_MAP_DATA',
+                payload: { mapId: activeMapId, data: { business_info: updatedBusinessInfo } }
+            });
+            dispatch({ type: 'SET_NOTIFICATION', payload: 'Business info saved successfully.' });
+        } catch (error) {
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save business info.' });
+        }
+    }, [activeMapId, effectiveBusinessInfo, dispatch]);
+
+    // Brand Kit save handler (saves via business info)
+    const handleSaveBrandKit = useCallback(async (brandKit: any) => {
+        await handleSaveBusinessInfo({ brandKit });
+    }, [handleSaveBusinessInfo]);
 
     const handleGenerateMissingFoundationPages = useCallback(async () => {
         console.log('=== handleGenerateMissingFoundationPages START ===');
@@ -2083,6 +2291,22 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         }
     }, [activeMapId, state.user?.id, state.websiteStructure?.foundationPages, allTopics, effectiveBusinessInfo, dispatch]);
 
+    // Repair malformed briefs in the current map
+    const handleRepairBriefs = useCallback(async () => {
+        if (!activeMapId) {
+            return { repaired: 0, skipped: 0, errors: ['No active map'] };
+        }
+
+        const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+        const result = await repairBriefsInMap(supabase, activeMapId);
+
+        if (result.repaired > 0) {
+            dispatch({ type: 'SET_NOTIFICATION', payload: `Repaired ${result.repaired} brief(s). Reload the page to see changes.` });
+        }
+
+        return result;
+    }, [activeMapId, businessInfo.supabaseUrl, businessInfo.supabaseAnonKey, dispatch]);
+
     const stateSnapshot = {
         'Active Map Found': !!activeMap,
         'Map Has Pillars': !!activeMap?.pillars,
@@ -2162,6 +2386,7 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 onCalculateTopicalAuthority={onCalculateTopicalAuthority}
                 onGeneratePublicationPlan={onGeneratePublicationPlan}
                 onRunUnifiedAudit={onRunUnifiedAudit}
+                onRepairBriefs={handleRepairBriefs}
                 onExpandCoreTopic={handleOpenExpansionModal}
                 expandingCoreTopicId={Object.entries(isLoading).find(([k, v]) => k.startsWith('expand_') && v === true)?.[0].split('_')[1] || null}
                 onSavePillars={onSavePillars}
@@ -2218,6 +2443,10 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 // Navigation
                 navigation={navigation}
                 onSaveNavigation={handleSaveNavigation}
+                // Brand Kit
+                onSaveBrandKit={handleSaveBrandKit}
+                // Business Info / Map Settings
+                onSaveBusinessInfo={handleSaveBusinessInfo}
             />
             <BriefReviewModal
                 isOpen={!!modals.briefReview}
@@ -2251,6 +2480,45 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 onExport={handleEnhancedExport}
                 hasSchemas={false}
                 hasAuditResults={!!state.validationResult}
+            />
+
+            {/* Bulk Generation Progress Modal */}
+            <BulkBriefProgress
+                isOpen={briefGenerationTotal > 0}
+                current={briefGenerationCurrent}
+                total={briefGenerationTotal}
+                currentTopicTitle={briefGenerationStatus}
+                onCancel={onCancelBriefGeneration}
+            />
+
+            {/* Bulk Generation Summary Modal */}
+            <BulkGenerationSummary
+                isOpen={showBulkSummary}
+                onClose={() => setShowBulkSummary(false)}
+                topics={allTopics}
+                briefs={briefs}
+                onRegenerateFailed={(topicIds) => {
+                    // Filter to topics that need regeneration and trigger batch
+                    const topicsToRegenerate = allTopics.filter(t => topicIds.includes(t.id));
+                    if (topicsToRegenerate.length > 0) {
+                        const processor = new BatchProcessor(dispatch, () => stateRef.current);
+                        processor.generateAllBriefs(topicsToRegenerate).then(() => {
+                            setShowBulkSummary(true);
+                        });
+                    }
+                }}
+            />
+
+            {/* Improvement Confirmation Modal */}
+            <ImprovementConfirmationModal
+                isOpen={showImprovementConfirmation}
+                onClose={() => {
+                    setShowImprovementConfirmation(false);
+                    dispatch({ type: 'SET_IMPROVEMENT_LOG', payload: null });
+                }}
+                suggestion={state.improvementLog}
+                onConfirm={onApplyImprovement}
+                isApplying={isApplyingImprovement}
             />
         </>
     );

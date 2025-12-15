@@ -16,6 +16,8 @@ import { SiteInventoryItem, ActionType, EnrichedTopic } from '../../types';
 import { useInventoryOperations } from '../../hooks/useInventoryOperations';
 import { useTopicOperations } from '../../hooks/useTopicOperations';
 import { useMapData } from '../../hooks/useMapData';
+import { ReportExportButton, ReportModal } from '../reports';
+import { useMigrationReport } from '../../hooks/useReportGeneration';
 
 const MigrationDashboardContainer: React.FC = () => {
     const { state, dispatch } = useAppState();
@@ -59,7 +61,15 @@ const MigrationDashboardContainer: React.FC = () => {
 
     const targetTopics = useMemo(() => activeMap?.topics || [], [activeMap?.topics]);
     const targetBriefs = useMemo(() => activeMap?.briefs || {}, [activeMap?.briefs]);
-    
+
+    // Report generation hook
+    const reportHook = useMigrationReport(
+        inventory,
+        targetTopics,
+        state.projects.find(p => p.id === activeProjectId)?.project_name,
+        businessInfo?.domain
+    );
+
     // Topic Operations Hook for Editing/Deleting in Migration View
     const { handleUpdateTopic, handleDeleteTopic } = useTopicOperations(
         activeMapId, 
@@ -144,6 +154,15 @@ const MigrationDashboardContainer: React.FC = () => {
                   <Button onClick={() => setShowWizard(true)} className="text-xs py-2">
                       Import Data
                   </Button>
+                  {reportHook.canGenerate && (
+                      <ReportExportButton
+                          reportType="migration"
+                          onClick={reportHook.open}
+                          variant="secondary"
+                          size="sm"
+                          className="text-xs py-2 bg-indigo-700 hover:bg-indigo-600"
+                      />
+                  )}
               </div>
             </header>
 
@@ -243,6 +262,17 @@ const MigrationDashboardContainer: React.FC = () => {
                 linkedBrief={linkedBrief}
                 onMarkOptimized={markOptimized}
             />
+
+            {/* Report Modal */}
+            {reportHook.data && (
+                <ReportModal
+                    isOpen={reportHook.isOpen}
+                    onClose={reportHook.close}
+                    reportType="migration"
+                    data={reportHook.data}
+                    projectName={state.projects.find(p => p.id === activeProjectId)?.project_name}
+                />
+            )}
         </div>
     );
 };

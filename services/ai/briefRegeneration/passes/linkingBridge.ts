@@ -37,10 +37,12 @@ You are an expert Holistic SEO Strategist finalizing the LINKING and CONTEXTUAL 
 - Title: ${currentBrief.title}
 - Section Headings: ${sections.map(s => s.heading).join(' → ')}
 
-## Current Linking Data
-- Contextual Bridge: ${JSON.stringify(currentBrief.contextualBridge || {}, null, 2)}
-- Discourse Anchors: ${JSON.stringify(currentBrief.discourse_anchors || [])}
-- Visual Semantics Count: ${currentBrief.visual_semantics?.length || 0}
+## Current Linking Data (may be empty - YOU MUST GENERATE NEW CONTENT)
+- Contextual Bridge Links: ${Array.isArray(currentBrief.contextualBridge) ? currentBrief.contextualBridge.length : (currentBrief.contextualBridge?.links?.length || 0)} existing
+- Discourse Anchors: ${currentBrief.discourse_anchors?.length || 0} existing
+- Visual Semantics: ${currentBrief.visual_semantics?.length || 0} existing
+
+**IMPORTANT:** If any of these counts are 0, you MUST generate new content for those fields. Do not return empty arrays.
 
 ## User's Feedback & Instructions
 "${userInstructions}"
@@ -108,10 +110,21 @@ export async function regenerateLinkingAndBridge(
     allTopics
   );
 
+  // IMPORTANT: Always provide structure for fallback, but don't rely on current brief
+  // if it's empty - the AI should generate new content for these fields
+  const contextualBridgeLinks = Array.isArray(currentBrief.contextualBridge)
+    ? currentBrief.contextualBridge
+    : currentBrief.contextualBridge?.links || [];
   const fallback = {
-    contextualBridge: currentBrief.contextualBridge || { type: 'section', content: '', links: [] },
-    discourse_anchors: currentBrief.discourse_anchors || [],
-    visual_semantics: currentBrief.visual_semantics || []
+    contextualBridge: (contextualBridgeLinks.length > 0)
+      ? currentBrief.contextualBridge
+      : { type: 'section', content: '', links: [] },
+    discourse_anchors: (currentBrief.discourse_anchors?.length > 0)
+      ? currentBrief.discourse_anchors
+      : [],
+    visual_semantics: (currentBrief.visual_semantics?.length > 0)
+      ? currentBrief.visual_semantics
+      : []
   };
 
   try {

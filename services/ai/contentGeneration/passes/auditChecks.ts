@@ -119,6 +119,19 @@ export function runAlgorithmicAudit(
   // 20. Supplementary Link Placement
   results.push(checkSupplementaryLinkPlacement(draft));
 
+  // Phase D: Content Format Balance (21-24) - Baker Principle
+  // 21. Prose/Structured Balance
+  results.push(checkProseStructuredBalance(draft));
+
+  // 22. List Definition Sentences
+  results.push(checkListDefinitionSentences(draft));
+
+  // 23. Table Appropriateness
+  results.push(checkTableAppropriateness(draft));
+
+  // 24. Image Placement
+  results.push(checkImagePlacement(draft));
+
   return results;
 }
 
@@ -909,5 +922,230 @@ function checkSupplementaryLinkPlacement(draft: string): AuditRuleResult {
     ruleName: 'Supplementary Link Placement',
     isPassing: true,
     details: 'Links are properly positioned after main content.'
+  };
+}
+
+// =====================================================
+// Phase D: Content Format Balance (Baker Principle)
+// Checks 21-24: Prose/Structured Balance
+// =====================================================
+
+/**
+ * Analyze content format distribution (prose vs structured content).
+ */
+function analyzeContentFormats(draft: string): {
+  proseChars: number;
+  structuredChars: number;
+  prosePercentage: number;
+  listCount: number;
+  tableCount: number;
+} {
+  if (!draft) {
+    return { proseChars: 0, structuredChars: 0, prosePercentage: 1, listCount: 0, tableCount: 0 };
+  }
+
+  let structuredContent = '';
+  let workingDraft = draft;
+
+  // Count and extract lists
+  const unorderedLists = draft.match(/(?:^|\n)[-*]\s+.+(?:\n[-*]\s+.+)*/gm) || [];
+  const orderedLists = draft.match(/(?:^|\n)\d+\.\s+.+(?:\n\d+\.\s+.+)*/gm) || [];
+  const listCount = unorderedLists.length + orderedLists.length;
+
+  // Count and extract tables
+  const tables = draft.match(/\|.+\|[\s\S]*?\|[-:|\s]+\|[\s\S]*?(?=\n[^|]|\n\n|$)/gm) || [];
+  const tableCount = tables.length;
+
+  // Calculate structured content size
+  unorderedLists.forEach(l => structuredContent += l);
+  orderedLists.forEach(l => structuredContent += l);
+  tables.forEach(t => structuredContent += t);
+
+  // Remove structured content from draft to get prose
+  [...unorderedLists, ...orderedLists, ...tables].forEach(s => {
+    workingDraft = workingDraft.replace(s, '');
+  });
+
+  const structuredChars = structuredContent.length;
+  const proseChars = workingDraft.trim().length;
+  const totalChars = proseChars + structuredChars;
+  const prosePercentage = totalChars > 0 ? proseChars / totalChars : 1;
+
+  return { proseChars, structuredChars, prosePercentage, listCount, tableCount };
+}
+
+/**
+ * Check 21: Prose/Structured Content Balance (Baker Principle)
+ * Target: 60-80% prose content
+ */
+export function checkProseStructuredBalance(draft: string): AuditRuleResult {
+  const stats = analyzeContentFormats(draft);
+  const percentage = stats.prosePercentage * 100;
+
+  // Target range: 60-80% prose
+  const isPassing = percentage >= 60 && percentage <= 80;
+
+  if (percentage < 60) {
+    return {
+      ruleName: 'Prose/Structured Balance',
+      isPassing: false,
+      details: `${percentage.toFixed(0)}% prose content (too structured). Target: 60-80%`,
+      remediation: 'Add more explanatory paragraphs. The content is too list/table heavy.'
+    };
+  }
+
+  if (percentage > 80) {
+    return {
+      ruleName: 'Prose/Structured Balance',
+      isPassing: false,
+      details: `${percentage.toFixed(0)}% prose content (needs more structure). Target: 60-80%`,
+      remediation: 'Add lists or tables where content enumerates multiple items.'
+    };
+  }
+
+  return {
+    ruleName: 'Prose/Structured Balance',
+    isPassing: true,
+    details: `${percentage.toFixed(0)}% prose content (optimal range: 60-80%)`
+  };
+}
+
+/**
+ * Check 22: List Definition Sentences
+ * Every list must be preceded by a definition sentence ending with ":"
+ */
+export function checkListDefinitionSentences(draft: string): AuditRuleResult {
+  // Find all lists
+  const listPattern = /(?:^|\n)([-*]\s+.+(?:\n[-*]\s+.+)*)/gm;
+  const orderedPattern = /(?:^|\n)(\d+\.\s+.+(?:\n\d+\.\s+.+)*)/gm;
+
+  let violations = 0;
+  const violationExamples: string[] = [];
+
+  // Check unordered lists
+  let match;
+  while ((match = listPattern.exec(draft)) !== null) {
+    const listStart = match.index;
+    // Get 200 chars before the list
+    const textBefore = draft.substring(Math.max(0, listStart - 200), listStart);
+
+    // Check if last sentence before list ends with ":"
+    const lastSentence = textBefore.split(/[.!?]/).pop() || '';
+    const hasDefinitionSentence = /:[\s\n]*$/.test(lastSentence) ||
+                                  /:[\s]*\n?$/.test(textBefore.trim());
+
+    if (!hasDefinitionSentence) {
+      violations++;
+      const firstListItem = match[1].split('\n')[0].substring(0, 30);
+      if (violationExamples.length < 2) {
+        violationExamples.push(`"${firstListItem}..."`);
+      }
+    }
+  }
+
+  // Check ordered lists
+  while ((match = orderedPattern.exec(draft)) !== null) {
+    const listStart = match.index;
+    const textBefore = draft.substring(Math.max(0, listStart - 200), listStart);
+
+    const lastSentence = textBefore.split(/[.!?]/).pop() || '';
+    const hasDefinitionSentence = /:[\s\n]*$/.test(lastSentence) ||
+                                  /:[\s]*\n?$/.test(textBefore.trim());
+
+    if (!hasDefinitionSentence) {
+      violations++;
+      const firstListItem = match[1].split('\n')[0].substring(0, 30);
+      if (violationExamples.length < 2) {
+        violationExamples.push(`"${firstListItem}..."`);
+      }
+    }
+  }
+
+  if (violations > 0) {
+    return {
+      ruleName: 'List Definition Sentences',
+      isPassing: false,
+      details: `${violations} list(s) missing definition sentence before them`,
+      affectedTextSnippet: violationExamples.join(', '),
+      remediation: 'Add a sentence ending with ":" before each list. Example: "The main benefits include:"'
+    };
+  }
+
+  return {
+    ruleName: 'List Definition Sentences',
+    isPassing: true,
+    details: 'All lists preceded by proper definition sentences'
+  };
+}
+
+/**
+ * Check 23: Table Appropriateness
+ * Tables should have 2+ entities and 2+ attributes (not just 2 columns)
+ */
+export function checkTableAppropriateness(draft: string): AuditRuleResult {
+  // Find markdown tables
+  const tablePattern = /\|(.+)\|[\s\S]*?\|[-:|\s]+\|([\s\S]*?)(?=\n[^|]|\n\n|$)/gm;
+
+  const violations: string[] = [];
+
+  let match;
+  while ((match = tablePattern.exec(draft)) !== null) {
+    const headerRow = match[1];
+    const headerCells = headerRow.split('|').filter(c => c.trim());
+
+    // A proper table should have at least 3 columns (entity + 2 attributes)
+    if (headerCells.length <= 2) {
+      const firstCell = headerCells[0]?.trim().substring(0, 20) || 'Unknown';
+      violations.push(`Table "${firstCell}..." has only ${headerCells.length} columns`);
+    }
+  }
+
+  if (violations.length > 0) {
+    return {
+      ruleName: 'Table Appropriateness',
+      isPassing: false,
+      details: `${violations.length} table(s) have only 2 columns (should use list instead)`,
+      affectedTextSnippet: violations[0],
+      remediation: 'Two-column tables should be converted to lists. Tables are for comparing 2+ entities with 2+ attributes.'
+    };
+  }
+
+  return {
+    ruleName: 'Table Appropriateness',
+    isPassing: true,
+    details: 'All tables have appropriate structure (3+ columns)'
+  };
+}
+
+/**
+ * Check 24: Image Placement
+ * Images should NOT appear between a heading and the first paragraph
+ */
+export function checkImagePlacement(draft: string): AuditRuleResult {
+  // Pattern: heading immediately followed by image (with possible whitespace)
+  const badPlacementPattern = /^(#{2,6}\s+[^\n]+)\n\n?\s*(\[IMAGE:|!\[)/gm;
+
+  const violations: string[] = [];
+
+  let match;
+  while ((match = badPlacementPattern.exec(draft)) !== null) {
+    const heading = match[1].replace(/^#+\s*/, '').substring(0, 30);
+    violations.push(`Image after "${heading}..."`);
+  }
+
+  if (violations.length > 0) {
+    return {
+      ruleName: 'Image Placement',
+      isPassing: false,
+      details: `${violations.length} image(s) placed between heading and first paragraph`,
+      affectedTextSnippet: violations[0],
+      remediation: 'Move images AFTER the first paragraph. Pattern: Heading → Answer Paragraph → Image'
+    };
+  }
+
+  return {
+    ruleName: 'Image Placement',
+    isPassing: true,
+    details: 'All images placed correctly after answer paragraphs'
   };
 }

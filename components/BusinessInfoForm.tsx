@@ -2,7 +2,7 @@
 // components/BusinessInfoForm.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppState } from '../state/appState';
-import { AppStep, BusinessInfo, AuthorProfile, StylometryType } from '../types';
+import { AppStep, BusinessInfo, AuthorProfile, StylometryType, WebsiteType, WEBSITE_TYPE_CONFIG } from '../types';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -12,6 +12,9 @@ import { Select } from './ui/Select';
 import { InfoTooltip } from './ui/InfoTooltip';
 import { Loader } from './ui/Loader';
 import * as modelDiscovery from '../services/modelDiscoveryService';
+import { useSmartWizard } from '../hooks/useSmartWizard';
+import { detectInputType } from '../services/ai/businessResearch';
+import BrandKitEditor from './BrandKitEditor';
 
 const AIConfiguration = ({ localBusinessInfo, setLocalBusinessInfo, globalBusinessInfo }: { localBusinessInfo: Partial<BusinessInfo>, setLocalBusinessInfo: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>>, globalBusinessInfo: BusinessInfo }) => {
     const [models, setModels] = useState<string[]>([]);
@@ -195,6 +198,166 @@ const AuthorConfiguration = ({ localBusinessInfo, setLocalBusinessInfo }: { loca
     );
 };
 
+// Smart Wizard Panel - AI-powered auto-fill
+interface SmartWizardPanelProps {
+    localBusinessInfo: Partial<BusinessInfo>;
+    setLocalBusinessInfo: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>>;
+    isFieldSuggested: (fieldName: string) => boolean;
+    markFieldEdited: (fieldName: string) => void;
+}
+
+const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
+    localBusinessInfo,
+    setLocalBusinessInfo,
+    isFieldSuggested,
+    markFieldEdited,
+}) => {
+    const smartWizard = useSmartWizard();
+    const [showApplyButton, setShowApplyButton] = useState(false);
+
+    const handleResearch = async () => {
+        const result = await smartWizard.research();
+        if (result && result.suggestions && Object.keys(result.suggestions).length > 0) {
+            setShowApplyButton(true);
+        }
+    };
+
+    const handleApply = () => {
+        smartWizard.applySuggestions(localBusinessInfo, setLocalBusinessInfo);
+        setShowApplyButton(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleResearch();
+        }
+    };
+
+    const inputType = smartWizard.input ? detectInputType(smartWizard.input) : null;
+
+    return (
+        <div className="p-4 border border-emerald-700/50 rounded-lg bg-emerald-900/20 mb-6">
+            <h3 className="text-lg font-semibold text-emerald-400 flex items-center mb-2">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Smart Auto-Fill
+                <InfoTooltip text="Enter a business name, website URL, or description to automatically research and fill in the form fields. You can always edit the suggestions." />
+            </h3>
+            <p className="text-sm text-gray-400 mb-3">
+                Save time by letting AI research and pre-fill the form. Enter a URL, business name, or description.
+            </p>
+
+            <div className="flex gap-2">
+                <div className="flex-1 relative">
+                    <Input
+                        value={smartWizard.input}
+                        onChange={(e) => smartWizard.setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="e.g., https://example.com or 'Acme Corp - B2B software company'"
+                        className="pr-20"
+                        disabled={smartWizard.isResearching}
+                    />
+                    {inputType && smartWizard.input && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
+                            {inputType === 'url' ? 'URL' : inputType === 'name' ? 'Name' : inputType === 'mixed' ? 'URL + Info' : 'Description'}
+                        </span>
+                    )}
+                </div>
+                <Button
+                    type="button"
+                    onClick={handleResearch}
+                    disabled={!smartWizard.input.trim() || smartWizard.isResearching}
+                    className="whitespace-nowrap"
+                >
+                    {smartWizard.isResearching ? (
+                        <>
+                            <Loader className="w-4 h-4 mr-2" />
+                            Researching...
+                        </>
+                    ) : (
+                        <>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Research
+                        </>
+                    )}
+                </Button>
+            </div>
+
+            {/* Error message */}
+            {smartWizard.error && (
+                <div className="mt-3 p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
+                    <p className="text-sm text-red-400">{smartWizard.error}</p>
+                </div>
+            )}
+
+            {/* Success result with apply button */}
+            {smartWizard.result && !smartWizard.error && (
+                <div className="mt-3 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                    smartWizard.result.confidence === 'high' ? 'bg-green-700 text-green-200' :
+                                    smartWizard.result.confidence === 'medium' ? 'bg-yellow-700 text-yellow-200' :
+                                    'bg-orange-700 text-orange-200'
+                                }`}>
+                                    {smartWizard.result.confidence} confidence
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    Source: {smartWizard.result.source}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-300">
+                                Found {Object.values(smartWizard.result.suggestions).filter(v => v && String(v).trim()).length} field suggestions
+                            </p>
+                            {smartWizard.result.warnings.length > 0 && (
+                                <p className="text-xs text-yellow-400 mt-1">
+                                    {smartWizard.result.warnings[0]}
+                                </p>
+                            )}
+                        </div>
+                        {showApplyButton && (
+                            <Button
+                                type="button"
+                                onClick={handleApply}
+                                variant="primary"
+                                size="sm"
+                            >
+                                Apply Suggestions
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* Preview of suggestions */}
+                    {showApplyButton && smartWizard.result.suggestions && (
+                        <div className="mt-3 pt-3 border-t border-gray-700">
+                            <p className="text-xs text-gray-500 mb-2">Preview:</p>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                {smartWizard.result.suggestions.seedKeyword && (
+                                    <div><span className="text-gray-500">Seed Keyword:</span> <span className="text-gray-300">{smartWizard.result.suggestions.seedKeyword}</span></div>
+                                )}
+                                {smartWizard.result.suggestions.industry && (
+                                    <div><span className="text-gray-500">Industry:</span> <span className="text-gray-300">{smartWizard.result.suggestions.industry}</span></div>
+                                )}
+                                {smartWizard.result.suggestions.audience && (
+                                    <div><span className="text-gray-500">Audience:</span> <span className="text-gray-300">{smartWizard.result.suggestions.audience}</span></div>
+                                )}
+                                {smartWizard.result.suggestions.targetMarket && (
+                                    <div><span className="text-gray-500">Market:</span> <span className="text-gray-300">{smartWizard.result.suggestions.targetMarket}</span></div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // FIX: Added a strongly-typed props interface to ensure type safety and resolve compiler errors in parent components.
 interface BusinessInfoFormProps {
   onSave: (formData: Partial<BusinessInfo>) => void;
@@ -205,6 +368,21 @@ interface BusinessInfoFormProps {
 const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isLoading }) => {
     const { state } = useAppState();
     const activeMap = state.topicalMaps.find(m => m.id === state.activeMapId);
+
+    // Track which fields were auto-filled by Smart Wizard
+    const [suggestedFields, setSuggestedFields] = useState<Set<string>>(new Set());
+
+    const isFieldSuggested = useCallback((fieldName: string): boolean => {
+        return suggestedFields.has(fieldName);
+    }, [suggestedFields]);
+
+    const markFieldEdited = useCallback((fieldName: string) => {
+        setSuggestedFields(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(fieldName);
+            return newSet;
+        });
+    }, []);
 
     const [localBusinessInfo, setLocalBusinessInfo] = useState<Partial<BusinessInfo>>(() => {
         // Initialize with map data if it exists, otherwise fall back to global state
@@ -258,6 +436,15 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                         <h1 className="text-3xl font-bold text-white">Define Business Context</h1>
                         <p className="text-gray-400 mt-2">Provide core details about the business. This context is crucial for the AI to generate a relevant topical map.</p>
                     </header>
+
+                    {/* Smart Wizard Panel */}
+                    <SmartWizardPanel
+                        localBusinessInfo={localBusinessInfo}
+                        setLocalBusinessInfo={setLocalBusinessInfo}
+                        isFieldSuggested={isFieldSuggested}
+                        markFieldEdited={markFieldEdited}
+                    />
+
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -268,6 +455,60 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                                 <Label htmlFor="industry">Industry</Label>
                                 <Input id="industry" name="industry" value={localBusinessInfo.industry || ''} onChange={handleChange} required />
                             </div>
+                        </div>
+
+                        {/* Website Type Selector */}
+                        <div className="p-4 border border-gray-700 rounded-lg bg-gray-900/30">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-lg font-semibold text-cyan-400 flex items-center">
+                                    Website Type
+                                    <InfoTooltip text="Select your website type to get optimized AI strategies for content structure, EAV priorities, and linking patterns. This affects how topical maps and briefs are generated." />
+                                </h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {(Object.keys(WEBSITE_TYPE_CONFIG) as WebsiteType[]).map((type) => {
+                                    const config = WEBSITE_TYPE_CONFIG[type];
+                                    const isSelected = localBusinessInfo.websiteType === type;
+                                    return (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => setLocalBusinessInfo(prev => ({ ...prev, websiteType: type }))}
+                                            className={`p-3 rounded-lg border text-left transition-all ${
+                                                isSelected
+                                                    ? 'border-cyan-500 bg-cyan-900/30 ring-1 ring-cyan-500'
+                                                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600 hover:bg-gray-800'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className={`font-medium ${isSelected ? 'text-cyan-300' : 'text-gray-200'}`}>
+                                                    {config.label}
+                                                </span>
+                                                {isSelected && (
+                                                    <svg className="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-400 line-clamp-2">{config.description}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {localBusinessInfo.websiteType && (
+                                <div className="mt-3 pt-3 border-t border-gray-700">
+                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                        <div>
+                                            <span className="text-gray-500">Core Focus:</span>
+                                            <p className="text-gray-300">{WEBSITE_TYPE_CONFIG[localBusinessInfo.websiteType].coreSectionFocus}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">Authority Focus:</span>
+                                            <p className="text-gray-300">{WEBSITE_TYPE_CONFIG[localBusinessInfo.websiteType].authorSectionFocus}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <Label htmlFor="valueProp">Unique Value Proposition</Label>
@@ -290,6 +531,12 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                         
                         {/* New Author Configuration Section */}
                         <AuthorConfiguration localBusinessInfo={localBusinessInfo} setLocalBusinessInfo={setLocalBusinessInfo} />
+
+                        {/* Brand Kit Section */}
+                        <BrandKitEditor
+                          brandKit={localBusinessInfo.brandKit}
+                          onChange={(brandKit) => setLocalBusinessInfo(prev => ({ ...prev, brandKit }))}
+                        />
 
                         <AIConfiguration localBusinessInfo={localBusinessInfo} setLocalBusinessInfo={setLocalBusinessInfo} globalBusinessInfo={state.businessInfo} />
                     </div>

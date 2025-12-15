@@ -11,6 +11,19 @@ interface TripleEditRowProps {
     onDelete: () => void;
 }
 
+// Category color coding
+const CATEGORY_COLORS: Record<string, string> = {
+    ROOT: 'text-blue-400',
+    UNIQUE: 'text-purple-400',
+    RARE: 'text-orange-400',
+    COMMON: 'text-gray-400',
+    // Legacy mappings
+    CORE_DEFINITION: 'text-blue-400',
+    SEARCH_DEMAND: 'text-orange-400',
+    COMPETITIVE_EXPANSION: 'text-purple-400',
+    COMPOSITE: 'text-gray-400'
+};
+
 export const TripleEditRow: React.FC<TripleEditRowProps> = ({ triple, onChange, onDelete }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -37,7 +50,7 @@ export const TripleEditRow: React.FC<TripleEditRowProps> = ({ triple, onChange, 
     const handleMetadataChange = (section: 'validation' | 'presentation', field: string, value: any) => {
         const currentMetadata = triple.metadata || {};
         const currentSection = currentMetadata[section] || {};
-        
+
         onChange({
             ...triple,
             metadata: {
@@ -49,6 +62,26 @@ export const TripleEditRow: React.FC<TripleEditRowProps> = ({ triple, onChange, 
             }
         });
     };
+
+    const handleLexicalChange = (field: 'synonyms' | 'antonyms' | 'hypernyms', value: string) => {
+        // Parse comma-separated values into array, trim whitespace
+        const values = value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+        onChange({
+            ...triple,
+            lexical: {
+                ...triple.lexical,
+                [field]: values
+            }
+        });
+    };
+
+    // Get display value for lexical arrays
+    const getLexicalDisplay = (field: 'synonyms' | 'antonyms' | 'hypernyms'): string => {
+        return triple.lexical?.[field]?.join(', ') || '';
+    };
+
+    // Get category color class
+    const categoryColor = CATEGORY_COLORS[triple.predicate?.category || 'COMMON'] || 'text-gray-400';
 
     return (
         <div className="bg-gray-800 border border-gray-700 rounded-lg mb-2 overflow-hidden">
@@ -87,16 +120,15 @@ export const TripleEditRow: React.FC<TripleEditRowProps> = ({ triple, onChange, 
 
                      {/* Category Selector */}
                      <div className="md:col-span-3">
-                         <Select 
-                            value={triple.predicate.category || 'COMMON'} 
+                         <Select
+                            value={triple.predicate.category || 'COMMON'}
                             onChange={handleCategoryChange}
-                            className="!text-xs !py-1.5"
+                            className={`!text-xs !py-1.5 ${categoryColor}`}
                         >
-                            <option value="CORE_DEFINITION">Core Definition (Root)</option>
-                            <option value="SEARCH_DEMAND">Search Demand (Popular)</option>
-                            <option value="COMPETITIVE_EXPANSION">Competitive (Unique)</option>
-                            <option value="COMPOSITE">Composite (Group)</option>
-                            <option value="COMMON">Common (Generic)</option>
+                            <option value="ROOT">ROOT (Identity)</option>
+                            <option value="UNIQUE">UNIQUE (Differentiator)</option>
+                            <option value="RARE">RARE (Expert Detail)</option>
+                            <option value="COMMON">COMMON (Generic)</option>
                          </Select>
                      </div>
                 </div>
@@ -172,13 +204,13 @@ export const TripleEditRow: React.FC<TripleEditRowProps> = ({ triple, onChange, 
                             <Label className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Data Details</Label>
                             <div className="space-y-2">
                                 <div className="grid grid-cols-2 gap-2">
-                                    <Input 
+                                    <Input
                                         placeholder="Unit (e.g. kg)"
                                         value={triple.object.unit || ''}
                                         onChange={(e) => onChange({ ...triple, object: { ...triple.object, unit: e.target.value } })}
                                         className="!text-xs !py-0.5 !h-6"
                                     />
-                                    <Input 
+                                    <Input
                                         placeholder="Truth Range"
                                         value={triple.object.truth_range || ''}
                                         onChange={(e) => onChange({ ...triple, object: { ...triple.object, truth_range: e.target.value } })}
@@ -186,6 +218,101 @@ export const TripleEditRow: React.FC<TripleEditRowProps> = ({ triple, onChange, 
                                         title="e.g. 7.0 - 7.5"
                                     />
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Lexical Enrichment Section */}
+                    <div className="mt-3 pt-3 border-t border-gray-700/50">
+                        <Label className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 flex items-center gap-2">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                            Lexical Enrichment (for semantic richness)
+                        </Label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {/* Synonyms */}
+                            <div>
+                                <label className="text-[10px] text-gray-400 mb-1 block">
+                                    Synonyms <span className="text-gray-600">(comma-separated)</span>
+                                </label>
+                                <Input
+                                    placeholder="e.g. alternative, similar, related"
+                                    value={getLexicalDisplay('synonyms')}
+                                    onChange={(e) => handleLexicalChange('synonyms', e.target.value)}
+                                    className="!text-xs !py-1 !h-7 bg-green-900/20 border-green-800/30 placeholder:text-gray-600"
+                                    title="Alternative terms that mean the same thing"
+                                />
+                                {triple.lexical?.synonyms && triple.lexical.synonyms.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {triple.lexical.synonyms.slice(0, 3).map((syn, i) => (
+                                            <span key={i} className="px-1.5 py-0.5 text-[10px] bg-green-900/30 text-green-300 rounded">
+                                                {syn}
+                                            </span>
+                                        ))}
+                                        {triple.lexical.synonyms.length > 3 && (
+                                            <span className="px-1.5 py-0.5 text-[10px] text-gray-500">
+                                                +{triple.lexical.synonyms.length - 3} more
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Antonyms */}
+                            <div>
+                                <label className="text-[10px] text-gray-400 mb-1 block">
+                                    Antonyms <span className="text-gray-600">(comma-separated)</span>
+                                </label>
+                                <Input
+                                    placeholder="e.g. opposite, contrasting"
+                                    value={getLexicalDisplay('antonyms')}
+                                    onChange={(e) => handleLexicalChange('antonyms', e.target.value)}
+                                    className="!text-xs !py-1 !h-7 bg-red-900/20 border-red-800/30 placeholder:text-gray-600"
+                                    title="Opposite or contrasting concepts"
+                                />
+                                {triple.lexical?.antonyms && triple.lexical.antonyms.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {triple.lexical.antonyms.slice(0, 3).map((ant, i) => (
+                                            <span key={i} className="px-1.5 py-0.5 text-[10px] bg-red-900/30 text-red-300 rounded">
+                                                {ant}
+                                            </span>
+                                        ))}
+                                        {triple.lexical.antonyms.length > 3 && (
+                                            <span className="px-1.5 py-0.5 text-[10px] text-gray-500">
+                                                +{triple.lexical.antonyms.length - 3} more
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Hypernyms */}
+                            <div>
+                                <label className="text-[10px] text-gray-400 mb-1 block">
+                                    Hypernyms <span className="text-gray-600">(broader terms)</span>
+                                </label>
+                                <Input
+                                    placeholder="e.g. category, type, class"
+                                    value={getLexicalDisplay('hypernyms')}
+                                    onChange={(e) => handleLexicalChange('hypernyms', e.target.value)}
+                                    className="!text-xs !py-1 !h-7 bg-blue-900/20 border-blue-800/30 placeholder:text-gray-600"
+                                    title="Broader category terms"
+                                />
+                                {triple.lexical?.hypernyms && triple.lexical.hypernyms.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {triple.lexical.hypernyms.slice(0, 3).map((hyp, i) => (
+                                            <span key={i} className="px-1.5 py-0.5 text-[10px] bg-blue-900/30 text-blue-300 rounded">
+                                                {hyp}
+                                            </span>
+                                        ))}
+                                        {triple.lexical.hypernyms.length > 3 && (
+                                            <span className="px-1.5 py-0.5 text-[10px] text-gray-500">
+                                                +{triple.lexical.hypernyms.length - 3} more
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

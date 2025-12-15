@@ -1,21 +1,13 @@
 
 import React, { useState } from 'react';
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution errors.
-// FIX: Changed import to be a relative path and added KnowledgeGraph interface.
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution errors.
-import { TopicRecommendation, KnowledgeNode, KnowledgeGraph } from '../types';
-// FIX: Corrected import path to be relative.
+import { TopicRecommendation, KnowledgeNode, KnowledgeGraph, SemanticTriple } from '../types';
 import { Loader } from './ui/Loader';
-// FIX: Corrected import path to be a relative path.
 import { Card } from './ui/Card';
-// FIX: Corrected import path to be a relative path.
 import { Button } from './ui/Button';
-// FIX: Corrected import path to be a relative path.
 import { sanitizeForUI } from '../utils/helpers';
-// FIX: Corrected import path to be a relative path.
 import { InfoTooltip } from './ui/InfoTooltip';
-// FIX: Corrected import path to be a relative path.
 import { Textarea } from './ui/Textarea';
+import { KnowledgeGraphTree } from './KnowledgeGraphTree';
 
 interface KnowledgeDomainModalProps {
   isOpen: boolean;
@@ -29,6 +21,8 @@ interface KnowledgeDomainModalProps {
   isExpandingKnowledgeDomain: boolean;
   onFindAndAddMissingKnowledgeTerms: () => void;
   isFindingMissingTerms: boolean;
+  eavs?: SemanticTriple[];
+  centralEntity?: string;
 }
 
 const CategoryBadge: React.FC<{ category: TopicRecommendation['category']}> = ({ category }) => {
@@ -108,20 +102,22 @@ const SparqlQueryTab: React.FC<{ knowledgeGraph: KnowledgeGraph }> = ({ knowledg
     );
 };
 
-const KnowledgeDomainModal: React.FC<KnowledgeDomainModalProps> = ({ 
-    isOpen, 
-    onClose, 
-    knowledgeGraph, 
-    recommendations, 
-    onAddTopicIntelligently, 
-    isLoading, 
+const KnowledgeDomainModal: React.FC<KnowledgeDomainModalProps> = ({
+    isOpen,
+    onClose,
+    knowledgeGraph,
+    recommendations,
+    onAddTopicIntelligently,
+    isLoading,
     error,
     onExpandKnowledgeDomain,
     isExpandingKnowledgeDomain,
     onFindAndAddMissingKnowledgeTerms,
-    isFindingMissingTerms
+    isFindingMissingTerms,
+    eavs,
+    centralEntity
 }) => {
-  const [activeTab, setActiveTab] = useState<'nodes' | 'sparql'>('nodes');
+  const [activeTab, setActiveTab] = useState<'nodes' | 'tree' | 'sparql'>('nodes');
   if (!isOpen) return null;
 
   const nodes = knowledgeGraph ? Array.from(knowledgeGraph.getNodes().values()) : null;
@@ -152,6 +148,12 @@ const KnowledgeDomainModal: React.FC<KnowledgeDomainModalProps> = ({
                   <nav className="-mb-px flex space-x-4" aria-label="Tabs">
                       <button onClick={() => setActiveTab('nodes')} className={`${activeTab === 'nodes' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}>
                           Nodes & Recommendations
+                      </button>
+                      <button onClick={() => setActiveTab('tree')} className={`${activeTab === 'tree' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-1`}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg>
+                          EAV Tree View
                       </button>
                       <button onClick={() => setActiveTab('sparql')} className={`${activeTab === 'sparql' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}>
                           Advanced SPARQL Query
@@ -220,6 +222,27 @@ const KnowledgeDomainModal: React.FC<KnowledgeDomainModalProps> = ({
                     )}
                 </div>
               )}
+
+              {activeTab === 'tree' && (
+                <div>
+                    <h3 className="text-lg font-semibold text-cyan-400 mb-3 flex items-center">
+                        EAV Knowledge Graph Tree
+                        <InfoTooltip text="Hierarchical view of your semantic triples (Entity-Attribute-Value), grouped by subject entity and attribute relation." />
+                    </h3>
+                    {eavs && eavs.length > 0 ? (
+                        <KnowledgeGraphTree
+                            eavs={eavs}
+                            centralEntity={centralEntity}
+                        />
+                    ) : (
+                        <div className="text-center py-10 text-gray-500">
+                            <p>No EAVs available for this map.</p>
+                            <p className="text-sm mt-2">Run the EAV Discovery Wizard to generate semantic triples.</p>
+                        </div>
+                    )}
+                </div>
+              )}
+
               {activeTab === 'sparql' && knowledgeGraph && <SparqlQueryTab knowledgeGraph={knowledgeGraph} />}
             </div>
           )}

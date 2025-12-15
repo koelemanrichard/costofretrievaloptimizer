@@ -15,6 +15,8 @@ import { Loader } from './ui/Loader';
 import { NAPForm } from './ui/NAPForm';
 import { FoundationPageCard } from './ui/FoundationPageCard';
 import NavigationDesigner from './NavigationDesigner';
+import BrandKitEditor from './BrandKitEditor';
+import { BrandKit } from '../types';
 
 interface FoundationPagesPanelProps {
   foundationPages: FoundationPage[];
@@ -31,6 +33,11 @@ interface FoundationPagesPanelProps {
   navigation?: NavigationStructure | null;
   topics?: EnrichedTopic[];
   onSaveNavigation?: (navigation: NavigationStructure) => Promise<void>;
+  onGenerateNavigation?: () => void;
+  onRegenerateNavigation?: () => Promise<void>;
+  isGeneratingNavigation?: boolean;
+  // Brand Kit
+  onSaveBrandKit?: (brandKit: any) => Promise<void>;
 }
 
 // Page type order for consistent display
@@ -53,14 +60,21 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
   // Navigation props
   navigation,
   topics = [],
-  onSaveNavigation
+  onSaveNavigation,
+  onGenerateNavigation,
+  onRegenerateNavigation,
+  isGeneratingNavigation = false,
+  // Brand Kit
+  onSaveBrandKit
 }) => {
   const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pages' | 'nap' | 'navigation'>('pages');
+  const [activeTab, setActiveTab] = useState<'pages' | 'nap' | 'navigation' | 'brandkit'>('pages');
   const [editingPage, setEditingPage] = useState<FoundationPage | null>(null);
   const [isSavingNAP, setIsSavingNAP] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [localBrandKit, setLocalBrandKit] = useState<BrandKit | undefined>(businessInfo?.brandKit);
+  const [isSavingBrandKit, setIsSavingBrandKit] = useState(false);
 
   // Sort pages by type order
   const sortedPages = [...foundationPages].sort((a, b) => {
@@ -97,6 +111,16 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
       await onGenerateMissingPages();
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSaveBrandKit = async () => {
+    if (!onSaveBrandKit || !localBrandKit) return;
+    setIsSavingBrandKit(true);
+    try {
+      await onSaveBrandKit(localBrandKit);
+    } finally {
+      setIsSavingBrandKit(false);
     }
   };
 
@@ -184,6 +208,16 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
           onClick={() => setActiveTab('navigation')}
         >
           Navigation
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'brandkit'
+              ? 'text-purple-400 border-b-2 border-purple-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('brandkit')}
+        >
+          Brand Kit
         </button>
       </div>
 
@@ -328,21 +362,84 @@ export const FoundationPagesPanel: React.FC<FoundationPagesPanelProps> = ({
       {/* Navigation Tab */}
       {activeTab === 'navigation' && (
         <div>
-          {onSaveNavigation ? (
+          {/* Show generate button if navigation doesn't exist but we can generate it */}
+          {!navigation && onGenerateNavigation && (
+            <Card className="p-8 text-center">
+              <p className="text-gray-400 mb-4">No navigation structure found for this map.</p>
+              <Button
+                onClick={onGenerateNavigation}
+                disabled={isGeneratingNavigation}
+              >
+                {isGeneratingNavigation ? (
+                  <span className="flex items-center gap-2">
+                    <Loader className="w-4 h-4" />
+                    Generating Navigation...
+                  </span>
+                ) : (
+                  'Generate Navigation'
+                )}
+              </Button>
+              <p className="text-sm text-gray-500 mt-3">
+                This will create a default navigation structure based on your foundation pages and topics.
+              </p>
+            </Card>
+          )}
+          {/* Show designer if navigation exists */}
+          {navigation && onSaveNavigation && (
             <NavigationDesigner
-              navigation={navigation || null}
+              navigation={navigation}
               foundationPages={foundationPages.filter(p => !p.deleted_at)}
               topics={topics}
               onSave={onSaveNavigation}
               onDiscard={() => setActiveTab('pages')}
+              onRegenerate={onRegenerateNavigation}
+              isRegenerating={isGeneratingNavigation}
+              pillars={pillars}
             />
-          ) : (
+          )}
+          {/* Fallback if neither condition is met */}
+          {!navigation && !onGenerateNavigation && !onSaveNavigation && (
             <Card className="p-8 text-center">
               <p className="text-gray-400">Navigation editing is not available.</p>
-              <p className="text-sm text-gray-500 mt-2">Generate a topical map first to create navigation.</p>
+              <p className="text-sm text-gray-500 mt-2">Complete the setup steps to enable navigation configuration.</p>
             </Card>
           )}
         </div>
+      )}
+
+      {/* Brand Kit Tab */}
+      {activeTab === 'brandkit' && (
+        <Card className="p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-white">Brand Kit</h3>
+            <p className="text-gray-400 text-sm mt-1">
+              Configure your brand colors, logo, and visual identity for consistent image generation across all content.
+            </p>
+          </div>
+
+          <BrandKitEditor
+            brandKit={localBrandKit}
+            onChange={setLocalBrandKit}
+          />
+
+          {onSaveBrandKit && (
+            <div className="mt-6 pt-4 border-t border-gray-700 flex justify-end">
+              <Button
+                onClick={handleSaveBrandKit}
+                disabled={isSavingBrandKit}
+              >
+                {isSavingBrandKit ? (
+                  <span className="flex items-center gap-2">
+                    <Loader className="w-4 h-4" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save Brand Kit'
+                )}
+              </Button>
+            </div>
+          )}
+        </Card>
       )}
 
       {/* Edit Modal - Simplified inline for now */}

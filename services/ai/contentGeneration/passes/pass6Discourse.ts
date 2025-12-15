@@ -1,47 +1,56 @@
 // services/ai/contentGeneration/passes/pass6Discourse.ts
-import { ContentBrief, ContentGenerationJob, BusinessInfo } from '../../../../types';
+import {
+  ContentBrief,
+  ContentGenerationJob,
+  BusinessInfo,
+  SectionProgressCallback,
+  ContentGenerationSection,
+  ContentFormatBudget
+} from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { PASS_6_DISCOURSE_PROMPT } from '../../../../config/prompts';
-import * as geminiService from '../../../geminiService';
-import * as openAiService from '../../../openAiService';
-import * as anthropicService from '../../../anthropicService';
-import * as perplexityService from '../../../perplexityService';
-import * as openRouterService from '../../../openRouterService';
+import { executeSectionPass } from './baseSectionPass';
+import { buildPass6Prompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
 
-const noOpDispatch = () => {};
-
-async function callProviderWithPrompt(info: BusinessInfo, prompt: string): Promise<string> {
-  switch (info.aiProvider) {
-    case 'openai': return openAiService.generateText(prompt, info, noOpDispatch);
-    case 'anthropic': return anthropicService.generateText(prompt, info, noOpDispatch);
-    case 'perplexity': return perplexityService.generateText(prompt, info, noOpDispatch);
-    case 'openrouter': return openRouterService.generateText(prompt, info, noOpDispatch);
-    case 'gemini':
-    default: return geminiService.generateText(prompt, info, noOpDispatch);
-  }
-}
-
+/**
+ * Pass 6: Discourse Integration
+ *
+ * Uses format budget-aware selective processing:
+ * - Only processes sections identified as needing discourse improvement
+ * - Uses adjacent section context to ensure smooth transitions
+ * - Applies discourse anchors for contextual bridges
+ *
+ * Batches sections to reduce API calls.
+ */
 export async function executePass6(
   orchestrator: ContentGenerationOrchestrator,
   job: ContentGenerationJob,
   brief: ContentBrief,
-  businessInfo: BusinessInfo
+  businessInfo: BusinessInfo,
+  onSectionProgress?: SectionProgressCallback,
+  shouldAbort?: () => boolean
 ): Promise<string> {
-  const draft = job.draft_content || '';
+  return executeSectionPass(
+    orchestrator,
+    job,
+    brief,
+    businessInfo,
+    {
+      passNumber: 6,
+      passKey: 'pass_6_discourse',
+      nextPassNumber: 7,
+      promptBuilder: buildPass6Prompt,
 
-  await orchestrator.updateJob(job.id, {
-    passes_status: { ...job.passes_status, pass_6_discourse: 'in_progress' }
-  });
+      // Batch processing: 3 sections per API call
+      batchSize: 3,
 
-  const prompt = PASS_6_DISCOURSE_PROMPT(draft, brief, businessInfo);
-  const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
-  const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
-
-  await orchestrator.updateJob(job.id, {
-    draft_content: result,
-    passes_status: { ...job.passes_status, pass_6_discourse: 'completed' },
-    current_pass: 7
-  });
-
-  return result;
+      // Selective processing: Only sections needing discourse improvement
+      filterSections: (sections: ContentGenerationSection[], budget: ContentFormatBudget) => {
+        return sections.filter(s =>
+          budget.sectionsNeedingOptimization.discourse.includes(s.section_key)
+        );
+      }
+    },
+    onSectionProgress,
+    shouldAbort
+  );
 }

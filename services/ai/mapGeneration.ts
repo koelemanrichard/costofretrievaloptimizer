@@ -1,13 +1,143 @@
 
 // services/ai/mapGeneration.ts
-import { BusinessInfo, CandidateEntity, SourceContextOption, SEOPillars, SemanticTriple, EnrichedTopic, KnowledgeGraph, ExpansionMode, TopicViabilityResult, TopicBlueprint } from '../../types';
+import { BusinessInfo, CandidateEntity, SourceContextOption, SEOPillars, SemanticTriple, EnrichedTopic, KnowledgeGraph, ExpansionMode, TopicViabilityResult, TopicBlueprint, WebsiteType } from '../../types';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
 import { AppAction } from '../../state/appState';
+import { getWebsiteTypeConfig, validateHubSpokeRatio } from '../../config/websiteTypeTemplates';
 import React from 'react';
+
+// ============================================
+// CLUSTER ROLE ASSIGNMENT LOGIC
+// Based on Holistic SEO best practices:
+// - A "pillar" is a core topic with sufficient spokes (3+) to form a content cluster
+// - All other topics are "cluster_content"
+// ============================================
+
+const DEFAULT_PILLAR_SPOKE_THRESHOLD = 3; // Default minimum spokes for a core topic to be considered a pillar
+
+/**
+ * Get the pillar spoke threshold based on website type
+ * Uses the minimum hub-spoke ratio from the website type config
+ */
+const getPillarSpokeThreshold = (websiteType?: WebsiteType): number => {
+    if (!websiteType) return DEFAULT_PILLAR_SPOKE_THRESHOLD;
+    const config = getWebsiteTypeConfig(websiteType);
+    return config.hubSpokeRatio.min;
+};
+
+/**
+ * Assigns cluster_role to topics based on hub-spoke structure
+ *
+ * - Core topics with N+ spokes → pillar (hub pages) where N is based on website type
+ * - Core topics with <N spokes → cluster_content (standalone content)
+ * - Outer topics → cluster_content (spoke pages)
+ *
+ * This enables:
+ * - Navigation prioritization of pillars in header
+ * - PageRank flow optimization toward money pages
+ * - Quality Node detection in navigation service
+ */
+export const assignClusterRoles = (
+    coreTopics: EnrichedTopic[],
+    outerTopics: EnrichedTopic[],
+    websiteType?: WebsiteType
+): { coreTopics: EnrichedTopic[], outerTopics: EnrichedTopic[], hubSpokeAnalysis: HubSpokeAnalysis } => {
+    const threshold = getPillarSpokeThreshold(websiteType);
+    const typeConfig = websiteType ? getWebsiteTypeConfig(websiteType) : null;
+
+    // Count spokes per core topic
+    const spokeCountMap = new Map<string, number>();
+    for (const outer of outerTopics) {
+        if (outer.parent_topic_id) {
+            const current = spokeCountMap.get(outer.parent_topic_id) || 0;
+            spokeCountMap.set(outer.parent_topic_id, current + 1);
+        }
+    }
+
+    // Assign cluster_role to core topics and collect hub-spoke analysis
+    const hubRatios: number[] = [];
+    const enrichedCoreTopics = coreTopics.map(core => {
+        const spokeCount = spokeCountMap.get(core.id) || 0;
+        hubRatios.push(spokeCount);
+        const clusterRole: 'pillar' | 'cluster_content' = spokeCount >= threshold
+            ? 'pillar'
+            : 'cluster_content';
+
+        // Validate hub-spoke ratio for this core topic
+        const ratioValidation = websiteType
+            ? validateHubSpokeRatio(websiteType, spokeCount)
+            : { valid: true, message: '' };
+
+        return {
+            ...core,
+            cluster_role: clusterRole,
+            metadata: {
+                ...core.metadata,
+                cluster_role: clusterRole,
+                spoke_count: spokeCount,
+                hub_spoke_valid: ratioValidation.valid,
+                hub_spoke_message: ratioValidation.message
+            }
+        };
+    });
+
+    // Assign cluster_role to outer topics (all are cluster_content)
+    const enrichedOuterTopics = outerTopics.map(outer => ({
+        ...outer,
+        cluster_role: 'cluster_content' as const,
+        metadata: {
+            ...outer.metadata,
+            cluster_role: 'cluster_content'
+        }
+    }));
+
+    // Calculate overall hub-spoke analysis
+    const avgRatio = hubRatios.length > 0 ? hubRatios.reduce((a, b) => a + b, 0) / hubRatios.length : 0;
+    const hubSpokeAnalysis: HubSpokeAnalysis = {
+        averageRatio: avgRatio,
+        optimalRatio: typeConfig?.hubSpokeRatio.optimal || 7,
+        minRatio: typeConfig?.hubSpokeRatio.min || 3,
+        maxRatio: typeConfig?.hubSpokeRatio.max || 10,
+        isOptimal: typeConfig
+            ? avgRatio >= typeConfig.hubSpokeRatio.min && avgRatio <= typeConfig.hubSpokeRatio.max
+            : avgRatio >= 3,
+        pillarsCount: enrichedCoreTopics.filter(t => t.cluster_role === 'pillar').length,
+        totalCoreTopics: enrichedCoreTopics.length,
+        recommendations: []
+    };
+
+    // Generate recommendations
+    if (avgRatio < hubSpokeAnalysis.minRatio) {
+        hubSpokeAnalysis.recommendations.push(
+            `Average spoke count (${avgRatio.toFixed(1)}) is below minimum (${hubSpokeAnalysis.minRatio}). Consider adding more spoke pages per core topic.`
+        );
+    }
+    if (avgRatio > hubSpokeAnalysis.maxRatio) {
+        hubSpokeAnalysis.recommendations.push(
+            `Average spoke count (${avgRatio.toFixed(1)}) exceeds maximum (${hubSpokeAnalysis.maxRatio}). Consider creating additional hub pages.`
+        );
+    }
+
+    return { coreTopics: enrichedCoreTopics, outerTopics: enrichedOuterTopics, hubSpokeAnalysis };
+};
+
+/**
+ * Hub-spoke analysis result
+ */
+export interface HubSpokeAnalysis {
+    averageRatio: number;
+    optimalRatio: number;
+    minRatio: number;
+    maxRatio: number;
+    isOptimal: boolean;
+    pillarsCount: number;
+    totalCoreTopics: number;
+    recommendations: string[];
+}
 
 export const suggestCentralEntityCandidates = (
     businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
@@ -66,31 +196,85 @@ export const discoverCoreSemanticTriples = (
 };
 
 export const expandSemanticTriples = (
-    businessInfo: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[], dispatch: React.Dispatch<any>
+    businessInfo: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[], dispatch: React.Dispatch<any>, count: number = 15
 ): Promise<SemanticTriple[]> => {
      switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch);
-        case 'anthropic': return anthropicService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch);
-        case 'perplexity': return perplexityService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch);
-        case 'openrouter': return openRouterService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch);
+        case 'openai': return openAiService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch, count);
+        case 'anthropic': return anthropicService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch, count);
+        case 'perplexity': return perplexityService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch, count);
+        case 'openrouter': return openRouterService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch, count);
         case 'gemini':
         default:
-            return geminiService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch);
+            return geminiService.expandSemanticTriples(businessInfo, pillars, existingTriples, dispatch, count);
     }
 };
 
-export const generateInitialTopicalMap = (
+export const generateInitialTopicalMap = async (
     businessInfo: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>
 ): Promise<{ coreTopics: EnrichedTopic[], outerTopics: EnrichedTopic[] }> => {
+    // Step 1: Get raw topics from AI provider
+    let rawResult: { coreTopics: EnrichedTopic[], outerTopics: EnrichedTopic[] };
+
     switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
-        case 'anthropic': return anthropicService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
-        case 'perplexity': return perplexityService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
-        case 'openrouter': return openRouterService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+        case 'openai':
+            rawResult = await openAiService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+            break;
+        case 'anthropic':
+            rawResult = await anthropicService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+            break;
+        case 'perplexity':
+            rawResult = await perplexityService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+            break;
+        case 'openrouter':
+            rawResult = await openRouterService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+            break;
         case 'gemini':
         default:
-            return geminiService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+            rawResult = await geminiService.generateInitialTopicalMap(businessInfo, pillars, eavs, competitors, dispatch);
+            break;
     }
+
+    // Step 2: Apply cluster_role assignment based on hub-spoke structure (website type aware)
+    const threshold = getPillarSpokeThreshold(businessInfo.websiteType);
+    const enrichedResult = assignClusterRoles(rawResult.coreTopics, rawResult.outerTopics, businessInfo.websiteType);
+
+    // Log the pillar assignment results with hub-spoke analysis
+    const { hubSpokeAnalysis } = enrichedResult;
+    dispatch({
+        type: 'LOG_EVENT',
+        payload: {
+            service: 'MapGeneration',
+            message: `Cluster role assignment complete: ${hubSpokeAnalysis.pillarsCount} pillars identified (${threshold}+ spokes threshold)`,
+            status: hubSpokeAnalysis.isOptimal ? 'info' : 'warning',
+            timestamp: Date.now(),
+            data: {
+                totalCore: enrichedResult.coreTopics.length,
+                pillars: hubSpokeAnalysis.pillarsCount,
+                clusterContent: enrichedResult.coreTopics.length - hubSpokeAnalysis.pillarsCount,
+                hubSpokeAnalysis: {
+                    averageRatio: hubSpokeAnalysis.averageRatio.toFixed(1),
+                    optimalRatio: hubSpokeAnalysis.optimalRatio,
+                    isOptimal: hubSpokeAnalysis.isOptimal,
+                    recommendations: hubSpokeAnalysis.recommendations
+                }
+            }
+        }
+    });
+
+    // Log recommendations if hub-spoke ratio is not optimal
+    if (hubSpokeAnalysis.recommendations.length > 0) {
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'MapGeneration',
+                message: `Hub-Spoke Recommendations: ${hubSpokeAnalysis.recommendations.join(' ')}`,
+                status: 'warning',
+                timestamp: Date.now()
+            }
+        });
+    }
+
+    return { coreTopics: enrichedResult.coreTopics, outerTopics: enrichedResult.outerTopics };
 };
 
 export const addTopicIntelligently = (

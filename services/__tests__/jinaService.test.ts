@@ -52,7 +52,7 @@ describe('jinaService', () => {
       } as Response);
 
       await expect(
-        extractPageContent('https://example.com', 'test-key', undefined, { maxRetries: 2 })
+        extractPageContent('https://example.com', 'test-key', undefined, { maxRetries: 2, initialDelayMs: 100, backoffMultiplier: 2 })
       ).rejects.toThrow('503');
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });

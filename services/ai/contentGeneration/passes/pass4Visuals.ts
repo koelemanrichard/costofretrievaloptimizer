@@ -1,47 +1,56 @@
 // services/ai/contentGeneration/passes/pass4Visuals.ts
-import { ContentBrief, ContentGenerationJob, BusinessInfo } from '../../../../types';
+import {
+  ContentBrief,
+  ContentGenerationJob,
+  BusinessInfo,
+  SectionProgressCallback,
+  ContentGenerationSection,
+  ContentFormatBudget
+} from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { PASS_4_VISUAL_SEMANTICS_PROMPT } from '../../../../config/prompts';
-import * as geminiService from '../../../geminiService';
-import * as openAiService from '../../../openAiService';
-import * as anthropicService from '../../../anthropicService';
-import * as perplexityService from '../../../perplexityService';
-import * as openRouterService from '../../../openRouterService';
+import { executeSectionPass } from './baseSectionPass';
+import { buildPass4Prompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
 
-const noOpDispatch = () => {};
-
-async function callProviderWithPrompt(info: BusinessInfo, prompt: string): Promise<string> {
-  switch (info.aiProvider) {
-    case 'openai': return openAiService.generateText(prompt, info, noOpDispatch);
-    case 'anthropic': return anthropicService.generateText(prompt, info, noOpDispatch);
-    case 'perplexity': return perplexityService.generateText(prompt, info, noOpDispatch);
-    case 'openrouter': return openRouterService.generateText(prompt, info, noOpDispatch);
-    case 'gemini':
-    default: return geminiService.generateText(prompt, info, noOpDispatch);
-  }
-}
-
+/**
+ * Pass 4: Visual Semantics
+ *
+ * Uses format budget-aware selective processing:
+ * - Only processes sections identified as needing images
+ * - Ensures proper image placement (never between heading and first paragraph)
+ * - Uses vocabulary-extending alt text
+ *
+ * Batches sections to reduce API calls.
+ */
 export async function executePass4(
   orchestrator: ContentGenerationOrchestrator,
   job: ContentGenerationJob,
   brief: ContentBrief,
-  businessInfo: BusinessInfo
+  businessInfo: BusinessInfo,
+  onSectionProgress?: SectionProgressCallback,
+  shouldAbort?: () => boolean
 ): Promise<string> {
-  const draft = job.draft_content || '';
+  return executeSectionPass(
+    orchestrator,
+    job,
+    brief,
+    businessInfo,
+    {
+      passNumber: 4,
+      passKey: 'pass_4_visuals',
+      nextPassNumber: 5,
+      promptBuilder: buildPass4Prompt,
 
-  await orchestrator.updateJob(job.id, {
-    passes_status: { ...job.passes_status, pass_4_visuals: 'in_progress' }
-  });
+      // Batch processing: 5 sections per API call
+      batchSize: 5,
 
-  const prompt = PASS_4_VISUAL_SEMANTICS_PROMPT(draft, brief, businessInfo);
-  const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
-  const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
-
-  await orchestrator.updateJob(job.id, {
-    draft_content: result,
-    passes_status: { ...job.passes_status, pass_4_visuals: 'completed' },
-    current_pass: 5
-  });
-
-  return result;
+      // Selective processing: Only sections needing images
+      filterSections: (sections: ContentGenerationSection[], budget: ContentFormatBudget) => {
+        return sections.filter(s =>
+          budget.sectionsNeedingOptimization.images.includes(s.section_key)
+        );
+      }
+    },
+    onSectionProgress,
+    shouldAbort
+  );
 }

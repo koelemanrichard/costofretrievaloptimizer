@@ -36,7 +36,7 @@ const MergeMapSelectStep: React.FC<MergeMapSelectStepProps> = ({
         <div className="space-y-2">
           {availableMaps.map(map => {
             const isSelected = selectedMapIds.includes(map.id);
-            const topicCount = map.topics?.length || 0;
+            const topicCount = map.topicCounts?.total || map.topics?.length || 0;
 
             return (
               <Card

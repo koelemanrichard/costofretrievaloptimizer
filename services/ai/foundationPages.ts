@@ -83,6 +83,62 @@ interface GeneratedNavigationResponse {
   };
 }
 
+// ============================================
+// CLUSTER ROLE FALLBACK LOGIC
+// Ensures topics have cluster_role assigned even if map generation didn't set it
+// ============================================
+
+const PILLAR_SPOKE_THRESHOLD = 3; // Minimum spokes for a core topic to be considered a pillar
+
+/**
+ * Ensures core topics have cluster_role assigned.
+ * If cluster_role is missing, assigns it based on spoke count.
+ *
+ * @param coreTopics - Core topics that may or may not have cluster_role
+ * @param allTopics - All topics (including outer) to count spokes
+ * @returns Core topics with cluster_role guaranteed
+ */
+const ensureClusterRoles = (
+  coreTopics: EnrichedTopic[],
+  allTopics: EnrichedTopic[]
+): EnrichedTopic[] => {
+  // Check if any core topics are missing cluster_role
+  const hasMissingRoles = coreTopics.some(t => !t.cluster_role);
+
+  if (!hasMissingRoles) {
+    // All topics already have cluster_role assigned
+    return coreTopics;
+  }
+
+  // Count spokes per core topic
+  const outerTopics = allTopics.filter(t => t.type === 'outer');
+  const spokeCountMap = new Map<string, number>();
+
+  for (const outer of outerTopics) {
+    if (outer.parent_topic_id) {
+      const current = spokeCountMap.get(outer.parent_topic_id) || 0;
+      spokeCountMap.set(outer.parent_topic_id, current + 1);
+    }
+  }
+
+  // Assign cluster_role based on spoke count
+  return coreTopics.map(core => {
+    if (core.cluster_role) {
+      return core; // Already has role
+    }
+
+    const spokeCount = spokeCountMap.get(core.id) || 0;
+    const clusterRole: 'pillar' | 'cluster_content' = spokeCount >= PILLAR_SPOKE_THRESHOLD
+      ? 'pillar'
+      : 'cluster_content';
+
+    return {
+      ...core,
+      cluster_role: clusterRole
+    };
+  });
+};
+
 /**
  * Generate foundation pages via AI based on business context and SEO pillars
  * @param selectedPages - Optional array of page types to generate. If not provided, generates all standard pages.
@@ -134,10 +190,11 @@ export const generateFoundationPages = async (
         break;
     }
 
-    // Filter to only include selected page types
-    const filteredPages = result.foundationPages.filter(page =>
-      pagesToGenerate.includes(page.page_type as FoundationPageType)
-    );
+    // Filter to only include selected page types (normalize AI-returned types first)
+    const filteredPages = result.foundationPages.filter(page => {
+      const normalizedType = normalizePageType(page.page_type);
+      return normalizedType && pagesToGenerate.includes(normalizedType);
+    });
 
     // If author page is selected but not in AI result, add a default author page
     if (pagesToGenerate.includes('author') && !filteredPages.some(p => p.page_type === 'author')) {
@@ -201,18 +258,41 @@ export const generateDefaultNavigation = async (
   foundationPages: FoundationPage[],
   coreTopics: EnrichedTopic[],
   businessInfo: BusinessInfo,
-  dispatch: React.Dispatch<any>
+  dispatch: React.Dispatch<any>,
+  allTopics?: EnrichedTopic[] // Include outer topics for cluster role fallback
 ): Promise<NavigationStructure> => {
   dispatch({ type: 'LOG_EVENT', payload: { service: 'FoundationPages', message: 'Generating navigation structure...', status: 'info', timestamp: Date.now() } });
+
+  // Ensure topics have cluster_role assigned (fallback if missing)
+  const topicsWithRoles = ensureClusterRoles(coreTopics, allTopics || []);
 
   const sanitizer = new AIResponseSanitizer(dispatch);
   const prompt = prompts.GENERATE_DEFAULT_NAVIGATION_PROMPT(
     foundationPages.map(p => ({ page_type: p.page_type, title: p.title, slug: p.slug })),
-    coreTopics.map(t => ({ id: t.id, title: t.title, slug: t.slug })),
+    // Pass cluster_role and topic_class to the prompt
+    topicsWithRoles.map(t => ({
+      id: t.id,
+      title: t.title,
+      slug: t.slug,
+      cluster_role: t.cluster_role,
+      topic_class: t.topic_class
+    })),
     businessInfo
   );
 
-  const defaultNav = createDefaultNavigation(foundationPages, coreTopics, businessInfo);
+  // Log pillar detection stats
+  const pillarCount = topicsWithRoles.filter(t => t.cluster_role === 'pillar').length;
+  dispatch({
+    type: 'LOG_EVENT',
+    payload: {
+      service: 'FoundationPages',
+      message: `Navigation generation: ${pillarCount} pillars, ${topicsWithRoles.filter(t => t.topic_class === 'monetization').length} monetization topics identified`,
+      status: 'info',
+      timestamp: Date.now()
+    }
+  });
+
+  const defaultNav = createDefaultNavigation(foundationPages, topicsWithRoles, businessInfo);
 
   try {
     // Use the configured AI provider

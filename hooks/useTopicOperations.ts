@@ -56,7 +56,13 @@ export const useTopicOperations = (
                 slug: topicData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
                 type: topicType,
                 parent_topic_id: parentId,
-                freshness: topicData.freshness
+                freshness: topicData.freshness,
+                metadata: {
+                    topic_class: topicData.topic_class || (topicType === 'core' ? 'monetization' : 'informational'),
+                    cluster_role: topicData.cluster_role,
+                    attribute_focus: topicData.attribute_focus,
+                    canonical_query: topicData.canonical_query,
+                }
             }).select().single();
 
             if (error) throw error;
@@ -92,7 +98,13 @@ export const useTopicOperations = (
                     slug: input.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                     type: 'core',
                     parent_topic_id: null,
-                    freshness: input.data.freshness
+                    freshness: input.data.freshness,
+                    metadata: {
+                        topic_class: input.data.topic_class || 'monetization',
+                        cluster_role: input.data.cluster_role,
+                        attribute_focus: input.data.attribute_focus,
+                        canonical_query: input.data.canonical_query,
+                    }
                 }).select().single();
                 
                 if (error) throw error;
@@ -126,7 +138,13 @@ export const useTopicOperations = (
                     slug: input.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                     type: 'outer',
                     parent_topic_id: parentId,
-                    freshness: input.data.freshness
+                    freshness: input.data.freshness,
+                    metadata: {
+                        topic_class: input.data.topic_class || 'informational',
+                        cluster_role: input.data.cluster_role,
+                        attribute_focus: input.data.attribute_focus,
+                        canonical_query: input.data.canonical_query,
+                    }
                 }).select().single();
 
                 if (error) throw error;

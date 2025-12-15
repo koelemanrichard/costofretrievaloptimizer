@@ -552,8 +552,19 @@ export const classifyTopicSections = async (
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<any>
 ): Promise<{ id: string, topic_class: 'monetization' | 'informational', suggestedType?: 'core' | 'outer' | null, suggestedParentTitle?: string | null, typeChangeReason?: string | null }[]> => {
-    // Use Gemini as the default classifier as it's reliable
-    // In the future, this could be provider-specific
+    // This function uses Gemini for classification - we need to ensure proper Gemini configuration
+    // If the user's current provider is not Gemini, check if they have a Gemini API key configured
+    const geminiInfo: BusinessInfo = {
+        ...businessInfo,
+        aiProvider: 'gemini',
+        aiModel: 'gemini-3-pro-preview', // Use the latest Gemini model (November 2025)
+    };
+
+    // Check if Gemini API key is available
+    if (!businessInfo.geminiApiKey) {
+        throw new Error('Gemini API key is required for section classification. Please configure a Gemini API key in Settings > SERP & Services.');
+    }
+
     const result = await geminiService.classifyTopicSections(
         topics.map(t => ({
             id: t.id,
@@ -562,7 +573,7 @@ export const classifyTopicSections = async (
             type: t.type,
             parent_topic_id: t.parent_topic_id
         })),
-        businessInfo,
+        geminiInfo,
         dispatch
     );
     return result;

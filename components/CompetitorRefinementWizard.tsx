@@ -76,8 +76,11 @@ const CompetitorRefinementWizard: React.FC<CompetitorRefinementWizardProps> = ({
                 {isLoading && <div className="flex justify-center"><Loader /></div>}
                 {error && <div className="text-red-400 bg-red-900/20 p-4 rounded-md text-center">{error}</div>}
                 <div className="space-y-3 max-h-96 overflow-y-auto pr-4">
-                    {competitors.map(c => (
-                        <div key={c.link} className={`p-3 rounded-lg flex items-start gap-3 cursor-pointer border ${selectedCompetitorUrls.includes(c.link) ? 'bg-blue-900/20 border-blue-700' : 'bg-gray-900/50 border-gray-700'}`} onClick={() => handleToggleCompetitor(c.link)}>
+                    {/* Deduplicate competitors by URL to avoid duplicate keys */}
+                    {competitors
+                        .filter((c, index, self) => self.findIndex(x => x.link === c.link) === index)
+                        .map((c, index) => (
+                        <div key={`${c.link}-${index}`} className={`p-3 rounded-lg flex items-start gap-3 cursor-pointer border ${selectedCompetitorUrls.includes(c.link) ? 'bg-blue-900/20 border-blue-700' : 'bg-gray-900/50 border-gray-700'}`} onClick={() => handleToggleCompetitor(c.link)}>
                             <input type="checkbox" checked={selectedCompetitorUrls.includes(c.link)} readOnly className="mt-1 flex-shrink-0" />
                             <div>
                                 <p className="font-semibold text-white">{c.title}</p>

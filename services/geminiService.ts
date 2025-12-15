@@ -42,24 +42,31 @@ import { KnowledgeGraph } from "../lib/knowledgeGraph";
 import { AppAction } from "../state/appState";
 import React from "react";
 import { v4 as uuidv4 } from 'uuid';
+import { calculateTopicSimilarityPairs } from '../utils/helpers';
 
-// Valid Gemini models (November 2025 - Latest)
+// Valid Gemini models (December 2025)
+// Reference: https://ai.google.dev/gemini-api/docs/models
 const validGeminiModels = [
     // Gemini 3 series (Latest - November 2025)
-    'gemini-3-pro-preview',   // Latest flagship - RECOMMENDED DEFAULT
-    // Gemini 2.5 series (Stable - 2025)
-    'gemini-2.5-flash',       // Fast, cost-effective
-    'gemini-2.5-pro',         // Advanced reasoning
-    'gemini-2.5-flash-lite',  // Lightweight variant
+    'gemini-3-pro-preview',        // Latest reasoning model
+    'gemini-3-pro-image-preview',  // With image generation
+    // Gemini 2.5 series (Production - September 2025)
+    'gemini-2.5-flash',            // RECOMMENDED - Fast, stable production
+    'gemini-2.5-flash-lite',       // Ultra-efficient for high-throughput
+    'gemini-2.5-pro',              // Advanced reasoning
+    'gemini-2.5-flash-preview-09-2025',
+    'gemini-2.5-flash-lite-preview-09-2025',
     // Gemini 2.0 series (Still supported)
     'gemini-2.0-flash',
+    'gemini-2.0-flash-exp',
     'gemini-2.0-flash-lite',
-    // Legacy 1.5 models (being deprecated)
+    // Gemini 1.5 series (Legacy)
     'gemini-1.5-flash',
     'gemini-1.5-pro',
 ];
 
-// Default to gemini-3-pro-preview as the latest flagship model
+// Default to gemini-3-pro-preview as the latest model (November 2025)
+// Fallback to gemini-2.5-flash if empty response is received
 const GEMINI_DEFAULT_MODEL = 'gemini-3-pro-preview';
 const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash';
 
@@ -103,68 +110,97 @@ const callApi = async <T>(
     dispatch: React.Dispatch<AppAction>,
     sanitizerFn: (text: string) => T,
     isJson: boolean = true,
-    responseSchema?: any 
+    responseSchema?: any,
+    maxTokens: number = 8192,
+    retryWithFallback: boolean = true
 ): Promise<T> => {
-    dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Sending request...`, status: 'info', timestamp: Date.now(), data: { model: businessInfo.aiModel, prompt: prompt.substring(0, 200) + '...' } } });
-    
     const apiKey = businessInfo.geminiApiKey;
     if (!apiKey) {
         const errorMsg = "Gemini API key is not configured. Please set it in the application settings.";
         dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: errorMsg, status: 'failure', timestamp: Date.now() } });
         throw new Error(errorMsg);
     }
-    
+
     const ai = getAi(apiKey);
-    
-    try {
+    const validatedModel = validateModel(businessInfo.aiModel, dispatch);
+
+    // Helper to make the actual API call
+    const makeRequest = async (modelToUse: string): Promise<T> => {
+        dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Sending request with model: ${modelToUse}...`, status: 'info', timestamp: Date.now(), data: { model: modelToUse, promptLength: prompt.length } } });
+
         const config: any = {
-            // Set high output token limit to prevent truncation for long content
-            maxOutputTokens: 8192,
+            maxOutputTokens: maxTokens,
         };
         if (isJson) config.responseMimeType = "application/json";
         if (responseSchema) config.responseSchema = responseSchema;
 
-        // Strictly format contents as per SDK requirements
         const contents = [{
             role: 'user',
             parts: [{ text: prompt }]
         }];
 
-        // Validate and use the appropriate model, pass dispatch for logging
-        const validatedModel = validateModel(businessInfo.aiModel, dispatch);
-
         const response: GenerateContentResponse = await ai.models.generateContent({
-            model: validatedModel,
+            model: modelToUse,
             contents: contents,
             config: config,
         });
 
         const responseText = response.text;
 
-        if (!responseText) {
-          throw new Error("Received an empty response from the Gemini API.");
-        }
-
-        // Check for truncation indicators
+        // Check finish reason for better diagnostics
         const candidates = response.candidates;
+        let finishReason = 'UNKNOWN';
         if (candidates && candidates.length > 0) {
-            const finishReason = candidates[0].finishReason;
+            finishReason = candidates[0].finishReason || 'UNKNOWN';
             if (finishReason === 'MAX_TOKENS') {
                 dispatch({ type: 'LOG_EVENT', payload: {
                     service: 'Gemini',
-                    message: 'WARNING: Response was truncated due to max token limit. Content may be incomplete.',
+                    message: 'WARNING: Response was truncated due to max token limit.',
+                    status: 'warning',
+                    timestamp: Date.now()
+                }});
+            } else if (finishReason === 'SAFETY') {
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'Gemini',
+                    message: 'WARNING: Response was blocked by safety filters.',
                     status: 'warning',
                     timestamp: Date.now()
                 }});
             }
         }
 
-        dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Received response. Sanitizing...`, status: 'info', timestamp: Date.now(), data: { response: responseText.substring(0, 200) + '...' } } });
+        if (!responseText) {
+            throw new Error(`Empty response from Gemini (model: ${modelToUse}, finishReason: ${finishReason})`);
+        }
+
+        dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Received response (${responseText.length} chars). Sanitizing...`, status: 'info', timestamp: Date.now() } });
 
         return sanitizerFn(responseText);
+    };
 
+    try {
+        return await makeRequest(validatedModel);
     } catch (error) {
         const message = error instanceof Error ? error.message : "An unknown error occurred with the Gemini API.";
+
+        // If it's an empty response error and we haven't retried yet, try fallback model
+        if (retryWithFallback && message.includes('Empty response') && validatedModel !== GEMINI_FALLBACK_MODEL) {
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Gemini',
+                message: `Model ${validatedModel} returned empty. Retrying with fallback model ${GEMINI_FALLBACK_MODEL}...`,
+                status: 'warning',
+                timestamp: Date.now()
+            }});
+
+            try {
+                return await makeRequest(GEMINI_FALLBACK_MODEL);
+            } catch (retryError) {
+                const retryMessage = retryError instanceof Error ? retryError.message : "Retry also failed";
+                dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Fallback also failed: ${retryMessage}`, status: 'failure', timestamp: Date.now() } });
+                throw new Error(`Gemini API Call Failed (both models): ${retryMessage}`);
+            }
+        }
+
         dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message, status: 'failure', timestamp: Date.now(), data: error } });
         throw new Error(`Gemini API Call Failed: ${message}`);
     }
@@ -195,10 +231,57 @@ export const discoverCoreSemanticTriples = async (businessInfo: BusinessInfo, pi
     return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SemanticTriple>(text, []));
 };
 
-export const expandSemanticTriples = async (businessInfo: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[], dispatch: React.Dispatch<any>): Promise<SemanticTriple[]> => {
+export const expandSemanticTriples = async (businessInfo: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[], dispatch: React.Dispatch<any>, count: number = 15): Promise<SemanticTriple[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const prompt = prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(businessInfo, pillars, existingTriples);
-    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SemanticTriple>(text, []));
+
+    // For large counts, use batched generation to avoid token limits
+    const BATCH_SIZE = 30; // Optimal batch size for reliable generation
+
+    if (count <= BATCH_SIZE) {
+        // Single call for smaller counts
+        const prompt = prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(businessInfo, pillars, existingTriples, count);
+        return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SemanticTriple>(text, []));
+    }
+
+    // Batched generation for larger counts
+    const allNewTriples: SemanticTriple[] = [];
+    const batches = Math.ceil(count / BATCH_SIZE);
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Gemini',
+        message: `Starting batched EAV expansion: ${count} triples in ${batches} batches of ${BATCH_SIZE}`,
+        status: 'info',
+        timestamp: Date.now()
+    }});
+
+    for (let i = 0; i < batches; i++) {
+        const batchCount = Math.min(BATCH_SIZE, count - allNewTriples.length);
+        const combinedExisting = [...existingTriples, ...allNewTriples]; // Include previously generated in context
+
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Gemini',
+            message: `Generating batch ${i + 1}/${batches}: ${batchCount} triples (${allNewTriples.length}/${count} complete)`,
+            status: 'info',
+            timestamp: Date.now()
+        }});
+
+        const prompt = prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(businessInfo, pillars, combinedExisting, batchCount);
+        const batchResults = await callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SemanticTriple>(text, []));
+
+        allNewTriples.push(...batchResults);
+
+        // Early exit if we've reached the target
+        if (allNewTriples.length >= count) break;
+    }
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Gemini',
+        message: `Batched EAV expansion complete: Generated ${allNewTriples.length} new triples`,
+        status: 'success',
+        timestamp: Date.now()
+    }});
+
+    return allNewTriples.slice(0, count); // Ensure we don't return more than requested
 };
 
 export const generateInitialTopicalMap = async (businessInfo: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>): Promise<{ coreTopics: EnrichedTopic[], outerTopics: EnrichedTopic[] }> => {
@@ -280,7 +363,8 @@ export const generateInitialTopicalMap = async (businessInfo: BusinessInfo, pill
     };
     const fallback = { monetizationSection: [], informationalSection: [] };
 
-    const result = await callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitize(text, sanitizerSchema, fallback), true, apiSchema);
+    // Use higher token limit for topical maps which can be large with many topics
+    const result = await callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitize(text, sanitizerSchema, fallback), true, apiSchema, 32768);
 
     // Log the raw result for debugging
     dispatch({ type: 'LOG_EVENT', payload: {
@@ -402,14 +486,52 @@ export const generateContentBrief = async (
         discourse_anchors: Array
     };
     
-    return callApi(
-        prompt, 
-        businessInfo, 
-        dispatch, 
-        (text) => sanitizer.sanitize(text, sanitizerSchema, CONTENT_BRIEF_FALLBACK), 
-        true, 
-        CONTENT_BRIEF_SCHEMA
+    // Use higher token limit for content briefs which can be large
+    const result = await callApi(
+        prompt,
+        businessInfo,
+        dispatch,
+        (text) => {
+            const parsed = sanitizer.sanitize(text, sanitizerSchema, CONTENT_BRIEF_FALLBACK);
+            // Log what fields are populated vs empty for debugging
+            const emptyFields: string[] = [];
+
+            // CRITICAL: Check for structured_outline - this is the most important field
+            if (!parsed.structured_outline || parsed.structured_outline.length === 0) {
+                emptyFields.push('structured_outline (CRITICAL)');
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'Gemini',
+                    message: `CRITICAL: AI did not return structured_outline. Content brief will have empty sections. Try regenerating.`,
+                    status: 'error',
+                    timestamp: Date.now()
+                }});
+            } else {
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'Gemini',
+                    message: `Content brief generated with ${parsed.structured_outline.length} sections in structured_outline.`,
+                    status: 'success',
+                    timestamp: Date.now()
+                }});
+            }
+
+            if (!parsed.visual_semantics || parsed.visual_semantics.length === 0) emptyFields.push('visual_semantics');
+            if (!parsed.contextualBridge?.links || parsed.contextualBridge.links.length === 0) emptyFields.push('contextualBridge.links');
+            if (!parsed.discourse_anchors || parsed.discourse_anchors.length === 0) emptyFields.push('discourse_anchors');
+            if (emptyFields.length > 0) {
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'Gemini',
+                    message: `Content brief generated with empty fields: ${emptyFields.join(', ')}. AI may not have generated these sections.`,
+                    status: 'warning',
+                    timestamp: Date.now()
+                }});
+            }
+            return parsed;
+        },
+        true,
+        CONTENT_BRIEF_SCHEMA,
+        32768  // Increased token limit - content briefs with structured_outline need more space
     );
+    return result;
 };
 
 export const findMergeOpportunitiesForSelection = async (businessInfo: BusinessInfo, selectedTopics: EnrichedTopic[], dispatch: React.Dispatch<AppAction>): Promise<MergeSuggestion> => {
@@ -514,7 +636,38 @@ export const findMergeOpportunities = async (topics: EnrichedTopic[], businessIn
 };
 
 export const analyzeSemanticRelationships = async (topics: EnrichedTopic[], businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<SemanticAnalysisResult> => {
-    return Promise.resolve({ summary: "Mocked: Analysis shows strong clustering around core topics.", pairs: [], actionableSuggestions: ["Consider creating a glossary page."] });
+    const sanitizer = new AIResponseSanitizer(dispatch);
+
+    // Pre-calculate similarity pairs based on topic hierarchy
+    // This gives the AI structured data to work with
+    const preCalculatedPairs = calculateTopicSimilarityPairs(topics);
+
+    // Limit pairs to prevent token overflow (top 20 most relevant pairs)
+    const limitedPairs = preCalculatedPairs.slice(0, 20);
+
+    const prompt = prompts.ANALYZE_SEMANTIC_RELATIONSHIPS_PROMPT(topics, businessInfo, limitedPairs);
+
+    const fallback: SemanticAnalysisResult = {
+        summary: 'Unable to analyze semantic relationships. Please try again.',
+        pairs: limitedPairs.map(p => ({
+            topicA: p.topicA,
+            topicB: p.topicB,
+            distance: { weightedScore: 1 - p.similarity },
+            relationship: {
+                type: p.similarity >= 0.7 ? 'SIBLING' as const : p.similarity >= 0.4 ? 'RELATED' as const : 'DISTANT' as const,
+                internalLinkingPriority: p.similarity >= 0.7 ? 'high' as const : p.similarity >= 0.4 ? 'medium' as const : 'low' as const
+            }
+        })),
+        actionableSuggestions: ['Review topic hierarchy for better clustering.']
+    };
+
+    const schema = {
+        summary: String,
+        pairs: Array,
+        actionableSuggestions: Array
+    };
+
+    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitize(text, schema, fallback));
 };
 
 export const analyzeContextualCoverage = async (businessInfo: BusinessInfo, topics: EnrichedTopic[], pillars: SEOPillars, dispatch: React.Dispatch<any>): Promise<ContextualCoverageMetrics> => {
@@ -917,6 +1070,7 @@ export const generateText = async (
 
 /**
  * Classifies topics into Core Section (monetization) or Author Section (informational)
+ * Uses batching for large topic sets to avoid AI output truncation
  */
 export const classifyTopicSections = async (
     topics: { id: string, title: string, description: string, type?: string, parent_topic_id?: string | null }[],
@@ -924,7 +1078,9 @@ export const classifyTopicSections = async (
     dispatch: React.Dispatch<any>
 ): Promise<{ id: string, topic_class: 'monetization' | 'informational', suggestedType?: 'core' | 'outer' | null, suggestedParentTitle?: string | null, typeChangeReason?: string | null }[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const prompt = prompts.CLASSIFY_TOPIC_SECTIONS_PROMPT(businessInfo, topics);
+
+    // Batch size for classification to avoid AI output truncation
+    const BATCH_SIZE = 20;
 
     dispatch({ type: 'LOG_EVENT', payload: {
         service: 'Gemini',
@@ -933,30 +1089,81 @@ export const classifyTopicSections = async (
         timestamp: Date.now()
     }});
 
-    const result = await callApi(
-        prompt,
-        businessInfo,
-        dispatch,
-        (text) => sanitizer.sanitizeArray(text, []),
-        false
-    );
+    // For small sets, process in a single call
+    if (topics.length <= BATCH_SIZE) {
+        const prompt = prompts.CLASSIFY_TOPIC_SECTIONS_PROMPT(businessInfo, topics);
+        const result = await callApi(
+            prompt,
+            businessInfo,
+            dispatch,
+            (text) => sanitizer.sanitizeArray(text, []),
+            true
+        );
 
-    // Validate and filter results
-    const validResults = result.filter((item: any) =>
-        item.id && (item.topic_class === 'monetization' || item.topic_class === 'informational')
-    );
+        const validResults = result.filter((item: any) =>
+            item.id && (item.topic_class === 'monetization' || item.topic_class === 'informational')
+        );
 
-    // Count type changes
-    const typeChanges = validResults.filter((r: any) => r.suggestedType && r.suggestedType !== null);
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Gemini',
+            message: `Classification complete. Monetization: ${validResults.filter((r: any) => r.topic_class === 'monetization').length}, Informational: ${validResults.filter((r: any) => r.topic_class === 'informational').length}`,
+            status: 'info',
+            timestamp: Date.now()
+        }});
+
+        return validResults;
+    }
+
+    // Batched classification for larger sets
+    const allResults: { id: string, topic_class: 'monetization' | 'informational', suggestedType?: 'core' | 'outer' | null, suggestedParentTitle?: string | null, typeChangeReason?: string | null }[] = [];
+    const batches = Math.ceil(topics.length / BATCH_SIZE);
 
     dispatch({ type: 'LOG_EVENT', payload: {
         service: 'Gemini',
-        message: `Classification complete. Monetization: ${validResults.filter((r: any) => r.topic_class === 'monetization').length}, Informational: ${validResults.filter((r: any) => r.topic_class === 'informational').length}, Type changes suggested: ${typeChanges.length}`,
+        message: `Processing ${topics.length} topics in ${batches} batches of ${BATCH_SIZE}...`,
         status: 'info',
         timestamp: Date.now()
     }});
 
-    return validResults;
+    for (let i = 0; i < batches; i++) {
+        const batchTopics = topics.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Gemini',
+            message: `Classifying batch ${i + 1}/${batches} (${batchTopics.length} topics)...`,
+            status: 'info',
+            timestamp: Date.now()
+        }});
+
+        const prompt = prompts.CLASSIFY_TOPIC_SECTIONS_PROMPT(businessInfo, batchTopics);
+        const result = await callApi(
+            prompt,
+            businessInfo,
+            dispatch,
+            (text) => sanitizer.sanitizeArray(text, []),
+            true
+        );
+
+        const validBatchResults = result.filter((item: any) =>
+            item.id && (item.topic_class === 'monetization' || item.topic_class === 'informational')
+        );
+
+        allResults.push(...validBatchResults);
+    }
+
+    // Log final counts
+    const monetizationCount = allResults.filter(r => r.topic_class === 'monetization').length;
+    const informationalCount = allResults.filter(r => r.topic_class === 'informational').length;
+    const typeChanges = allResults.filter(r => r.suggestedType && r.suggestedType !== null).length;
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Gemini',
+        message: `Classification complete. Monetization: ${monetizationCount}, Informational: ${informationalCount}, Type changes suggested: ${typeChanges}`,
+        status: 'success',
+        timestamp: Date.now()
+    }});
+
+    return allResults;
 };
 
 // ============================================

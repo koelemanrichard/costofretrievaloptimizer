@@ -119,7 +119,7 @@ const MergeReviewStep: React.FC<MergeReviewStepProps> = ({
               key={map.id}
               className="px-3 py-1 bg-blue-900/50 text-blue-200 rounded-full text-sm"
             >
-              {map.name} ({map.topics?.length || 0} topics)
+              {map.name} ({map.topicCounts?.total || map.topics?.length || 0} topics)
             </span>
           ))}
         </div>

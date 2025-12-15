@@ -73,7 +73,7 @@ const TopicDetailPanel: React.FC<TopicDetailPanelProps> = ({
 
 
   return (
-    <Card className="absolute top-4 right-4 w-80 max-w-sm bg-gray-800/95 backdrop-blur-md z-50 animate-fade-in-right shadow-2xl border border-gray-600 max-h-[80vh] overflow-y-auto">
+    <Card className="fixed top-20 right-4 w-80 max-w-sm bg-gray-800/95 backdrop-blur-md z-50 animate-fade-in-right shadow-2xl border border-gray-600 max-h-[80vh] overflow-y-auto">
       <div className="p-4">
         <div className="flex justify-between items-start">
           <h3 className={`text-lg font-bold ${topic.type === 'core' ? 'text-green-400' : 'text-purple-400'}`}>{safeString(topic.title)}</h3>
@@ -84,12 +84,36 @@ const TopicDetailPanel: React.FC<TopicDetailPanelProps> = ({
         
         {/* Holistic SEO Identity Section */}
         <div className="mt-4 pt-3 border-t border-gray-700 space-y-3">
+            {/* Topic Type (core/outer hierarchy) */}
+            <div>
+                <Label htmlFor="topic-type-select" className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Topic Type (Hierarchy)</Label>
+                <Select
+                    id="topic-type-select"
+                    value={topic.type}
+                    onChange={(e) => {
+                        if (onUpdateTopic) {
+                            const newType = e.target.value as 'core' | 'outer';
+                            onUpdateTopic(topic.id, {
+                                type: newType,
+                                // Clear parent if promoting to core
+                                parent_topic_id: newType === 'core' ? null : topic.parent_topic_id
+                            });
+                        }
+                    }}
+                    className="!py-1 !text-xs"
+                    disabled={!onUpdateTopic}
+                >
+                    <option value="core">Core (Hub/Pillar Topic)</option>
+                    <option value="outer">Outer (Supporting/Cluster Topic)</option>
+                </Select>
+            </div>
+
             {/* Topic Class / Section Toggle */}
             <div>
                 <Label htmlFor="topic-section-select" className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Topic Section</Label>
-                <Select 
-                    id="topic-section-select" 
-                    value={topic.topic_class || 'informational'} 
+                <Select
+                    id="topic-section-select"
+                    value={topic.topic_class || 'informational'}
                     onChange={handleSectionChange}
                     className="!py-1 !text-xs"
                     disabled={!onUpdateTopic}

@@ -5,6 +5,7 @@ import { ProhibitedLanguageValidator } from './prohibitedLanguage';
 import { EAVDensityValidator } from './eavDensity';
 import { ModalityValidator } from './modalityValidator';
 import { CenterpieceValidator } from './centerpieceValidator';
+import { CentralEntityFocusValidator } from './centralEntityFocusValidator';
 import { YMYLValidator } from './ymylValidator';
 import { FormatCodeValidator } from './formatCodeValidator';
 import { StructureValidator } from './structureValidator';
@@ -51,6 +52,9 @@ export class RulesValidator {
     // 9. Repetition Detection
     violations.push(...RepetitionValidator.validate(content));
 
+    // 10. Central Entity Focus (lenient - info level)
+    violations.push(...CentralEntityFocusValidator.validate(content, context));
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -78,8 +82,11 @@ export class RulesValidator {
 
 export { ProhibitedLanguageValidator } from './prohibitedLanguage';
 export { EAVDensityValidator } from './eavDensity';
+export type { EavDensityResult, EavDensityWarning } from './eavDensity';
 export { ModalityValidator } from './modalityValidator';
 export { CenterpieceValidator } from './centerpieceValidator';
+export { CentralEntityFocusValidator } from './centralEntityFocusValidator';
+export type { CentralEntityFocusResult, CentralEntityFocusWarning } from './centralEntityFocusValidator';
 export { YMYLValidator } from './ymylValidator';
 export { FormatCodeValidator } from './formatCodeValidator';
 export { StructureValidator } from './structureValidator';

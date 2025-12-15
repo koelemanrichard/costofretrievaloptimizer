@@ -1,6 +1,6 @@
 // services/ai/contentGeneration/orchestrator.ts
 import { getSupabaseClient } from '../../supabaseClient';
-import { ContentGenerationJob, ContentGenerationSection, ContentBrief, PassesStatus, SectionDefinition, PASS_NAMES } from '../../../types';
+import { ContentGenerationJob, ContentGenerationSection, ContentBrief, PassesStatus, SectionDefinition, PASS_NAMES, ImagePlaceholder } from '../../../types';
 
 export interface OrchestratorCallbacks {
   onPassStart: (passNumber: number, passName: string) => void;
@@ -84,6 +84,18 @@ export class ContentGenerationOrchestrator {
       .eq('id', jobId);
 
     if (error) throw new Error(`Failed to update job: ${error.message}`);
+  }
+
+  async updateImagePlaceholders(jobId: string, placeholders: ImagePlaceholder[]): Promise<void> {
+    const { error } = await this.supabase
+      .from('content_generation_jobs')
+      .update({
+        image_placeholders: placeholders as unknown as Record<string, unknown>[],
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', jobId);
+
+    if (error) throw new Error(`Failed to update image placeholders: ${error.message}`);
   }
 
   async getJob(jobId: string): Promise<ContentGenerationJob | null> {

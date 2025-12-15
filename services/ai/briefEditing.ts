@@ -1,7 +1,7 @@
 // services/ai/briefEditing.ts
 // AI service for content brief editing: regeneration, section refinement, and new section generation
 
-import { BusinessInfo, ContentBrief, EnrichedTopic, SEOPillars, BriefSection } from '../../types';
+import { BusinessInfo, ContentBrief, EnrichedTopic, SEOPillars, BriefSection, SemanticTriple } from '../../types';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
@@ -24,6 +24,7 @@ export type ProgressCallback = (progress: RegenerationProgress) => void;
  * Automatically uses multi-pass regeneration for large briefs (>10 sections)
  *
  * @param onProgress - Optional callback for progress updates during multi-pass regeneration
+ * @param eavs - Optional EAVs for section generation when structured_outline is empty
  */
 export const regenerateBrief = async (
     businessInfo: BusinessInfo,
@@ -33,17 +34,19 @@ export const regenerateBrief = async (
     pillars: SEOPillars,
     allTopics: EnrichedTopic[],
     dispatch: React.Dispatch<any>,
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    eavs?: SemanticTriple[]
 ): Promise<ContentBrief> => {
     const sectionCount = currentBrief.structured_outline?.length || 0;
 
-    // Use multi-pass for large briefs or when progress callback is provided
-    if (sectionCount > MULTI_PASS_THRESHOLD || onProgress) {
+    // Use multi-pass for large briefs, when progress callback is provided, OR when sections are empty
+    // (so we can generate them from scratch using the new sectionsGeneration pass)
+    if (sectionCount > MULTI_PASS_THRESHOLD || onProgress || sectionCount === 0) {
         dispatch({
             type: 'LOG_EVENT',
             payload: {
                 service: 'BriefEditing',
-                message: `Using multi-pass regeneration (${sectionCount} sections)`,
+                message: `Using multi-pass regeneration (${sectionCount} sections${sectionCount === 0 ? ' - will generate from scratch' : ''})`,
                 status: 'info',
                 timestamp: Date.now()
             }
@@ -57,7 +60,8 @@ export const regenerateBrief = async (
             pillars,
             allTopics,
             dispatch,
-            onProgress
+            onProgress,
+            eavs  // Pass EAVs for section generation when empty
         );
 
         if (!result.success || !result.brief) {

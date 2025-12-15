@@ -10,6 +10,7 @@ import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { AIProviderSettings, ServiceSettings } from '../SettingsModal';
 import { Loader } from '../ui/Loader';
+import HelpEditor from './HelpEditor';
 
 interface UserData {
     id: string;
@@ -285,7 +286,7 @@ const AdminDashboard: React.FC = () => {
     const [logs, setLogs] = useState<TelemetryLog[]>([]);
     const [isCheckingDB, setIsCheckingDB] = useState(false);
     const [dbStatus, setDbStatus] = useState<'ok' | 'error' | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'users'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'users' | 'help'>('overview');
 
     useEffect(() => {
         setLogs(getTelemetryLogs());
@@ -343,11 +344,17 @@ const AdminDashboard: React.FC = () => {
                         >
                             ⚙️ Configuration
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab('users')}
                             className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
                         >
                             👥 User Management
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('help')}
+                            className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'help' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                        >
+                            📚 Help Documentation
                         </button>
                     </nav>
                     <div className="p-4 border-t border-gray-700">
@@ -442,6 +449,10 @@ const AdminDashboard: React.FC = () => {
 
                     {activeTab === 'users' && (
                         <UserManagement />
+                    )}
+
+                    {activeTab === 'help' && (
+                        <HelpEditor />
                     )}
                 </main>
             </div>

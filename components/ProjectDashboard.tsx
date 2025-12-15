@@ -9,10 +9,6 @@ import { calculateNextSteps, RecommendationType } from '../services/recommendati
 
 // Import child components
 import TopicalMapDisplay from './TopicalMapDisplay';
-import StrategicDashboard from './ui/StrategicDashboard';
-import WorkbenchPanel from './dashboard/WorkbenchPanel';
-import AnalysisToolsPanel from './dashboard/AnalysisToolsPanel';
-import StrategicContextPanel from './dashboard/StrategicContextPanel';
 import { NextStepsWidget } from './dashboard/NextStepsWidget';
 import { FoundationPagesPanel } from './FoundationPagesPanel';
 
@@ -41,8 +37,14 @@ import EavManagerModal from './EavManagerModal';
 import CompetitorManagerModal from './CompetitorManagerModal';
 import TopicExpansionModal from './TopicExpansionModal';
 import TopicResourcesModal from './TopicResourcesModal';
+import BusinessInfoModal from './BusinessInfoModal';
+import PillarEditModal from './PillarEditModal';
+import { PlanningDashboard, PerformanceImportModal } from './planning';
 
 import { Button } from './ui/Button';
+import TabNavigation, { createDashboardTabs, NavIcons } from './dashboard/TabNavigation';
+import StrategyOverview from './dashboard/StrategyOverview';
+import CollapsiblePanel from './dashboard/CollapsiblePanel';
 
 interface ProjectDashboardProps {
   projectName: string;
@@ -68,6 +70,7 @@ interface ProjectDashboardProps {
   onCalculateTopicalAuthority: () => void;
   onGeneratePublicationPlan: () => void;
   onRunUnifiedAudit: () => void;
+  onRepairBriefs?: () => Promise<{ repaired: number; skipped: number; errors: string[] }>;
   onExpandCoreTopic: (coreTopic: EnrichedTopic, mode: ExpansionMode, userContext?: string, overrideSettings?: { provider: string, model: string }) => void;
   expandingCoreTopicId: string | null;
   onSavePillars: (newPillars: SEOPillars) => void;
@@ -134,6 +137,10 @@ interface ProjectDashboardProps {
   // Navigation
   navigation?: NavigationStructure | null;
   onSaveNavigation?: (navigation: NavigationStructure) => Promise<void>;
+  // Brand Kit
+  onSaveBrandKit?: (brandKit: any) => Promise<void>;
+  // Business Info / Map Settings
+  onSaveBusinessInfo?: (updates: Partial<BusinessInfo>) => Promise<void>;
 }
 
 
@@ -159,6 +166,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     onCalculateTopicalAuthority,
     onGeneratePublicationPlan,
     onRunUnifiedAudit,
+    onRepairBriefs,
     onExpandCoreTopic,
     expandingCoreTopicId,
     onSavePillars,
@@ -207,11 +215,16 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     isRepairingNavigation,
     // Navigation
     navigation,
-    onSaveNavigation
+    onSaveNavigation,
+    // Brand Kit
+    onSaveBrandKit,
+    // Business Info / Map Settings
+    onSaveBusinessInfo
 }) => {
     const { state, dispatch } = useAppState();
     const { modals, isLoading, briefGenerationStatus, validationResult, unifiedAudit } = state;
     const [topicForBrief, setTopicForBrief] = useState<EnrichedTopic | null>(null);
+    const [isBusinessInfoModalOpen, setIsBusinessInfoModalOpen] = useState(false);
 
     // Ref for scrolling to Website Structure section
     const websiteStructureRef = useRef<HTMLDivElement>(null);
@@ -287,72 +300,93 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         }
     };
 
+    // Create navigation tabs configuration
+    const dashboardTabs = createDashboardTabs({
+        onEditPillars: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarEdit', visible: true } }),
+        onManageEavs: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eavManager', visible: true } }),
+        onManageCompetitors: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'competitorManager', visible: true } }),
+        onBusinessInfo: () => setIsBusinessInfoModalOpen(true),
+        onGenerateBriefs: onGenerateAllBriefs,
+        onAddTopic: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'addTopic', visible: true } }),
+        onUploadGsc: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'gsc', visible: true } }),
+        onValidate: onValidateMap,
+        onLinkAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'multiPassLinkingAudit', visible: true } }),
+        onUnifiedAudit: onRunUnifiedAudit,
+        onRegenerateMap: onRegenerateMap,
+        onRepairBriefs: onRepairBriefs,
+        onExport: () => onExportData('xlsx'),
+        isValidating: !!isLoading.validation,
+        isAuditing: !!isLoading.linkAudit,
+        canGenerateBriefs: canGenerateBriefs,
+        // Current values for dropdown display
+        currentPillars: topicalMap.pillars ? {
+            ce: topicalMap.pillars.centralEntity,
+            sc: topicalMap.pillars.sourceContext,
+            csi: topicalMap.pillars.centralSearchIntent,
+        } : undefined,
+        eavCount: (topicalMap.eavs as any[])?.length || 0,
+        competitorCount: topicalMap.competitors?.length || 0,
+        // Planning
+        onOpenPlanning: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'planningDashboard', visible: true } }),
+        onGeneratePlan: onGeneratePublicationPlan,
+        onImportPerformance: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'performanceImport', visible: true } }),
+        isGeneratingPlan: state.publicationPlanning?.isGeneratingPlan,
+        hasPlan: !!state.publicationPlanning?.planResult,
+    });
+
     return (
-        <div className="space-y-8 max-w-7xl w-full">
-            <header className="flex justify-between items-start">
+        <div className="space-y-6 max-w-7xl w-full">
+            {/* Compact Header */}
+            <header className="flex justify-between items-center">
               <div>
-                <h1 className="text-4xl font-bold text-white">{projectName}</h1>
-                <p className="text-lg text-gray-400 mt-1">Topical Map: {topicalMap.name}</p>
+                <h1 className="text-2xl font-bold text-white">{projectName}</h1>
+                <p className="text-sm text-gray-400">Topical Map: {topicalMap.name}</p>
               </div>
-              <div className="flex gap-3">
-                  <Button onClick={onSwitchToMigration} className="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500">
-                      Switch to Migration Workbench
+              <div className="flex gap-2">
+                  <Button onClick={onSwitchToMigration} variant="secondary" className="text-sm">
+                      Migration Workbench
                   </Button>
-                  <Button onClick={onBackToProjects} variant="secondary">Back to Projects</Button>
+                  <Button onClick={onBackToProjects} variant="ghost" className="text-sm">Back to Projects</Button>
               </div>
             </header>
 
-            {/* New Recommendation Widget */}
-            <NextStepsWidget recommendations={recommendations} onAction={handleRecommendationAction} />
+            {/* Tab Navigation - All actions in one place */}
+            <TabNavigation tabs={dashboardTabs} />
 
-            <StrategicDashboard metrics={metrics} />
-
-            {topicalMap.pillars && (
-                <StrategicContextPanel
+            {/* Condensed Strategy Overview */}
+            <CollapsiblePanel
+                id="strategy-overview"
+                title="Strategy Overview"
+                icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+                defaultExpanded={true}
+                persistKey="dashboard-strategy"
+            >
+                <StrategyOverview
                     pillars={topicalMap.pillars}
-                    eavsCount={(topicalMap.eavs || []).length}
-                    competitorsCount={(topicalMap.competitors || []).length}
-                    onEditPillars={onSavePillars}
-                    onManageEavs={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eavManager', visible: true } })}
-                    onManageCompetitors={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'competitorManager', visible: true } })}
-                    onRegenerateMap={onRegenerateMap}
-                    isRegenerating={!!isLoading.map}
-                    onEnrichData={onEnrichData}
-                    isEnriching={isEnriching}
                     topics={allTopics}
-                    onGenerateBlueprints={onGenerateBlueprints}
-                    isGeneratingBlueprints={isGeneratingBlueprints}
+                    briefs={briefs}
+                    eavs={topicalMap.eavs as SemanticTriple[] || []}
+                    knowledgeGraph={knowledgeGraph}
+                    onEditPillars={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarEdit', visible: true } })}
+                    onEditEavs={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eavManager', visible: true } })}
+                    onEditCompetitors={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'competitorManager', visible: true } })}
                 />
+            </CollapsiblePanel>
+
+            {/* Priority Recommendations (Compact) */}
+            {recommendations.length > 0 && (
+                <CollapsiblePanel
+                    id="next-steps"
+                    title={`Next Steps (${recommendations.length})`}
+                    icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                    defaultExpanded={recommendations.some(r => r.priority === 'CRITICAL')}
+                    persistKey="dashboard-nextsteps"
+                >
+                    <NextStepsWidget recommendations={recommendations} onAction={handleRecommendationAction} />
+                </CollapsiblePanel>
             )}
 
-            <WorkbenchPanel
-                isLoading={isLoading}
-                canGenerateBriefs={canGenerateBriefs}
-                briefGenerationStatus={briefGenerationStatus}
-                onAnalyzeKnowledgeDomain={onAnalyzeKnowledgeDomain}
-                onAddTopicManually={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'addTopic', visible: true } })}
-                onViewInternalLinking={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'internalLinking', visible: true } })}
-                onUploadGsc={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'gsc', visible: true } })}
-                onGenerateAllBriefs={onGenerateAllBriefs}
-                onExportData={onExportData}
-                onQuickAudit={onQuickAudit}
-                onScrollToWebsiteStructure={scrollToWebsiteStructure}
-                foundationPagesCount={foundationPages.filter(p => !p.deleted_at).length}
-            />
-
-            <AnalysisToolsPanel
-                isLoading={isLoading}
-                onValidateMap={onValidateMap}
-                onFindMergeOpportunities={onFindMergeOpportunities}
-                onAnalyzeSemanticRelationships={onAnalyzeSemanticRelationships}
-                onAnalyzeContextualCoverage={onAnalyzeContextualCoverage}
-                onAuditInternalLinking={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'multiPassLinkingAudit', visible: true }})}
-                onCalculateTopicalAuthority={onCalculateTopicalAuthority}
-                onGeneratePublicationPlan={onGeneratePublicationPlan}
-                onRunUnifiedAudit={onRunUnifiedAudit}
-                auditProgress={unifiedAudit.progress}
-            />
-
+            {/* Main Content: Topical Map */}
             <TopicalMapDisplay
                 coreTopics={coreTopics}
                 outerTopics={outerTopics}
@@ -386,6 +420,11 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     navigation={navigation}
                     topics={allTopics}
                     onSaveNavigation={onSaveNavigation}
+                    onGenerateNavigation={onRepairNavigation}
+                    onRegenerateNavigation={onRepairNavigation ? async () => onRepairNavigation() : undefined}
+                    isGeneratingNavigation={isRepairingNavigation}
+                    // Brand Kit
+                    onSaveBrandKit={onSaveBrandKit}
                 />
             </div>
 
@@ -455,6 +494,8 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 isExpandingKnowledgeDomain={!!isLoading.knowledgeDomain}
                 onFindAndAddMissingKnowledgeTerms={onFindAndAddMissingKnowledgeTerms}
                 isFindingMissingTerms={!!isLoading.knowledgeDomain}
+                eavs={topicalMap.eavs as SemanticTriple[] | undefined}
+                centralEntity={topicalMap.pillars?.centralEntity}
             />
             <InternalLinkingModal
                  isOpen={!!modals.internalLinking}
@@ -529,6 +570,12 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarConfirmation', visible: false } })}
                 onConfirm={onConfirmPillarChange}
             />
+            <PillarEditModal
+                isOpen={!!modals.pillarEdit}
+                onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarEdit', visible: false } })}
+                pillars={topicalMap.pillars}
+                onSave={onSavePillars}
+            />
             {topicalMap.eavs && (
                 <EavManagerModal
                     isOpen={!!modals.eavManager}
@@ -549,6 +596,45 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 isOpen={!!modals.topicExpansion}
                 onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'topicExpansion', visible: false } })}
                 onExpand={onExpandWithContext}
+            />
+            {onSaveBusinessInfo && (
+                <BusinessInfoModal
+                    isOpen={isBusinessInfoModalOpen}
+                    onClose={() => setIsBusinessInfoModalOpen(false)}
+                    businessInfo={effectiveBusinessInfo}
+                    onSave={onSaveBusinessInfo}
+                />
+            )}
+            {/* Planning Dashboard Modal */}
+            {modals.planningDashboard && (
+                <div className="fixed inset-0 z-50 bg-gray-900">
+                    <div className="h-full flex flex-col">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                            <h2 className="text-xl font-semibold text-white">Publication Planning</h2>
+                            <button
+                                onClick={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'planningDashboard', visible: false } })}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            <PlanningDashboard topics={allTopics} />
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Performance Import Modal */}
+            <PerformanceImportModal
+                isOpen={!!modals.performanceImport}
+                onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'performanceImport', visible: false } })}
+                topics={allTopics}
+                mapId={topicalMap.id}
+                userId={state.user?.id || ''}
+                supabaseUrl={effectiveBusinessInfo.supabaseUrl || ''}
+                supabaseKey={effectiveBusinessInfo.supabaseAnonKey || ''}
             />
         </div>
     );

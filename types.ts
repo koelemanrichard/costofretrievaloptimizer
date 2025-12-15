@@ -24,7 +24,52 @@ export enum AppStep {
   ADMIN // New Admin Step
 }
 
-export type WebsiteType = 'ECOMMERCE' | 'SAAS' | 'SERVICE' | 'INFORMATIONAL';
+export type WebsiteType = 'ECOMMERCE' | 'SAAS' | 'SERVICE_B2B' | 'INFORMATIONAL' | 'AFFILIATE_REVIEW';
+
+// Website type metadata for UI and AI guidance
+export const WEBSITE_TYPE_CONFIG: Record<WebsiteType, {
+  label: string;
+  description: string;
+  coreSectionFocus: string;
+  authorSectionFocus: string;
+  keyAttributes: string[];
+}> = {
+  ECOMMERCE: {
+    label: 'E-commerce',
+    description: 'Online stores selling products with product taxonomy and shopping intent',
+    coreSectionFocus: 'Product categories, buying guides, comparisons',
+    authorSectionFocus: 'Industry trends, educational content, brand story',
+    keyAttributes: ['price', 'specifications', 'availability', 'reviews', 'variants']
+  },
+  SAAS: {
+    label: 'SaaS / Software',
+    description: 'Software-as-a-service with user role segmentation and feature-focused content',
+    coreSectionFocus: 'Features, use cases, integrations, pricing',
+    authorSectionFocus: 'Industry insights, best practices, tutorials',
+    keyAttributes: ['features', 'pricing_tiers', 'integrations', 'user_roles', 'security']
+  },
+  SERVICE_B2B: {
+    label: 'Service / B2B',
+    description: 'Professional services with deep expertise and scientific-style content',
+    coreSectionFocus: 'Service offerings, case studies, expertise areas',
+    authorSectionFocus: 'Thought leadership, research, industry analysis',
+    keyAttributes: ['methodology', 'credentials', 'case_studies', 'process', 'outcomes']
+  },
+  INFORMATIONAL: {
+    label: 'Blog / Informational',
+    description: 'Content-focused sites with query-driven topics and unique information gain',
+    coreSectionFocus: 'Cornerstone content, comprehensive guides',
+    authorSectionFocus: 'Trending topics, news, community content',
+    keyAttributes: ['expertise_level', 'freshness', 'comprehensiveness', 'uniqueness']
+  },
+  AFFILIATE_REVIEW: {
+    label: 'Affiliate / Review',
+    description: 'Product reviews and comparisons with commerce-like structure and trust signals',
+    coreSectionFocus: 'Product reviews, comparisons, buying guides',
+    authorSectionFocus: 'Industry news, trends, how-to content',
+    keyAttributes: ['rating', 'pros_cons', 'price_comparison', 'alternatives', 'verdict']
+  }
+};
 
 export type StylometryType = 'ACADEMIC_FORMAL' | 'DIRECT_TECHNICAL' | 'PERSUASIVE_SALES' | 'INSTRUCTIONAL_CLEAR';
 
@@ -48,6 +93,7 @@ export interface BusinessInfo {
   expertise: string;
   seedKeyword: string;
   language: string;
+  region?: string; // Geographic region (e.g., "Netherlands", "United States")
   targetMarket: string;
   
   // Holistic SEO - Authority Proof & Authorship
@@ -84,6 +130,13 @@ export interface BusinessInfo {
   neo4jUri?: string;
   neo4jUser?: string;
   neo4jPassword?: string;
+
+  // Image Generation & Brand Kit
+  brandKit?: BrandKit;
+  cloudinaryCloudName?: string;
+  cloudinaryApiKey?: string;
+  cloudinaryUploadPreset?: string;
+  markupGoApiKey?: string;
 }
 
 export interface SEOPillars {
@@ -141,7 +194,7 @@ export interface SemanticTriple {
   predicate: {
       relation: string;
       type: string;
-      category?: AttributeCategory; // NEW: Research-based classification
+      category?: AttributeCategory; // Research-based classification
       classification?: AttributeClass;
   };
   object: {
@@ -150,7 +203,12 @@ export interface SemanticTriple {
       unit?: string;
       truth_range?: string;
   };
-  metadata?: AttributeMetadata; // NEW: Deep metadata for EAV
+  metadata?: AttributeMetadata; // Deep metadata for EAV
+  lexical?: {
+      synonyms?: string[];    // Alternative terms for the object value
+      antonyms?: string[];    // Opposite/contrasting concepts
+      hypernyms?: string[];   // Broader category terms
+  };
 }
 
 export enum FreshnessProfile {
@@ -181,7 +239,11 @@ export interface EnrichedTopic {
   description: string;
   type: 'core' | 'outer';
   freshness: FreshnessProfile;
-  
+
+  // Database timestamps
+  created_at?: string;
+  updated_at?: string;
+
   // Holistic SEO - Section & Quality Metadata
   topic_class?: 'monetization' | 'informational'; // Core Section vs Author Section
   cluster_role?: 'pillar' | 'cluster_content';
@@ -309,6 +371,146 @@ export interface VisualSemantics {
     width_hint?: string;
 }
 
+// Image Generation Types
+export type ImageType = 'HERO' | 'SECTION' | 'INFOGRAPHIC' | 'CHART' | 'DIAGRAM' | 'AUTHOR';
+
+export interface ImagePlaceholder {
+  id: string;
+  type: ImageType;
+  position: number;
+  sectionKey?: string;
+  description: string;
+  altTextSuggestion: string;
+  status: 'placeholder' | 'generating' | 'uploaded' | 'generated' | 'error';
+  generatedUrl?: string;
+  userUploadUrl?: string;
+  specs: ImageSpecs;
+  metadata?: ImageMetadata;
+  errorMessage?: string; // Error details when status is 'error'
+}
+
+// Image Generation Progress Types
+export type ImageGenerationPhase = 'idle' | 'generating' | 'uploading' | 'complete' | 'error';
+
+export interface ImageGenerationError {
+  phase: ImageGenerationPhase;
+  provider: string;
+  message: string;
+  code?: string;
+  retryable: boolean;
+  suggestion: string;
+}
+
+export interface ImageGenerationProgress {
+  phase: ImageGenerationPhase;
+  provider?: string;
+  progress: number;
+  message?: string;
+  previewUrl?: string;
+  finalUrl?: string;
+  error?: ImageGenerationError;
+}
+
+export interface ImageSpecs {
+  width: number;
+  height: number;
+  format: 'avif' | 'webp' | 'png' | 'jpeg';
+  maxFileSize: number;
+  textOverlay?: {
+    text: string;
+    position: 'center' | 'bottom' | 'top';
+    style: string;
+  };
+  logoOverlay?: {
+    position: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+    opacity: number;
+  };
+}
+
+export interface ImageMetadata {
+  filename: string;
+  altText: string;
+  caption?: string;
+  generatedBy?: string; // Provider name that generated this image
+  exif: {
+    author: string;
+    copyright: string;
+    software: string;
+    description: string;
+  };
+  iptc: {
+    creator: string;
+    rights: string;
+    source: string;
+    keywords: string[];
+  };
+  schema: {
+    "@type": "ImageObject";
+    url: string;
+    width: number;
+    height: number;
+    caption: string;
+    license?: string;
+    acquireLicensePage?: string;
+  };
+}
+
+export type ImageStyle = 'photorealistic' | 'illustration' | 'cartoon' | 'minimal' | 'artistic' | 'technical';
+export type ImageProviderPreference = 'auto' | 'markupgo' | 'gemini' | 'dall-e';
+
+export interface ImageGenerationSettings {
+  preferredStyle: ImageStyle;
+  preferredProvider: ImageProviderPreference;
+  customInstructions?: string; // Additional prompt instructions for all images
+  sizeOverrides?: {
+    HERO?: { width: number; height: number };
+    SECTION?: { width: number; height: number };
+    INFOGRAPHIC?: { width: number; height: number };
+    CHART?: { width: number; height: number };
+    DIAGRAM?: { width: number; height: number };
+  };
+}
+
+export interface BrandKit {
+  logo?: {
+    url: string;
+    cloudinaryId?: string;
+  };
+  logoPlacement: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+  logoOpacity: number;
+  colors: {
+    primary: string;
+    secondary: string;
+    textOnImage: string;
+    overlayGradient?: string;
+  };
+  fonts: {
+    heading: string;
+    body: string;
+  };
+  copyright: {
+    holder: string;
+    licenseUrl?: string;
+  };
+  heroTemplates: HeroTemplate[];
+  markupGoDefaultTemplateId?: string; // Default MarkupGo template ID for this topical map
+  imageGeneration?: ImageGenerationSettings; // Image generation preferences
+}
+
+export interface HeroTemplate {
+  id: string;
+  name: string;
+  description: string;
+  markupGoTemplateId?: string;
+  style: {
+    textPosition: 'center' | 'bottom-left' | 'bottom-center' | 'top-center';
+    hasGradientOverlay: boolean;
+    hasSubtitle: boolean;
+    backgroundColor?: string;
+  };
+  preview?: string;
+}
+
 export interface FeaturedSnippetTarget {
     question: string;
     answer_target_length: number; // e.g. 40
@@ -330,6 +532,11 @@ export interface ContentBrief {
   serpAnalysis: {
     peopleAlsoAsk: string[];
     competitorHeadings: { title: string; url: string; headings: { level: number; text: string }[] }[];
+    // Optional aggregated SERP data
+    avgWordCount?: number;
+    avgHeadings?: number;
+    commonStructure?: string;
+    contentGaps?: string[];
   };
   visuals: {
     featuredImagePrompt: string;
@@ -597,6 +804,143 @@ export interface PublicationPlan {
     phases: PublicationPlanPhase[];
 }
 
+// =============================================================================
+// PUBLICATION PLANNING & TRACKING TYPES
+// =============================================================================
+
+/** Publication status workflow */
+export type PublicationStatus =
+  | 'not_started'
+  | 'brief_ready'
+  | 'draft_in_progress'
+  | 'draft_ready'
+  | 'in_review'
+  | 'scheduled'
+  | 'published'
+  | 'needs_update';
+
+/** Publication phase based on semantic SEO guidelines */
+export type PublicationPhase =
+  | 'phase_1_authority'    // Batch publish 20-60 topics (monetization + pillars)
+  | 'phase_2_support'      // 3-7/week (remaining monetization + high-priority informational)
+  | 'phase_3_expansion'    // 2-5/week (informational with RARE/UNIQUE EAVs)
+  | 'phase_4_longtail';    // 1-2/week (remaining topics)
+
+/** Priority level for publication ordering */
+export type PublicationPriority = 'critical' | 'high' | 'medium' | 'low';
+
+/** Per-topic publication planning data (stored in EnrichedTopic.metadata.publication_plan) */
+export interface TopicPublicationPlan {
+  // Dates
+  optimal_publication_date?: string;   // AI calculated (ISO date)
+  actual_publication_date?: string;    // When actually published
+  scheduled_date?: string;             // User-set scheduled date
+
+  // Status & Phase
+  status: PublicationStatus;
+  status_override?: PublicationStatus; // Manual override of auto-detected status
+  phase: PublicationPhase;
+
+  // Priority
+  priority: PublicationPriority;
+  priority_score?: number;             // 0-100 calculated score
+
+  // Dependencies
+  dependencies?: string[];             // Topic IDs that must be published first
+
+  // Performance tracking
+  baseline_snapshot_id?: string;       // Reference to baseline performance snapshot
+
+  // User notes
+  notes?: string;
+}
+
+/** Performance snapshot from GSC CSV import */
+export interface PerformanceSnapshot {
+  id: string;
+  topic_id: string;
+  map_id: string;
+  user_id: string;
+
+  // Capture metadata
+  captured_at: string;                 // ISO timestamp
+  capture_source: 'csv_import';
+  is_baseline: boolean;                // First import becomes baseline
+
+  // GSC metrics
+  gsc_clicks: number;
+  gsc_impressions: number;
+  gsc_ctr: number;                     // Click-through rate (0-1)
+  gsc_position: number;                // Average position
+
+  // Delta from baseline (calculated)
+  delta_clicks?: number;
+  delta_impressions?: number;
+  delta_ctr?: number;
+  delta_position?: number;
+}
+
+/** Priority calculation breakdown (100 points max) */
+export interface PriorityScoreBreakdown {
+  structural: {
+    total: number;                     // Max 35
+    core_type: number;                 // +15 for core topics
+    pillar_role: number;               // +10 for pillar topics
+    monetization: number;              // +10 for monetization class
+  };
+  semantic: {
+    total: number;                     // Max 30
+    unique_eavs: number;               // +8 each (max 16)
+    rare_eavs: number;                 // +4 each (max 8)
+    root_eavs: number;                 // +2 each (max 4)
+    common_eavs: number;               // +0.5 each (max 2)
+  };
+  dependency: {
+    total: number;                     // Max 20
+    has_children: number;              // +10 if has children
+    root_level: number;                // +10 if root/pillar
+    depth_penalty: number;             // -2 per level deep
+  };
+  seasonal: {
+    total: number;                     // Max 15
+    timing_score: number;              // Based on freshness profile
+  };
+}
+
+/** Planning generation result from AI service */
+export interface PublicationPlanResult {
+  topics: Array<{
+    topic_id: string;
+    phase: PublicationPhase;
+    priority: PublicationPriority;
+    priority_score: number;
+    priority_breakdown: PriorityScoreBreakdown;
+    optimal_publication_date: string;
+    dependencies: string[];
+  }>;
+  summary: {
+    phase_1_count: number;
+    phase_2_count: number;
+    phase_3_count: number;
+    phase_4_count: number;
+    total_duration_weeks: number;
+    batch_launch_date: string;
+  };
+}
+
+/** Filters for planning dashboard views */
+export interface PlanningFilters {
+  status?: PublicationStatus[];
+  phase?: PublicationPhase[];
+  priority?: PublicationPriority[];
+  topic_type?: ('core' | 'outer')[];
+  date_range?: {
+    start: string;
+    end: string;
+  };
+  search?: string;
+}
+
 export interface AuditRuleResult {
     ruleName: string;
     isPassing: boolean;
@@ -664,6 +1008,9 @@ export interface ResolvedEntity {
   confidenceScore: number;
   source: 'wikidata' | 'ai_inferred' | 'user_provided';
   lastVerifiedAt?: string;
+  // Extended from EntityCandidate after resolution
+  role?: 'subject' | 'author' | 'publisher' | 'mentioned' | 'about';
+  isMainEntity?: boolean;
 }
 
 // Entity candidate extracted from content
@@ -906,12 +1253,16 @@ export interface TopicalMap {
     map_name?: string; // Alias for name (for DB compatibility)
     domain?: string;
     created_at: string;
+    user_id?: string;
     business_info?: Partial<BusinessInfo>;
     pillars?: SEOPillars;
     eavs?: SemanticTriple[];
     competitors?: string[];
     topics?: EnrichedTopic[];
     briefs?: Record<string, ContentBrief>;
+    // Lightweight topic counts for UI display (merge modal, etc.)
+    // Kept separate from topics array to not interfere with useMapData hydration
+    topicCounts?: { core: number; outer: number; total: number };
     analysis_state?: {
         validationResult?: ValidationResult;
         semanticAnalysisResult?: SemanticAnalysisResult;
@@ -921,6 +1272,10 @@ export interface TopicalMap {
         publicationPlan?: PublicationPlan;
         gscOpportunities?: GscOpportunity[];
     };
+    // Foundation pages generated for this map (Homepage, About, Contact, etc.)
+    foundationPages?: FoundationPage[];
+    // Navigation structure for this map
+    navigation?: NavigationStructure;
 }
 
 export interface KnowledgeNode {
@@ -1351,6 +1706,7 @@ export interface AuditHistoryEntry {
 
 // Raw extracted data types
 export interface JinaExtraction {
+  url?: string;
   title: string;
   description: string;
   content: string;
@@ -1360,6 +1716,9 @@ export interface JinaExtraction {
   schema: any[];
   wordCount: number;
   readingTime: number;
+  author?: string | null;
+  publishedTime?: string | null;
+  modifiedTime?: string | null;
 }
 
 export interface ApifyPageData {
@@ -1385,9 +1744,19 @@ export interface ApifyPageData {
   // Full HTML for custom parsing
   html: string;
 
+  // Markdown content (if extracted)
+  markdown?: string;
+
   // Links
   internalLinks: { href: string; text: string; rel?: string; position?: string }[];
   externalLinks: { href: string; text: string; rel?: string }[];
+
+  // Link counts (computed)
+  internalLinkCount?: number;
+  externalLinkCount?: number;
+
+  // Content metrics
+  wordCount?: number;
 
   // Images
   images: { src: string; alt: string; width?: number; height?: number }[];
@@ -1676,6 +2045,9 @@ export interface FoundationPage {
   deleted_at?: string | null;
   deletion_reason?: 'user_deleted' | 'not_needed';
 
+  // Publication status
+  status?: 'draft' | 'published';
+
   metadata?: Record<string, any>;
   created_at?: string;
   updated_at?: string;
@@ -1728,6 +2100,9 @@ export interface NavigationStructure {
   max_header_links: number;  // Default: 10
   max_footer_links: number;  // Default: 30
   dynamic_by_section: boolean;  // Change nav based on topic_class
+
+  // Sticky header behavior
+  sticky?: boolean;
 
   metadata?: Record<string, any>;
   created_at?: string;
@@ -2252,6 +2627,34 @@ export interface PassesStatus {
   pass_9_schema: PassStatus;
 }
 
+// Context passed to content generation passes
+export interface ContentGenerationContext {
+  pillars: {
+    centralEntity: string;
+    sourceContext: string;
+    centralSearchIntent: string;
+    primaryVerb?: string;
+    auxiliaryVerb?: string;
+  };
+  eavs: SemanticTriple[];
+  businessInfo: BusinessInfo;
+  brief: ContentBrief;
+  topic: {
+    id: string;
+    title: string;
+    type: 'core' | 'outer';
+    parentTopicId?: string;
+    topicClass?: 'monetization' | 'informational';
+  };
+  topicalMap: {
+    id: string;
+    name: string;
+    totalTopics: number;
+    relatedTopics: Array<{ id: string; title: string; type: string }>;
+  };
+  knowledgeGraphTerms?: string[];
+}
+
 export interface ContentGenerationJob {
   id: string;
   brief_id: string;
@@ -2280,6 +2683,9 @@ export interface ContentGenerationJob {
   schema_entities: ResolvedEntity[] | null;
   schema_page_type: SchemaPageType | null;
   progressive_schema_data: ProgressiveSchemaData | null;
+
+  // Image generation fields
+  image_placeholders?: ImagePlaceholder[];
 }
 
 export interface AuditDetails {
@@ -2291,6 +2697,30 @@ export interface AuditDetails {
   passingRules: number;
   totalRules: number;
   timestamp: string;
+  // Semantic Compliance Score (target >= 85%)
+  complianceScore?: {
+    overall: number;
+    passed: boolean;
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
+    breakdown: {
+      eavCoverage: number;
+      contextualFlow: number;
+      anchorDiversity: number;
+      formatCompliance: number;
+      schemaCompleteness: number;
+      visualHierarchy: number;
+      centralEntityFocus: number;
+      subordinateText: number;
+      freshnessSignals: number;
+    };
+    issues: Array<{
+      factor: string;
+      severity: 'critical' | 'major' | 'minor';
+      message: string;
+      recommendation: string;
+    }>;
+    recommendations: string[];
+  };
 }
 
 export interface ContentGenerationSection {
@@ -2544,4 +2974,298 @@ export interface MergeExecutionResult {
   newMap: TopicalMap;
   topicsCreated: number;
   warnings: string[];
+}
+
+// ============================================
+// Section-by-Section Optimization Types
+// ============================================
+
+/**
+ * Holistic summary context computed once per pass from the full article.
+ * This compact representation (~2-4KB) preserves full article metrics
+ * without requiring each section to receive the entire article.
+ */
+export interface HolisticSummaryContext {
+  articleStructure: {
+    title: string;
+    totalWordCount: number;
+    totalSections: number;
+    headingOutline: {
+      key: string;
+      heading: string;
+      level: number;
+      wordCount: number;
+      order: number;
+    }[];
+  };
+  vocabularyMetrics: {
+    typeTokenRatio: number;        // Unique words / total words (0-1)
+    uniqueWordCount: number;
+    totalWordCount: number;
+    overusedTerms: { term: string; count: number }[];  // Terms appearing >3x
+  };
+  coverageDistribution: {
+    sectionKey: string;
+    heading: string;
+    percentage: number;            // % of total word count
+  }[];
+  anchorTextsUsed: {
+    text: string;
+    sectionKey: string;
+    count: number;
+  }[];
+  sectionKeyTerms: {
+    sectionKey: string;
+    keyTerms: string[];            // Top 5 TF-IDF terms per section
+    lastSentence: string;          // For discourse chaining (S-P-O pattern)
+  }[];
+  introductionSummary: {
+    content: string;               // Full intro for alignment checks
+    topicsPreviewedInOrder: string[];
+  };
+  centralEntity: string;           // From SEO pillars
+  discourseAnchors: string[];      // Key entities for discourse integration
+  featuredSnippetTarget?: {
+    question: string;
+    targetType: string;            // 'paragraph' | 'list' | 'table'
+  };
+}
+
+/**
+ * Context provided to each section during optimization passes.
+ * Contains the section content, holistic summary, and adjacent sections.
+ */
+export interface SectionOptimizationContext {
+  section: ContentGenerationSection;
+  holistic: HolisticSummaryContext;
+  adjacentContext: {
+    previousSection?: {
+      key: string;
+      heading: string;
+      lastParagraph: string;       // For discourse continuity
+      keyTerms: string[];          // For vocabulary variety
+    };
+    nextSection?: {
+      key: string;
+      heading: string;
+      firstParagraph: string;      // For transition preparation
+    };
+  };
+  brief: ContentBrief;
+  businessInfo: BusinessInfo;
+  passNumber: number;
+}
+
+/**
+ * Configuration for section-level pass execution.
+ */
+export interface SectionPassConfig {
+  passNumber: number;
+  passKey: keyof PassesStatus;
+  nextPassNumber: number;
+  promptBuilder: (ctx: SectionOptimizationContext) => string;
+  /** If true, only process the intro section (for Pass 7) */
+  introOnly?: boolean;
+  /** Custom section filter - return true to process section */
+  sectionFilter?: (section: ContentGenerationSection, holistic: HolisticSummaryContext) => boolean;
+
+  // New: Format budget integration
+  /** Number of sections to process per batch (default: 1) */
+  batchSize?: number;
+  /** Filter sections based on format budget (selective processing) */
+  filterSections?: (sections: ContentGenerationSection[], budget: ContentFormatBudget) => ContentGenerationSection[];
+  /** Build prompt for batch of sections (alternative to single section promptBuilder) */
+  buildBatchPrompt?: (
+    batch: ContentGenerationSection[],
+    holistic: HolisticSummaryContext,
+    budget: ContentFormatBudget,
+    brief: ContentBrief,
+    businessInfo: BusinessInfo
+  ) => string;
+}
+
+/**
+ * Callback for section-level progress reporting.
+ */
+export type SectionProgressCallback = (
+  sectionKey: string,
+  currentIndex: number,
+  totalSections: number
+) => void;
+
+/**
+ * Section type classification for content format budgeting.
+ * Based on the "Baker Principle" from research - different section types
+ * have different optimal prose/structured content ratios.
+ */
+export type SectionContentType = 'macro' | 'body' | 'comparison' | 'bridge' | 'supplementary';
+
+/**
+ * Content format budget tracking for balanced optimization.
+ * Prevents over-optimization with lists/tables by tracking article-wide distribution.
+ */
+export interface ContentFormatBudget {
+  /** Current content format statistics */
+  currentStats: {
+    totalSections: number;
+    sectionsWithLists: number;
+    sectionsWithTables: number;
+    sectionsWithImages: number;
+    /** Prose to structured content ratio (0-1, e.g., 0.7 = 70% prose) */
+    proseToStructuredRatio: number;
+  };
+
+  /** Per-section type classification */
+  sectionClassifications: {
+    sectionKey: string;
+    heading: string;
+    type: SectionContentType;
+    hasListAlready: boolean;
+    hasTableAlready: boolean;
+    hasImageAlready: boolean;
+  }[];
+
+  /** Sections identified as needing specific optimizations */
+  sectionsNeedingOptimization: {
+    /** Sections that should get lists (based on query semantics) */
+    lists: string[];
+    /** Sections that should get tables (comparative content) */
+    tables: string[];
+    /** Sections that should get images */
+    images: string[];
+    /** Sections needing discourse improvement */
+    discourse: string[];
+  };
+
+  /** Budget constraints to maintain balance */
+  constraints: {
+    /** Maximum sections that can have lists (e.g., 40% of total) */
+    maxListSections: number;
+    /** Maximum sections that can have tables (e.g., 15% of total) */
+    maxTableSections: number;
+    /** Target prose ratio (0.6-0.8 = 60-80% prose) */
+    targetProseRatio: number;
+  };
+}
+
+// ============================================
+// NAVIGATION ENHANCEMENT TYPES
+// ============================================
+
+/**
+ * TOC Entry for Table of Contents generation
+ */
+export interface TOCEntry {
+  id: string;
+  heading: string;
+  level: number;
+  slug: string;           // URL-safe #hash
+  children: TOCEntry[];
+}
+
+/**
+ * Generated Table of Contents result
+ */
+export interface GeneratedTOC {
+  entries: TOCEntry[];
+  htmlOutput: string;
+  markdownOutput: string;
+  passageHints: string[];
+  totalHeadings: number;
+  maxDepth: number;
+}
+
+/**
+ * Hreflang entry for multilingual support
+ */
+export interface HreflangEntry {
+  language: string;       // ISO 639-1 (e.g., 'en', 'nl', 'de')
+  region?: string;        // ISO 3166-1 Alpha-2 (e.g., 'US', 'NL')
+  url: string;
+  isDefault?: boolean;
+}
+
+/**
+ * Hreflang configuration for international SEO
+ */
+export interface HreflangConfig {
+  enabled: boolean;
+  entries: HreflangEntry[];
+  defaultLanguage: string;
+  validateSymmetry: boolean;
+}
+
+/**
+ * Hreflang validation result
+ */
+export interface HreflangValidationResult {
+  isValid: boolean;
+  symmetryIssues: { sourceUrl: string; missingReturnLinks: string[] }[];
+  duplicateIssues: string[];
+  formatIssues: string[];
+  suggestions: string[];
+  score: number;
+}
+
+/**
+ * DOM size estimation for navigation elements
+ * Used for Cost of Retrieval optimization
+ */
+export interface NavigationDOMEstimate {
+  estimatedNodes: number;
+  breakdown: {
+    headerNav: number;
+    footerSections: number;
+    legalLinks: number;
+    napData: number;
+    wrappers: number;
+  };
+  corScore: number;    // Cost of Retrieval (0-100, lower is better)
+  status: 'optimal' | 'warning' | 'critical';
+  recommendations: string[];
+}
+
+/**
+ * N-gram analysis for navigation entity reinforcement
+ */
+export interface NavigationNGramAnalysis {
+  linksWithCentralEntity: NavigationLink[];
+  linksWithoutCentralEntity: NavigationLink[];
+  entityReinforcement: number; // 0-100 score
+  centralEntityWords: string[];
+  suggestions: string[];
+}
+
+/**
+ * Anchor text repetition analysis result
+ */
+export interface AnchorRepetitionResult {
+  violations: {
+    targetId: string;
+    targetTitle: string;
+    anchor: string;
+    count: number;
+    sources: string[];
+    riskLevel: 'warning' | 'critical';
+  }[];
+  diversificationSuggestions: {
+    currentAnchor: string;
+    targetTitle: string;
+    alternatives: string[];
+  }[];
+  overallScore: number;
+  summary: string;
+}
+
+/**
+ * Link bridge analysis for contextual navigation
+ */
+export interface LinkBridgeAnalysis {
+  linkId: string;
+  targetTopicId?: string;
+  targetTitle: string;
+  needsBridge: boolean;
+  relevanceScore: number;
+  suggestedBridge?: string;
+  reasons: string[];
 }

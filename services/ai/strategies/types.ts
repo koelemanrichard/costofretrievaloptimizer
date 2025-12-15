@@ -24,7 +24,7 @@ export interface ContentStrategy {
     
     // EAV & Semantic
     getEavPrompt(pillars: SEOPillars): string;
-    getEavExpansionPrompt(pillars: SEOPillars, existingTriples: SemanticTriple[]): string;
+    getEavExpansionPrompt(pillars: SEOPillars, existingTriples: SemanticTriple[], count?: number): string;
     
     // Validation
     getValidationPrompt(topics: EnrichedTopic[], pillars: SEOPillars): string;

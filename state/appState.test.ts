@@ -610,9 +610,10 @@ describe('appReducer', () => {
   describe('LOG_EVENT', () => {
     it('adds event to beginning of log', () => {
       const logEntry = {
-        timestamp: new Date().toISOString(),
+        service: 'Test',
         message: 'Test event',
-        level: 'info' as const
+        status: 'info' as const,
+        timestamp: Date.now()
       };
       const action: AppAction = { type: 'LOG_EVENT', payload: logEntry };
 
@@ -623,8 +624,8 @@ describe('appReducer', () => {
     });
 
     it('adds multiple events in order', () => {
-      const event1 = { timestamp: '2023-01-01', message: 'First', level: 'info' as const };
-      const event2 = { timestamp: '2023-01-02', message: 'Second', level: 'info' as const };
+      const event1 = { service: 'Test', message: 'First', status: 'info' as const, timestamp: 1000 };
+      const event2 = { service: 'Test', message: 'Second', status: 'info' as const, timestamp: 2000 };
 
       let newState = appReducer(state, { type: 'LOG_EVENT', payload: event1 });
       newState = appReducer(newState, { type: 'LOG_EVENT', payload: event2 });
@@ -637,16 +638,18 @@ describe('appReducer', () => {
     it('limits log to 100 entries', () => {
       // Start with 100 entries
       const existingLog = Array.from({ length: 100 }, (_, i) => ({
-        timestamp: `2023-01-${i}`,
+        service: 'Test',
         message: `Event ${i}`,
-        level: 'info' as const
+        status: 'info' as const,
+        timestamp: i
       }));
       const stateWithFullLog = { ...state, generationLog: existingLog };
 
       const newEntry = {
-        timestamp: '2023-01-101',
+        service: 'Test',
         message: 'New event',
-        level: 'info' as const
+        status: 'info' as const,
+        timestamp: 101
       };
       const action: AppAction = { type: 'LOG_EVENT', payload: newEntry };
 
@@ -663,8 +666,8 @@ describe('appReducer', () => {
       const stateWithLog = {
         ...state,
         generationLog: [
-          { timestamp: '2023-01-01', message: 'Event 1', level: 'info' as const },
-          { timestamp: '2023-01-02', message: 'Event 2', level: 'info' as const }
+          { service: 'Test', message: 'Event 1', status: 'info' as const, timestamp: 1000 },
+          { service: 'Test', message: 'Event 2', status: 'info' as const, timestamp: 2000 }
         ]
       };
       const action: AppAction = { type: 'CLEAR_LOG' };

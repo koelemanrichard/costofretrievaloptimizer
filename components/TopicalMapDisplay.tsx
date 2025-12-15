@@ -1,14 +1,12 @@
 
 // FIX: Implemented the TopicalMapDisplay component to render the topical map UI.
 import React, { useState, useMemo, useCallback } from 'react';
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
-// FIX: Added FreshnessProfile to imports to use the enum.
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
 import { EnrichedTopic, ContentBrief, MergeSuggestion, FreshnessProfile, ExpansionMode } from '../types';
 import TopicItem from './TopicItem';
 import { Button } from './ui/Button';
 import TopicalMapGraphView from './TopicalMapGraphView';
-// FIX: Corrected import path for aiService to be relative.
+import { ReportExportButton, ReportModal } from './reports';
+import { useTopicalMapReport } from '../hooks/useReportGeneration';
 import * as aiService from '../services/aiService';
 import { useAppState } from '../state/appState';
 import { getSupabaseClient } from '../services/supabaseClient';
@@ -16,6 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { slugify } from '../utils/helpers';
 import MergeConfirmationModal from './ui/MergeConfirmationModal';
 import { InfoTooltip } from './ui/InfoTooltip';
+import { BriefHealthStatsBar } from './ui/BriefHealthBadge';
+import { calculateBriefHealthStats } from '../utils/briefQualityScore';
 
 interface TopicalMapDisplayProps {
   coreTopics: EnrichedTopic[];
@@ -74,6 +74,38 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   const [draggedTopicId, setDraggedTopicId] = useState<string | null>(null);
   const [collapsedCoreIds, setCollapsedCoreIds] = useState<Set<string>>(new Set());
   const [isRepairingLabels, setIsRepairingLabels] = useState(false);
+  const [repairingTopicId, setRepairingTopicId] = useState<string | null>(null);
+  const [sortOption, setSortOption] = useState<'created_desc' | 'created_asc' | 'title_asc' | 'title_desc' | 'updated_desc' | 'updated_asc'>('created_desc');
+
+  // Report generation hook
+  const allTopicsForReport = useMemo(() => [...coreTopics, ...outerTopics], [coreTopics, outerTopics]);
+  const currentMap = state.topicalMaps.find(m => m.id === activeMapId);
+  const reportHook = useTopicalMapReport(currentMap || undefined, allTopicsForReport);
+
+  // Sorting function for topics
+  const sortTopics = useCallback((topics: EnrichedTopic[]) => {
+    return [...topics].sort((a, b) => {
+      switch (sortOption) {
+        case 'created_desc':
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        case 'created_asc':
+          return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        case 'title_asc':
+          return (a.title || '').localeCompare(b.title || '');
+        case 'title_desc':
+          return (b.title || '').localeCompare(a.title || '');
+        case 'updated_desc':
+          return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
+        case 'updated_asc':
+          return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [sortOption]);
+
+  // Sorted core topics
+  const sortedCoreTopics = useMemo(() => sortTopics(coreTopics), [coreTopics, sortTopics]);
 
   const topicsByParent = useMemo(() => {
     const map = new Map<string, EnrichedTopic[]>();
@@ -84,10 +116,20 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
       }
       map.get(parentId)!.push(topic);
     });
+    // Sort outer topics within each parent group
+    map.forEach((topics, key) => {
+      map.set(key, sortTopics(topics));
+    });
     return map;
-  }, [outerTopics]);
-  
+  }, [outerTopics, sortTopics]);
+
   const allTopics = useMemo(() => [...coreTopics, ...outerTopics], [coreTopics, outerTopics]);
+
+  // Calculate brief health statistics
+  const briefHealthStats = useMemo(() => {
+    const topicIds = allTopics.map(t => t.id);
+    return calculateBriefHealthStats(briefs, topicIds);
+  }, [allTopics, briefs]);
 
   const handleToggleCollapse = (coreTopicId: string) => {
     setCollapsedCoreIds(prev => {
@@ -132,6 +174,80 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
       dispatch({ type: 'SET_LOADING', payload: { key: 'deleteTopic', value: false } });
     }
   }, [activeMapId, businessInfo.supabaseUrl, businessInfo.supabaseAnonKey, dispatch]);
+
+  // Repair missing brief fields for a specific topic
+  const handleRepairBriefMissing = useCallback(async (topicId: string, missingFields: string[]) => {
+    if (!activeMapId) return;
+    const activeMap = state.topicalMaps.find(m => m.id === activeMapId);
+    if (!activeMap?.pillars) {
+      dispatch({ type: 'SET_ERROR', payload: 'SEO Pillars must be defined to repair briefs.' });
+      return;
+    }
+
+    const topic = allTopics.find(t => t.id === topicId);
+    const brief = briefs[topicId];
+    if (!topic || !brief) {
+      dispatch({ type: 'SET_ERROR', payload: 'Topic or brief not found.' });
+      return;
+    }
+
+    setRepairingTopicId(topicId);
+    try {
+      // Dynamic import to avoid circular dependencies
+      const { repairBriefMissingFields } = await import('../services/ai/briefRepair');
+
+      const repairedFields = await repairBriefMissingFields(
+        brief,
+        missingFields,
+        topic,
+        activeMap.pillars,
+        businessInfo,
+        allTopics,
+        dispatch
+      );
+
+      if (repairedFields) {
+        // Build update payload for Supabase (snake_case)
+        // Note: targetKeyword and searchIntent exist in TypeScript interface but NOT in database schema
+        const dbUpdates: Record<string, any> = {};
+        if (repairedFields.metaDescription !== undefined) dbUpdates.meta_description = repairedFields.metaDescription;
+        if (repairedFields.structured_outline !== undefined) dbUpdates.structured_outline = repairedFields.structured_outline;
+        if (repairedFields.serpAnalysis !== undefined) dbUpdates.serp_analysis = repairedFields.serpAnalysis;
+        if (repairedFields.contextualBridge !== undefined) dbUpdates.contextual_bridge = repairedFields.contextualBridge;
+        if (repairedFields.visuals !== undefined) dbUpdates.visuals = repairedFields.visuals;
+
+        // Persist to Supabase
+        const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+        const { error: dbError } = await supabase
+          .from('content_briefs')
+          .update(dbUpdates)
+          .eq('id', brief.id);
+
+        if (dbError) {
+          console.error('[TopicalMapDisplay] Failed to persist repaired brief:', dbError);
+          throw new Error(`Database error: ${dbError.message}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'UPDATE_BRIEF',
+          payload: {
+            mapId: activeMapId,
+            topicId,
+            updates: repairedFields
+          }
+        });
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Repaired ${missingFields.length} missing field(s) for "${topic.title}".` });
+      } else {
+        dispatch({ type: 'SET_NOTIFICATION', payload: 'No fields needed repair.' });
+      }
+    } catch (error) {
+      console.error('[TopicalMapDisplay] Brief repair error:', error);
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to repair brief.' });
+    } finally {
+      setRepairingTopicId(null);
+    }
+  }, [activeMapId, state.topicalMaps, allTopics, briefs, businessInfo, dispatch]);
 
   // Repair Section Labels - classifies topics into Core Section (monetization) vs Author Section (informational)
   // Also verifies and fixes topic type (core vs outer) misclassifications
@@ -315,6 +431,19 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 </Button>
                 {viewMode === 'list' && coreTopics.length > 0 && (
                     <div className="flex items-center gap-2 flex-wrap">
+                        {/* Sorting dropdown */}
+                        <select
+                            value={sortOption}
+                            onChange={(e) => setSortOption(e.target.value as typeof sortOption)}
+                            className="bg-gray-700 border border-gray-600 text-gray-200 text-xs rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="created_desc">Newest first</option>
+                            <option value="created_asc">Oldest first</option>
+                            <option value="title_asc">Title A-Z</option>
+                            <option value="title_desc">Title Z-A</option>
+                            <option value="updated_desc">Recently updated</option>
+                            <option value="updated_asc">Least recently updated</option>
+                        </select>
                         <Button onClick={handleExpandAll} variant="secondary" className="!py-1 !px-3 text-xs">Expand All</Button>
                         <Button onClick={handleCollapseAll} variant="secondary" className="!py-1 !px-3 text-xs">Collapse All</Button>
                         <div className="flex items-center gap-1">
@@ -350,6 +479,15 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                 Navigation
                             </Button>
                         )}
+                        {reportHook.canGenerate && (
+                            <ReportExportButton
+                                reportType="topical-map"
+                                onClick={reportHook.open}
+                                variant="primary"
+                                size="sm"
+                                label="Generate Report"
+                            />
+                        )}
                     </div>
                 )}
                 <div className="flex rounded-lg bg-gray-700 p-1">
@@ -370,8 +508,20 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 )}
             </div>
         ) : viewMode === 'list' ? (
-             <div className="space-y-6">
-                {coreTopics.map(core => {
+             <div className="space-y-4">
+                {/* Brief Health Stats Bar */}
+                {briefHealthStats.total > 0 && (
+                    <div className="px-3 py-2 bg-gray-800/50 rounded-lg border border-gray-700">
+                        <BriefHealthStatsBar
+                            complete={briefHealthStats.complete}
+                            partial={briefHealthStats.partial}
+                            empty={briefHealthStats.empty}
+                            withoutBriefs={briefHealthStats.withoutBriefs}
+                        />
+                    </div>
+                )}
+                <div className="space-y-6">
+                {sortedCoreTopics.map(core => {
                     const isCollapsed = collapsedCoreIds.has(core.id);
                     const childTopics = topicsByParent.get(core.id) || [];
                     const spokeCount = childTopics.length;
@@ -407,7 +557,8 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                     <TopicItem
                                         topic={core}
                                         hasBrief={!!briefs[core.id]}
-                                        onHighlight={() => onSelectTopicForBrief(core)}
+                                        brief={briefs[core.id]}
+                                        onHighlight={() => setHighlightedTopicId(core.id)}
                                         onGenerateBrief={() => onSelectTopicForBrief(core)}
                                         onDelete={() => handleDeleteTopic(core.id)}
                                         onUpdateTopic={onUpdateTopic}
@@ -424,6 +575,8 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                         allCoreTopics={coreTopics}
                                         onReparent={handleReparent}
                                         isGeneratingBrief={generatingTopicTitle === core.title}
+                                        onRepairMissing={(missingFields) => handleRepairBriefMissing(core.id, missingFields)}
+                                        isRepairingBrief={repairingTopicId === core.id}
                                     />
                                 </div>
                             </div>
@@ -434,7 +587,8 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                             key={outer.id}
                                             topic={outer}
                                             hasBrief={!!briefs[outer.id]}
-                                            onHighlight={() => onSelectTopicForBrief(outer)}
+                                            brief={briefs[outer.id]}
+                                            onHighlight={() => setHighlightedTopicId(outer.id)}
                                             onGenerateBrief={() => onSelectTopicForBrief(outer)}
                                             onDelete={() => handleDeleteTopic(outer.id)}
                                             onUpdateTopic={onUpdateTopic}
@@ -449,6 +603,8 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                             allCoreTopics={coreTopics}
                                             onReparent={handleReparent}
                                             isGeneratingBrief={generatingTopicTitle === outer.title}
+                                            onRepairMissing={(missingFields) => handleRepairBriefMissing(outer.id, missingFields)}
+                                            isRepairingBrief={repairingTopicId === outer.id}
                                         />
                                 ))}
                                 </div>
@@ -456,6 +612,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                         </div>
                     )
                 })}
+            </div>
             </div>
         ) : (
             <TopicalMapGraphView 
@@ -472,13 +629,24 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 onUpdateTopic={onUpdateTopic}
             />
         )}
-      <MergeConfirmationModal 
+      <MergeConfirmationModal
         isOpen={isMergeModalOpen}
         onClose={() => setIsMergeModalOpen(false)}
         suggestion={mergeSuggestion}
         onConfirm={handleExecuteMerge}
         isLoading={!!isLoading.executeMerge}
       />
+
+      {/* Report Modal */}
+      {reportHook.data && (
+        <ReportModal
+          isOpen={reportHook.isOpen}
+          onClose={reportHook.close}
+          reportType="topical-map"
+          data={reportHook.data}
+          projectName={currentMap?.name || businessInfo?.projectName}
+        />
+      )}
     </div>
   );
 };

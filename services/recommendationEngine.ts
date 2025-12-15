@@ -1,14 +1,16 @@
 
 import { TopicalMap, ValidationResult } from '../types';
 
-export type RecommendationType = 
+export type RecommendationType =
     | 'GENERATE_INITIAL_MAP'
     | 'ANALYZE_DOMAIN'
     | 'GENERATE_BRIEFS'
     | 'VALIDATE_MAP'
     | 'FIX_VALIDATION_ISSUES'
     | 'EXPORT_DATA'
-    | 'EXPAND_TOPICS';
+    | 'EXPAND_TOPICS'
+    | 'CONFIGURE_NAVIGATION'
+    | 'GENERATE_FOUNDATION_PAGES';
 
 export interface Recommendation {
     id: string;
@@ -99,7 +101,42 @@ export const calculateNextSteps = (map: TopicalMap, validationResult: Validation
         });
     }
 
-    // 5. Medium: Expansion
+    // 5. Medium: Foundation Pages
+    const foundationPages = map.foundationPages || [];
+    if (foundationPages.length === 0 && topics.length > 5) {
+        recommendations.push({
+            id: 'gen_foundation',
+            type: 'GENERATE_FOUNDATION_PAGES',
+            title: 'Create Foundation Pages',
+            description: 'Generate essential pages (Homepage, About, Contact) to establish your site\'s E-A-T foundation.',
+            priority: 'MEDIUM',
+            actionLabel: 'Generate Pages'
+        });
+    }
+
+    // 6. Medium: Navigation Structure
+    const hasNavigation = map.navigation && (
+        (map.navigation.header?.primary_nav?.length ?? 0) > 0 ||
+        (map.navigation.footer?.sections?.length ?? 0) > 0
+    );
+    if (foundationPages.length > 0 && !hasNavigation && coreTopics.length > 3) {
+        // Count pillars for better messaging
+        const pillarCount = coreTopics.filter(t => t.cluster_role === 'pillar').length;
+        const pillarMsg = pillarCount > 0
+            ? `${pillarCount} pillar pages detected.`
+            : 'No pillars detected - navigation will use monetization priority.';
+
+        recommendations.push({
+            id: 'configure_nav',
+            type: 'CONFIGURE_NAVIGATION',
+            title: 'Configure Site Navigation',
+            description: `Generate an intelligent navigation structure based on your topical map. ${pillarMsg} Proper navigation optimizes PageRank flow to money pages.`,
+            priority: 'MEDIUM',
+            actionLabel: 'Setup Navigation'
+        });
+    }
+
+    // 7. Medium: Expansion
     // Check Hub-Spoke ratios loosely
     const weakCores = coreTopics.filter(core => {
         const spokes = outerTopics.filter(t => t.parent_topic_id === core.id);
@@ -117,7 +154,7 @@ export const calculateNextSteps = (map: TopicalMap, validationResult: Validation
         });
     }
 
-    // 6. Low: Export
+    // 8. Low: Export
     if (briefCount > 0 && briefCount === topics.length) {
          recommendations.push({
             id: 'export_data',

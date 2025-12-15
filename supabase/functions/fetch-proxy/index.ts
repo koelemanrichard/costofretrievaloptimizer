@@ -35,8 +35,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const body = await req.json();
-    const { url, method = 'GET', headers: customHeaders = {} } = body;
+    const reqBody = await req.json();
+    const { url, method = 'GET', headers: customHeaders = {}, body: requestBody } = reqBody;
 
     if (!url) {
       return json({ error: 'Missing required field: url' }, 400, origin);
@@ -56,12 +56,20 @@ Deno.serve(async (req: Request) => {
       ...customHeaders,
     };
 
-    // Make the request
-    const response = await fetch(url, {
+    // Build fetch options
+    const fetchOptions: RequestInit = {
       method: method.toUpperCase(),
       headers: fetchHeaders,
       redirect: 'follow',
-    });
+    };
+
+    // Add body for POST/PUT/PATCH requests
+    if (requestBody && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+      fetchOptions.body = typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody);
+    }
+
+    // Make the request
+    const response = await fetch(url, fetchOptions);
 
     // Get response details
     const contentType = response.headers.get('content-type') || '';

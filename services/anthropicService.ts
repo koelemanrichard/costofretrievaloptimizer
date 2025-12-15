@@ -14,6 +14,7 @@ import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
 import { AIResponseSanitizer } from './aiResponseSanitizer';
 import { AppAction } from '../state/appState';
 import React from 'react';
+import { calculateTopicSimilarityPairs } from '../utils/helpers';
 
 /**
  * Call Anthropic API via Supabase Edge Function proxy to avoid CORS issues
@@ -67,20 +68,29 @@ const callApi = async <T>(
 
     const requestBody = {
         model: modelToUse,
-        max_tokens: 16384,
+        max_tokens: 32768,  // Increased for comprehensive content brief generation
         messages: [
             { role: "user", content: effectivePrompt }
         ],
-        system: "You are a helpful, expert SEO strategist. You ALWAYS output valid JSON when requested. Never include explanatory text, markdown formatting, or code blocks around your JSON response. Start directly with { and end with }. Keep responses concise - focus on quality topics rather than quantity."
+        system: "You are a helpful, expert SEO strategist. You ALWAYS output valid JSON when requested. Never include explanatory text, markdown formatting, or code blocks around your JSON response. Start directly with { and end with }. IMPORTANT: When generating content briefs, you MUST include ALL required fields including 'structured_outline' with detailed section breakdowns - never truncate or skip any fields in the JSON schema."
     };
 
     const bodyString = JSON.stringify(requestBody);
     const bodySizeKB = (bodyString.length / 1024).toFixed(2);
 
+    // Validate required configuration
+    if (!businessInfo.anthropicApiKey) {
+        throw new Error('Anthropic API key is not configured. Please add your API key in Settings.');
+    }
+    if (!businessInfo.supabaseAnonKey) {
+        throw new Error('Supabase anon key is not configured.');
+    }
+
     console.log('[Anthropic callApi] Making request to proxy:', {
         proxyUrl,
         model: modelToUse,
         hasApiKey: !!businessInfo.anthropicApiKey,
+        apiKeyPreview: businessInfo.anthropicApiKey ? `${businessInfo.anthropicApiKey.substring(0, 10)}...` : 'MISSING',
         hasAnonKey: !!businessInfo.supabaseAnonKey,
         promptLength: effectivePrompt.length,
         requestBodySizeKB: bodySizeKB
@@ -97,13 +107,23 @@ const callApi = async <T>(
             headers: {
                 'Content-Type': 'application/json',
                 'x-anthropic-api-key': businessInfo.anthropicApiKey,
-                'apikey': businessInfo.supabaseAnonKey || '',
+                'apikey': businessInfo.supabaseAnonKey,
             },
             body: bodyString,
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: response.statusText }));
+
+            // Provide more helpful error messages for common issues
+            if (response.status === 504) {
+                throw new Error(
+                    'Anthropic API Call Failed: Request timed out. This usually happens with complex content briefs. ' +
+                    'Try switching to Gemini (Settings → AI Provider) which is faster, ' +
+                    'or upgrade your Supabase plan for longer timeouts.'
+                );
+            }
+
             throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
 
@@ -215,9 +235,52 @@ export const discoverCoreSemanticTriples = async (info: BusinessInfo, pillars: S
     return callApi(prompts.DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT(info, pillars), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
 };
 
-export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, existing: SemanticTriple[], dispatch: React.Dispatch<any>) => {
+export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, existing: SemanticTriple[], dispatch: React.Dispatch<any>, count: number = 15): Promise<SemanticTriple[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+
+    // For large counts, use batched generation to avoid token limits
+    const BATCH_SIZE = 30;
+
+    if (count <= BATCH_SIZE) {
+        return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+    }
+
+    // Batched generation for larger counts
+    const allNewTriples: SemanticTriple[] = [];
+    const batches = Math.ceil(count / BATCH_SIZE);
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Anthropic',
+        message: `Starting batched EAV expansion: ${count} triples in ${batches} batches`,
+        status: 'info',
+        timestamp: Date.now()
+    }});
+
+    for (let i = 0; i < batches; i++) {
+        const batchCount = Math.min(BATCH_SIZE, count - allNewTriples.length);
+        const combinedExisting = [...existing, ...allNewTriples];
+
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Anthropic',
+            message: `Generating batch ${i + 1}/${batches}: ${batchCount} triples (${allNewTriples.length}/${count} complete)`,
+            status: 'info',
+            timestamp: Date.now()
+        }});
+
+        const batchResults = await callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, combinedExisting, batchCount), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+        allNewTriples.push(...batchResults);
+
+        if (allNewTriples.length >= count) break;
+    }
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Anthropic',
+        message: `Batched EAV expansion complete: Generated ${allNewTriples.length} new triples`,
+        status: 'success',
+        timestamp: Date.now()
+    }});
+
+    return allNewTriples.slice(0, count);
 };
 
 export const generateInitialTopicalMap = async (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>) => {
@@ -313,7 +376,27 @@ export const generateContentBrief = async (info: BusinessInfo, topic: EnrichedTo
         query_type_format: String, featured_snippet_target: Object,
         visual_semantics: Array, discourse_anchors: Array
     };
-    return callApi(prompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK));
+
+    const result = await callApi(prompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK));
+
+    // Validate structured_outline was returned
+    if (!result.structured_outline || result.structured_outline.length === 0) {
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Anthropic',
+            message: `CRITICAL: AI did not return structured_outline. Content brief will have empty sections. Try regenerating.`,
+            status: 'error',
+            timestamp: Date.now()
+        }});
+    } else {
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Anthropic',
+            message: `Content brief generated with ${result.structured_outline.length} sections in structured_outline.`,
+            status: 'success',
+            timestamp: Date.now()
+        }});
+    }
+
+    return result;
 };
 
 export const generateArticleDraft = async (brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>) => callApi(prompts.GENERATE_ARTICLE_DRAFT_PROMPT(brief, info), info, dispatch, t => t);
@@ -364,7 +447,31 @@ export const findMergeOpportunitiesForSelection = async (info: BusinessInfo, sel
     return callApi(prompts.FIND_MERGE_OPPORTUNITIES_FOR_SELECTION_PROMPT(info, selected), info, dispatch, t => sanitizer.sanitize(t, { topicIds: Array, topicTitles: Array, newTopic: Object, reasoning: String, canonicalQuery: String }, { topicIds: [], topicTitles: [], newTopic: { title: '', description: '' }, reasoning: '', canonicalQuery: '' }));
 };
 
-export const analyzeSemanticRelationships = async (topics: EnrichedTopic[], info: BusinessInfo, dispatch: React.Dispatch<any>) => ({ summary: "Mocked analysis", pairs: [], actionableSuggestions: [] });
+export const analyzeSemanticRelationships = async (topics: EnrichedTopic[], info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<SemanticAnalysisResult> => {
+    const sanitizer = new AIResponseSanitizer(dispatch);
+
+    const preCalculatedPairs = calculateTopicSimilarityPairs(topics);
+    const limitedPairs = preCalculatedPairs.slice(0, 20);
+
+    const prompt = prompts.ANALYZE_SEMANTIC_RELATIONSHIPS_PROMPT(topics, info, limitedPairs);
+
+    const fallback: SemanticAnalysisResult = {
+        summary: 'Unable to analyze semantic relationships. Please try again.',
+        pairs: limitedPairs.map(p => ({
+            topicA: p.topicA,
+            topicB: p.topicB,
+            distance: { weightedScore: 1 - p.similarity },
+            relationship: {
+                type: p.similarity >= 0.7 ? 'SIBLING' as const : p.similarity >= 0.4 ? 'RELATED' as const : 'DISTANT' as const,
+                internalLinkingPriority: p.similarity >= 0.7 ? 'high' as const : p.similarity >= 0.4 ? 'medium' as const : 'low' as const
+            }
+        })),
+        actionableSuggestions: ['Review topic hierarchy for better clustering.']
+    };
+
+    const schema = { summary: String, pairs: Array, actionableSuggestions: Array };
+    return callApi(prompt, info, dispatch, t => sanitizer.sanitize(t, schema, fallback));
+};
 
 export const analyzeContextualCoverage = async (info: BusinessInfo, topics: EnrichedTopic[], pillars: SEOPillars, dispatch: React.Dispatch<any>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
@@ -721,8 +828,13 @@ export const analyzeMapMerge = async (
   dispatch: React.Dispatch<any>
 ): Promise<MapMergeAnalysis> => {
   // Delegate to Gemini implementation for now
+  // Must override both aiProvider AND aiModel to avoid passing Claude model to Gemini
   const geminiService = await import('./geminiService');
-  return geminiService.analyzeMapMerge(mapsToMerge, { ...businessInfo, aiProvider: 'gemini' }, dispatch);
+  return geminiService.analyzeMapMerge(mapsToMerge, {
+    ...businessInfo,
+    aiProvider: 'gemini',
+    aiModel: 'gemini-2.5-pro-preview-06-05' // Use valid Gemini model
+  }, dispatch);
 };
 
 export const reanalyzeTopicSimilarity = async (
@@ -733,8 +845,13 @@ export const reanalyzeTopicSimilarity = async (
   dispatch: React.Dispatch<any>
 ): Promise<TopicSimilarityResult[]> => {
   // Delegate to Gemini implementation for now
+  // Must override both aiProvider AND aiModel to avoid passing Claude model to Gemini
   const geminiService = await import('./geminiService');
-  return geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, { ...businessInfo, aiProvider: 'gemini' }, dispatch);
+  return geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, {
+    ...businessInfo,
+    aiProvider: 'gemini',
+    aiModel: 'gemini-2.5-pro-preview-06-05' // Use valid Gemini model
+  }, dispatch);
 };
 
 // ============================================

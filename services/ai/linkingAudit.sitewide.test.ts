@@ -8,18 +8,19 @@ import {
   checkSiteWideNGrams,
   runSiteWideAudit,
 } from './linkingAudit';
-import type {
-  LinkingAuditContext,
-  EnrichedTopic,
-  ContentBrief,
-  FoundationPage,
-  NavigationStructure,
-  SEOPillars,
-  InternalLinkingRules,
-  SiteLinkAuditResult,
-  LinkFlowAnalysis,
-  SiteWideNGramAudit,
-  SiteWideAuditResult,
+import {
+  FreshnessProfile,
+  type LinkingAuditContext,
+  type EnrichedTopic,
+  type ContentBrief,
+  type FoundationPage,
+  type NavigationStructure,
+  type SEOPillars,
+  type InternalLinkingRules,
+  type SiteLinkAuditResult,
+  type LinkFlowAnalysis,
+  type SiteWideNGramAudit,
+  type SiteWideAuditResult,
 } from '../../types';
 
 // ============================================
@@ -28,33 +29,40 @@ import type {
 
 const createMockTopic = (overrides: Partial<EnrichedTopic> = {}): EnrichedTopic => ({
   id: 'topic-' + Math.random(),
-  topical_map_id: 'map-1',
+  map_id: 'map-1',
   title: 'Sample Topic',
+  slug: 'sample-topic',
   description: 'Sample description',
   type: 'core' as const,
+  freshness: FreshnessProfile.EVERGREEN,
   topic_class: 'informational' as const,
-  cluster_role: 'standalone' as const,
+  cluster_role: 'cluster_content' as const,
   parent_topic_id: null,
-  pillar_id: null,
   created_at: '2024-01-01',
   updated_at: '2024-01-01',
-  deleted_at: null,
-  enriched: false,
   ...overrides,
 });
 
 const createMockBrief = (topicId: string, overrides: Partial<ContentBrief> = {}): ContentBrief => ({
   id: 'brief-' + topicId,
   topic_id: topicId,
-  topical_map_id: 'map-1',
-  metaTitle: 'Sample Meta Title',
+  title: 'Sample Brief Title',
+  slug: 'sample-brief',
   metaDescription: 'Sample meta description',
-  focusKeyphrase: 'sample keyword',
+  keyTakeaways: [],
+  outline: '',
+  targetKeyword: 'sample keyword',
+  serpAnalysis: {
+    peopleAlsoAsk: [],
+    competitorHeadings: [],
+  },
+  visuals: {
+    featuredImagePrompt: '',
+    imageAltText: '',
+  },
+  contextualVectors: [],
   contextualBridge: [],
-  structured_outline: [],
   created_at: '2024-01-01',
-  updated_at: '2024-01-01',
-  deleted_at: null,
   ...overrides,
 });
 
@@ -64,37 +72,38 @@ const createMockFoundationPage = (overrides: Partial<FoundationPage> = {}): Foun
   page_type: 'about',
   title: 'About Us',
   slug: 'about-us',
-  content_sections: [],
-  created_at: '2024-01-01',
-  updated_at: '2024-01-01',
-  deleted_at: null,
+  sections: [],
   ...overrides,
 });
 
 const createMockNavigation = (overrides: Partial<NavigationStructure> = {}): NavigationStructure => ({
+  id: 'nav-1',
   map_id: 'map-1',
   header: {
+    logo_alt_text: 'Test Logo',
     primary_nav: [
-      { text: 'Home', url: '/', target_type: 'custom' },
-      { text: 'Services', url: '/services', target_type: 'custom' },
-      { text: 'About', url: '/about', target_type: 'foundation' },
+      { text: 'Home', external_url: '/', prominence: 'high' },
+      { text: 'Services', external_url: '/services', prominence: 'high' },
+      { text: 'About', target_foundation_page_id: 'fp-about', prominence: 'medium' },
     ],
-    cta_button: { text: 'Contact Us', url: '/contact', style: 'primary' },
+    cta_button: { text: 'Contact Us', url: '/contact' },
   },
   footer: {
     sections: [
       {
-        title: 'Company',
+        heading: 'Company',
         links: [
-          { text: 'About Us', url: '/about', target_type: 'foundation' },
-          { text: 'Careers', url: '/careers', target_type: 'custom' },
+          { text: 'About Us', target_foundation_page_id: 'fp-about', prominence: 'medium' },
+          { text: 'Careers', external_url: '/careers', prominence: 'low' },
         ],
       },
     ],
     legal_links: [
-      { text: 'Privacy Policy', url: '/privacy', target_type: 'foundation' },
-      { text: 'Terms of Service', url: '/terms', target_type: 'foundation' },
+      { text: 'Privacy Policy', target_foundation_page_id: 'fp-privacy', prominence: 'low' },
+      { text: 'Terms of Service', target_foundation_page_id: 'fp-terms', prominence: 'low' },
     ],
+    nap_display: false,
+    copyright_text: '© 2024 Test Company',
   },
   dynamic_by_section: false,
   max_header_links: 10,
@@ -107,9 +116,7 @@ const createMockNavigation = (overrides: Partial<NavigationStructure> = {}): Nav
 const createMockPillars = (overrides: Partial<SEOPillars> = {}): SEOPillars => ({
   centralEntity: 'Acme Corp',
   sourceContext: 'Enterprise Software Solutions',
-  eavs: [],
-  created_at: '2024-01-01',
-  updated_at: '2024-01-01',
+  centralSearchIntent: 'enterprise software solutions',
   ...overrides,
 });
 
@@ -183,25 +190,28 @@ describe('runSiteLinkCountAudit', () => {
   it('properly counts navigation links', () => {
     const nav = createMockNavigation({
       header: {
+        logo_alt_text: 'Test',
         primary_nav: [
-          { text: 'Link 1', url: '/1', target_type: 'custom' },
-          { text: 'Link 2', url: '/2', target_type: 'custom' },
+          { text: 'Link 1', external_url: '/1', prominence: 'high' },
+          { text: 'Link 2', external_url: '/2', prominence: 'high' },
         ],
-        cta_button: { text: 'CTA', url: '/cta', style: 'primary' },
+        cta_button: { text: 'CTA', url: '/cta' },
       },
       footer: {
         sections: [
           {
-            title: 'Section',
+            heading: 'Section',
             links: [
-              { text: 'Footer 1', url: '/f1', target_type: 'custom' },
-              { text: 'Footer 2', url: '/f2', target_type: 'custom' },
+              { text: 'Footer 1', external_url: '/f1', prominence: 'low' },
+              { text: 'Footer 2', external_url: '/f2', prominence: 'low' },
             ],
           },
         ],
         legal_links: [
-          { text: 'Legal 1', url: '/l1', target_type: 'custom' },
+          { text: 'Legal 1', external_url: '/l1', prominence: 'low' },
         ],
+        nap_display: false,
+        copyright_text: '© Test',
       },
     });
 
@@ -622,10 +632,11 @@ describe('checkSiteWideNGrams', () => {
   it('detects central entity in header', () => {
     const nav = createMockNavigation({
       header: {
+        logo_alt_text: 'Logo',
         primary_nav: [
-          { text: 'Acme Corp Services', url: '/services', target_type: 'custom' },
+          { text: 'Acme Corp Services', external_url: '/services', prominence: 'high' },
         ],
-        cta_button: null,
+        cta_button: undefined,
       },
     });
 
@@ -645,13 +656,15 @@ describe('checkSiteWideNGrams', () => {
       footer: {
         sections: [
           {
-            title: 'About',
+            heading: 'About',
             links: [
-              { text: 'About Acme Corp', url: '/about', target_type: 'foundation' },
+              { text: 'About Acme Corp', target_foundation_page_id: 'fp-about', prominence: 'medium' },
             ],
           },
         ],
         legal_links: [],
+        nap_display: false,
+        copyright_text: '© Test',
       },
     });
 
@@ -687,14 +700,17 @@ describe('checkSiteWideNGrams', () => {
   it('tracks locations where central entity is missing', () => {
     const nav = createMockNavigation({
       header: {
+        logo_alt_text: 'Logo',
         primary_nav: [
-          { text: 'Services', url: '/services', target_type: 'custom' },
+          { text: 'Services', external_url: '/services', prominence: 'high' },
         ],
-        cta_button: null,
+        cta_button: undefined,
       },
       footer: {
         sections: [],
         legal_links: [],
+        nap_display: false,
+        copyright_text: '© Test',
       },
     });
 
@@ -790,8 +806,9 @@ describe('checkSiteWideNGrams', () => {
     const ctx1 = createMockContext({
       navigation: createMockNavigation({
         header: {
+          logo_alt_text: 'Logo',
           primary_nav: [
-            { text: 'Acme Corp Home', url: '/', target_type: 'custom' },
+            { text: 'Acme Corp Home', external_url: '/', prominence: 'high' },
           ],
         },
       }),
@@ -801,8 +818,9 @@ describe('checkSiteWideNGrams', () => {
     const ctx2 = createMockContext({
       navigation: createMockNavigation({
         header: {
+          logo_alt_text: 'Logo',
           primary_nav: [
-            { text: 'Home', url: '/', target_type: 'custom' },
+            { text: 'Home', external_url: '/', prominence: 'high' },
           ],
         },
       }),
@@ -928,8 +946,9 @@ describe('runSiteWideAudit', () => {
       ],
       navigation: createMockNavigation({
         header: {
+          logo_alt_text: 'Logo',
           primary_nav: [
-            { text: 'Acme Corp Home', url: '/', target_type: 'custom' },
+            { text: 'Acme Corp Home', external_url: '/', prominence: 'high' },
           ],
         },
       }),

@@ -366,6 +366,7 @@ export class AIResponseSanitizer {
      */
     public sanitizeArray<T>(rawResponse: string, fallback: T[] = []): T[] {
         const jsonString = this.extractJsonString(rawResponse);
+
         if (!jsonString) {
             this.log('Sanitization (Array) failed: Extracted JSON string is empty.', { rawResponse });
             return fallback;

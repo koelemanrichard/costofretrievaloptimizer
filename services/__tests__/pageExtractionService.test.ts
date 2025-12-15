@@ -62,6 +62,7 @@ describe('pageExtractionService', () => {
       content: 'Example content',
       description: 'Example description',
       wordCount: 100,
+      readingTime: 1,
       headings: [{ level: 1, text: 'Main Heading' }],
       links: [],
       images: [],

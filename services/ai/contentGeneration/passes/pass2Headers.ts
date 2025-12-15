@@ -1,47 +1,41 @@
 // services/ai/contentGeneration/passes/pass2Headers.ts
-import { ContentBrief, ContentGenerationJob, BusinessInfo } from '../../../../types';
+import { ContentBrief, ContentGenerationJob, BusinessInfo, SectionProgressCallback } from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { PASS_2_HEADER_OPTIMIZATION_PROMPT } from '../../../../config/prompts';
-import * as geminiService from '../../../geminiService';
-import * as openAiService from '../../../openAiService';
-import * as anthropicService from '../../../anthropicService';
-import * as perplexityService from '../../../perplexityService';
-import * as openRouterService from '../../../openRouterService';
+import { executeSectionPass } from './baseSectionPass';
+import { buildPass2Prompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
 
-const noOpDispatch = () => {};
-
-async function callProviderWithPrompt(info: BusinessInfo, prompt: string): Promise<string> {
-  switch (info.aiProvider) {
-    case 'openai': return openAiService.generateText(prompt, info, noOpDispatch);
-    case 'anthropic': return anthropicService.generateText(prompt, info, noOpDispatch);
-    case 'perplexity': return perplexityService.generateText(prompt, info, noOpDispatch);
-    case 'openrouter': return openRouterService.generateText(prompt, info, noOpDispatch);
-    case 'gemini':
-    default: return geminiService.generateText(prompt, info, noOpDispatch);
-  }
-}
-
+/**
+ * Pass 2: Header Optimization
+ *
+ * Optimizes heading hierarchy and contextual overlap, section by section.
+ * Uses holistic context to ensure each heading connects to the central entity
+ * while maintaining logical H1→H2→H3 flow.
+ *
+ * Uses format budget awareness for article-wide context.
+ */
 export async function executePass2(
   orchestrator: ContentGenerationOrchestrator,
   job: ContentGenerationJob,
   brief: ContentBrief,
-  businessInfo: BusinessInfo
+  businessInfo: BusinessInfo,
+  onSectionProgress?: SectionProgressCallback,
+  shouldAbort?: () => boolean
 ): Promise<string> {
-  const draft = job.draft_content || '';
-
-  await orchestrator.updateJob(job.id, {
-    passes_status: { ...job.passes_status, pass_2_headers: 'in_progress' }
-  });
-
-  const prompt = PASS_2_HEADER_OPTIMIZATION_PROMPT(draft, brief, businessInfo);
-  const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
-  const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
-
-  await orchestrator.updateJob(job.id, {
-    draft_content: result,
-    passes_status: { ...job.passes_status, pass_2_headers: 'completed' },
-    current_pass: 3
-  });
-
-  return result;
+  return executeSectionPass(
+    orchestrator,
+    job,
+    brief,
+    businessInfo,
+    {
+      passNumber: 2,
+      passKey: 'pass_2_headers',
+      nextPassNumber: 3,
+      promptBuilder: buildPass2Prompt,
+      // All sections need header optimization (no selective filtering)
+      // Format budget context is still available for article-wide awareness
+      batchSize: 1 // Individual processing for now (headers need careful per-section attention)
+    },
+    onSectionProgress,
+    shouldAbort
+  );
 }

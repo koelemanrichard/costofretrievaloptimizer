@@ -258,10 +258,13 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
       });
 
       // Build resolved context from conflict resolutions
-      const resolvedBusinessInfo: Partial<BusinessInfo> = {};
+      // START with base business_info from first map to preserve non-conflicting fields
+      const baseBusinessInfo = mergeState.sourceMaps[0]?.business_info as Partial<BusinessInfo> || {};
+      const resolvedBusinessInfo: Partial<BusinessInfo> = { ...baseBusinessInfo };
       const basePillars = mergeState.sourceMaps[0]?.pillars;
       const resolvedPillars = basePillars ? { ...basePillars } : null;
 
+      // Override with conflict resolutions
       mergeState.contextConflicts.forEach(conflict => {
         let value: any;
         if (conflict.resolution === 'mapA') {

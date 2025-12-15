@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -15,6 +15,7 @@ interface AnalysisToolsPanelProps {
     onCalculateTopicalAuthority: () => void;
     onGeneratePublicationPlan: () => void;
     onRunUnifiedAudit: () => void;
+    onRepairBriefs?: () => Promise<{ repaired: number; skipped: number; errors: string[] }>;
     auditProgress?: AuditProgress | null;
 }
 
@@ -28,8 +29,27 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
     onCalculateTopicalAuthority,
     onGeneratePublicationPlan,
     onRunUnifiedAudit,
+    onRepairBriefs,
     auditProgress
 }) => {
+    const [isRepairing, setIsRepairing] = useState(false);
+    const [repairResult, setRepairResult] = useState<{ repaired: number; skipped: number; errors: string[] } | null>(null);
+
+    const handleRepairBriefs = async () => {
+        if (!onRepairBriefs) return;
+        setIsRepairing(true);
+        setRepairResult(null);
+        try {
+            const result = await onRepairBriefs();
+            setRepairResult(result);
+            if (result.repaired > 0) {
+                // Brief notification that reload may be needed
+                setTimeout(() => setRepairResult(null), 5000);
+            }
+        } finally {
+            setIsRepairing(false);
+        }
+    };
     const renderAuditButton = () => {
         if (!isLoading.unifiedAudit) {
             return 'Health Check';
@@ -93,6 +113,37 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
                             style={{ width: `${auditProgress.percentComplete}%` }}
                         />
                     </div>
+                </div>
+            )}
+
+            {/* Data Repair Section */}
+            {onRepairBriefs && (
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-medium text-gray-300">Data Repair</h3>
+                            <p className="text-xs text-gray-500">Fix malformed briefs that may cause display errors</p>
+                        </div>
+                        <Button
+                            onClick={handleRepairBriefs}
+                            disabled={isRepairing}
+                            variant="secondary"
+                            className="text-xs"
+                        >
+                            {isRepairing ? <><Loader className="w-3 h-3 mr-1" /> Repairing...</> : 'Repair Briefs'}
+                        </Button>
+                    </div>
+                    {repairResult && (
+                        <div className={`mt-2 text-xs p-2 rounded ${repairResult.repaired > 0 ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
+                            {repairResult.repaired > 0
+                                ? `✓ Repaired ${repairResult.repaired} brief(s). Reload the page to see changes.`
+                                : `No repairs needed (${repairResult.skipped} briefs checked).`
+                            }
+                            {repairResult.errors.length > 0 && (
+                                <div className="text-red-400 mt-1">Errors: {repairResult.errors.join(', ')}</div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </Card>

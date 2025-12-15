@@ -8,12 +8,13 @@ import {
   previewNavigationForAllSegments,
   type DynamicNavigationContext,
 } from './navigationService';
-import type {
-  EnrichedTopic,
-  FoundationPage,
-  NavigationStructure,
-  DynamicNavigationConfig,
-  NavigationSegment,
+import {
+  FreshnessProfile,
+  type EnrichedTopic,
+  type FoundationPage,
+  type NavigationStructure,
+  type DynamicNavigationConfig,
+  type NavigationSegment,
 } from '../types';
 
 // ============================================
@@ -29,7 +30,7 @@ function createMockTopic(overrides: Partial<EnrichedTopic> = {}): EnrichedTopic 
     slug: overrides.slug || 'test-topic',
     description: overrides.description || 'Test description',
     type: overrides.type || 'core',
-    freshness: overrides.freshness || 'STANDARD',
+    freshness: overrides.freshness || FreshnessProfile.STANDARD,
     topic_class: overrides.topic_class,
     cluster_role: overrides.cluster_role,
     attribute_focus: overrides.attribute_focus,
@@ -702,7 +703,7 @@ describe('generateDynamicNavigation', () => {
 
     it('handles topic without parent', () => {
       const topics = [
-        createMockTopic({ id: 'topic-1', title: 'Standalone Topic', parent_topic_id: null, cluster_role: 'standalone' }),
+        createMockTopic({ id: 'topic-1', title: 'Standalone Topic', parent_topic_id: null, cluster_role: 'cluster_content' }),
       ];
 
       const ctx = createMockContext({

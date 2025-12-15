@@ -1,47 +1,61 @@
 // services/ai/contentGeneration/passes/pass3Lists.ts
-import { ContentBrief, ContentGenerationJob, BusinessInfo } from '../../../../types';
+import {
+  ContentBrief,
+  ContentGenerationJob,
+  BusinessInfo,
+  SectionProgressCallback,
+  ContentGenerationSection,
+  ContentFormatBudget
+} from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { PASS_3_LIST_TABLE_PROMPT } from '../../../../config/prompts';
-import * as geminiService from '../../../geminiService';
-import * as openAiService from '../../../openAiService';
-import * as anthropicService from '../../../anthropicService';
-import * as perplexityService from '../../../perplexityService';
-import * as openRouterService from '../../../openRouterService';
+import { executeSectionPass } from './baseSectionPass';
+import { buildPass3Prompt, buildPass3BatchPrompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
 
-const noOpDispatch = () => {};
-
-async function callProviderWithPrompt(info: BusinessInfo, prompt: string): Promise<string> {
-  switch (info.aiProvider) {
-    case 'openai': return openAiService.generateText(prompt, info, noOpDispatch);
-    case 'anthropic': return anthropicService.generateText(prompt, info, noOpDispatch);
-    case 'perplexity': return perplexityService.generateText(prompt, info, noOpDispatch);
-    case 'openrouter': return openRouterService.generateText(prompt, info, noOpDispatch);
-    case 'gemini':
-    default: return geminiService.generateText(prompt, info, noOpDispatch);
-  }
-}
-
+/**
+ * Pass 3: List & Table Optimization
+ *
+ * Uses format budget-aware selective processing:
+ * - Only processes sections identified as needing lists/tables
+ * - Respects the 40% list / 15% table budget
+ * - Batches sections to reduce API calls
+ *
+ * This prevents over-optimization with lists/tables (Baker Principle).
+ */
 export async function executePass3(
   orchestrator: ContentGenerationOrchestrator,
   job: ContentGenerationJob,
   brief: ContentBrief,
-  businessInfo: BusinessInfo
+  businessInfo: BusinessInfo,
+  onSectionProgress?: SectionProgressCallback,
+  shouldAbort?: () => boolean
 ): Promise<string> {
-  const draft = job.draft_content || '';
+  return executeSectionPass(
+    orchestrator,
+    job,
+    brief,
+    businessInfo,
+    {
+      passNumber: 3,
+      passKey: 'pass_3_lists',
+      nextPassNumber: 4,
+      promptBuilder: buildPass3Prompt,
 
-  await orchestrator.updateJob(job.id, {
-    passes_status: { ...job.passes_status, pass_3_lists: 'in_progress' }
-  });
+      // Batch processing: 3 sections per API call
+      batchSize: 3,
 
-  const prompt = PASS_3_LIST_TABLE_PROMPT(draft, brief, businessInfo);
-  const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
-  const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
+      // Selective processing: Only sections that need lists/tables
+      filterSections: (sections: ContentGenerationSection[], budget: ContentFormatBudget) => {
+        const needsOptimization = new Set([
+          ...budget.sectionsNeedingOptimization.lists,
+          ...budget.sectionsNeedingOptimization.tables
+        ]);
+        return sections.filter(s => needsOptimization.has(s.section_key));
+      },
 
-  await orchestrator.updateJob(job.id, {
-    draft_content: result,
-    passes_status: { ...job.passes_status, pass_3_lists: 'completed' },
-    current_pass: 4
-  });
-
-  return result;
+      // Batch prompt with format budget context
+      buildBatchPrompt: buildPass3BatchPrompt
+    },
+    onSectionProgress,
+    shouldAbort
+  );
 }

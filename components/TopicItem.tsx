@@ -1,17 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution errors.
-// FIX: Changed import to be a relative path.
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution errors.
-import { EnrichedTopic, ExpansionMode } from '../types';
-// FIX: Corrected import path to be a relative path.
+import React, { useState, useEffect, useMemo } from 'react';
+import { EnrichedTopic, ExpansionMode, ContentBrief } from '../types';
 import { Loader } from './ui/Loader';
-// FIX: Corrected import path to be a relative path.
 import { slugify } from '../utils/helpers';
-// FIX: Corrected import path to be a relative path.
 import { Input } from './ui/Input';
 import { safeString } from '../utils/parsers';
 import TopicDetailPanel from './ui/TopicDetailPanel';
+import { BriefHealthIndicator } from './ui/BriefHealthBadge';
+import { calculateBriefQualityScore } from '../utils/briefQualityScore';
 
 interface TopicItemProps {
   topic: EnrichedTopic;
@@ -19,6 +15,7 @@ interface TopicItemProps {
   onGenerateBrief: () => void;
   onDelete: () => void;
   hasBrief: boolean;
+  brief?: ContentBrief | null; // Brief object for quality calculation
   onExpand?: (topic: EnrichedTopic, mode: ExpansionMode) => void;
   isExpanding?: boolean;
   onUpdateTopic: (topicId: string, updates: Partial<EnrichedTopic>) => void;
@@ -33,6 +30,8 @@ interface TopicItemProps {
   allCoreTopics?: EnrichedTopic[]; // Added for reparenting
   onReparent?: (topicId: string, newParentId: string) => void; // Added for reparenting
   isGeneratingBrief?: boolean; // Pulsing indicator when brief is being generated
+  onRepairMissing?: (missingFields: string[]) => void; // Repair missing brief fields
+  isRepairingBrief?: boolean; // Indicator when brief is being repaired
 }
 
 const ActionButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode }> = ({ icon, ...props }) => (
@@ -55,6 +54,7 @@ const TopicItem: React.FC<TopicItemProps> = ({
     onGenerateBrief,
     onDelete,
     hasBrief,
+    brief,
     onExpand,
     isExpanding,
     onUpdateTopic,
@@ -69,12 +69,19 @@ const TopicItem: React.FC<TopicItemProps> = ({
     allCoreTopics = [],
     onReparent = () => {},
     isGeneratingBrief = false,
+    onRepairMissing,
+    isRepairingBrief = false,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
-    
+
     const title = safeString(topic.title);
     const slug = safeString(topic.slug);
     const description = safeString(topic.description);
+
+    // Calculate brief quality score
+    const briefQuality = useMemo(() => {
+        return calculateBriefQualityScore(brief);
+    }, [brief]);
 
     // Edit mode state
     const [editableTitle, setEditableTitle] = useState(title);
@@ -233,11 +240,15 @@ const TopicItem: React.FC<TopicItemProps> = ({
                             ) : (
                                 <h4 className="font-semibold text-white flex items-center gap-2">
                                     {title}
-                                    {isGeneratingBrief && (
-                                        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full animate-pulse">
-                                            Generating...
-                                        </span>
-                                    )}
+                                    <BriefHealthIndicator
+                                        quality={briefQuality}
+                                        hasBrief={hasBrief}
+                                        isGenerating={isGeneratingBrief}
+                                        isRepairing={isRepairingBrief}
+                                        onRegenerate={onGenerateBrief}
+                                        onRepairMissing={onRepairMissing}
+                                        topicTitle={title}
+                                    />
                                 </h4>
                             )}
                             

@@ -45,7 +45,29 @@ export const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ content }) => {
         
         // Inline Code (`text`)
         line = line.replace(/`([^`]+)`/g, '<code class="bg-gray-800 px-1 rounded font-mono text-sm text-pink-300 border border-gray-700">$1</code>');
-        
+
+        // Images (![alt](url)) - MUST come before links
+        // First image (hero) gets special full-width treatment
+        const isFirstImage = !processedLines.some(l => l.includes('<img '));
+        if (isFirstImage && line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)) {
+          // Full-line hero image - give it special styling
+          line = line.replace(
+            /!\[([^\]]*)\]\(([^)]+)\)/g,
+            '<figure class="my-6"><img src="$2" alt="$1" class="w-full h-auto rounded-lg shadow-lg" loading="eager" /><figcaption class="text-center text-xs text-gray-500 mt-2 italic">$1</figcaption></figure>'
+          );
+        } else {
+          line = line.replace(
+            /!\[([^\]]*)\]\(([^)]+)\)/g,
+            '<img src="$2" alt="$1" class="max-w-full h-auto rounded-lg shadow-md my-4 mx-auto block" loading="lazy" />'
+          );
+        }
+
+        // Image placeholders [IMAGE: description | alt="text"] - show as pending placeholder
+        line = line.replace(
+          /\[IMAGE:\s*([^|]+)\s*\|\s*alt="([^"]+)"\]/g,
+          '<div class="my-4 p-4 bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg text-center"><div class="text-gray-400 text-sm mb-1">📷 Image Placeholder</div><div class="text-gray-300 text-xs">$1</div><div class="text-gray-500 text-xs italic mt-1">Alt: $2</div></div>'
+        );
+
         // Links ([text](url))
         line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline">$1</a>');
 
@@ -111,7 +133,10 @@ export const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ content }) => {
                 inTable = false;
             }
 
-            if (!line.startsWith('<h') && !line.startsWith('<div')) {
+            // Don't wrap block-level elements in <p> tags
+            const isBlockElement = line.startsWith('<h') || line.startsWith('<div') ||
+                                   line.startsWith('<figure') || line.startsWith('<img ');
+            if (!isBlockElement) {
                 if (line.trim() === '') {
                     line = '<div class="h-4"></div>';
                 } else {

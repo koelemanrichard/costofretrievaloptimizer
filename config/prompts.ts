@@ -1,17 +1,21 @@
 
 // config/prompts.ts
-import { BusinessInfo, SEOPillars, SemanticTriple, EnrichedTopic, ContentBrief, BriefSection, ResponseCode, GscRow, ValidationIssue, ExpansionMode, AuthorProfile, ContextualFlowIssue, FoundationPage, NavigationStructure } from '../types';
+import { BusinessInfo, SEOPillars, SemanticTriple, EnrichedTopic, ContentBrief, BriefSection, ResponseCode, GscRow, ValidationIssue, ExpansionMode, AuthorProfile, ContextualFlowIssue, FoundationPage, NavigationStructure, WebsiteType } from '../types';
 import { KnowledgeGraph } from '../lib/knowledgeGraph';
+import { getWebsiteTypeConfig } from './websiteTypeTemplates';
 
 const jsonResponseInstruction = `
 Respond with a valid JSON object. Do not include any explanatory text or markdown formatting before or after the JSON.
 `;
 
-const businessContext = (info: BusinessInfo): string => `
+const businessContext = (info: BusinessInfo): string => {
+    const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
+    return `
 Business Context:
 - Domain: ${info.domain}
 - Industry: ${info.industry}
 - Business Model: ${info.model}
+- Website Type: ${typeConfig?.label || 'General/Informational'}
 - Target Audience: ${info.audience}
 - Unique Value Proposition: ${info.valueProp}
 - Stated Expertise Level: ${info.expertise}
@@ -22,6 +26,64 @@ ${info.authorName ? `- Author: ${info.authorName} (${info.authorBio || ''})` : '
 ${info.authorCredentials ? `- Author Credentials: ${info.authorCredentials}` : ''}
 ${info.uniqueDataAssets ? `- Unique Data Assets: ${info.uniqueDataAssets}` : ''}
 `;
+};
+
+/**
+ * Generate website type-specific instructions for topical map generation
+ */
+const getWebsiteTypeInstructions = (websiteType?: WebsiteType): string => {
+    if (!websiteType) return '';
+
+    const config = getWebsiteTypeConfig(websiteType);
+
+    let instructions = `
+**WEBSITE TYPE-SPECIFIC STRATEGY: ${config.label.toUpperCase()}**
+${config.description}
+
+**Core Section Focus (Monetization):**
+${config.coreSectionRules.description}
+- Required page types: ${config.coreSectionRules.requiredPageTypes.join(', ')}
+- Optional page types: ${config.coreSectionRules.optionalPageTypes.join(', ')}
+- Content depth: ${config.coreSectionRules.contentDepth}
+- Attribute priority: ${config.coreSectionRules.attributePriority.join(' → ')}
+
+**Author Section Focus (Authority Building):**
+${config.authorSectionRules.description}
+- Required page types: ${config.authorSectionRules.requiredPageTypes.join(', ')}
+- Link-back strategy: ${config.authorSectionRules.linkBackStrategy} (PageRank should flow from Author → Core)
+
+**Hub-Spoke Structure:**
+- Optimal ratio: 1:${config.hubSpokeRatio.optimal} (min: ${config.hubSpokeRatio.min}, max: ${config.hubSpokeRatio.max})
+- Generate ${config.hubSpokeRatio.optimal} spokes per core topic
+
+**Linking Rules:**
+- Max ${config.linkingRules.maxAnchorsPerPage} anchors per page
+- Max ${config.linkingRules.maxAnchorRepetition} repetitions of same anchor text
+- Link direction: ${config.linkingRules.preferredLinkDirection.replace(/_/g, ' ')}
+`;
+
+    // Add type-specific template patterns
+    if (config.templatePatterns.length > 0) {
+        instructions += `
+**Recommended Topic Templates:**
+`;
+        config.templatePatterns.forEach(template => {
+            instructions += `- ${template.name}: ${template.description} (Schema: ${template.schemaType})
+`;
+        });
+    }
+
+    // Add type-specific EAV priorities
+    instructions += `
+**Prioritized Attributes for this Website Type:**
+- ROOT (Essential): ${config.eavPriority.requiredCategories.ROOT.join(', ')}
+- UNIQUE (Differentiating): ${config.eavPriority.requiredCategories.UNIQUE.join(', ')}
+- RARE (Detailed): ${config.eavPriority.requiredCategories.RARE.join(', ')}
+- Composite: ${config.eavPriority.compositeAttributes.join(', ')}
+`;
+
+    return instructions;
+}
 
 const getStylometryInstructions = (profile?: AuthorProfile): string => {
     if (!profile) return "Tone: Professional and authoritative.";
@@ -139,43 +201,109 @@ SEO Pillars:
 
 ${businessContext(info)}
 
+**ATTRIBUTE CATEGORIES (CRITICAL for semantic authority):**
+Assign each triple ONE of these categories based on its importance:
+- **ROOT**: Core defining attributes that establish entity identity (what it IS, essential characteristics). Target ~30% of triples.
+- **UNIQUE**: Differentiating features that set the entity apart from competitors (USPs, exclusive capabilities). Target ~30% of triples.
+- **RARE**: Detailed/technical attributes that demonstrate deep expertise (specs, advanced details). Target ~25% of triples.
+- **COMMON**: General/shared attributes common across the industry. Target ~15% of triples.
+
+**LEXICAL ENRICHMENT (for semantic richness):**
+For each triple, provide:
+- synonyms: 2-3 alternative terms for the object value
+- antonyms: 1-2 opposite/contrasting concepts (if applicable, otherwise empty array)
+
 Each triple must be a JSON object with the structure:
 {
   "subject": { "label": "string", "type": "string" },
-  "predicate": { "relation": "string", "type": "string" },
-  "object": { "value": "string or number", "type": "string" }
+  "predicate": { "relation": "string", "type": "string", "category": "ROOT|UNIQUE|RARE|COMMON" },
+  "object": { "value": "string or number", "type": "string" },
+  "lexical": { "synonyms": ["string"], "antonyms": ["string"] }
 }
 
 Example:
 {
   "subject": { "label": "Contract Management Software", "type": "Concept" },
-  "predicate": { "relation": "HAS_FEATURE", "type": "Property" },
-  "object": { "value": "Automated Workflows", "type": "Feature" }
+  "predicate": { "relation": "HAS_FEATURE", "type": "Property", "category": "UNIQUE" },
+  "object": { "value": "Automated Workflows", "type": "Feature" },
+  "lexical": { "synonyms": ["workflow automation", "process automation", "automated processes"], "antonyms": ["manual processes", "hand-operated workflows"] }
 }
 
 ${jsonResponseInstruction}
 Your output should be a JSON array of these triple objects.
 `;
 
-export const EXPAND_SEMANTIC_TRIPLES_PROMPT = (info: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[]): string => `
-You are an expert in semantic modeling. The user has provided a list of existing semantic triples. Expand upon this list by adding 10-15 new, related triples.
+// Helper function to calculate category distribution for expansion prompt
+const getCategoryDistribution = (triples: SemanticTriple[]): string => {
+  const counts: Record<string, number> = { ROOT: 0, UNIQUE: 0, RARE: 0, COMMON: 0 };
+  triples.forEach(t => {
+    const cat = t.predicate?.category || 'COMMON';
+    if (cat in counts) counts[cat]++;
+  });
+  return Object.entries(counts).map(([k, v]) => `- ${k}: ${v}`).join('\n');
+};
 
-Focus on adding more detail, related concepts, features, benefits, use cases, and other relevant factual connections. Do not repeat existing triples.
+export const EXPAND_SEMANTIC_TRIPLES_PROMPT = (info: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[], count: number = 15): string => `
+You are an expert in semantic modeling for SEO knowledge graphs.
+
+**CRITICAL REQUIREMENT: Generate EXACTLY ${count} new semantic triples. NOT 10, NOT 15, but EXACTLY ${count} triples.**
+
+Your task: Expand the existing semantic triples by adding ${count} NEW, unique triples that DO NOT duplicate any existing ones.
 
 SEO Pillars:
 - Central Entity: ${pillars.centralEntity}
 - Source Context: ${pillars.sourceContext}
 
-Existing Triples (for context):
-${JSON.stringify(existingTriples, null, 2)}
+**Current Category Distribution (aim to balance):**
+${getCategoryDistribution(existingTriples)}
+
+**ATTRIBUTE CATEGORIES (distribute across all):**
+- **ROOT** (~30%): Core defining attributes - identity, essential characteristics
+- **UNIQUE** (~30%): Differentiating features - USPs, competitive advantages
+- **RARE** (~25%): Technical/expert details - specs, deep knowledge
+- **COMMON** (~15%): General/industry-standard attributes
+
+**EXPANSION STRATEGIES (use ALL of these to generate ${count} triples):**
+1. **Deep Features**: Technical specifications, components, variations
+2. **Benefits & Outcomes**: Value propositions, user benefits, ROI factors
+3. **Processes & Methods**: How things work, methodologies, procedures
+4. **Comparisons**: Versus alternatives, differentiators, positioning
+5. **Use Cases**: Applications, scenarios, industries, user types
+6. **Requirements**: Prerequisites, dependencies, compatibility
+7. **Risks & Challenges**: Common issues, limitations, considerations
+8. **Related Concepts**: Adjacent topics, ecosystems, integrations
+
+**LEXICAL ENRICHMENT (for each triple):**
+- synonyms: 2-3 alternative terms for the object value
+- antonyms: 1-2 contrasting concepts (if applicable, otherwise empty array)
+
+**EXISTING TRIPLES TO AVOID DUPLICATING (${existingTriples.length} total):**
+${JSON.stringify(existingTriples.slice(0, Math.min(30, existingTriples.length)), null, 2)}
+${existingTriples.length > 30 ? `\n...and ${existingTriples.length - 30} more existing triples (all must be avoided)` : ''}
 
 ${businessContext(info)}
 
+**OUTPUT FORMAT - JSON array with EXACTLY ${count} objects:**
+[
+  {
+    "subject": { "label": "string", "type": "string" },
+    "predicate": { "relation": "VERB_PHRASE", "type": "string", "category": "ROOT|UNIQUE|RARE|COMMON" },
+    "object": { "value": "string or number", "type": "string" },
+    "lexical": { "synonyms": ["string"], "antonyms": ["string"] }
+  },
+  // ... repeat for all ${count} triples
+]
+
 ${jsonResponseInstruction}
-Your output should be a JSON array of the NEW triple objects only.
+
+**FINAL CHECK: Your response MUST contain EXACTLY ${count} triple objects in the array. Count them before responding.**
 `;
 
-export const GENERATE_INITIAL_TOPICAL_MAP_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[]): string => `
+export const GENERATE_INITIAL_TOPICAL_MAP_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[]): string => {
+    const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
+    const hubSpokeRatio = typeConfig?.hubSpokeRatio.optimal || 7;
+
+    return `
 You are a Holistic SEO Architect. Your task is to generate a massive, high-authority Topical Map based on the provided strategic inputs.
 
 **CRITICAL OBJECTIVE:** You must exhaustively explore every facet of the topic. You CANNOT be lazy. You MUST generate depth.
@@ -186,6 +314,8 @@ Strategic Inputs:
 - Key Competitors: ${competitors.join(', ')}
 
 ${businessContext(info)}
+
+${getWebsiteTypeInstructions(info.websiteType)}
 
 **SEMANTIC HIERARCHY RULES (CRITICAL):**
 A **CORE TOPIC** represents a DISTINCT ATTRIBUTE FACET of the Central Entity. It must be a fundamentally different service, product category, problem type, or major functional area.
@@ -208,7 +338,7 @@ An **OUTER TOPIC (Spoke)** is a VARIATION, MODIFIER, or SPECIFIC INSTANCE of a C
 1.  **Monetization Section (Core Section / Money Pages):**
     *   **MANDATORY: Generate a MINIMUM of 6 SEMANTICALLY DISTINCT Core Topics.**
     *   Each Core Topic MUST target a different attribute/facet of "${pillars.centralEntity}"
-    *   **HARD CONSTRAINT (1:7 HUB-SPOKE RATIO):** For EVERY Core Topic, generate exactly **7 unique Spokes**.
+    *   **HARD CONSTRAINT (1:${hubSpokeRatio} HUB-SPOKE RATIO):** For EVERY Core Topic, generate exactly **${hubSpokeRatio} unique Spokes**.
     *   *Spoke Ideas:* Location variants, price tiers, urgency levels, specific use cases, comparisons, checklists.
     *   *Example Structure:* "[Service Type]" (Core) → "Emergency [Service Type]", "[Service Type] Costs", "[Service Type] in [Location]", etc. (Spokes)
 
@@ -247,12 +377,13 @@ Each Core Topic object structure:
         "query_network": ["string"],
         "url_slug_hint": "string"
       }
-      // ... MUST HAVE 7 SPOKES HERE ...
+      // ... MUST HAVE ${hubSpokeRatio} SPOKES HERE ...
   ]
 }
 
 ${jsonResponseInstruction}
 `;
+};
 
 // Section-specific prompts for chunked generation to avoid token truncation
 export const GENERATE_MONETIZATION_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[]): string => `
@@ -493,43 +624,43 @@ For each section in 'structured_outline', classify using 'attribute_category':
 
 ### **OUTPUT JSON STRUCTURE**
 
-Respond with a SINGLE valid JSON object matching this schema exactly:
+**CRITICAL: The 'structured_outline' field is MANDATORY and MUST be included with at least 5-8 sections. Do NOT skip this field.**
+
+Respond with a SINGLE valid JSON object. Generate the 'structured_outline' FIRST as it is the most important field:
 
 {
-  "title": "string",
-  "slug": "string",
-  "metaDescription": "string (Must include Central Search Intent)",
-  "query_type_format": "string (e.g. 'Ordered List', 'Comparison Table', 'Prose')",
-  "keyTakeaways": ["string", "string", "string"],
-  "outline": "string (Markdown format)",
   "structured_outline": [
     {
-      "heading": "string",
-      "level": number,
+      "heading": "string (H2/H3 heading text)",
+      "level": 2,
       "format_code": "FS | PAA | LISTING | DEFINITIVE | TABLE | PROSE",
       "attribute_category": "ROOT | UNIQUE | RARE | COMMON",
       "content_zone": "MAIN | SUPPLEMENTARY",
-      "subordinate_text_hint": "string (Specific first-sentence syntax instruction)",
-      "methodology_note": "string (Include [FS], [PAA], etc. codes and [\"required phrases\"])",
+      "subordinate_text_hint": "string (First-sentence syntax instruction)",
+      "methodology_note": "string",
       "required_phrases": ["string"],
       "anchor_texts": [{ "phrase": "string", "target_topic_id": "string" }]
     }
   ],
+  "title": "string",
+  "slug": "string",
+  "metaDescription": "string (Must include Central Search Intent)",
+  "keyTakeaways": ["string", "string", "string"],
+  "outline": "string (Markdown format)",
+  "query_type_format": "string (e.g. 'Ordered List', 'Comparison Table', 'Prose')",
   "perspectives": ["string", "string"],
   "methodology_note": "string",
   "featured_snippet_target": {
     "question": "string",
     "answer_target_length": 40,
-    "required_predicates": ["string", "string"],
-    "target_type": "PARAGRAPH" | "LIST" | "TABLE"
+    "required_predicates": ["string"],
+    "target_type": "PARAGRAPH"
   },
   "visual_semantics": [
     {
-      "type": "INFOGRAPHIC" | "CHART" | "DIAGRAM",
+      "type": "INFOGRAPHIC | CHART | DIAGRAM",
       "description": "string",
-      "caption_data": "string (Data points to include)",
-      "height_hint": "string (e.g. '1080px')",
-      "width_hint": "string (e.g. '1920px')"
+      "caption_data": "string"
     }
   ],
   "discourse_anchors": ["string", "string"],
@@ -545,17 +676,12 @@ Respond with a SINGLE valid JSON object matching this schema exactly:
   "contextualBridge": {
     "type": "section",
     "content": "string (The transition paragraph text)",
-    "links": [
-      {
-        "targetTopic": "string",
-        "anchorText": "string",
-        "annotation_text_hint": "string (Text surrounding the anchor)",
-        "reasoning": "string"
-      }
-    ]
+    "links": []
   },
   "predicted_user_journey": "string"
 }
+
+**REMINDER: You MUST include 'structured_outline' with 5-8 detailed section objects. This is the most critical field.**
 
 ${jsonResponseInstruction}
 `;
@@ -1185,6 +1311,68 @@ ${jsonResponseInstruction}
 Return a JSON object with "total_duration_weeks" and an array of "phases" (phase, name, duration_weeks, publishing_rate, content: [{title, type}]).
 `;
 
+export const ANALYZE_SEMANTIC_RELATIONSHIPS_PROMPT = (
+    topics: EnrichedTopic[],
+    businessInfo: BusinessInfo,
+    preCalculatedPairs: { topicA: string; topicB: string; similarity: number }[]
+): string => `
+You are an expert SEO strategist analyzing semantic relationships between topics for internal linking strategy.
+
+${businessContext(businessInfo)}
+
+TOPIC LIST:
+${JSON.stringify(topics.map(t => ({
+    title: t.title,
+    type: t.type,
+    parentTitle: topics.find(p => p.id === t.parent_topic_id)?.title || null
+})), null, 2)}
+
+PRE-CALCULATED SIMILARITY SCORES (based on Knowledge Graph analysis):
+${JSON.stringify(preCalculatedPairs.map(p => ({
+    topicA: p.topicA,
+    topicB: p.topicB,
+    similarityScore: p.similarity.toFixed(2),
+    interpretation: p.similarity >= 0.9 ? 'DIRECTLY_CONNECTED' :
+                    p.similarity >= 0.5 ? 'STRONGLY_RELATED' :
+                    p.similarity >= 0.3 ? 'MODERATELY_RELATED' : 'WEAKLY_RELATED'
+})), null, 2)}
+
+INSTRUCTIONS:
+Analyze the semantic relationships and provide:
+
+1. **pairs**: For each pre-calculated pair, determine:
+   - relationship.type: 'SIBLING' (same parent or same level), 'RELATED' (different clusters but connected), 'DISTANT' (weak connection)
+   - relationship.internalLinkingPriority: 'high' (must link), 'medium' (should link), 'low' (optional link)
+   - relationship.bridge_topic_suggestion: If topics are distant but should be connected, suggest a bridge topic
+   - distance.weightedScore: Convert similarity to distance (1 - similarity)
+
+2. **summary**: A 2-3 sentence overview of the semantic structure (clustering patterns, isolated topics, etc.)
+
+3. **actionableSuggestions**: 3-5 specific recommendations for improving topic connectivity
+
+OUTPUT FORMAT (JSON):
+{
+    "summary": "string",
+    "pairs": [
+        {
+            "topicA": "string",
+            "topicB": "string",
+            "distance": {
+                "weightedScore": 0.0-1.0,
+                "cosine_similarity": 0.0-1.0
+            },
+            "relationship": {
+                "type": "SIBLING" | "RELATED" | "DISTANT",
+                "internalLinkingPriority": "high" | "medium" | "low",
+                "bridge_topic_suggestion": "string or null"
+            }
+        }
+    ],
+    "actionableSuggestions": ["string"]
+}
+
+${jsonResponseInstruction}
+`;
 
 export const ADD_TOPIC_INTELLIGENTLY_PROMPT = (newTopicTitle: string, newTopicDescription: string, allTopics: EnrichedTopic[], businessInfo: BusinessInfo): string => `
 You are an expert topical map architect. Determine the best placement for a new topic.
@@ -1856,9 +2044,15 @@ Return a JSON object:
 
 export const GENERATE_DEFAULT_NAVIGATION_PROMPT = (
   foundationPages: { page_type: string; title: string; slug: string }[],
-  coreTopics: { id: string; title: string; slug?: string }[],
+  coreTopics: { id: string; title: string; slug?: string; cluster_role?: string; topic_class?: string }[],
   info: BusinessInfo
-): string => `
+): string => {
+  // Identify pillars and monetization topics for prioritization
+  const pillarTopics = coreTopics.filter(t => t.cluster_role === 'pillar');
+  const monetizationTopics = coreTopics.filter(t => t.topic_class === 'monetization');
+  const informationalTopics = coreTopics.filter(t => t.topic_class === 'informational');
+
+  return `
 You are an expert Information Architect specializing in website navigation.
 Generate an optimal navigation structure based on the foundation pages and core topics.
 
@@ -1867,27 +2061,45 @@ ${businessContext(info)}
 **Available Foundation Pages:**
 ${JSON.stringify(foundationPages, null, 2)}
 
-**Core Topics (for potential header/footer links):**
-${JSON.stringify(coreTopics.slice(0, 15).map(t => ({ title: t.title, slug: t.slug })), null, 2)}
+**PILLAR TOPICS (High Authority Hub Pages - MUST prioritize in header):**
+${pillarTopics.length > 0
+  ? pillarTopics.map(t => `- ${t.title} (${t.slug || 'no-slug'})`).join('\n')
+  : '(No pillar topics identified - use monetization topics as priority)'}
+
+**MONETIZATION TOPICS (Money Pages - High priority for PageRank):**
+${monetizationTopics.slice(0, 8).map(t => `- ${t.title} (${t.slug || 'no-slug'})`).join('\n')}
+
+**INFORMATIONAL TOPICS (Author Section - Medium priority):**
+${informationalTopics.slice(0, 8).map(t => `- ${t.title} (${t.slug || 'no-slug'})`).join('\n')}
 
 **NAVIGATION RULES (Holistic SEO):**
 1. **Header Max Links: 10** - Only most important pages
 2. **Footer Max Links: 30** - Organized into sections
 3. **Total Page Links: Max 150** - Never exceed this
 4. **Homepage MUST be in header** - Always first position
-5. **Legal pages in footer** - Privacy, Terms at bottom
-6. **Pure HTML links** - No JavaScript-dependent navigation
-7. **Descriptive anchor text** - Never "Click here" or "Read more"
+5. **PILLAR topics MUST be in header** - These are authority hubs
+6. **Monetization topics HIGH priority** - These are money pages
+7. **Legal pages in footer ONLY** - Privacy, Terms never in header
+8. **Pure HTML links** - No JavaScript-dependent navigation
+9. **Descriptive anchor text** - Never "Click here" or "Read more"
+10. **N-gram injection** - Include Central Entity in header link text where natural
+
+**PageRank Flow Strategy:**
+- Direct PageRank to PILLAR pages first (hub pages)
+- PILLAR pages distribute to their cluster content
+- Monetization topics receive high placement for conversion
+- Informational topics support but don't dominate header
 
 **Header Structure:**
 - Position 1: Homepage (Logo link)
-- Positions 2-5: Core service/product categories
-- Position 6-8: Key informational pages (if space)
+- Positions 2-4: PILLAR topics (if available) or top monetization topics
+- Positions 5-7: Key monetization/service pages
+- Position 8-9: Key informational pages (if space)
 - CTA Button: Contact or main conversion action
 
 **Footer Structure:**
-- Section 1: Main Services/Products
-- Section 2: Resources/Information
+- Section 1: Main Services/Products (include PILLAR and monetization pages)
+- Section 2: Resources/Information (informational topics)
 - Section 3: Company (About, Contact, Careers)
 - Section 4: Legal (Privacy, Terms)
 - NAP Display: Company info at bottom
@@ -1935,6 +2147,7 @@ Return a JSON object:
   }
 }
 `;
+};
 
 export const VALIDATE_FOUNDATION_PAGES_PROMPT = (
   foundationPages: { page_type: string; title: string; h1_template?: string; meta_description?: string; sections?: any[]; nap_data?: any }[],
@@ -2357,7 +2570,7 @@ export const PASS_4_VISUAL_SEMANTICS_PROMPT = (
 ): string => `
 You are a Holistic SEO editor specializing in visual semantics.
 
-**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}** - Maintain the original language. Write alt text in ${info.language || 'English'}.
+**LANGUAGE: ${info.language || 'English'} | Target: ${info.targetMarket || 'Global'}**
 
 ## Current Draft
 ${draft}
@@ -2366,23 +2579,44 @@ ${draft}
 ## Title: ${brief.title}
 
 ## Visual Semantics Rules:
-1. **Alt Tag Vocabulary Extension**: Alt tags must use NEW vocabulary not in H1/Title
+1. **Alt Tag Vocabulary Extension**: Alt tags MUST use NEW vocabulary not in H1/Title (synonyms, related terms)
 2. **Context Bridging**: Alt text bridges the image to surrounding content
-3. **No Image Between H and Text**: Never place image between heading and its subordinate text
-4. **Textual Qualification**: Sentence before/after image must reference it
+3. **No Image Between H and Text**: NEVER place image between heading and its subordinate text
+4. **Textual Qualification**: Sentence before/after image MUST reference it
 5. **LCP Prominence**: First major image relates directly to Central Entity
 
+## Image Types to Consider:
+- **HERO**: Top of page, LCP element, includes text overlay with title/keyword
+- **SECTION**: Supporting content, placed AFTER definitions/explanations
+- **CHART**: For statistical data, comparisons, trends
+- **INFOGRAPHIC**: For bullet points, statistics, process summaries
+- **DIAGRAM**: For process flows, how-to steps, decision trees
+
 ## Instructions:
-Insert [IMAGE: description | alt="vocabulary-extending alt text"] placeholders where images would enhance the content. Place them:
-- After the first paragraph (LCP image)
-- After key definitions or explanations
-- In "How-to" sections for visual steps
-- NEVER immediately after a heading
-- **Write all descriptions and alt text in ${info.language || 'English'}**
+Insert image placeholders using this EXACT format:
+[IMAGE: detailed description of what the image should show | alt="vocabulary-extending alt text"]
 
-Example: [IMAGE: Diagram showing contract lifecycle stages | alt="contract management workflow phases from creation to renewal"]
+Placement rules:
+- HERO image: After first paragraph (LCP position)
+- SECTION images: After key definitions or explanations
+- CHART/INFOGRAPHIC: Where data needs visualization
+- NEVER immediately after a heading - always after subordinate text
 
-Return the COMPLETE article with image placeholders inserted in ${info.language || 'English'}. Do not summarize or truncate.
+Image description should include:
+- What object/scene should be depicted
+- What text overlay is needed (for HERO)
+- What data should be visualized (for CHART)
+
+Examples:
+[IMAGE: Hero image showing modern contract management dashboard interface with title overlay "${brief.title}" | alt="digital contract workflow automation platform interface"]
+
+[IMAGE: Bar chart comparing contract processing times before and after automation showing 60% reduction | alt="contract automation efficiency metrics comparison"]
+
+[IMAGE: Step-by-step diagram showing document approval workflow from submission to signature | alt="automated document approval process stages"]
+
+**Write all descriptions and alt text in ${info.language || 'English'}.**
+
+Return the COMPLETE article with image placeholders inserted. Do not summarize or truncate.
 `;
 
 export const PASS_5_MICRO_SEMANTICS_PROMPT = (
@@ -2779,5 +3013,61 @@ Return the new section as a JSON object:
   "methodology_note": "string (formatting notes with codes)",
   "required_phrases": ["string"],
   "anchor_texts": [{ "phrase": "string", "target_topic_id": "string" }]
+}
+`;
+
+// ============================================
+// SMART WIZARD - Business Research
+// ============================================
+
+export const RESEARCH_BUSINESS_PROMPT = (
+  input: string,
+  inputType: 'url' | 'name' | 'description' | 'mixed',
+  scrapedContent?: { title: string; description: string; content: string },
+  userDescription?: string
+): string => `
+You are a business analyst expert. Analyze the provided information and extract structured business data to help auto-fill a content strategy form.
+
+## Input Information
+- **Input Type**: ${inputType}
+- **User Input**: ${input}
+
+${userDescription ? `
+## User-Provided Description
+${userDescription}
+` : ''}
+
+${scrapedContent ? `
+## Scraped Website Content
+- **Title**: ${scrapedContent.title}
+- **Meta Description**: ${scrapedContent.description}
+- **Page Content** (excerpt):
+${scrapedContent.content}
+` : ''}
+
+## Your Task
+Based on the above information, extract the following business details. If you cannot determine a value with reasonable confidence, leave it as an empty string.
+
+**IMPORTANT**:
+- Be specific and accurate. Do not make up information.
+- For language and targetMarket, infer from the content language and business location/focus.
+- For seedKeyword, identify the main topic or product/service the business focuses on.
+- For valueProp, extract what makes this business unique or what value they provide.
+- For audience, identify who the business is targeting.
+${inputType === 'name' || inputType === 'description' || inputType === 'mixed' ? '- Use your knowledge about the business/industry to supplement any gaps.' : ''}
+
+${jsonResponseInstruction}
+
+Return a JSON object with these fields:
+{
+  "seedKeyword": "Main topic or primary keyword (e.g., 'contract management software', 'organic skincare')",
+  "industry": "Business industry/vertical (e.g., 'SaaS', 'E-commerce', 'Healthcare')",
+  "valueProp": "Unique value proposition - what makes this business special (2-3 sentences)",
+  "audience": "Target audience description (e.g., 'Small business owners', 'Enterprise legal teams')",
+  "language": "Language code (e.g., 'en', 'nl', 'de', 'es')",
+  "targetMarket": "Target country/region (e.g., 'United States', 'Netherlands', 'European Union')",
+  "authorName": "If identifiable, the main author/expert name, otherwise empty",
+  "authorBio": "If identifiable, a brief bio of the expert, otherwise empty",
+  "authorCredentials": "If identifiable, credentials/qualifications, otherwise empty"
 }
 `;

@@ -12,11 +12,15 @@ import ContentGenerationProgress from './ContentGenerationProgress';
 import { ContentGenerationSettingsPanel } from './ContentGenerationSettingsPanel';
 import { PassControlPanel } from './PassControlPanel';
 import { BriefEditModal } from './brief/BriefEditModal';
+import { ReportExportButton, ReportModal } from './reports';
+import { useContentBriefReport } from '../hooks/useReportGeneration';
 import {
   ContentGenerationSettings,
   PRIORITY_PRESETS,
   DEFAULT_CONTENT_GENERATION_SETTINGS
 } from '../types/contentGeneration';
+import { BriefHealthOverview } from './brief/BriefHealthOverview';
+import { getSupabaseClient } from '../services/supabaseClient';
 
 interface ContentBriefModalProps {
   allTopics: EnrichedTopic[];
@@ -48,6 +52,71 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     });
+
+    // Report generation hook
+    const reportHook = useContentBriefReport(brief, activeBriefTopic || undefined);
+
+    // Brief repair state
+    const [isRepairingBrief, setIsRepairingBrief] = useState(false);
+
+    // Handle repair missing fields
+    const handleRepairMissing = useCallback(async (missingFields: string[]) => {
+        if (!brief || !activeMapId || !activeBriefTopic || !activeMap?.pillars) return;
+
+        setIsRepairingBrief(true);
+        try {
+            // Import the repair service dynamically to avoid circular dependencies
+            const { repairBriefMissingFields } = await import('../services/ai/briefRepair');
+            const repairedBrief = await repairBriefMissingFields(
+                brief,
+                missingFields,
+                activeBriefTopic,
+                activeMap.pillars,
+                businessInfo,
+                allTopics,
+                dispatch
+            );
+
+            if (repairedBrief) {
+                // Build update payload for Supabase (snake_case)
+                // Note: targetKeyword and searchIntent exist in TypeScript interface but NOT in database schema
+                const dbUpdates: Record<string, any> = {};
+                if (repairedBrief.metaDescription !== undefined) dbUpdates.meta_description = repairedBrief.metaDescription;
+                if (repairedBrief.structured_outline !== undefined) dbUpdates.structured_outline = repairedBrief.structured_outline;
+                if (repairedBrief.serpAnalysis !== undefined) dbUpdates.serp_analysis = repairedBrief.serpAnalysis;
+                if (repairedBrief.contextualBridge !== undefined) dbUpdates.contextual_bridge = repairedBrief.contextualBridge;
+                if (repairedBrief.visuals !== undefined) dbUpdates.visuals = repairedBrief.visuals;
+
+                // Persist to Supabase
+                const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+                const { error: dbError } = await supabase
+                    .from('content_briefs')
+                    .update(dbUpdates)
+                    .eq('id', brief.id);
+
+                if (dbError) {
+                    console.error('[ContentBriefModal] Failed to persist repaired brief:', dbError);
+                    throw new Error(`Database error: ${dbError.message}`);
+                }
+
+                // Update local state
+                dispatch({
+                    type: 'UPDATE_BRIEF',
+                    payload: {
+                        mapId: activeMapId,
+                        topicId: activeBriefTopic.id,
+                        updates: repairedBrief
+                    }
+                });
+                dispatch({ type: 'SET_NOTIFICATION', payload: `Repaired ${missingFields.length} missing field(s) successfully.` });
+            }
+        } catch (error) {
+            console.error('Brief repair failed:', error);
+            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to repair brief' });
+        } finally {
+            setIsRepairingBrief(false);
+        }
+    }, [brief, activeMapId, activeBriefTopic, activeMap?.pillars, businessInfo, allTopics, dispatch]);
 
     const handleLog = useCallback((message: string, status: 'info' | 'success' | 'failure' | 'warning') => {
         setGenerationLogs(prev => [...prev, { message, status, timestamp: Date.now() }]);
@@ -93,12 +162,15 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         isGenerating,
         isPaused,
         isComplete,
+        isFailed,
         progress,
         currentPassName,
         startGeneration,
         pauseGeneration,
         resumeGeneration,
         cancelGeneration,
+        retryGeneration,
+        triggerJobRefresh,
         error
     } = useContentGeneration({
         briefId: brief?.id || '',
@@ -109,7 +181,8 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         pillars: activeMap?.pillars,
         topic: activeBriefTopic || undefined,
         onLog: handleLog,
-        onComplete: handleGenerationComplete
+        onComplete: handleGenerationComplete,
+        externalRefreshTrigger: state.jobRefreshTrigger // Listen for re-run triggers from DraftingModal
     });
 
     const handleClose = () => {
@@ -148,12 +221,15 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         ? brief.contextualBridge
         : brief.contextualBridge?.links || [];
 
-    // Show progress UI when actively generating OR paused (to show pass status)
-    const showProgressUI = isGenerating || isPaused || (job && !isComplete);
+    // Show progress UI when actively generating, paused, or failed (to show pass status and allow retry)
+    const showProgressUI = isGenerating || isPaused || isFailed || (job && !isComplete);
 
     // Allow settings when: multi-pass enabled and NOT actively generating
     // Settings should be accessible even when there's an existing draft (for regeneration)
     const canShowSettings = useMultiPass && !isGenerating;
+
+    // Highlight settings when there's an error to encourage switching providers
+    const highlightSettings = isFailed && !showSettings;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={handleClose}>
@@ -179,10 +255,12 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 className={`text-xs px-3 py-1.5 rounded border transition-colors ${
                                     showSettings
                                         ? 'bg-blue-900/50 border-blue-600 text-blue-200'
-                                        : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                                        : highlightSettings
+                                            ? 'bg-amber-900/50 border-amber-500 text-amber-200 animate-pulse'
+                                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
                                 }`}
                             >
-                                {showSettings ? '▲ Hide Settings' : '▼ Show Settings'}
+                                {showSettings ? '▲ Hide Settings' : highlightSettings ? '⚠ Change AI Provider' : '▼ Show Settings'}
                             </button>
                         )}
                         <button onClick={handleClose} className="text-gray-400 text-2xl leading-none hover:text-white">&times;</button>
@@ -219,12 +297,9 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 onPause={pauseGeneration}
                                 onResume={resumeGeneration}
                                 onCancel={cancelGeneration}
+                                onRetry={retryGeneration}
+                                error={error}
                             />
-                            {error && (
-                                <div className="mt-2 p-3 bg-red-900/30 border border-red-700 rounded text-sm text-red-300">
-                                    {error}
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -261,6 +336,14 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                     )}
 
                     <div className="space-y-6">
+                        {/* Brief Health Overview */}
+                        <BriefHealthOverview
+                            brief={brief}
+                            onRepairMissing={handleRepairMissing}
+                            onRegenerateBrief={() => setShowEditModal(true)}
+                            isRepairing={isRepairingBrief}
+                        />
+
                         {/* Meta Info */}
                         <Card className="p-4 bg-gray-900/50">
                             <h3 className="font-semibold text-lg text-blue-300 mb-2">Meta Information</h3>
@@ -502,6 +585,14 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 </Button>
                             </>
                         )}
+                        {reportHook.canGenerate && (
+                            <ReportExportButton
+                                reportType="content-brief"
+                                onClick={reportHook.open}
+                                variant="secondary"
+                                size="sm"
+                            />
+                        )}
                         <Button onClick={handleClose} variant="secondary">Close</Button>
                     </div>
                 </footer>
@@ -516,8 +607,22 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                     pillars={activeMap.pillars || { centralEntity: '', sourceContext: '', centralSearchIntent: '' }}
                     allTopics={allTopics}
                     mapId={activeMapId}
+                    businessInfo={businessInfo}
                     onClose={() => setShowEditModal(false)}
                     onSaved={() => setShowEditModal(false)}
+                    onRepairMissing={handleRepairMissing}
+                    isRepairing={isRepairingBrief}
+                />
+            )}
+
+            {/* Report Modal */}
+            {reportHook.data && (
+                <ReportModal
+                    isOpen={reportHook.isOpen}
+                    onClose={reportHook.close}
+                    reportType="content-brief"
+                    data={reportHook.data}
+                    projectName={activeMap?.name || businessInfo?.projectName}
                 />
             )}
         </div>

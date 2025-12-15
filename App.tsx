@@ -4,7 +4,7 @@ import React, { useEffect, useReducer, useRef } from 'react';
 import { AppStateContext, appReducer, initialState } from './state/appState';
 import { AppStep, BusinessInfo, Project, TopicalMap } from './types';
 import { getSupabaseClient } from './services/supabaseClient';
-import { parseTopicalMap, normalizeRpcData, parseProject } from './utils/parsers';
+import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
 
 // Import Screens
 import AuthScreen from './components/AuthScreen';
@@ -18,9 +18,9 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import SettingsModal from './components/SettingsModal';
 import { NotificationBanner } from './components/ui/NotificationBanner';
 import ConfirmationModal from './components/ui/ConfirmationModal';
-import HelpModal from './components/HelpModal';
 import GlobalLoadingBar from './components/ui/GlobalLoadingBar';
 import LoggingPanel from './components/LoggingPanel';
+import FooterDock, { DockIcons } from './components/ui/FooterDock';
 import MainLayout from './components/layout/MainLayout';
 
 const App: React.FC = () => {
@@ -51,7 +51,34 @@ const App: React.FC = () => {
 
         return () => subscription.unsubscribe();
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
-    
+
+    // Expose utility functions to window for console access
+    useEffect(() => {
+        const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+
+        // Expose repair function: window.repairBriefs(mapId)
+        (window as any).repairBriefs = async (mapId?: string) => {
+            const targetMapId = mapId || state.activeMapId;
+            if (!targetMapId) {
+                console.error('[RepairBriefs] No map ID provided and no active map. Usage: window.repairBriefs("map-id-here")');
+                return;
+            }
+            console.log(`[RepairBriefs] Starting repair for map: ${targetMapId}`);
+            const result = await repairBriefsInMap(supabase, targetMapId);
+            console.log('[RepairBriefs] Result:', result);
+            if (result.repaired > 0) {
+                console.log('[RepairBriefs] Reload the page to see fixed briefs in the UI.');
+            }
+            return result;
+        };
+
+        // Expose current state info
+        (window as any).getActiveMapId = () => state.activeMapId;
+        (window as any).getActiveProjectId = () => state.activeProjectId;
+
+        console.log('[App] Console utilities available: window.repairBriefs(), window.getActiveMapId(), window.getActiveProjectId()');
+    }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, state.activeMapId, state.activeProjectId]);
+
     useEffect(() => {
         const fetchInitialData = async () => {
             if (state.user) {
@@ -80,6 +107,7 @@ const App: React.FC = () => {
                             'dataforseoLogin', 'dataforseoPassword', 'apifyToken', 'infranodusApiKey',
                             'jinaApiKey', 'firecrawlApiKey', 'apitemplateApiKey',
                             'neo4jUri', 'neo4jUser', 'neo4jPassword',
+                            'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
                             'language', 'targetMarket', 'expertise'
                         ];
                         const filteredSettings: Record<string, any> = {};
@@ -138,25 +166,29 @@ const App: React.FC = () => {
             // or objects containing bad data) are converted to safe Application Domain Objects.
             const sanitizedMaps = (data || []).map((map: any) => parseTopicalMap(map));
 
-            // Fetch topic counts for each map to display in merge modal and other places
+            // Fetch topic COUNTS only (not full data) for UI display in merge modal, etc.
+            // We deliberately DO NOT set map.topics here - that stays undefined so useMapData
+            // can properly hydrate full topic data + briefs when the map is selected.
             const mapIds = sanitizedMaps.map(m => m.id);
             if (mapIds.length > 0) {
                 const { data: topicsData, error: topicsError } = await supabase
                     .from('topics')
-                    .select('id, map_id, title, type')
+                    .select('id, map_id, type')
                     .in('map_id', mapIds);
 
                 if (!topicsError && topicsData) {
-                    // Group topics by map_id
-                    const topicsByMap = topicsData.reduce((acc, topic) => {
-                        if (!acc[topic.map_id]) acc[topic.map_id] = [];
-                        acc[topic.map_id].push(topic);
+                    // Calculate counts per map
+                    const countsByMap = topicsData.reduce((acc, topic) => {
+                        if (!acc[topic.map_id]) acc[topic.map_id] = { core: 0, outer: 0, total: 0 };
+                        acc[topic.map_id].total++;
+                        if (topic.type === 'core') acc[topic.map_id].core++;
+                        else acc[topic.map_id].outer++;
                         return acc;
-                    }, {} as Record<string, typeof topicsData>);
+                    }, {} as Record<string, { core: number; outer: number; total: number }>);
 
-                    // Populate topics array on each map (minimal data for counts/display)
+                    // Set topicCounts on each map (NOT topics array)
                     sanitizedMaps.forEach(map => {
-                        map.topics = (topicsByMap[map.id] || []) as any;
+                        map.topicCounts = countsByMap[map.id] || { core: 0, outer: 0, total: 0 };
                     });
                 }
             }
@@ -240,6 +272,7 @@ const App: React.FC = () => {
         'dataforseoLogin', 'dataforseoPassword', 'apifyToken', 'infranodusApiKey',
         'jinaApiKey', 'firecrawlApiKey', 'apitemplateApiKey',
         'neo4jUri', 'neo4jUser', 'neo4jPassword',
+        'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
         'supabaseUrl', 'supabaseAnonKey',
         'language', 'targetMarket', 'expertise' // These can be global defaults
     ];
@@ -266,12 +299,23 @@ const App: React.FC = () => {
             // Update local state with what we sent
             dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...globalSettings } });
             dispatch({ type: 'SET_NOTIFICATION', payload: 'Settings saved successfully.' });
-            dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'settings', visible: false } });
+            // Keep modal open so user can see the save confirmation
         } catch(e) {
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to save settings.' });
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { key: 'settings', value: false } });
         }
+    };
+
+    /**
+     * Opens the help documentation in a separate browser window/tab.
+     * This allows users to continue working while viewing help content.
+     * @param featureKey - Optional feature key to deep-link to a specific article
+     */
+    const openHelpWindow = (featureKey?: string) => {
+        const baseUrl = '/help.html';
+        const url = featureKey ? `${baseUrl}#/${featureKey}` : baseUrl;
+        window.open(url, 'holistic-seo-help', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
     };
 
     const renderStep = () => {
@@ -315,11 +359,32 @@ const App: React.FC = () => {
                         {renderStep()}
                     </div>
 
-                    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
-                        <LoggingPanel />
-                        <button onClick={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'help', visible: true }})} className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 w-10 flex items-center justify-center rounded-full shadow-lg text-xl" title="Help">?</button>
-                        <button onClick={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'settings', visible: true }})} className="bg-gray-600 hover:bg-gray-700 text-white font-bold h-10 w-10 flex items-center justify-center rounded-full shadow-lg" title="Settings">⚙️</button>
-                    </div>
+                    {/* Footer Dock - collapsible corner toolbar */}
+                    <FooterDock
+                        items={[
+                            {
+                                id: 'logs',
+                                icon: DockIcons.logs,
+                                label: 'Activity Logs',
+                                onClick: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'logs', visible: !state.modals.logs } }),
+                            },
+                            {
+                                id: 'help',
+                                icon: DockIcons.help,
+                                label: 'Help',
+                                onClick: () => openHelpWindow(),
+                            },
+                            {
+                                id: 'settings',
+                                icon: DockIcons.settings,
+                                label: 'Settings',
+                                onClick: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'settings', visible: true } }),
+                            },
+                        ]}
+                    />
+
+                    {/* Logging Panel (shown when logs modal is visible) */}
+                    {state.modals.logs && <LoggingPanel />}
 
                     {/* Global Modals */}
                     <SettingsModal
@@ -327,10 +392,6 @@ const App: React.FC = () => {
                         onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'settings', visible: false } })}
                         onSave={handleSaveSettings}
                         initialSettings={state.businessInfo}
-                    />
-                    <HelpModal
-                        isOpen={!!state.modals.help}
-                        onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'help', visible: false } })}
                     />
                     {state.confirmation && (
                         <ConfirmationModal

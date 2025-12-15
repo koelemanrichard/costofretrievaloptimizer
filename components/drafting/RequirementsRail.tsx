@@ -8,6 +8,7 @@ import { safeString } from '../../utils/parsers';
 interface RequirementsRailProps {
     brief: ContentBrief;
     draftContent: string;
+    mapEavs?: SemanticTriple[];  // EAVs from the topical map (preferred source)
 }
 
 interface ChecklistItem {
@@ -17,8 +18,8 @@ interface ChecklistItem {
     type: 'KEYWORD' | 'EAV' | 'LINK';
 }
 
-export const RequirementsRail: React.FC<RequirementsRailProps> = ({ brief, draftContent }) => {
-    
+export const RequirementsRail: React.FC<RequirementsRailProps> = ({ brief, draftContent, mapEavs }) => {
+
     const analysis = useMemo(() => {
         const text = draftContent.toLowerCase();
         const items: ChecklistItem[] = [];
@@ -40,16 +41,22 @@ export const RequirementsRail: React.FC<RequirementsRailProps> = ({ brief, draft
         });
 
         // 2. Check Semantic Triples (EAVs)
-        const triples = brief.contextualVectors || [];
+        // Prefer map-level EAVs (from topical map), fall back to brief.contextualVectors
+        const triples = mapEavs && mapEavs.length > 0 ? mapEavs : (brief.contextualVectors || []);
         // Limit to top 10 to avoid UI clutter
         triples.slice(0, 10).forEach((triple: SemanticTriple, idx) => {
+            // Defensive: skip malformed triples
+            if (!triple || !triple.object || !triple.subject) return;
+
             // Check if Object Value matches (most distinct part)
-            const val = String(triple.object.value).toLowerCase();
+            const val = String(triple.object.value || '').toLowerCase();
+            if (!val) return; // Skip if no value to check
+
             const isMet = text.includes(val);
             if (isMet) metCount++;
             items.push({
                 id: `eav-${idx}`,
-                label: `${triple.subject.label} → ${triple.object.value}`,
+                label: `${triple.subject.label || 'Unknown'} → ${triple.object.value || 'Unknown'}`,
                 isMet,
                 type: 'EAV'
             });
@@ -78,7 +85,7 @@ export const RequirementsRail: React.FC<RequirementsRailProps> = ({ brief, draft
         const score = total > 0 ? Math.round((metCount / total) * 100) : 0;
 
         return { items, score };
-    }, [brief, draftContent]);
+    }, [brief, draftContent, mapEavs]);
 
     return (
         <div className="h-full flex flex-col bg-gray-800 border-l border-gray-700 w-80 flex-shrink-0">

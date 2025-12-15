@@ -1,7 +1,7 @@
 // hooks/useBriefEditor.ts
 // Hook for managing content brief editing state and operations
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useAppState } from '../state/appState';
 import { ContentBrief, BriefSection, EnrichedTopic, SEOPillars } from '../types';
 import { getSupabaseClient } from '../services/supabaseClient';
@@ -10,6 +10,9 @@ import { RegenerationProgress } from '../services/ai/briefEditing';
 
 // Re-export for consumers
 export type { RegenerationProgress };
+
+// Module-level guard to prevent concurrent regenerations across HMR reloads
+let isRegeneratingGlobal = false;
 
 export interface UseBriefEditorReturn {
     // State
@@ -40,6 +43,8 @@ export interface UseBriefEditorReturn {
     saveToDB: () => Promise<boolean>;
     discardChanges: () => void;
     setEditedBrief: (brief: ContentBrief | null) => void;
+    initializeBrief: (brief: ContentBrief | null) => void;
+    clearError: () => void;
 }
 
 export const useBriefEditor = (
@@ -210,12 +215,26 @@ export const useBriefEditor = (
     ): Promise<ContentBrief | null> => {
         if (!editedBrief) return null;
 
+        // Guard against concurrent regenerations (survives HMR)
+        if (isRegeneratingGlobal) {
+            console.warn('[useBriefEditor] Regeneration already in progress, skipping duplicate call');
+            return null;
+        }
+
+        isRegeneratingGlobal = true;
         setIsRegenerating(true);
         setError(null);
         setRegenerationProgress(null);
 
         try {
             const originalSectionCount = editedBrief.structured_outline?.length || 0;
+
+            // Get EAVs from the map state - needed for section generation when structured_outline is empty
+            const currentMap = mapId ? state.topicalMaps.find(m => m.id === mapId) : undefined;
+            const mapEavs = currentMap?.eavs;
+            if (originalSectionCount === 0) {
+                console.log('[useBriefEditor] structured_outline is empty - will generate sections from scratch using', mapEavs?.length || 0, 'EAVs');
+            }
 
             // Progress callback for multi-pass regeneration
             const handleProgress = (progress: RegenerationProgress) => {
@@ -230,7 +249,8 @@ export const useBriefEditor = (
                 pillars,
                 allTopics,
                 dispatch,
-                handleProgress // Enable progress tracking
+                handleProgress, // Enable progress tracking
+                mapEavs // Pass EAVs for section generation when structured_outline is empty
             );
 
             // SAFEGUARD: If the AI returned empty structured_outline but original had sections,
@@ -257,14 +277,16 @@ export const useBriefEditor = (
             // Return the regenerated brief for preview (don't apply automatically)
             return regeneratedBrief;
         } catch (err) {
+            console.error('[useBriefEditor] Regeneration error:', err);
             const message = err instanceof Error ? err.message : 'Failed to regenerate brief';
             setError(message);
             return null;
         } finally {
+            isRegeneratingGlobal = false;
             setIsRegenerating(false);
             setRegenerationProgress(null);
         }
-    }, [editedBrief, businessInfo, dispatch]);
+    }, [editedBrief, businessInfo, dispatch, mapId, state.topicalMaps]);
 
     // Save to database
     const saveToDB = useCallback(async (): Promise<boolean> => {
@@ -305,11 +327,13 @@ export const useBriefEditor = (
                 query_type_format: editedBrief.query_type_format,
                 featured_snippet_target: editedBrief.featured_snippet_target as any,
                 visual_semantics: editedBrief.visual_semantics as any,
-                discourse_anchors: editedBrief.discourse_anchors as any,
-                updated_at: new Date().toISOString()
+                discourse_anchors: editedBrief.discourse_anchors as any
             }, { onConflict: 'topic_id' });
 
-            if (dbError) throw dbError;
+            if (dbError) {
+                console.error('[useBriefEditor] Database save error:', dbError);
+                throw dbError;
+            }
 
             // Update global state
             dispatch({
@@ -338,10 +362,21 @@ export const useBriefEditor = (
         setError(null);
     }, [originalBrief]);
 
-    // Update the edited brief (and original for initial load)
-    const setBrief = useCallback((brief: ContentBrief | null) => {
+    // Initialize brief (for initial load - sets both edited and original)
+    const initializeBrief = useCallback((brief: ContentBrief | null) => {
         setEditedBrief(brief);
         setOriginalBrief(brief);
+    }, []);
+
+    // Update edited brief without changing original (for AI regeneration/apply)
+    const updateEditedBrief = useCallback((brief: ContentBrief | null) => {
+        setEditedBrief(brief);
+        // Don't update originalBrief - this marks it as unsaved
+    }, []);
+
+    // Clear error state (useful when switching between operations)
+    const clearError = useCallback(() => {
+        setError(null);
     }, []);
 
     return {
@@ -363,6 +398,8 @@ export const useBriefEditor = (
         regenerateBrief,
         saveToDB,
         discardChanges,
-        setEditedBrief: setBrief
+        setEditedBrief: updateEditedBrief,  // For applying changes (keeps unsaved state)
+        initializeBrief,  // For initial load (syncs original)
+        clearError
     };
 };

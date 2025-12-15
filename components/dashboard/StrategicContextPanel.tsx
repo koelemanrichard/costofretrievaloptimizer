@@ -23,6 +23,10 @@ interface StrategicContextPanelProps {
     // Blueprint Generation
     onGenerateBlueprints?: () => void;
     isGeneratingBlueprints?: boolean;
+    // Business Info
+    onEditBusinessInfo?: () => void;
+    language?: string;
+    region?: string;
 }
 
 const StrategicContextPanel: React.FC<StrategicContextPanelProps> = ({
@@ -38,7 +42,10 @@ const StrategicContextPanel: React.FC<StrategicContextPanelProps> = ({
     isEnriching,
     topics = [],
     onGenerateBlueprints,
-    isGeneratingBlueprints
+    isGeneratingBlueprints,
+    onEditBusinessInfo,
+    language,
+    region
 }) => {
     // Detect if any topics are missing critical metadata
     const missingMetadataCount = useMemo(() => {
@@ -66,6 +73,18 @@ const StrategicContextPanel: React.FC<StrategicContextPanelProps> = ({
 
             {/* Context Management Actions */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Business Settings Card */}
+                {onEditBusinessInfo && (
+                    <Card className="p-4 flex justify-between items-center">
+                        <div>
+                            <h4 className="font-semibold text-white">Map Settings</h4>
+                            <p className="text-sm text-gray-400">
+                                {language || 'en'} / {region || 'Not set'}
+                            </p>
+                        </div>
+                        <Button onClick={onEditBusinessInfo} variant="secondary" className="text-sm py-2">Edit</Button>
+                    </Card>
+                )}
                 <Card className="p-4 flex justify-between items-center">
                     <div>
                         <h4 className="font-semibold text-white">Semantic Triples (EAV)</h4>

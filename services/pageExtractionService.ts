@@ -71,7 +71,9 @@ export type ExtractionUseCase =
   | 'link_analysis'
   | 'schema_extraction'
   | 'site_audit'
-  | 'competitor_analysis';
+  | 'competitor_analysis'
+  | 'full_seo'
+  | 'content_quality';
 
 /**
  * Map use cases to extraction types
@@ -80,6 +82,7 @@ export function getExtractionTypeForUseCase(useCase: ExtractionUseCase): Extract
   switch (useCase) {
     case 'content_brief':
     case 'topic_enrichment':
+    case 'content_quality':
       // Only need content and headings
       return 'semantic_only';
     case 'link_analysis':
@@ -88,6 +91,7 @@ export function getExtractionTypeForUseCase(useCase: ExtractionUseCase): Extract
       return 'technical_only';
     case 'site_audit':
     case 'competitor_analysis':
+    case 'full_seo':
       // Need everything
       return 'full_audit';
     default:
@@ -122,12 +126,14 @@ async function extractWithProvider(
         technical = firecrawlResult;
         // Convert markdown to semantic format
         if (firecrawlResult.markdown) {
+          const wordCount = firecrawlResult.markdown.split(/\s+/).length;
           semantic = {
             url,
             title: firecrawlResult.title || '',
             content: firecrawlResult.markdown,
             description: firecrawlResult.metaDescription || '',
-            wordCount: firecrawlResult.markdown.split(/\s+/).length,
+            wordCount,
+            readingTime: Math.ceil(wordCount / 200), // ~200 wpm average reading speed
             headings: parseHeadingsFromMarkdown(firecrawlResult.markdown),
             links: [],
             images: firecrawlResult.images || [],

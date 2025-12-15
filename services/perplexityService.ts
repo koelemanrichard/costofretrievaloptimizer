@@ -14,6 +14,7 @@ import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
 import { AIResponseSanitizer } from './aiResponseSanitizer';
 import { AppAction } from '../state/appState';
 import React from 'react';
+import { calculateTopicSimilarityPairs } from '../utils/helpers';
 
 const API_URL = 'https://api.perplexity.ai/chat/completions';
 
@@ -87,9 +88,52 @@ export const discoverCoreSemanticTriples = async (info: BusinessInfo, pillars: S
     return callApi(prompts.DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT(info, pillars), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
 };
 
-export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, existing: SemanticTriple[], dispatch: React.Dispatch<any>) => {
+export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, existing: SemanticTriple[], dispatch: React.Dispatch<any>, count: number = 15): Promise<SemanticTriple[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+
+    // For large counts, use batched generation to avoid token limits
+    const BATCH_SIZE = 30;
+
+    if (count <= BATCH_SIZE) {
+        return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+    }
+
+    // Batched generation for larger counts
+    const allNewTriples: SemanticTriple[] = [];
+    const batches = Math.ceil(count / BATCH_SIZE);
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Perplexity',
+        message: `Starting batched EAV expansion: ${count} triples in ${batches} batches`,
+        status: 'info',
+        timestamp: Date.now()
+    }});
+
+    for (let i = 0; i < batches; i++) {
+        const batchCount = Math.min(BATCH_SIZE, count - allNewTriples.length);
+        const combinedExisting = [...existing, ...allNewTriples];
+
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Perplexity',
+            message: `Generating batch ${i + 1}/${batches}: ${batchCount} triples (${allNewTriples.length}/${count} complete)`,
+            status: 'info',
+            timestamp: Date.now()
+        }});
+
+        const batchResults = await callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, combinedExisting, batchCount), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+        allNewTriples.push(...batchResults);
+
+        if (allNewTriples.length >= count) break;
+    }
+
+    dispatch({ type: 'LOG_EVENT', payload: {
+        service: 'Perplexity',
+        message: `Batched EAV expansion complete: Generated ${allNewTriples.length} new triples`,
+        status: 'success',
+        timestamp: Date.now()
+    }});
+
+    return allNewTriples.slice(0, count);
 };
 
 export const generateInitialTopicalMap = async (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>) => {
@@ -183,7 +227,31 @@ export const findMergeOpportunitiesForSelection = async (info: BusinessInfo, sel
     return callApi(prompts.FIND_MERGE_OPPORTUNITIES_FOR_SELECTION_PROMPT(info, selected), info, dispatch, t => sanitizer.sanitize(t, { topicIds: Array, topicTitles: Array, newTopic: Object, reasoning: String, canonicalQuery: String }, { topicIds: [], topicTitles: [], newTopic: { title: '', description: '' }, reasoning: '', canonicalQuery: '' }));
 };
 
-export const analyzeSemanticRelationships = async (topics: EnrichedTopic[], info: BusinessInfo, dispatch: React.Dispatch<any>) => ({ summary: "Mocked analysis", pairs: [], actionableSuggestions: [] });
+export const analyzeSemanticRelationships = async (topics: EnrichedTopic[], info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<SemanticAnalysisResult> => {
+    const sanitizer = new AIResponseSanitizer(dispatch);
+
+    const preCalculatedPairs = calculateTopicSimilarityPairs(topics);
+    const limitedPairs = preCalculatedPairs.slice(0, 20);
+
+    const prompt = prompts.ANALYZE_SEMANTIC_RELATIONSHIPS_PROMPT(topics, info, limitedPairs);
+
+    const fallback: SemanticAnalysisResult = {
+        summary: 'Unable to analyze semantic relationships. Please try again.',
+        pairs: limitedPairs.map(p => ({
+            topicA: p.topicA,
+            topicB: p.topicB,
+            distance: { weightedScore: 1 - p.similarity },
+            relationship: {
+                type: p.similarity >= 0.7 ? 'SIBLING' as const : p.similarity >= 0.4 ? 'RELATED' as const : 'DISTANT' as const,
+                internalLinkingPriority: p.similarity >= 0.7 ? 'high' as const : p.similarity >= 0.4 ? 'medium' as const : 'low' as const
+            }
+        })),
+        actionableSuggestions: ['Review topic hierarchy for better clustering.']
+    };
+
+    const schema = { summary: String, pairs: Array, actionableSuggestions: Array };
+    return callApi(prompt, info, dispatch, t => sanitizer.sanitize(t, schema, fallback));
+};
 
 export const analyzeContextualCoverage = async (info: BusinessInfo, topics: EnrichedTopic[], pillars: SEOPillars, dispatch: React.Dispatch<any>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
@@ -314,8 +382,13 @@ export const analyzeMapMerge = async (
   dispatch: React.Dispatch<any>
 ): Promise<MapMergeAnalysis> => {
   // Delegate to Gemini implementation for now
+  // Must override both aiProvider AND aiModel to avoid passing Perplexity model to Gemini
   const geminiService = await import('./geminiService');
-  return geminiService.analyzeMapMerge(mapsToMerge, { ...businessInfo, aiProvider: 'gemini' }, dispatch);
+  return geminiService.analyzeMapMerge(mapsToMerge, {
+    ...businessInfo,
+    aiProvider: 'gemini',
+    aiModel: 'gemini-2.5-pro-preview-06-05'
+  }, dispatch);
 };
 
 export const reanalyzeTopicSimilarity = async (
@@ -326,8 +399,13 @@ export const reanalyzeTopicSimilarity = async (
   dispatch: React.Dispatch<any>
 ): Promise<TopicSimilarityResult[]> => {
   // Delegate to Gemini implementation for now
+  // Must override both aiProvider AND aiModel to avoid passing Perplexity model to Gemini
   const geminiService = await import('./geminiService');
-  return geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, { ...businessInfo, aiProvider: 'gemini' }, dispatch);
+  return geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, {
+    ...businessInfo,
+    aiProvider: 'gemini',
+    aiModel: 'gemini-2.5-pro-preview-06-05'
+  }, dispatch);
 };
 
 // ============================================

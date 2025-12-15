@@ -128,22 +128,33 @@ export const parseBusinessInfo = (json: any): Partial<BusinessInfo> => {
  */
 export const parseEavs = (json: any): SemanticTriple[] => {
     const rawArray = safeArray(json); // Use safeArray to handle potential stringified inputs
-    
+
     return rawArray.map((item: any) => {
         if (!item || typeof item !== 'object') return null;
+
+        // DEFENSIVE: Skip malformed triples that lack required structure
+        // These cause crashes in components like RequirementsRail
+        if (!item.subject || typeof item.subject !== 'object') return null;
+        if (!item.object || typeof item.object !== 'object') return null;
+
+        // Also skip if the essential values are missing
+        const subjectLabel = safeString(item.subject?.label);
+        const objectValue = safeString(item.object?.value);
+        if (!subjectLabel && !objectValue) return null; // Triple has no meaningful data
+
         return {
-            subject: { 
-                label: safeString(item.subject?.label), 
-                type: safeString(item.subject?.type) 
+            subject: {
+                label: subjectLabel,
+                type: safeString(item.subject?.type)
             },
-            predicate: { 
-                relation: safeString(item.predicate?.relation), 
+            predicate: {
+                relation: safeString(item.predicate?.relation),
                 type: safeString(item.predicate?.type),
                 category: item.predicate?.category ? safeString(item.predicate?.category) as AttributeCategory : undefined,
                 classification: item.predicate?.classification ? safeString(item.predicate?.classification) as AttributeClass : undefined,
             },
-            object: { 
-                value: safeString(item.object?.value), 
+            object: {
+                value: objectValue,
                 type: safeString(item.object?.type),
                 unit: item.object?.unit ? safeString(item.object?.unit) : undefined,
                 truth_range: item.object?.truth_range ? safeString(item.object?.truth_range) : undefined,
@@ -434,4 +445,144 @@ export const sanitizeInventoryFromDb = (dbItem: any): SiteInventoryItem => {
         created_at: safeString(dbItem.created_at || new Date().toISOString()),
         updated_at: safeString(dbItem.updated_at || new Date().toISOString()),
     };
+};
+
+/**
+ * Repairs malformed contextual_vectors in content_briefs.
+ * Call this from browser console or add to a Health Check utility.
+ *
+ * Usage:
+ *   import { repairBriefsInMap } from './utils/parsers';
+ *   await repairBriefsInMap(supabase, mapId);
+ */
+export const repairBriefsInMap = async (
+    supabase: any,
+    mapId: string
+): Promise<{ repaired: number; skipped: number; errors: string[] }> => {
+    const results = { repaired: 0, skipped: 0, errors: [] as string[] };
+
+    // 1. Get all topic IDs for this map
+    const { data: topics, error: topicError } = await supabase
+        .from('topics')
+        .select('id, title')
+        .eq('map_id', mapId);
+
+    if (topicError) {
+        results.errors.push(`Failed to load topics: ${topicError.message}`);
+        return results;
+    }
+
+    if (!topics || topics.length === 0) {
+        return results;
+    }
+
+    const topicIds = topics.map((t: any) => t.id);
+
+    // 2. Get all briefs for these topics
+    const { data: briefs, error: briefError } = await supabase
+        .from('content_briefs')
+        .select('id, topic_id, contextual_vectors')
+        .in('topic_id', topicIds);
+
+    if (briefError) {
+        results.errors.push(`Failed to load briefs: ${briefError.message}`);
+        return results;
+    }
+
+    if (!briefs || briefs.length === 0) {
+        return results;
+    }
+
+    // 3. Check and repair each brief
+    for (const brief of briefs) {
+        const vectors = brief.contextual_vectors;
+
+        // Skip if already null/empty - nothing to repair
+        if (!vectors || (Array.isArray(vectors) && vectors.length === 0)) {
+            results.skipped++;
+            continue;
+        }
+
+        // Check if vectors need repair (missing subject/object structure)
+        let needsRepair = false;
+        const repairedVectors: SemanticTriple[] = [];
+
+        const rawArray = Array.isArray(vectors) ? vectors : [];
+        for (const item of rawArray) {
+            if (!item || typeof item !== 'object') {
+                needsRepair = true;
+                continue; // Skip invalid items
+            }
+
+            // Check if structure is valid
+            if (!item.subject || !item.object || !item.predicate) {
+                needsRepair = true;
+                continue; // Skip malformed items
+            }
+
+            // Check nested structure
+            if (typeof item.subject !== 'object' || typeof item.object !== 'object') {
+                needsRepair = true;
+                // Try to repair
+                repairedVectors.push({
+                    subject: {
+                        label: safeString(item.subject?.label || item.subject || ''),
+                        type: safeString(item.subject?.type || '')
+                    },
+                    predicate: {
+                        relation: safeString(item.predicate?.relation || item.predicate || ''),
+                        type: safeString(item.predicate?.type || ''),
+                        category: item.predicate?.category as AttributeCategory || undefined,
+                        classification: item.predicate?.classification as AttributeClass || undefined
+                    },
+                    object: {
+                        value: safeString(item.object?.value || item.object || ''),
+                        type: safeString(item.object?.type || ''),
+                        unit: item.object?.unit ? safeString(item.object.unit) : undefined,
+                        truth_range: item.object?.truth_range ? safeString(item.object.truth_range) : undefined
+                    }
+                });
+            } else {
+                // Structure looks valid, keep it
+                repairedVectors.push({
+                    subject: {
+                        label: safeString(item.subject.label || ''),
+                        type: safeString(item.subject.type || '')
+                    },
+                    predicate: {
+                        relation: safeString(item.predicate.relation || ''),
+                        type: safeString(item.predicate.type || ''),
+                        category: item.predicate.category as AttributeCategory || undefined,
+                        classification: item.predicate.classification as AttributeClass || undefined
+                    },
+                    object: {
+                        value: safeString(item.object.value || ''),
+                        type: safeString(item.object.type || ''),
+                        unit: item.object.unit ? safeString(item.object.unit) : undefined,
+                        truth_range: item.object.truth_range ? safeString(item.object.truth_range) : undefined
+                    }
+                });
+            }
+        }
+
+        if (needsRepair) {
+            // Update the brief in database
+            const { error: updateError } = await supabase
+                .from('content_briefs')
+                .update({ contextual_vectors: repairedVectors })
+                .eq('id', brief.id);
+
+            if (updateError) {
+                results.errors.push(`Failed to repair brief ${brief.id}: ${updateError.message}`);
+            } else {
+                results.repaired++;
+                console.log(`[RepairBriefs] Repaired brief for topic ${brief.topic_id}`);
+            }
+        } else {
+            results.skipped++;
+        }
+    }
+
+    console.log(`[RepairBriefs] Complete. Repaired: ${results.repaired}, Skipped: ${results.skipped}, Errors: ${results.errors.length}`);
+    return results;
 };

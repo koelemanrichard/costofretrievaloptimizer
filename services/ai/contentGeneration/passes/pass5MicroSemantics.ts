@@ -1,47 +1,43 @@
 // services/ai/contentGeneration/passes/pass5MicroSemantics.ts
-import { ContentBrief, ContentGenerationJob, BusinessInfo } from '../../../../types';
+import { ContentBrief, ContentGenerationJob, BusinessInfo, SectionProgressCallback } from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { PASS_5_MICRO_SEMANTICS_PROMPT } from '../../../../config/prompts';
-import * as geminiService from '../../../geminiService';
-import * as openAiService from '../../../openAiService';
-import * as anthropicService from '../../../anthropicService';
-import * as perplexityService from '../../../perplexityService';
-import * as openRouterService from '../../../openRouterService';
+import { executeSectionPass } from './baseSectionPass';
+import { buildPass5Prompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
 
-const noOpDispatch = () => {};
-
-async function callProviderWithPrompt(info: BusinessInfo, prompt: string): Promise<string> {
-  switch (info.aiProvider) {
-    case 'openai': return openAiService.generateText(prompt, info, noOpDispatch);
-    case 'anthropic': return anthropicService.generateText(prompt, info, noOpDispatch);
-    case 'perplexity': return perplexityService.generateText(prompt, info, noOpDispatch);
-    case 'openrouter': return openRouterService.generateText(prompt, info, noOpDispatch);
-    case 'gemini':
-    default: return geminiService.generateText(prompt, info, noOpDispatch);
-  }
-}
-
+/**
+ * Pass 5: Micro Semantics Optimization
+ *
+ * The most comprehensive linguistic optimization pass, applied section by section.
+ * Applies modality certainty, stop word removal, subject positioning,
+ * information density, and reference principle rules.
+ * Uses holistic vocabulary metrics to guide synonym usage.
+ *
+ * Processes ALL sections (no selective filtering) as all content benefits from
+ * linguistic polish. Uses format budget for article-wide vocabulary awareness.
+ */
 export async function executePass5(
   orchestrator: ContentGenerationOrchestrator,
   job: ContentGenerationJob,
   brief: ContentBrief,
-  businessInfo: BusinessInfo
+  businessInfo: BusinessInfo,
+  onSectionProgress?: SectionProgressCallback,
+  shouldAbort?: () => boolean
 ): Promise<string> {
-  const draft = job.draft_content || '';
-
-  await orchestrator.updateJob(job.id, {
-    passes_status: { ...job.passes_status, pass_5_microsemantics: 'in_progress' }
-  });
-
-  const prompt = PASS_5_MICRO_SEMANTICS_PROMPT(draft, brief, businessInfo);
-  const optimizedDraft = await callProviderWithPrompt(businessInfo, prompt);
-  const result = typeof optimizedDraft === 'string' ? optimizedDraft : draft;
-
-  await orchestrator.updateJob(job.id, {
-    draft_content: result,
-    passes_status: { ...job.passes_status, pass_5_microsemantics: 'completed' },
-    current_pass: 6
-  });
-
-  return result;
+  return executeSectionPass(
+    orchestrator,
+    job,
+    brief,
+    businessInfo,
+    {
+      passNumber: 5,
+      passKey: 'pass_5_microsemantics',
+      nextPassNumber: 6,
+      promptBuilder: buildPass5Prompt,
+      // All sections need micro-semantic optimization (no selective filtering)
+      // Linguistic polish benefits every section
+      batchSize: 1 // Individual processing (micro-semantics requires careful per-section attention)
+    },
+    onSectionProgress,
+    shouldAbort
+  );
 }

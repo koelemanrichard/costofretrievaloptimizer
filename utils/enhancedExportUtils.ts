@@ -3,7 +3,9 @@ import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import {
   EnrichedTopic, ContentBrief, SEOPillars, ValidationResult,
-  SemanticTriple, BusinessInfo, BriefSection
+  SemanticTriple, BusinessInfo, BriefSection,
+  FoundationPage, NAPData, NavigationStructure, BrandKit,
+  PublicationPlanResult, PerformanceSnapshot
 } from '../types';
 import { safeString } from './parsers';
 
@@ -67,6 +69,14 @@ export interface EnhancedExportInput {
   businessInfo?: Partial<BusinessInfo>;
   mapName?: string;
   projectName?: string;
+  // NEW: Additional data for comprehensive export
+  foundationPages?: FoundationPage[];
+  napData?: NAPData;
+  navigation?: NavigationStructure | null;
+  brandKit?: BrandKit;
+  // Publication Planning
+  publicationPlan?: PublicationPlanResult | null;
+  performanceSnapshots?: Map<string, PerformanceSnapshot>;
 }
 
 export interface ExportSettings {
@@ -110,6 +120,23 @@ export class EnhancedExportGenerator {
 
     if (this.settings.includeAuditResults && this.input.metrics) {
       this.createAuditResultsSheet();
+    }
+
+    // NEW: Additional worksheets for comprehensive export
+    if (this.input.foundationPages?.length) {
+      this.createFoundationPagesSheet();
+    }
+    if (this.input.napData) {
+      this.createNapDataSheet();
+    }
+    if (this.input.navigation) {
+      this.createNavigationSheet();
+    }
+    if (this.input.brandKit) {
+      this.createBrandKitSheet();
+    }
+    if (this.input.publicationPlan) {
+      this.createPublicationPlanSheet();
     }
 
     return this.workbook;
@@ -749,6 +776,499 @@ export class EnhancedExportGenerator {
     sheet.getColumn(1).width = 40;
     sheet.getColumn(2).width = 15;
     sheet.getColumn(3).width = 15;
+  }
+
+  private createFoundationPagesSheet(): void {
+    const sheet = this.workbook.addWorksheet('Foundation Pages', {
+      properties: { tabColor: { argb: 'FF9C27B0' } } // Purple
+    });
+
+    const pages = this.input.foundationPages || [];
+
+    // Header
+    sheet.mergeCells('A1:H1');
+    sheet.getCell('A1').value = 'FOUNDATION PAGES';
+    sheet.getCell('A1').font = { bold: true, size: 14 };
+
+    // Column headers
+    const headers = ['Page Type', 'Title', 'Slug', 'Meta Description', 'H1 Template', 'Schema Type', 'Status', 'Sections'];
+    const headerRow = sheet.addRow(headers);
+    this.styleHeaderRow(headerRow);
+
+    // Data
+    pages.forEach(page => {
+      sheet.addRow([
+        page.page_type,
+        page.title,
+        page.slug,
+        page.meta_description || '',
+        page.h1_template || '',
+        page.schema_type || '',
+        page.status || 'draft',
+        page.sections?.map(s => s.heading).join(', ') || ''
+      ]);
+    });
+
+    // Column widths
+    sheet.getColumn(1).width = 15;
+    sheet.getColumn(2).width = 30;
+    sheet.getColumn(3).width = 25;
+    sheet.getColumn(4).width = 40;
+    sheet.getColumn(5).width = 30;
+    sheet.getColumn(6).width = 15;
+    sheet.getColumn(7).width = 10;
+    sheet.getColumn(8).width = 40;
+  }
+
+  private createNapDataSheet(): void {
+    const sheet = this.workbook.addWorksheet('NAP Data', {
+      properties: { tabColor: { argb: 'FF00BCD4' } } // Cyan
+    });
+
+    const nap = this.input.napData;
+    if (!nap) return;
+
+    // Header
+    sheet.mergeCells('A1:B1');
+    sheet.getCell('A1').value = 'NAP (NAME, ADDRESS, PHONE) DATA';
+    sheet.getCell('A1').font = { bold: true, size: 14 };
+
+    let row = 3;
+
+    // Primary location
+    const primaryData = [
+      ['Company Name', nap.company_name],
+      ['Primary Address', nap.address],
+      ['Phone', nap.phone],
+      ['Email', nap.email],
+      ['Founded Year', nap.founded_year || '']
+    ];
+
+    primaryData.forEach(([label, value]) => {
+      sheet.getCell(`A${row}`).value = label;
+      sheet.getCell(`A${row}`).font = { bold: true };
+      sheet.getCell(`B${row}`).value = value;
+      row++;
+    });
+
+    // Additional locations
+    if (nap.locations && nap.locations.length > 0) {
+      row += 2;
+      sheet.getCell(`A${row}`).value = 'Additional Locations';
+      sheet.getCell(`A${row}`).font = { bold: true, size: 12 };
+      row++;
+
+      const locHeaders = ['Location Name', 'Address', 'Phone', 'Email', 'Headquarters?'];
+      const locHeaderRow = sheet.getRow(row);
+      locHeaders.forEach((h, idx) => {
+        locHeaderRow.getCell(idx + 1).value = h;
+      });
+      this.styleHeaderRow(locHeaderRow);
+      row++;
+
+      nap.locations.forEach(loc => {
+        sheet.addRow([
+          loc.name,
+          loc.address,
+          loc.phone,
+          loc.email || '',
+          loc.is_headquarters ? 'Yes' : 'No'
+        ]);
+      });
+    }
+
+    sheet.getColumn(1).width = 20;
+    sheet.getColumn(2).width = 50;
+  }
+
+  private createNavigationSheet(): void {
+    const sheet = this.workbook.addWorksheet('Navigation', {
+      properties: { tabColor: { argb: 'FFFF9800' } } // Orange
+    });
+
+    const nav = this.input.navigation;
+    if (!nav) return;
+
+    // Header
+    sheet.mergeCells('A1:G1');
+    sheet.getCell('A1').value = 'NAVIGATION STRUCTURE';
+    sheet.getCell('A1').font = { bold: true, size: 14 };
+
+    // Column headers
+    const headers = ['Location', 'Section', 'Order', 'Text', 'Prominence', 'Target Type', 'Target ID/URL'];
+    const headerRow = sheet.addRow(headers);
+    this.styleHeaderRow(headerRow);
+
+    // Header navigation
+    nav.header.primary_nav.forEach((link, idx) => {
+      sheet.addRow([
+        'Header',
+        '',
+        idx + 1,
+        link.text,
+        link.prominence || 'medium',
+        link.target_topic_id ? 'Topic' : link.target_foundation_page_id ? 'Foundation Page' : 'External',
+        link.target_topic_id || link.target_foundation_page_id || link.external_url || ''
+      ]);
+    });
+
+    // CTA Button
+    if (nav.header.cta_button) {
+      sheet.addRow([
+        'Header CTA',
+        '',
+        0,
+        nav.header.cta_button.text,
+        'high',
+        'CTA',
+        nav.header.cta_button.url || ''
+      ]);
+    }
+
+    // Footer sections
+    nav.footer.sections.forEach(section => {
+      section.links.forEach((link, idx) => {
+        sheet.addRow([
+          'Footer',
+          section.heading,
+          idx + 1,
+          link.text,
+          link.prominence || 'low',
+          link.target_topic_id ? 'Topic' : link.target_foundation_page_id ? 'Foundation Page' : 'External',
+          link.target_topic_id || link.target_foundation_page_id || link.external_url || ''
+        ]);
+      });
+    });
+
+    // Legal links
+    nav.footer.legal_links.forEach((link, idx) => {
+      sheet.addRow([
+        'Footer Legal',
+        'Legal',
+        idx + 1,
+        link.text,
+        'low',
+        link.target_foundation_page_id ? 'Foundation Page' : 'External',
+        link.target_foundation_page_id || link.external_url || ''
+      ]);
+    });
+
+    // Column widths
+    sheet.getColumn(1).width = 15;
+    sheet.getColumn(2).width = 15;
+    sheet.getColumn(3).width = 8;
+    sheet.getColumn(4).width = 30;
+    sheet.getColumn(5).width = 12;
+    sheet.getColumn(6).width = 18;
+    sheet.getColumn(7).width = 40;
+  }
+
+  private createBrandKitSheet(): void {
+    const sheet = this.workbook.addWorksheet('Brand Kit', {
+      properties: { tabColor: { argb: 'FFE91E63' } } // Pink
+    });
+
+    const brand = this.input.brandKit;
+    if (!brand) return;
+
+    // Header
+    sheet.mergeCells('A1:B1');
+    sheet.getCell('A1').value = 'BRAND KIT';
+    sheet.getCell('A1').font = { bold: true, size: 14 };
+
+    let row = 3;
+
+    // Colors section
+    sheet.getCell(`A${row}`).value = 'Colors';
+    sheet.getCell(`A${row}`).font = { bold: true, size: 12 };
+    row++;
+
+    const colorData = [
+      ['Primary Color', brand.colors?.primary || ''],
+      ['Secondary Color', brand.colors?.secondary || ''],
+      ['Text on Image', brand.colors?.textOnImage || ''],
+      ['Overlay Gradient', brand.colors?.overlayGradient || '']
+    ];
+
+    colorData.forEach(([label, value]) => {
+      sheet.getCell(`A${row}`).value = label;
+      sheet.getCell(`B${row}`).value = value;
+      // Add color preview
+      if (value && value.startsWith('#')) {
+        sheet.getCell(`B${row}`).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF' + value.replace('#', '') }
+        };
+      }
+      row++;
+    });
+
+    row++;
+    // Fonts section
+    sheet.getCell(`A${row}`).value = 'Typography';
+    sheet.getCell(`A${row}`).font = { bold: true, size: 12 };
+    row++;
+
+    const fontData = [
+      ['Heading Font', brand.fonts?.heading || ''],
+      ['Body Font', brand.fonts?.body || '']
+    ];
+
+    fontData.forEach(([label, value]) => {
+      sheet.getCell(`A${row}`).value = label;
+      sheet.getCell(`B${row}`).value = value;
+      row++;
+    });
+
+    row++;
+    // Logo section
+    sheet.getCell(`A${row}`).value = 'Logo Settings';
+    sheet.getCell(`A${row}`).font = { bold: true, size: 12 };
+    row++;
+
+    const logoData = [
+      ['Logo Placement', brand.logoPlacement || ''],
+      ['Logo Opacity', brand.logoOpacity ? `${brand.logoOpacity}%` : '']
+    ];
+
+    logoData.forEach(([label, value]) => {
+      sheet.getCell(`A${row}`).value = label;
+      sheet.getCell(`B${row}`).value = value;
+      row++;
+    });
+
+    row++;
+    // Copyright section
+    sheet.getCell(`A${row}`).value = 'Copyright';
+    sheet.getCell(`A${row}`).font = { bold: true, size: 12 };
+    row++;
+
+    const copyrightData = [
+      ['Copyright Holder', brand.copyright?.holder || ''],
+      ['License URL', brand.copyright?.licenseUrl || '']
+    ];
+
+    copyrightData.forEach(([label, value]) => {
+      sheet.getCell(`A${row}`).value = label;
+      sheet.getCell(`B${row}`).value = value;
+      row++;
+    });
+
+    // Hero templates
+    if (brand.heroTemplates && brand.heroTemplates.length > 0) {
+      row += 2;
+      sheet.getCell(`A${row}`).value = 'Hero Templates';
+      sheet.getCell(`A${row}`).font = { bold: true, size: 12 };
+      row++;
+
+      brand.heroTemplates.forEach(template => {
+        sheet.getCell(`A${row}`).value = template.name;
+        sheet.getCell(`B${row}`).value = template.description;
+        row++;
+      });
+    }
+
+    sheet.getColumn(1).width = 20;
+    sheet.getColumn(2).width = 40;
+  }
+
+  private createPublicationPlanSheet(): void {
+    const sheet = this.workbook.addWorksheet('Publication Plan', {
+      properties: { tabColor: { argb: 'FF9C27B0' } } // Purple for planning
+    });
+
+    const { topics, briefs, publicationPlan, performanceSnapshots } = this.input;
+
+    if (!publicationPlan) return;
+
+    // Build plan lookup
+    const planByTopic = new Map(publicationPlan.topics.map(p => [p.topic_id, p]));
+
+    // Headers
+    const headers = [
+      'Topic Title',
+      'Slug',
+      'Type',
+      'Phase',
+      'Status',
+      'Priority',
+      'Score',
+      'Planned Date',
+      'Actual Date',
+      'Days Variance',
+      'Impressions',
+      'Clicks',
+      'CTR',
+      'Avg Position',
+      'Has Brief',
+      'Has Draft',
+      'Notes'
+    ];
+
+    const headerRow = sheet.addRow(headers);
+    this.styleHeaderRow(headerRow);
+    sheet.getRow(1).height = 25;
+
+    // Set column widths
+    sheet.getColumn(1).width = 30;  // Title
+    sheet.getColumn(2).width = 25;  // Slug
+    sheet.getColumn(3).width = 10;  // Type
+    sheet.getColumn(4).width = 20;  // Phase
+    sheet.getColumn(5).width = 15;  // Status
+    sheet.getColumn(6).width = 12;  // Priority
+    sheet.getColumn(7).width = 8;   // Score
+    sheet.getColumn(8).width = 14;  // Planned Date
+    sheet.getColumn(9).width = 14;  // Actual Date
+    sheet.getColumn(10).width = 14; // Variance
+    sheet.getColumn(11).width = 12; // Impressions
+    sheet.getColumn(12).width = 10; // Clicks
+    sheet.getColumn(13).width = 10; // CTR
+    sheet.getColumn(14).width = 12; // Position
+    sheet.getColumn(15).width = 10; // Has Brief
+    sheet.getColumn(16).width = 10; // Has Draft
+    sheet.getColumn(17).width = 30; // Notes
+
+    // Phase labels
+    const phaseLabels: Record<string, string> = {
+      'phase_1_authority': 'P1: Authority',
+      'phase_2_support': 'P2: Support',
+      'phase_3_expansion': 'P3: Expansion',
+      'phase_4_longtail': 'P4: Long-tail'
+    };
+
+    // Status labels
+    const statusLabels: Record<string, string> = {
+      'not_started': 'Not Started',
+      'brief_ready': 'Brief Ready',
+      'draft_in_progress': 'In Progress',
+      'draft_ready': 'Draft Ready',
+      'in_review': 'In Review',
+      'scheduled': 'Scheduled',
+      'published': 'Published',
+      'needs_update': 'Needs Update'
+    };
+
+    // Sort topics by optimal_publication_date
+    const sortedTopics = [...topics].sort((a, b) => {
+      const planA = planByTopic.get(a.id);
+      const planB = planByTopic.get(b.id);
+      const dateA = planA?.optimal_publication_date || a.metadata?.publication_plan?.optimal_publication_date || '';
+      const dateB = planB?.optimal_publication_date || b.metadata?.publication_plan?.optimal_publication_date || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    // Add data rows
+    sortedTopics.forEach((topic, idx) => {
+      const plan = planByTopic.get(topic.id) || topic.metadata?.publication_plan;
+      const brief = briefs[topic.id];
+      const snapshot = performanceSnapshots?.get(topic.id);
+
+      const phase = plan?.phase || '';
+      const status = plan?.status || topic.metadata?.publication_plan?.status || 'not_started';
+      const priority = plan?.priority || '';
+      const priorityScore = plan?.priority_score ?? '';
+      const plannedDate = plan?.optimal_publication_date || '';
+      const actualDate = topic.metadata?.publication_plan?.actual_publication_date || '';
+
+      // Calculate variance
+      let variance = '';
+      if (plannedDate && actualDate) {
+        const planned = new Date(plannedDate);
+        const actual = new Date(actualDate);
+        const diffDays = Math.round((actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24));
+        variance = diffDays > 0 ? `+${diffDays}` : diffDays.toString();
+      }
+
+      const row = sheet.addRow([
+        topic.title,
+        topic.slug || '',
+        topic.type,
+        phaseLabels[phase] || phase,
+        statusLabels[status] || status,
+        priority,
+        priorityScore,
+        plannedDate,
+        actualDate,
+        variance,
+        snapshot?.gsc_impressions ?? '',
+        snapshot?.gsc_clicks ?? '',
+        snapshot?.gsc_ctr ? `${(snapshot.gsc_ctr * 100).toFixed(2)}%` : '',
+        snapshot?.gsc_position?.toFixed(1) ?? '',
+        brief ? 'Yes' : 'No',
+        brief?.articleDraft ? 'Yes' : 'No',
+        topic.metadata?.publication_plan?.notes || ''
+      ]);
+
+      // Alternating row colors
+      if (idx % 2 === 1) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: COLORS.altRowBg }
+          };
+        });
+      }
+
+      // Phase-based coloring for phase column
+      const phaseCell = row.getCell(4);
+      if (phase === 'phase_1_authority') {
+        phaseCell.font = { color: { argb: 'FFDC3545' } }; // Red
+      } else if (phase === 'phase_2_support') {
+        phaseCell.font = { color: { argb: 'FFFD7E14' } }; // Orange
+      } else if (phase === 'phase_3_expansion') {
+        phaseCell.font = { color: { argb: 'FFFFC107' } }; // Yellow
+      } else if (phase === 'phase_4_longtail') {
+        phaseCell.font = { color: { argb: 'FF17A2B8' } }; // Blue
+      }
+
+      // Priority-based coloring
+      const priorityCell = row.getCell(6);
+      if (priority === 'critical') {
+        priorityCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8D7DA' } };
+      } else if (priority === 'high') {
+        priorityCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3CD' } };
+      }
+
+      // Status-based coloring
+      const statusCell = row.getCell(5);
+      if (status === 'published') {
+        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4EDDA' } };
+      } else if (status === 'needs_update') {
+        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8D7DA' } };
+      }
+
+      // Variance coloring (red if late)
+      const varianceCell = row.getCell(10);
+      if (variance && parseInt(variance) > 0) {
+        varianceCell.font = { color: { argb: 'FFDC3545' } };
+      } else if (variance && parseInt(variance) < 0) {
+        varianceCell.font = { color: { argb: 'FF28A745' } };
+      }
+    });
+
+    // Add summary section at top
+    sheet.insertRow(1, []);
+    sheet.insertRow(1, []);
+    sheet.insertRow(1, []);
+    sheet.insertRow(1, []);
+
+    const summary = publicationPlan.summary;
+    sheet.getCell('A1').value = 'Publication Plan Summary';
+    sheet.getCell('A1').font = { bold: true, size: 14 };
+
+    sheet.getCell('A2').value = `Total Duration: ${summary.total_duration_weeks} weeks`;
+    sheet.getCell('C2').value = `Batch Launch: ${summary.batch_launch_date}`;
+    sheet.getCell('E2').value = `Total Topics: ${topics.length}`;
+
+    sheet.getCell('A3').value = `Phase 1: ${summary.phase_1_count}`;
+    sheet.getCell('B3').value = `Phase 2: ${summary.phase_2_count}`;
+    sheet.getCell('C3').value = `Phase 3: ${summary.phase_3_count}`;
+    sheet.getCell('D3').value = `Phase 4: ${summary.phase_4_count}`;
+
+    // Freeze panes (header + summary)
+    sheet.views = [{ state: 'frozen', ySplit: 5 }];
   }
 
   private styleHeaderRow(row: ExcelJS.Row): void {

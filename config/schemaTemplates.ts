@@ -9,7 +9,7 @@ import type { SchemaPageType, SchemaTemplate } from '../types';
 
 // Article/BlogPosting properties
 const ARTICLE_PROPERTIES = {
-  required: [
+  requiredProperties: [
     '@type',
     '@id',
     'headline',
@@ -17,7 +17,7 @@ const ARTICLE_PROPERTIES = {
     'author',
     'publisher'
   ],
-  recommended: [
+  recommendedProperties: [
     'mainEntityOfPage',
     'image',
     'dateModified',
@@ -25,7 +25,7 @@ const ARTICLE_PROPERTIES = {
     'articleBody',
     'wordCount'
   ],
-  optional: [
+  optionalProperties: [
     'name',
     'articleSection',
     'keywords',
@@ -50,13 +50,13 @@ const ARTICLE_PROPERTIES = {
 
 // Product properties
 const PRODUCT_PROPERTIES = {
-  required: [
+  requiredProperties: [
     '@type',
     '@id',
     'name',
     'image'
   ],
-  recommended: [
+  recommendedProperties: [
     'description',
     'brand',
     'offers',
@@ -64,7 +64,7 @@ const PRODUCT_PROPERTIES = {
     'review',
     'sku'
   ],
-  optional: [
+  optionalProperties: [
     'gtin',
     'mpn',
     'category',
@@ -90,7 +90,7 @@ const PRODUCT_PROPERTIES = {
   ]
 };
 
-// Organization properties
+// Organization properties (used for nested author/publisher - keep as required/recommended/optional for nested use)
 const ORGANIZATION_PROPERTIES = {
   required: [
     '@type',
@@ -166,15 +166,15 @@ const PERSON_PROPERTIES = {
 
 // FAQPage properties
 const FAQPAGE_PROPERTIES = {
-  required: [
+  requiredProperties: [
     '@type',
     'mainEntity'
   ],
-  recommended: [
+  recommendedProperties: [
     'name',
     'description'
   ],
-  optional: [
+  optionalProperties: [
     'about',
     'audience',
     'dateCreated',
@@ -186,18 +186,18 @@ const FAQPAGE_PROPERTIES = {
 
 // HowTo properties
 const HOWTO_PROPERTIES = {
-  required: [
+  requiredProperties: [
     '@type',
     'name',
     'step'
   ],
-  recommended: [
+  recommendedProperties: [
     'description',
     'image',
     'totalTime',
     'estimatedCost'
   ],
-  optional: [
+  optionalProperties: [
     'supply',
     'tool',
     'yield',
@@ -214,20 +214,20 @@ const HOWTO_PROPERTIES = {
 
 // WebPage properties
 const WEBPAGE_PROPERTIES = {
-  required: [
+  requiredProperties: [
     '@type',
     '@id',
     'url',
     'name'
   ],
-  recommended: [
+  recommendedProperties: [
     'description',
     'isPartOf',
     'primaryImageOfPage',
     'datePublished',
     'dateModified'
   ],
-  optional: [
+  optionalProperties: [
     'breadcrumb',
     'mainEntity',
     'about',
@@ -272,9 +272,9 @@ export const SCHEMA_TEMPLATES: Record<SchemaPageType, SchemaTemplate> = {
 
   NewsArticle: {
     type: 'NewsArticle',
-    required: [...ARTICLE_PROPERTIES.required, 'dateline'],
-    recommended: [...ARTICLE_PROPERTIES.recommended, 'printEdition', 'printPage', 'printSection'],
-    optional: ARTICLE_PROPERTIES.optional,
+    requiredProperties: [...ARTICLE_PROPERTIES.requiredProperties, 'dateline'],
+    recommendedProperties: [...ARTICLE_PROPERTIES.recommendedProperties, 'printEdition', 'printPage', 'printSection'],
+    optionalProperties: ARTICLE_PROPERTIES.optionalProperties,
     nestedTypes: {
       author: PERSON_PROPERTIES.required,
       publisher: ORGANIZATION_PROPERTIES.required,
@@ -316,9 +316,9 @@ export const SCHEMA_TEMPLATES: Record<SchemaPageType, SchemaTemplate> = {
 
   HomePage: {
     type: 'WebPage',
-    required: ['@type', '@id', 'url', 'name', 'isPartOf'],
-    recommended: ['description', 'primaryImageOfPage', 'about'],
-    optional: ['breadcrumb', 'speakable', 'significantLink', 'potentialAction'],
+    requiredProperties: ['@type', '@id', 'url', 'name', 'isPartOf'],
+    recommendedProperties: ['description', 'primaryImageOfPage', 'about'],
+    optionalProperties: ['breadcrumb', 'speakable', 'significantLink', 'potentialAction'],
     nestedTypes: {
       isPartOf: ['@type', '@id', 'name', 'url', 'publisher'],
       about: ['@type', '@id', 'name', 'description'],
@@ -328,9 +328,9 @@ export const SCHEMA_TEMPLATES: Record<SchemaPageType, SchemaTemplate> = {
 
   ProfilePage: {
     type: 'ProfilePage',
-    required: ['@type', '@id', 'mainEntity'],
-    recommended: ['name', 'description', 'url'],
-    optional: ['dateCreated', 'dateModified'],
+    requiredProperties: ['@type', '@id', 'mainEntity'],
+    recommendedProperties: ['name', 'description', 'url'],
+    optionalProperties: ['dateCreated', 'dateModified'],
     nestedTypes: {
       mainEntity: PERSON_PROPERTIES.required
     }
@@ -338,9 +338,9 @@ export const SCHEMA_TEMPLATES: Record<SchemaPageType, SchemaTemplate> = {
 
   CollectionPage: {
     type: 'CollectionPage',
-    required: ['@type', '@id', 'name'],
-    recommended: ['description', 'url', 'mainEntity'],
-    optional: ['about', 'hasPart', 'numberOfItems', 'itemListElement'],
+    requiredProperties: ['@type', '@id', 'name'],
+    recommendedProperties: ['description', 'url', 'mainEntity'],
+    optionalProperties: ['about', 'hasPart', 'numberOfItems', 'itemListElement'],
     nestedTypes: {
       mainEntity: ['@type', 'itemListElement', 'numberOfItems'],
       itemListElement: ['@type', 'position', 'url', 'name']

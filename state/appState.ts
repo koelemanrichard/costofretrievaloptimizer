@@ -40,6 +40,14 @@ import {
     LinkingFixHistoryEntry,
     UnifiedAuditResult,
     AuditFixHistoryEntry,
+    // Publication Planning types
+    PublicationStatus,
+    PublicationPhase,
+    PublicationPriority,
+    TopicPublicationPlan,
+    PerformanceSnapshot,
+    PlanningFilters,
+    PublicationPlanResult,
 } from '../types';
 
 // Union type for schema results - supports both legacy and enhanced schema
@@ -71,6 +79,9 @@ export interface AppState {
     activeBriefTopic: EnrichedTopic | null;
     briefGenerationResult: ContentBrief | null;
     briefGenerationStatus: string | null;
+    briefGenerationCancelled: boolean;
+    briefGenerationTotal: number;
+    briefGenerationCurrent: number;
 
     // New Expansion State
     activeExpansionTopic: EnrichedTopic | null;
@@ -92,6 +103,9 @@ export interface AppState {
     contentIntegrityResult: ContentIntegrityResult | null;
     schemaResult: SchemaResult | null;
     flowAuditResult: FlowAuditResult | null;
+
+    // Content generation job refresh trigger (incremented to notify useContentGeneration to re-check job state)
+    jobRefreshTrigger: number;
 
     // Site Analysis V2 state (persisted across tab navigation)
     siteAnalysis: {
@@ -128,6 +142,20 @@ export interface AppState {
         fixHistory: AuditFixHistoryEntry[];
         lastAuditId: string | null;
     };
+
+    // Publication Planning state
+    publicationPlanning: {
+        viewMode: 'calendar' | 'list';
+        calendarMode: 'month' | 'week';
+        currentDate: string;                              // ISO date for calendar focus
+        filters: PlanningFilters;
+        selectedTopicIds: string[];                       // For bulk operations
+        snapshotsByMap: Record<string, PerformanceSnapshot[]>;
+        baselinesByTopic: Record<string, PerformanceSnapshot>;
+        planResult: PublicationPlanResult | null;         // Latest AI-generated plan
+        isGeneratingPlan: boolean;
+        batchLaunchDate: string | null;                   // Configurable batch launch date
+    };
 }
 
 export type AppAction =
@@ -153,6 +181,7 @@ export type AppAction =
   | { type: 'SET_COMPETITORS'; payload: { mapId: string, competitors: string[] } }
   | { type: 'SET_TOPICS_FOR_MAP'; payload: { mapId: string; topics: EnrichedTopic[] } }
   | { type: 'ADD_TOPIC'; payload: { mapId: string; topic: EnrichedTopic } }
+  | { type: 'ADD_TOPICS'; payload: { mapId: string; topics: EnrichedTopic[] } }
   | { type: 'UPDATE_TOPIC'; payload: { mapId: string; topicId: string; updates: Partial<EnrichedTopic> } }
   | { type: 'DELETE_TOPIC'; payload: { mapId: string; topicId: string } }
   | { type: 'SET_BRIEFS_FOR_MAP'; payload: { mapId: string; briefs: Record<string, ContentBrief> } }
@@ -165,6 +194,9 @@ export type AppAction =
   | { type: 'SET_ACTIVE_BRIEF_TOPIC'; payload: EnrichedTopic | null }
   | { type: 'SET_BRIEF_GENERATION_RESULT'; payload: ContentBrief | null }
   | { type: 'SET_BRIEF_GENERATION_STATUS'; payload: string | null }
+  | { type: 'SET_BRIEF_GENERATION_PROGRESS'; payload: { current: number; total: number; status: string } }
+  | { type: 'CANCEL_BRIEF_GENERATION' }
+  | { type: 'RESET_BRIEF_GENERATION' }
   | { type: 'SET_ACTIVE_EXPANSION_TOPIC'; payload: EnrichedTopic | null }
   | { type: 'SET_ACTIVE_EXPANSION_MODE'; payload: ExpansionMode | null }
   | { type: 'SET_MODAL_VISIBILITY'; payload: { modal: string; visible: boolean } }
@@ -222,7 +254,29 @@ export type AppAction =
   | { type: 'DELETE_BRIEF_SECTION'; payload: { mapId: string; topicId: string; sectionIndex: number } }
   | { type: 'ADD_BRIEF_SECTION'; payload: { mapId: string; topicId: string; sectionIndex: number; section: BriefSection } }
   | { type: 'REORDER_BRIEF_SECTIONS'; payload: { mapId: string; topicId: string; sections: BriefSection[] } }
-  | { type: 'REPLACE_BRIEF'; payload: { mapId: string; topicId: string; brief: ContentBrief } };
+  | { type: 'REPLACE_BRIEF'; payload: { mapId: string; topicId: string; brief: ContentBrief } }
+  // Content generation job refresh trigger
+  | { type: 'TRIGGER_JOB_REFRESH' }
+  // Publication Planning actions
+  | { type: 'SET_PLANNING_VIEW_MODE'; payload: 'calendar' | 'list' }
+  | { type: 'SET_PLANNING_CALENDAR_MODE'; payload: 'month' | 'week' }
+  | { type: 'SET_PLANNING_CURRENT_DATE'; payload: string }
+  | { type: 'SET_PLANNING_FILTERS'; payload: PlanningFilters }
+  | { type: 'SET_PLANNING_SELECTED_TOPICS'; payload: string[] }
+  | { type: 'TOGGLE_PLANNING_TOPIC_SELECTION'; payload: string }
+  | { type: 'CLEAR_PLANNING_SELECTION' }
+  | { type: 'SET_PERFORMANCE_SNAPSHOTS'; payload: { mapId: string; snapshots: PerformanceSnapshot[] } }
+  | { type: 'ADD_PERFORMANCE_SNAPSHOT'; payload: { mapId: string; snapshot: PerformanceSnapshot } }
+  | { type: 'SET_TOPIC_BASELINE'; payload: { topicId: string; snapshot: PerformanceSnapshot } }
+  | { type: 'SET_PUBLICATION_PLAN_RESULT'; payload: PublicationPlanResult | null }
+  | { type: 'SET_GENERATING_PLAN'; payload: boolean }
+  | { type: 'SET_BATCH_LAUNCH_DATE'; payload: string | null }
+  | { type: 'UPDATE_TOPIC_PUBLICATION_STATUS'; payload: { mapId: string; topicId: string; status: PublicationStatus } }
+  | { type: 'UPDATE_TOPIC_PUBLICATION_PHASE'; payload: { mapId: string; topicId: string; phase: PublicationPhase } }
+  | { type: 'SET_TOPIC_PUBLICATION_DATE'; payload: { mapId: string; topicId: string; dateType: 'optimal' | 'scheduled' | 'actual'; date: string | null } }
+  | { type: 'BULK_UPDATE_PUBLICATION_PHASE'; payload: { mapId: string; topicIds: string[]; phase: PublicationPhase } }
+  | { type: 'APPLY_PUBLICATION_PLAN'; payload: { mapId: string; planResult: PublicationPlanResult } }
+  | { type: 'RESET_PUBLICATION_PLANNING' };
 
 export const initialState: AppState = {
     user: null,
@@ -242,6 +296,9 @@ export const initialState: AppState = {
     activeBriefTopic: null,
     briefGenerationResult: null,
     briefGenerationStatus: null,
+    briefGenerationCancelled: false,
+    briefGenerationTotal: 0,
+    briefGenerationCurrent: 0,
     activeExpansionTopic: null,
     activeExpansionMode: null,
     modals: {},
@@ -258,6 +315,7 @@ export const initialState: AppState = {
     contentIntegrityResult: null,
     schemaResult: null,
     flowAuditResult: null,
+    jobRefreshTrigger: 0,
     siteAnalysis: {
         viewMode: 'project_list',
         currentProject: null,
@@ -284,6 +342,18 @@ export const initialState: AppState = {
         progress: null,
         fixHistory: [],
         lastAuditId: null,
+    },
+    publicationPlanning: {
+        viewMode: 'list',
+        calendarMode: 'month',
+        currentDate: new Date().toISOString().split('T')[0],
+        filters: {},
+        selectedTopicIds: [],
+        snapshotsByMap: {},
+        baselinesByTopic: {},
+        planResult: null,
+        isGeneratingPlan: false,
+        batchLaunchDate: null,
     },
 };
 
@@ -312,25 +382,46 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         case 'SET_TOPICS_FOR_MAP':
         case 'SET_BRIEFS_FOR_MAP':
         case 'ADD_TOPIC':
+        case 'ADD_TOPICS':
         case 'UPDATE_TOPIC':
         case 'DELETE_TOPIC':
         case 'ADD_BRIEF':
+        case 'UPDATE_BRIEF':
         case 'UPDATE_BRIEF_LINKS':
         case 'UPDATE_BRIEF_SECTION':
         case 'DELETE_BRIEF_SECTION':
         case 'ADD_BRIEF_SECTION':
         case 'REORDER_BRIEF_SECTIONS':
-        case 'REPLACE_BRIEF':
+        case 'REPLACE_BRIEF': {
+            const newTopicalMaps = state.topicalMaps.map(map => {
+                const matches = 'mapId' in action.payload && map.id === action.payload.mapId;
+                return matches ? mapReducer(map, action) : map;
+            });
             return {
                 ...state,
-                topicalMaps: state.topicalMaps.map(map => 'mapId' in action.payload && map.id === action.payload.mapId ? mapReducer(map, action) : map)
+                topicalMaps: newTopicalMaps
             };
+        }
         case 'SET_KNOWLEDGE_GRAPH': return { ...state, knowledgeGraph: action.payload };
         case 'LOG_EVENT': return { ...state, generationLog: [action.payload, ...state.generationLog].slice(0, 100) };
         case 'CLEAR_LOG': return { ...state, generationLog: [] };
         case 'SET_ACTIVE_BRIEF_TOPIC': return { ...state, activeBriefTopic: action.payload };
         case 'SET_BRIEF_GENERATION_RESULT': return { ...state, briefGenerationResult: action.payload };
         case 'SET_BRIEF_GENERATION_STATUS': return { ...state, briefGenerationStatus: action.payload };
+        case 'SET_BRIEF_GENERATION_PROGRESS': return {
+            ...state,
+            briefGenerationCurrent: action.payload.current,
+            briefGenerationTotal: action.payload.total,
+            briefGenerationStatus: action.payload.status
+        };
+        case 'CANCEL_BRIEF_GENERATION': return { ...state, briefGenerationCancelled: true };
+        case 'RESET_BRIEF_GENERATION': return {
+            ...state,
+            briefGenerationCancelled: false,
+            briefGenerationTotal: 0,
+            briefGenerationCurrent: 0,
+            briefGenerationStatus: null
+        };
         case 'SET_ACTIVE_EXPANSION_TOPIC': return { ...state, activeExpansionTopic: action.payload };
         case 'SET_ACTIVE_EXPANSION_MODE': return { ...state, activeExpansionMode: action.payload };
         case 'SET_MODAL_VISIBILITY': return { ...state, modals: { ...state.modals, [action.payload.modal]: action.payload.visible } };
@@ -350,6 +441,9 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         case 'SET_CONTENT_INTEGRITY_RESULT': return { ...state, contentIntegrityResult: action.payload };
         case 'SET_SCHEMA_RESULT': return { ...state, schemaResult: action.payload };
         case 'SET_FLOW_AUDIT_RESULT': return { ...state, flowAuditResult: action.payload };
+
+        // Content generation job refresh trigger
+        case 'TRIGGER_JOB_REFRESH': return { ...state, jobRefreshTrigger: state.jobRefreshTrigger + 1 };
 
         // Site Analysis V2 reducers
         case 'SET_SITE_ANALYSIS_VIEW_MODE':
@@ -559,6 +653,130 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
                 }
             };
 
+        // Publication Planning reducers
+        case 'SET_PLANNING_VIEW_MODE':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, viewMode: action.payload }
+            };
+        case 'SET_PLANNING_CALENDAR_MODE':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, calendarMode: action.payload }
+            };
+        case 'SET_PLANNING_CURRENT_DATE':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, currentDate: action.payload }
+            };
+        case 'SET_PLANNING_FILTERS':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, filters: action.payload }
+            };
+        case 'SET_PLANNING_SELECTED_TOPICS':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, selectedTopicIds: action.payload }
+            };
+        case 'TOGGLE_PLANNING_TOPIC_SELECTION': {
+            const topicId = action.payload;
+            const current = state.publicationPlanning.selectedTopicIds;
+            const newSelection = current.includes(topicId)
+                ? current.filter(id => id !== topicId)
+                : [...current, topicId];
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, selectedTopicIds: newSelection }
+            };
+        }
+        case 'CLEAR_PLANNING_SELECTION':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, selectedTopicIds: [] }
+            };
+        case 'SET_PERFORMANCE_SNAPSHOTS':
+            return {
+                ...state,
+                publicationPlanning: {
+                    ...state.publicationPlanning,
+                    snapshotsByMap: {
+                        ...state.publicationPlanning.snapshotsByMap,
+                        [action.payload.mapId]: action.payload.snapshots
+                    }
+                }
+            };
+        case 'ADD_PERFORMANCE_SNAPSHOT': {
+            const mapSnapshots = state.publicationPlanning.snapshotsByMap[action.payload.mapId] || [];
+            return {
+                ...state,
+                publicationPlanning: {
+                    ...state.publicationPlanning,
+                    snapshotsByMap: {
+                        ...state.publicationPlanning.snapshotsByMap,
+                        [action.payload.mapId]: [...mapSnapshots, action.payload.snapshot]
+                    }
+                }
+            };
+        }
+        case 'SET_TOPIC_BASELINE':
+            return {
+                ...state,
+                publicationPlanning: {
+                    ...state.publicationPlanning,
+                    baselinesByTopic: {
+                        ...state.publicationPlanning.baselinesByTopic,
+                        [action.payload.topicId]: action.payload.snapshot
+                    }
+                }
+            };
+        case 'SET_PUBLICATION_PLAN_RESULT':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, planResult: action.payload }
+            };
+        case 'SET_GENERATING_PLAN':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, isGeneratingPlan: action.payload }
+            };
+        case 'SET_BATCH_LAUNCH_DATE':
+            return {
+                ...state,
+                publicationPlanning: { ...state.publicationPlanning, batchLaunchDate: action.payload }
+            };
+        case 'UPDATE_TOPIC_PUBLICATION_STATUS':
+        case 'UPDATE_TOPIC_PUBLICATION_PHASE':
+        case 'SET_TOPIC_PUBLICATION_DATE':
+        case 'BULK_UPDATE_PUBLICATION_PHASE':
+        case 'APPLY_PUBLICATION_PLAN': {
+            // Delegate to mapReducer for topic updates within maps
+            const newTopicalMaps = state.topicalMaps.map(map => {
+                const matches = 'mapId' in action.payload && map.id === action.payload.mapId;
+                return matches ? mapReducerForPlanning(map, action) : map;
+            });
+            return {
+                ...state,
+                topicalMaps: newTopicalMaps
+            };
+        }
+        case 'RESET_PUBLICATION_PLANNING':
+            return {
+                ...state,
+                publicationPlanning: {
+                    viewMode: 'list',
+                    calendarMode: 'month',
+                    currentDate: new Date().toISOString().split('T')[0],
+                    filters: {},
+                    selectedTopicIds: [],
+                    snapshotsByMap: {},
+                    baselinesByTopic: {},
+                    planResult: null,
+                    isGeneratingPlan: false,
+                    batchLaunchDate: null,
+                }
+            };
+
         default: return state;
     }
 };
@@ -570,7 +788,19 @@ const mapReducer = (map: TopicalMap, action: any): TopicalMap => {
         case 'SET_EAVS': return { ...map, eavs: action.payload.eavs };
         case 'SET_COMPETITORS': return { ...map, competitors: action.payload.competitors };
         case 'SET_TOPICS_FOR_MAP': return { ...map, topics: action.payload.topics };
-        case 'ADD_TOPIC': return { ...map, topics: [...(map.topics || []), action.payload.topic] };
+        case 'ADD_TOPIC': {
+            const newTopics = [...(map.topics || []), action.payload.topic];
+            return { ...map, topics: newTopics };
+        }
+        case 'ADD_TOPICS': {
+            // Batch add topics - prevents issues with multiple individual dispatches
+            const currentTopics = map.topics || [];
+            const newTopicIds = new Set(action.payload.topics.map((t: any) => t.id));
+            // Filter out any existing topics to prevent duplicates
+            const dedupedCurrent = currentTopics.filter(t => !newTopicIds.has(t.id));
+            const finalTopics = [...dedupedCurrent, ...action.payload.topics];
+            return { ...map, topics: finalTopics };
+        }
         case 'UPDATE_TOPIC': return { ...map, topics: (map.topics || []).map(t => t.id === action.payload.topicId ? { ...t, ...action.payload.updates } : t) };
         case 'DELETE_TOPIC': return { ...map, topics: (map.topics || []).filter(t => t.id !== action.payload.topicId) };
         case 'SET_BRIEFS_FOR_MAP': return { ...map, briefs: action.payload.briefs };
@@ -680,6 +910,92 @@ const mapReducer = (map: TopicalMap, action: any): TopicalMap => {
         default: return map;
     }
 }
+
+/**
+ * Handles publication planning updates to topics within a map.
+ * Updates topic metadata with publication plan data.
+ */
+const mapReducerForPlanning = (map: TopicalMap, action: any): TopicalMap => {
+    const updateTopicMetadata = (topicId: string, updates: Record<string, any>): EnrichedTopic[] => {
+        return (map.topics || []).map(t => {
+            if (t.id !== topicId) return t;
+            const currentMetadata = t.metadata || {};
+            const currentPlan = currentMetadata.publication_plan || {};
+            return {
+                ...t,
+                metadata: {
+                    ...currentMetadata,
+                    publication_plan: { ...currentPlan, ...updates }
+                }
+            };
+        });
+    };
+
+    switch (action.type) {
+        case 'UPDATE_TOPIC_PUBLICATION_STATUS': {
+            const topics = updateTopicMetadata(action.payload.topicId, {
+                status: action.payload.status
+            });
+            return { ...map, topics };
+        }
+        case 'UPDATE_TOPIC_PUBLICATION_PHASE': {
+            const topics = updateTopicMetadata(action.payload.topicId, {
+                phase: action.payload.phase
+            });
+            return { ...map, topics };
+        }
+        case 'SET_TOPIC_PUBLICATION_DATE': {
+            const { topicId, dateType, date } = action.payload;
+            const dateKey = `${dateType}_publication_date`;
+            const topics = updateTopicMetadata(topicId, { [dateKey]: date });
+            return { ...map, topics };
+        }
+        case 'BULK_UPDATE_PUBLICATION_PHASE': {
+            const { topicIds, phase } = action.payload;
+            const updatedTopics = (map.topics || []).map(t => {
+                if (!topicIds.includes(t.id)) return t;
+                const currentMetadata = t.metadata || {};
+                const currentPlan = currentMetadata.publication_plan || {};
+                return {
+                    ...t,
+                    metadata: {
+                        ...currentMetadata,
+                        publication_plan: { ...currentPlan, phase }
+                    }
+                };
+            });
+            return { ...map, topics: updatedTopics };
+        }
+        case 'APPLY_PUBLICATION_PLAN': {
+            const { planResult } = action.payload as { planResult: PublicationPlanResult };
+            const planByTopic = new Map<string, PublicationPlanResult['topics'][0]>(
+                planResult.topics.map(p => [p.topic_id, p])
+            );
+            const updatedTopics = (map.topics || []).map(t => {
+                const plan = planByTopic.get(t.id);
+                if (!plan) return t;
+                const currentMetadata = t.metadata || {};
+                return {
+                    ...t,
+                    metadata: {
+                        ...currentMetadata,
+                        publication_plan: {
+                            phase: plan.phase,
+                            priority: plan.priority,
+                            priority_score: plan.priority_score,
+                            optimal_publication_date: plan.optimal_publication_date,
+                            dependencies: plan.dependencies,
+                            status: 'not_started' as PublicationStatus
+                        }
+                    }
+                };
+            });
+            return { ...map, topics: updatedTopics };
+        }
+        default:
+            return map;
+    }
+};
 
 
 export const AppStateContext = createContext<{ state: AppState; dispatch: Dispatch<AppAction> } | undefined>(undefined);
