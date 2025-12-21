@@ -43,6 +43,59 @@ import { AppAction } from "../state/appState";
 import React from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
+import { logAiUsage, estimateTokens, AIUsageContext } from './telemetryService';
+import { getSupabaseClient } from './supabaseClient';
+
+// Current operation context for logging (set by callers)
+let currentUsageContext: AIUsageContext = {};
+let currentOperation: string = 'unknown';
+
+/**
+ * Set the context for AI usage logging (should be called before AI operations)
+ */
+export function setUsageContext(context: AIUsageContext, operation?: string): void {
+    currentUsageContext = context;
+    if (operation) currentOperation = operation;
+}
+
+/**
+ * Extract markdown content from potentially JSON-wrapped AI responses.
+ * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
+ * This function gracefully handles such cases.
+ */
+const extractMarkdownFromResponse = (text: string): string => {
+    if (!text) return text;
+
+    // Strip markdown code block wrapper if present (```json ... ``` or ``` ... ```)
+    let cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+        const firstNewline = cleaned.indexOf('\n');
+        if (firstNewline !== -1) {
+            cleaned = cleaned.substring(firstNewline + 1);
+        }
+        if (cleaned.endsWith('```')) {
+            cleaned = cleaned.substring(0, cleaned.length - 3).trimEnd();
+        }
+    }
+
+    // Try to parse as JSON and extract content
+    try {
+        const parsed = JSON.parse(cleaned);
+        // Check common key names for polished content (order matters - most specific first)
+        const content = parsed.polished_content || parsed.polished_article ||
+                       parsed.polishedContent || parsed.polishedArticle ||
+                       parsed.polishedDraft || parsed.content || parsed.article ||
+                       parsed.markdown || parsed.text || parsed.draft;
+        if (typeof content === 'string') {
+            console.log('[extractMarkdownFromResponse] Successfully extracted content from JSON wrapper');
+            return content;
+        }
+    } catch (e) {
+        // Not valid JSON, return original text (which is the expected case)
+    }
+
+    return text;
+};
 
 // Valid Gemini models (December 2025)
 // Reference: https://ai.google.dev/gemini-api/docs/models
@@ -69,6 +122,46 @@ const validGeminiModels = [
 // Fallback to gemini-2.5-flash if empty response is received
 const GEMINI_DEFAULT_MODEL = 'gemini-3-pro-preview';
 const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash';
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 10000;
+
+/**
+ * Delay helper with exponential backoff
+ */
+const delay = (attempt: number): Promise<void> => {
+    const backoff = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
+    const jitter = Math.random() * 500; // Add jitter to avoid thundering herd
+    return new Promise(resolve => setTimeout(resolve, backoff + jitter));
+};
+
+/**
+ * Check if an error is retryable
+ */
+const isRetryableError = (error: any): boolean => {
+    const message = error?.message?.toLowerCase() || '';
+    const status = error?.status || error?.statusCode;
+
+    // Rate limit errors
+    if (status === 429 || message.includes('rate limit') || message.includes('quota')) {
+        return true;
+    }
+    // Server errors
+    if (status >= 500 && status < 600) {
+        return true;
+    }
+    // Empty response errors
+    if (message.includes('empty response')) {
+        return true;
+    }
+    // Network/timeout errors
+    if (message.includes('timeout') || message.includes('network') || message.includes('econnreset')) {
+        return true;
+    }
+    return false;
+};
 
 const validateModel = (model: string | undefined, dispatch?: React.Dispatch<AppAction>): string => {
     if (!model) {
@@ -112,8 +205,12 @@ const callApi = async <T>(
     isJson: boolean = true,
     responseSchema?: any,
     maxTokens: number = 8192,
-    retryWithFallback: boolean = true
+    retryWithFallback: boolean = true,
+    operationName?: string
 ): Promise<T> => {
+    const startTime = Date.now();
+    const operation = operationName || currentOperation;
+
     const apiKey = businessInfo.geminiApiKey;
     if (!apiKey) {
         const errorMsg = "Gemini API key is not configured. Please set it in the application settings.";
@@ -124,9 +221,19 @@ const callApi = async <T>(
     const ai = getAi(apiKey);
     const validatedModel = validateModel(businessInfo.aiModel, dispatch);
 
-    // Helper to make the actual API call
-    const makeRequest = async (modelToUse: string): Promise<T> => {
-        dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Sending request with model: ${modelToUse}...`, status: 'info', timestamp: Date.now(), data: { model: modelToUse, promptLength: prompt.length } } });
+    // Get supabase client for database logging (if available)
+    let supabase: any;
+    try {
+        if (businessInfo.supabaseUrl && businessInfo.supabaseAnonKey) {
+            supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+        }
+    } catch (e) {
+        // Ignore if supabase not available
+    }
+
+    // Helper to make a single API attempt
+    const makeSingleAttempt = async (modelToUse: string): Promise<{ result: T | null; responseText: string | null; error: Error | null }> => {
+        const requestStartTime = Date.now();
 
         const config: any = {
             maxOutputTokens: maxTokens,
@@ -139,43 +246,141 @@ const callApi = async <T>(
             parts: [{ text: prompt }]
         }];
 
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: modelToUse,
-            contents: contents,
-            config: config,
-        });
+        try {
+            const response: GenerateContentResponse = await ai.models.generateContent({
+                model: modelToUse,
+                contents: contents,
+                config: config,
+            });
 
-        const responseText = response.text;
+            const responseText = response.text;
+            const durationMs = Date.now() - requestStartTime;
 
-        // Check finish reason for better diagnostics
-        const candidates = response.candidates;
-        let finishReason = 'UNKNOWN';
-        if (candidates && candidates.length > 0) {
-            finishReason = candidates[0].finishReason || 'UNKNOWN';
-            if (finishReason === 'MAX_TOKENS') {
-                dispatch({ type: 'LOG_EVENT', payload: {
-                    service: 'Gemini',
-                    message: 'WARNING: Response was truncated due to max token limit.',
-                    status: 'warning',
-                    timestamp: Date.now()
-                }});
-            } else if (finishReason === 'SAFETY') {
-                dispatch({ type: 'LOG_EVENT', payload: {
-                    service: 'Gemini',
-                    message: 'WARNING: Response was blocked by safety filters.',
-                    status: 'warning',
-                    timestamp: Date.now()
-                }});
+            // Check finish reason for better diagnostics
+            const candidates = response.candidates;
+            let finishReason = 'UNKNOWN';
+            if (candidates && candidates.length > 0) {
+                finishReason = candidates[0].finishReason || 'UNKNOWN';
+                if (finishReason === 'MAX_TOKENS') {
+                    dispatch({ type: 'LOG_EVENT', payload: {
+                        service: 'Gemini',
+                        message: 'WARNING: Response was truncated due to max token limit.',
+                        status: 'warning',
+                        timestamp: Date.now()
+                    }});
+                } else if (finishReason === 'SAFETY') {
+                    dispatch({ type: 'LOG_EVENT', payload: {
+                        service: 'Gemini',
+                        message: 'WARNING: Response was blocked by safety filters.',
+                        status: 'warning',
+                        timestamp: Date.now()
+                    }});
+                }
             }
+
+            if (!responseText) {
+                // Log failed usage
+                logAiUsage({
+                    provider: 'gemini',
+                    model: modelToUse,
+                    operation,
+                    tokensIn: estimateTokens(prompt.length),
+                    tokensOut: 0,
+                    durationMs,
+                    success: false,
+                    errorMessage: `Empty response (finishReason: ${finishReason})`,
+                    context: currentUsageContext
+                }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
+                return { result: null, responseText: null, error: new Error(`Empty response from Gemini (model: ${modelToUse}, finishReason: ${finishReason})`) };
+            }
+
+            // Log successful usage
+            const tokensIn = estimateTokens(prompt.length);
+            const tokensOut = estimateTokens(responseText.length);
+
+            logAiUsage({
+                provider: 'gemini',
+                model: modelToUse,
+                operation,
+                tokensIn,
+                tokensOut,
+                durationMs,
+                success: true,
+                requestSizeBytes: prompt.length,
+                responseSizeBytes: responseText.length,
+                context: currentUsageContext
+            }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
+            dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Received response (${responseText.length} chars). Sanitizing...`, status: 'info', timestamp: Date.now() } });
+
+            return { result: sanitizerFn(responseText), responseText, error: null };
+        } catch (error: any) {
+            const durationMs = Date.now() - requestStartTime;
+
+            // Log failed attempt
+            logAiUsage({
+                provider: 'gemini',
+                model: modelToUse,
+                operation,
+                tokensIn: estimateTokens(prompt.length),
+                tokensOut: 0,
+                durationMs,
+                success: false,
+                errorMessage: error?.message || 'Unknown error',
+                errorCode: error?.status?.toString() || error?.code,
+                context: currentUsageContext
+            }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
+            return { result: null, responseText: null, error };
+        }
+    };
+
+    // Helper to make the actual API call with retries
+    const makeRequest = async (modelToUse: string): Promise<T> => {
+        dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Sending request with model: ${modelToUse}...`, status: 'info', timestamp: Date.now(), data: { model: modelToUse, promptLength: prompt.length } } });
+
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'Gemini',
+                    message: `Retry attempt ${attempt + 1}/${MAX_RETRIES} for model ${modelToUse}...`,
+                    status: 'info',
+                    timestamp: Date.now()
+                }});
+                await delay(attempt);
+            }
+
+            const { result, error } = await makeSingleAttempt(modelToUse);
+
+            if (result !== null) {
+                return result;
+            }
+
+            lastError = error;
+
+            // Check if we should retry
+            if (!isRetryableError(error)) {
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'Gemini',
+                    message: `Non-retryable error: ${error?.message}`,
+                    status: 'failure',
+                    timestamp: Date.now()
+                }});
+                break;
+            }
+
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Gemini',
+                message: `Retryable error on attempt ${attempt + 1}: ${error?.message}`,
+                status: 'warning',
+                timestamp: Date.now()
+            }});
         }
 
-        if (!responseText) {
-            throw new Error(`Empty response from Gemini (model: ${modelToUse}, finishReason: ${finishReason})`);
-        }
-
-        dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message: `Received response (${responseText.length} chars). Sanitizing...`, status: 'info', timestamp: Date.now() } });
-
-        return sanitizerFn(responseText);
+        throw lastError || new Error('Request failed after all retries');
     };
 
     try {
@@ -201,6 +406,22 @@ const callApi = async <T>(
             }
         }
 
+        // Log failed usage (if not already logged in makeRequest)
+        if (!message.includes('Empty response')) {
+            const durationMs = Date.now() - startTime;
+            logAiUsage({
+                provider: 'gemini',
+                model: validatedModel,
+                operation,
+                tokensIn: estimateTokens(prompt.length),
+                tokensOut: 0,
+                durationMs,
+                success: false,
+                errorMessage: message,
+                context: currentUsageContext
+            }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+        }
+
         dispatch({ type: 'LOG_EVENT', payload: { service: 'Gemini', message, status: 'failure', timestamp: Date.now(), data: error } });
         throw new Error(`Gemini API Call Failed: ${message}`);
     }
@@ -210,25 +431,25 @@ const callApi = async <T>(
 export const suggestCentralEntityCandidates = async (businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<CandidateEntity[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const prompt = prompts.SUGGEST_CENTRAL_ENTITY_CANDIDATES_PROMPT(businessInfo);
-    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<CandidateEntity>(text, []));
+    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<CandidateEntity>(text, []), true, undefined, 8192, true, 'suggestCentralEntityCandidates');
 };
 
 export const suggestSourceContextOptions = async (businessInfo: BusinessInfo, centralEntity: string, dispatch: React.Dispatch<any>): Promise<SourceContextOption[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const prompt = prompts.SUGGEST_SOURCE_CONTEXT_OPTIONS_PROMPT(businessInfo, centralEntity);
-    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SourceContextOption>(text, []));
+    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SourceContextOption>(text, []), true, undefined, 8192, true, 'suggestSourceContextOptions');
 };
 
 export const suggestCentralSearchIntent = async (businessInfo: BusinessInfo, centralEntity: string, sourceContext: string, dispatch: React.Dispatch<any>): Promise<{ intent: string, reasoning: string }[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const prompt = prompts.SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT(businessInfo, centralEntity, sourceContext);
-    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<{ intent: string, reasoning: string }>(text, []));
+    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<{ intent: string, reasoning: string }>(text, []), true, undefined, 8192, true, 'suggestCentralSearchIntent');
 };
 
 export const discoverCoreSemanticTriples = async (businessInfo: BusinessInfo, pillars: SEOPillars, dispatch: React.Dispatch<any>): Promise<SemanticTriple[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const prompt = prompts.DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT(businessInfo, pillars);
-    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SemanticTriple>(text, []));
+    return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<SemanticTriple>(text, []), true, undefined, 8192, true, 'discoverCoreSemanticTriples');
 };
 
 export const expandSemanticTriples = async (businessInfo: BusinessInfo, pillars: SEOPillars, existingTriples: SemanticTriple[], dispatch: React.Dispatch<any>, count: number = 15): Promise<SemanticTriple[]> => {
@@ -448,7 +669,7 @@ export const generateContentBrief = async (
 ): Promise<Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const prompt = prompts.GENERATE_CONTENT_BRIEF_PROMPT(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode);
-    
+
     // Using the detailed sanitizer schema as a fallback/parser for the structured output
     const sanitizerSchema = {
         title: String,
@@ -462,6 +683,10 @@ export const generateContentBrief = async (
         serpAnalysis: {
             peopleAlsoAsk: Array,
             competitorHeadings: Array,
+            avgWordCount: Number,
+            avgHeadings: Number,
+            commonStructure: String,
+            contentGaps: Array
         },
         visuals: {
             featuredImagePrompt: String,
@@ -485,53 +710,135 @@ export const generateContentBrief = async (
         visual_semantics: Array,
         discourse_anchors: Array
     };
-    
-    // Use higher token limit for content briefs which can be large
-    const result = await callApi(
-        prompt,
-        businessInfo,
-        dispatch,
-        (text) => {
-            const parsed = sanitizer.sanitize(text, sanitizerSchema, CONTENT_BRIEF_FALLBACK);
-            // Log what fields are populated vs empty for debugging
-            const emptyFields: string[] = [];
 
-            // CRITICAL: Check for structured_outline - this is the most important field
-            if (!parsed.structured_outline || parsed.structured_outline.length === 0) {
-                emptyFields.push('structured_outline (CRITICAL)');
-                dispatch({ type: 'LOG_EVENT', payload: {
-                    service: 'Gemini',
-                    message: `CRITICAL: AI did not return structured_outline. Content brief will have empty sections. Try regenerating.`,
-                    status: 'error',
-                    timestamp: Date.now()
-                }});
-            } else {
-                dispatch({ type: 'LOG_EVENT', payload: {
-                    service: 'Gemini',
-                    message: `Content brief generated with ${parsed.structured_outline.length} sections in structured_outline.`,
-                    status: 'success',
-                    timestamp: Date.now()
-                }});
-            }
+    // Sanitizer function that validates critical fields
+    const sanitizeBrief = (text: string) => {
+        const parsed = sanitizer.sanitize(text, sanitizerSchema, CONTENT_BRIEF_FALLBACK);
+        // Log what fields are populated vs empty for debugging
+        const emptyFields: string[] = [];
 
-            if (!parsed.visual_semantics || parsed.visual_semantics.length === 0) emptyFields.push('visual_semantics');
-            if (!parsed.contextualBridge?.links || parsed.contextualBridge.links.length === 0) emptyFields.push('contextualBridge.links');
-            if (!parsed.discourse_anchors || parsed.discourse_anchors.length === 0) emptyFields.push('discourse_anchors');
-            if (emptyFields.length > 0) {
+        // CRITICAL: Check for structured_outline - this is the most important field
+        if (!parsed.structured_outline || parsed.structured_outline.length === 0) {
+            emptyFields.push('structured_outline (CRITICAL)');
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Gemini',
+                message: `CRITICAL: AI did not return structured_outline. Content brief will have empty sections.`,
+                status: 'error',
+                timestamp: Date.now()
+            }});
+        } else {
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Gemini',
+                message: `Content brief generated with ${parsed.structured_outline.length} sections in structured_outline.`,
+                status: 'success',
+                timestamp: Date.now()
+            }});
+        }
+
+        if (!parsed.visual_semantics || parsed.visual_semantics.length === 0) emptyFields.push('visual_semantics');
+        if (!parsed.contextualBridge?.links || parsed.contextualBridge.links.length === 0) emptyFields.push('contextualBridge.links');
+        if (!parsed.discourse_anchors || parsed.discourse_anchors.length === 0) emptyFields.push('discourse_anchors');
+        if (emptyFields.length > 0) {
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Gemini',
+                message: `Content brief generated with empty fields: ${emptyFields.join(', ')}. AI may not have generated these sections.`,
+                status: 'warning',
+                timestamp: Date.now()
+            }});
+        }
+        return parsed;
+    };
+
+    // Custom brief generation with validation and fallback model retry
+    const generateBriefWithValidation = async (): Promise<Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>> => {
+        // First attempt with current model
+        let result = await callApi(
+            prompt,
+            businessInfo,
+            dispatch,
+            sanitizeBrief,
+            true,
+            CONTENT_BRIEF_SCHEMA,
+            32768,  // Increased token limit - content briefs with structured_outline need more space
+            false,  // Don't use built-in fallback retry, we handle it ourselves
+            'generateContentBrief'
+        );
+
+        // If structured_outline is empty, retry with fallback model
+        if (!result.structured_outline || result.structured_outline.length === 0) {
+            const currentModel = validateModel(businessInfo.aiModel, dispatch);
+
+            if (currentModel !== GEMINI_FALLBACK_MODEL) {
                 dispatch({ type: 'LOG_EVENT', payload: {
                     service: 'Gemini',
-                    message: `Content brief generated with empty fields: ${emptyFields.join(', ')}. AI may not have generated these sections.`,
+                    message: `Empty structured_outline detected. Retrying with fallback model ${GEMINI_FALLBACK_MODEL}...`,
                     status: 'warning',
                     timestamp: Date.now()
                 }});
+
+                // Create modified business info with fallback model
+                const fallbackBusinessInfo = { ...businessInfo, aiModel: GEMINI_FALLBACK_MODEL };
+
+                try {
+                    result = await callApi(
+                        prompt,
+                        fallbackBusinessInfo,
+                        dispatch,
+                        sanitizeBrief,
+                        true,
+                        CONTENT_BRIEF_SCHEMA,
+                        32768,
+                        false,
+                        'generateContentBrief (fallback)'
+                    );
+
+                    // If still empty after fallback, try one more time with higher tokens
+                    if (!result.structured_outline || result.structured_outline.length === 0) {
+                        dispatch({ type: 'LOG_EVENT', payload: {
+                            service: 'Gemini',
+                            message: `Still empty after fallback model. Trying with increased token limit (65536)...`,
+                            status: 'warning',
+                            timestamp: Date.now()
+                        }});
+
+                        result = await callApi(
+                            prompt,
+                            fallbackBusinessInfo,
+                            dispatch,
+                            sanitizeBrief,
+                            true,
+                            CONTENT_BRIEF_SCHEMA,
+                            65536,  // Double the token limit
+                            false,
+                            'generateContentBrief (extended tokens)'
+                        );
+                    }
+                } catch (fallbackError) {
+                    dispatch({ type: 'LOG_EVENT', payload: {
+                        service: 'Gemini',
+                        message: `Fallback model also failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`,
+                        status: 'failure',
+                        timestamp: Date.now()
+                    }});
+                    // Return the original result even if empty, better than throwing
+                }
             }
-            return parsed;
-        },
-        true,
-        CONTENT_BRIEF_SCHEMA,
-        32768  // Increased token limit - content briefs with structured_outline need more space
-    );
-    return result;
+        }
+
+        // Final validation - ensure we have at least a minimal outline
+        if (!result.structured_outline || result.structured_outline.length === 0) {
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'Gemini',
+                message: `WARNING: All attempts returned empty structured_outline. Brief will need manual regeneration.`,
+                status: 'error',
+                timestamp: Date.now()
+            }});
+        }
+
+        return result;
+    };
+
+    return generateBriefWithValidation();
 };
 
 export const findMergeOpportunitiesForSelection = async (businessInfo: BusinessInfo, selectedTopics: EnrichedTopic[], dispatch: React.Dispatch<AppAction>): Promise<MergeSuggestion> => {
@@ -560,7 +867,7 @@ export const generateArticleDraft = async (brief: ContentBrief, businessInfo: Bu
 
 export const polishDraft = async (draft: string, brief: ContentBrief, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<string> => {
     const prompt = prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, businessInfo);
-    return callApi(prompt, businessInfo, dispatch, (text) => text, false);
+    return callApi(prompt, businessInfo, dispatch, extractMarkdownFromResponse, false);
 };
 
 export const auditContentIntegrity = async (brief: ContentBrief, draft: string, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<ContentIntegrityResult> => {

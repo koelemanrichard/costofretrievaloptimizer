@@ -15,6 +15,59 @@ import { AIResponseSanitizer } from './aiResponseSanitizer';
 import { AppAction } from '../state/appState';
 import React from 'react';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
+import { logAiUsage, estimateTokens, AIUsageContext } from './telemetryService';
+import { getSupabaseClient } from './supabaseClient';
+
+// Current operation context for logging (set by callers)
+let currentUsageContext: AIUsageContext = {};
+let currentOperation: string = 'unknown';
+
+/**
+ * Set the context for AI usage logging (should be called before AI operations)
+ */
+export function setUsageContext(context: AIUsageContext, operation?: string): void {
+    currentUsageContext = context;
+    if (operation) currentOperation = operation;
+}
+
+/**
+ * Extract markdown content from potentially JSON-wrapped AI responses.
+ * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
+ * This function gracefully handles such cases.
+ */
+const extractMarkdownFromResponse = (text: string): string => {
+    if (!text) return text;
+
+    // Strip markdown code block wrapper if present (```json ... ``` or ``` ... ```)
+    let cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+        const firstNewline = cleaned.indexOf('\n');
+        if (firstNewline !== -1) {
+            cleaned = cleaned.substring(firstNewline + 1);
+        }
+        if (cleaned.endsWith('```')) {
+            cleaned = cleaned.substring(0, cleaned.length - 3).trimEnd();
+        }
+    }
+
+    // Try to parse as JSON and extract content
+    try {
+        const parsed = JSON.parse(cleaned);
+        // Check common key names for polished content (order matters - most specific first)
+        const content = parsed.polished_content || parsed.polished_article ||
+                       parsed.polishedContent || parsed.polishedArticle ||
+                       parsed.polishedDraft || parsed.content || parsed.article ||
+                       parsed.markdown || parsed.text || parsed.draft;
+        if (typeof content === 'string') {
+            console.log('[extractMarkdownFromResponse] Successfully extracted content from JSON wrapper');
+            return content;
+        }
+    } catch (e) {
+        // Not valid JSON, return original text (which is the expected case)
+    }
+
+    return text;
+};
 
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -23,12 +76,27 @@ const callApi = async <T>(
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<AppAction>,
     sanitizerFn: (text: string) => T,
-    isJson: boolean = true
+    isJson: boolean = true,
+    operationName?: string
 ): Promise<T> => {
-    dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenRouter', message: `Sending request to ${businessInfo.aiModel}...`, status: 'info', timestamp: Date.now() } });
+    const startTime = Date.now();
+    const operation = operationName || currentOperation;
+    const modelToUse = businessInfo.aiModel || 'openai/gpt-4o';
+
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenRouter', message: `Sending request to ${modelToUse}...`, status: 'info', timestamp: Date.now() } });
 
     if (!businessInfo.openRouterApiKey) {
         throw new Error("OpenRouter API key is not configured.");
+    }
+
+    // Get supabase client for database logging (if available)
+    let supabase: any;
+    try {
+        if (businessInfo.supabaseUrl && businessInfo.supabaseAnonKey) {
+            supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+        }
+    } catch (e) {
+        // Ignore if supabase not available
     }
 
     try {
@@ -41,7 +109,7 @@ const callApi = async <T>(
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: businessInfo.aiModel,
+                model: modelToUse,
                 messages: [
                     { role: "system", content: "You are a helpful, expert SEO strategist. You output strict JSON when requested." },
                     { role: "user", content: prompt }
@@ -58,13 +126,46 @@ const callApi = async <T>(
 
         const data = await response.json();
         const responseText = data.choices[0].message.content || '';
-        
+        const durationMs = Date.now() - startTime;
+
+        // Log successful usage
+        const tokensIn = data.usage?.prompt_tokens || estimateTokens(prompt.length);
+        const tokensOut = data.usage?.completion_tokens || estimateTokens(responseText.length);
+
+        logAiUsage({
+            provider: 'openrouter',
+            model: modelToUse,
+            operation,
+            tokensIn,
+            tokensOut,
+            durationMs,
+            success: true,
+            requestSizeBytes: prompt.length,
+            responseSizeBytes: responseText.length,
+            context: currentUsageContext
+        }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
         dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenRouter', message: `Received response.`, status: 'info', timestamp: Date.now() } });
-        
+
         return sanitizerFn(responseText);
 
     } catch (error) {
+        const durationMs = Date.now() - startTime;
         const message = error instanceof Error ? error.message : "Unknown OpenRouter error";
+
+        // Log failed usage
+        logAiUsage({
+            provider: 'openrouter',
+            model: modelToUse,
+            operation,
+            tokensIn: estimateTokens(prompt.length),
+            tokensOut: 0,
+            durationMs,
+            success: false,
+            errorMessage: message,
+            context: currentUsageContext
+        }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
         dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenRouter', message: `Error: ${message}`, status: 'failure', timestamp: Date.now(), data: error } });
         throw new Error(`OpenRouter API Call Failed: ${message}`);
     }
@@ -172,7 +273,7 @@ export const generateContentBrief = async (info: BusinessInfo, topic: EnrichedTo
     const schema = {
         title: String, slug: String, metaDescription: String, keyTakeaways: Array, outline: String,
         structured_outline: Array, perspectives: Array, methodology_note: String,
-        serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array },
+        serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array, avgWordCount: Number, avgHeadings: Number, commonStructure: String, contentGaps: Array },
         visuals: { featuredImagePrompt: String, imageAltText: String },
         contextualVectors: Array,
         contextualBridge: { type: String, content: String, links: Array },
@@ -185,7 +286,7 @@ export const generateContentBrief = async (info: BusinessInfo, topic: EnrichedTo
 
 export const generateArticleDraft = async (brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>) => callApi(prompts.GENERATE_ARTICLE_DRAFT_PROMPT(brief, info), info, dispatch, t => t, false);
 
-export const polishDraft = async (draft: string, brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>) => callApi(prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, info), info, dispatch, t => t, false);
+export const polishDraft = async (draft: string, brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>) => callApi(prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, info), info, dispatch, extractMarkdownFromResponse, false);
 
 export const auditContentIntegrity = async (brief: ContentBrief, draft: string, info: BusinessInfo, dispatch: React.Dispatch<any>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
@@ -447,7 +548,7 @@ export const regenerateBrief = async (
   const schema = {
     title: String, slug: String, metaDescription: String, keyTakeaways: Array, outline: String,
     structured_outline: Array, perspectives: Array, methodology_note: String,
-    serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array },
+    serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array, avgWordCount: Number, avgHeadings: Number, commonStructure: String, contentGaps: Array },
     visuals: { featuredImagePrompt: String, imageAltText: String },
     contextualVectors: Array,
     contextualBridge: { type: String, content: String, links: Array },

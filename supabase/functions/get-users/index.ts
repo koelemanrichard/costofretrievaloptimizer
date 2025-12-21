@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 function corsHeaders(origin = "*") {
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
 }
@@ -43,39 +43,93 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // 1. Initialize Supabase Admin Client (Service Role)
-    // This allows us to bypass RLS and access the auth.users schema
     const supabaseAdmin = createClient(
         getEnvVar('PROJECT_URL'),
         getEnvVar('SERVICE_ROLE_KEY')
     );
 
-    // 2. Verify the caller is authenticated (even if we don't strictly check "admin" role yet)
-    // In a production app, you would check if 'user.role === admin' here.
+    // Verify the caller is authenticated
     const authHeader = req.headers.get('Authorization')!;
-    const { error: authError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
-    
-    if (authError) {
+    const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+
+    if (authError || !callerUser) {
         return json({ error: 'Unauthorized' }, 401, origin);
     }
 
-    // 3. List Users
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    // GET - List all users
+    if (req.method === 'GET') {
+      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) throw listError;
 
-    if (listError) {
-        throw listError;
+      const safeUsers = users.map(u => ({
+          id: u.id,
+          email: u.email,
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at,
+          role: u.user_metadata?.role || 'user'
+      }));
+
+      return json({ users: safeUsers }, 200, origin);
     }
 
-    // 4. Map to a safe response format
-    const safeUsers = users.map(u => ({
-        id: u.id,
-        email: u.email,
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at,
-        role: u.role || 'authenticated' // Default role
-    }));
+    // POST - Create new user
+    if (req.method === 'POST') {
+      const body = await req.json();
+      const { email, password, role } = body;
 
-    return json({ users: safeUsers }, 200, origin);
+      if (!email || !password) {
+        return json({ error: 'Email and password are required' }, 400, origin);
+      }
+
+      const { data, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { role: role || 'user' }
+      });
+
+      if (createError) throw createError;
+      return json({ user: data.user, message: 'User created successfully' }, 201, origin);
+    }
+
+    // PUT - Update user
+    if (req.method === 'PUT') {
+      const body = await req.json();
+      const { id, email, password, role } = body;
+
+      if (!id) {
+        return json({ error: 'User ID is required' }, 400, origin);
+      }
+
+      const updateData: any = {
+        user_metadata: { role: role || 'user' }
+      };
+
+      if (email) updateData.email = email;
+      if (password) updateData.password = password;
+
+      const { data, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(id, updateData);
+
+      if (updateError) throw updateError;
+      return json({ user: data.user, message: 'User updated successfully' }, 200, origin);
+    }
+
+    // DELETE - Delete user
+    if (req.method === 'DELETE') {
+      const body = await req.json();
+      const { id } = body;
+
+      if (!id) {
+        return json({ error: 'User ID is required' }, 400, origin);
+      }
+
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+      if (deleteError) throw deleteError;
+      return json({ message: 'User deleted successfully' }, 200, origin);
+    }
+
+    return json({ error: 'Method not allowed' }, 405, origin);
 
   } catch (error) {
     console.error("Error in get-users:", error);

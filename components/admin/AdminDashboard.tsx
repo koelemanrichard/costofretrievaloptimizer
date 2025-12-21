@@ -8,9 +8,10 @@ import { getTelemetryLogs, clearTelemetryLogs } from '../../services/telemetrySe
 import { AppStep, TelemetryLog, BusinessInfo } from '../../types';
 import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
-import { AIProviderSettings, ServiceSettings } from '../SettingsModal';
+import { AIProviderSettings, ServiceSettings } from '../modals';
 import { Loader } from '../ui/Loader';
 import HelpEditor from './HelpEditor';
+import AIUsageReport from './AIUsageReport';
 
 interface UserData {
     id: string;
@@ -286,7 +287,7 @@ const AdminDashboard: React.FC = () => {
     const [logs, setLogs] = useState<TelemetryLog[]>([]);
     const [isCheckingDB, setIsCheckingDB] = useState(false);
     const [dbStatus, setDbStatus] = useState<'ok' | 'error' | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'users' | 'help'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'usage' | 'config' | 'users' | 'help'>('overview');
 
     useEffect(() => {
         setLogs(getTelemetryLogs());
@@ -319,8 +320,8 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    const totalCost = logs.reduce((sum, log) => sum + log.cost_est, 0);
-    const totalTokens = logs.reduce((sum, log) => sum + log.tokens_in + log.tokens_out, 0);
+    const totalCost = logs.reduce((sum, log) => sum + (log.cost_est || 0), 0);
+    const totalTokens = logs.reduce((sum, log) => sum + (log.tokens_in || 0) + (log.tokens_out || 0), 0);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
@@ -332,13 +333,19 @@ const AdminDashboard: React.FC = () => {
                         <p className="text-xs text-gray-400 mt-1">System Management</p>
                     </div>
                     <nav className="flex-grow p-4 space-y-2">
-                        <button 
+                        <button
                             onClick={() => setActiveTab('overview')}
                             className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
                         >
                             📊 System Overview
                         </button>
-                        <button 
+                        <button
+                            onClick={() => setActiveTab('usage')}
+                            className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'usage' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                        >
+                            💰 AI Usage & Costs
+                        </button>
+                        <button
                             onClick={() => setActiveTab('config')}
                             className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'config' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
                         >
@@ -421,16 +428,20 @@ const AdminDashboard: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-800">
-                                            {logs.map((log) => (
-                                                <tr key={log.id} className="hover:bg-gray-800/50">
-                                                    <td className="px-4 py-2 whitespace-nowrap">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                                                    <td className="px-4 py-2">{log.provider}</td>
-                                                    <td className="px-4 py-2 font-mono text-xs">{log.model}</td>
-                                                    <td className="px-4 py-2 font-medium text-white">{log.operation}</td>
-                                                    <td className="px-4 py-2 text-right font-mono text-xs">{log.tokens_in} / {log.tokens_out}</td>
-                                                    <td className="px-4 py-2 text-right text-green-400 font-mono">${log.cost_est.toFixed(5)}</td>
-                                                </tr>
-                                            ))}
+                                            {logs.map((log) => {
+                                                const date = new Date(log.timestamp);
+                                                const timeStr = !isNaN(date.getTime()) ? date.toLocaleTimeString() : 'Invalid Date';
+                                                return (
+                                                    <tr key={log.id} className="hover:bg-gray-800/50">
+                                                        <td className="px-4 py-2 whitespace-nowrap">{timeStr}</td>
+                                                        <td className="px-4 py-2">{log.provider || 'unknown'}</td>
+                                                        <td className="px-4 py-2 font-mono text-xs">{log.model || 'unknown'}</td>
+                                                        <td className="px-4 py-2 font-medium text-white">{log.operation || 'unknown'}</td>
+                                                        <td className="px-4 py-2 text-right font-mono text-xs">{log.tokens_in || 0} / {log.tokens_out || 0}</td>
+                                                        <td className="px-4 py-2 text-right text-green-400 font-mono">${(log.cost_est ?? 0).toFixed(5)}</td>
+                                                    </tr>
+                                                );
+                                            })}
                                             {logs.length === 0 && (
                                                 <tr>
                                                     <td colSpan={6} className="px-4 py-8 text-center italic">No activity recorded yet.</td>
@@ -441,6 +452,10 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </Card>
                         </div>
+                    )}
+
+                    {activeTab === 'usage' && (
+                        <AIUsageReport />
                     )}
 
                     {activeTab === 'config' && (

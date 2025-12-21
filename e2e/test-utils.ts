@@ -12,7 +12,7 @@ export const TEST_CONFIG = {
   TEST_PASSWORD: process.env.TEST_PASSWORD || 'pannekoek',
 
   // Supabase config (should match your dev environment)
-  SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'https://blucvnmncvwzlwxoyoum.supabase.co',
+  SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'https://shtqshmmsrmtquuhyupl.supabase.co',
 
   // Timeouts
   DEFAULT_TIMEOUT: 30000,

@@ -5,6 +5,7 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { dispatchToProvider } from './providerDispatcher';
 import React from 'react';
 
 // --- Local Algorithmic Checks (The "Quality Engine") ---
@@ -340,15 +341,13 @@ export const validateNavigation = (
 export const analyzeGscDataForOpportunities = (
     gscRows: GscRow[], knowledgeGraph: KnowledgeGraph, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<GscOpportunity[]> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch),
+        openai: () => openAiService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch),
+        anthropic: () => anthropicService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch),
+        perplexity: () => perplexityService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch),
+        openrouter: () => openRouterService.analyzeGscDataForOpportunities(gscRows, knowledgeGraph, businessInfo, dispatch),
+    });
 };
 
 export const validateTopicalMap = async (
@@ -361,16 +360,13 @@ export const validateTopicalMap = async (
     navigation?: NavigationStructure | null
 ): Promise<ValidationResult> => {
     // 1. Run AI Validation (Semantic Checks)
-    let aiResult: ValidationResult;
-    switch (businessInfo.aiProvider) {
-        case 'openai': aiResult = await openAiService.validateTopicalMap(topics, pillars, businessInfo, dispatch); break;
-        case 'anthropic': aiResult = await anthropicService.validateTopicalMap(topics, pillars, businessInfo, dispatch); break;
-        case 'perplexity': aiResult = await perplexityService.validateTopicalMap(topics, pillars, businessInfo, dispatch); break;
-        case 'openrouter': aiResult = await openRouterService.validateTopicalMap(topics, pillars, businessInfo, dispatch); break;
-        case 'gemini':
-        default:
-             aiResult = await geminiService.validateTopicalMap(topics, pillars, businessInfo, dispatch);
-    }
+    const aiResult = await dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.validateTopicalMap(topics, pillars, businessInfo, dispatch),
+        openai: () => openAiService.validateTopicalMap(topics, pillars, businessInfo, dispatch),
+        anthropic: () => anthropicService.validateTopicalMap(topics, pillars, businessInfo, dispatch),
+        perplexity: () => perplexityService.validateTopicalMap(topics, pillars, businessInfo, dispatch),
+        openrouter: () => openRouterService.validateTopicalMap(topics, pillars, businessInfo, dispatch),
+    });
 
     // 2. Run Local Algorithmic Checks (Holistic Metrics)
     const hubSpoke = calculateHubSpokeMetrics(topics);
@@ -461,85 +457,73 @@ export const validateTopicalMap = async (
 export const improveTopicalMap = (
     topics: EnrichedTopic[], issues: ValidationIssue[], businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<MapImprovementSuggestion> => {
-     switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.improveTopicalMap(topics, issues, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.improveTopicalMap(topics, issues, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.improveTopicalMap(topics, issues, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.improveTopicalMap(topics, issues, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.improveTopicalMap(topics, issues, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.improveTopicalMap(topics, issues, businessInfo, dispatch),
+        openai: () => openAiService.improveTopicalMap(topics, issues, businessInfo, dispatch),
+        anthropic: () => anthropicService.improveTopicalMap(topics, issues, businessInfo, dispatch),
+        perplexity: () => perplexityService.improveTopicalMap(topics, issues, businessInfo, dispatch),
+        openrouter: () => openRouterService.improveTopicalMap(topics, issues, businessInfo, dispatch),
+    });
 };
 
 export const analyzeSemanticRelationships = (
     topics: EnrichedTopic[], businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<SemanticAnalysisResult> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.analyzeSemanticRelationships(topics, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.analyzeSemanticRelationships(topics, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.analyzeSemanticRelationships(topics, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.analyzeSemanticRelationships(topics, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.analyzeSemanticRelationships(topics, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.analyzeSemanticRelationships(topics, businessInfo, dispatch),
+        openai: () => openAiService.analyzeSemanticRelationships(topics, businessInfo, dispatch),
+        anthropic: () => anthropicService.analyzeSemanticRelationships(topics, businessInfo, dispatch),
+        perplexity: () => perplexityService.analyzeSemanticRelationships(topics, businessInfo, dispatch),
+        openrouter: () => openRouterService.analyzeSemanticRelationships(topics, businessInfo, dispatch),
+    });
 };
 
 export const analyzeContextualCoverage = (
     businessInfo: BusinessInfo, topics: EnrichedTopic[], pillars: SEOPillars, dispatch: React.Dispatch<any>
 ): Promise<ContextualCoverageMetrics> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch);
-        case 'anthropic': return anthropicService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch);
-        case 'perplexity': return perplexityService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch);
-        case 'openrouter': return openRouterService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch),
+        openai: () => openAiService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch),
+        anthropic: () => anthropicService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch),
+        perplexity: () => perplexityService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch),
+        openrouter: () => openRouterService.analyzeContextualCoverage(businessInfo, topics, pillars, dispatch),
+    });
 };
 
 export const auditInternalLinking = (
     topics: EnrichedTopic[], briefs: Record<string, ContentBrief>, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<InternalLinkAuditResult> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.auditInternalLinking(topics, briefs, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.auditInternalLinking(topics, briefs, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.auditInternalLinking(topics, briefs, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.auditInternalLinking(topics, briefs, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.auditInternalLinking(topics, briefs, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.auditInternalLinking(topics, briefs, businessInfo, dispatch),
+        openai: () => openAiService.auditInternalLinking(topics, briefs, businessInfo, dispatch),
+        anthropic: () => anthropicService.auditInternalLinking(topics, briefs, businessInfo, dispatch),
+        perplexity: () => perplexityService.auditInternalLinking(topics, briefs, businessInfo, dispatch),
+        openrouter: () => openRouterService.auditInternalLinking(topics, briefs, businessInfo, dispatch),
+    });
 };
 
 export const calculateTopicalAuthority = (
     topics: EnrichedTopic[], briefs: Record<string, ContentBrief>, knowledgeGraph: KnowledgeGraph, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<TopicalAuthorityScore> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch),
+        openai: () => openAiService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch),
+        anthropic: () => anthropicService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch),
+        perplexity: () => perplexityService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch),
+        openrouter: () => openRouterService.calculateTopicalAuthority(topics, briefs, knowledgeGraph, businessInfo, dispatch),
+    });
 };
 
 export const generatePublicationPlan = (
     topics: EnrichedTopic[], businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<PublicationPlan> => {
-     switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.generatePublicationPlan(topics, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.generatePublicationPlan(topics, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.generatePublicationPlan(topics, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.generatePublicationPlan(topics, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.generatePublicationPlan(topics, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.generatePublicationPlan(topics, businessInfo, dispatch),
+        openai: () => openAiService.generatePublicationPlan(topics, businessInfo, dispatch),
+        anthropic: () => anthropicService.generatePublicationPlan(topics, businessInfo, dispatch),
+        perplexity: () => perplexityService.generatePublicationPlan(topics, businessInfo, dispatch),
+        openrouter: () => openRouterService.generatePublicationPlan(topics, businessInfo, dispatch),
+    });
 };
 
 /**

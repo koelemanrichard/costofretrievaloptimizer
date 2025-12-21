@@ -151,10 +151,23 @@ export function useContentGeneration({
     setRefreshTrigger(prev => prev + 1);
   }, []);
 
+  // Track briefId changes to reset state
+  const previousBriefIdRef = useRef<string | null>(null);
+
   // Check for existing job on mount (including completed jobs) and auto-resume if needed
   useEffect(() => {
     const checkExisting = async () => {
       if (!orchestratorRef.current || !briefId) return;
+
+      // CRITICAL: Reset state when briefId changes to prevent showing stale data from previous brief
+      if (previousBriefIdRef.current !== null && previousBriefIdRef.current !== briefId) {
+        console.log('[useContentGeneration] Brief changed from', previousBriefIdRef.current, 'to', briefId, '- resetting state');
+        setJob(null);
+        setSections([]);
+        setError(null);
+      }
+      previousBriefIdRef.current = briefId;
+
       try {
         // First check for ANY job (including completed) to restore state
         const latestJob = await orchestratorRef.current.getLatestJob(briefId);
@@ -213,10 +226,17 @@ export function useContentGeneration({
               }
             }, 100);
           }
+        } else {
+          // No job found for this brief - ensure state is clean
+          console.log('[useContentGeneration] No existing job found for brief:', briefId);
+          setJob(null);
+          setSections([]);
         }
       } catch (err) {
         // Silently ignore - no existing job
         console.debug('No existing job found:', err);
+        setJob(null);
+        setSections([]);
       }
     };
     checkExisting();

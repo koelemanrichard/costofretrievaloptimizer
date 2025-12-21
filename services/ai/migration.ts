@@ -5,20 +5,10 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { dispatchToProvider } from './providerDispatcher';
 import React from 'react';
 import { SEMANTIC_CHUNKING_PROMPT, GENERATE_MIGRATION_DECISION_PROMPT } from '../../config/prompts';
 import { v4 as uuidv4 } from 'uuid';
-
-const getService = (info: BusinessInfo) => {
-    switch (info.aiProvider) {
-        case 'openai': return openAiService;
-        case 'anthropic': return anthropicService;
-        case 'perplexity': return perplexityService;
-        case 'openrouter': return openRouterService;
-        case 'gemini':
-        default: return geminiService;
-    }
-};
 
 export const semanticChunking = async (
     content: string,
@@ -37,7 +27,13 @@ export const semanticChunking = async (
     }];
 
     try {
-        const result = await getService(businessInfo).generateJson(prompt, businessInfo, dispatch, fallback);
+        const result = await dispatchToProvider(businessInfo, {
+            gemini: () => geminiService.generateJson(prompt, businessInfo, dispatch, fallback),
+            openai: () => openAiService.generateJson(prompt, businessInfo, dispatch, fallback),
+            anthropic: () => anthropicService.generateJson(prompt, businessInfo, dispatch, fallback),
+            perplexity: () => perplexityService.generateJson(prompt, businessInfo, dispatch, fallback),
+            openrouter: () => openRouterService.generateJson(prompt, businessInfo, dispatch, fallback),
+        });
         return Array.isArray(result) ? result : fallback;
     } catch {
         return fallback;
@@ -75,7 +71,13 @@ export const generateDecisionMatrix = async (
     };
 
     try {
-        return await getService(businessInfo).generateJson(prompt, businessInfo, dispatch, fallback);
+        return await dispatchToProvider(businessInfo, {
+            gemini: () => geminiService.generateJson(prompt, businessInfo, dispatch, fallback),
+            openai: () => openAiService.generateJson(prompt, businessInfo, dispatch, fallback),
+            anthropic: () => anthropicService.generateJson(prompt, businessInfo, dispatch, fallback),
+            perplexity: () => perplexityService.generateJson(prompt, businessInfo, dispatch, fallback),
+            openrouter: () => openRouterService.generateJson(prompt, businessInfo, dispatch, fallback),
+        });
     } catch {
         return fallback;
     }

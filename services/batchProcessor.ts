@@ -45,13 +45,34 @@ export class BatchProcessor {
         const activeProject = state.projects.find(p => p.id === state.activeProjectId);
 
         // Use map-specific business info if available, merged with global and project domain
+        // AI settings (provider, model, API keys) ALWAYS come from global state, not map's business_info
         const mapBusinessInfo = activeMap.business_info as Partial<BusinessInfo> || {};
+        // Strip AI settings from map - they should come from global user_settings
+        const {
+            aiProvider: _mapAiProvider,
+            aiModel: _mapAiModel,
+            geminiApiKey: _gk,
+            openAiApiKey: _ok,
+            anthropicApiKey: _ak,
+            perplexityApiKey: _pk,
+            openRouterApiKey: _ork,
+            ...mapBusinessContext
+        } = mapBusinessInfo;
+
         const effectiveBusinessInfo = {
             ...state.businessInfo,
-            domain: mapBusinessInfo.domain || activeProject?.domain || state.businessInfo.domain,
-            projectName: mapBusinessInfo.projectName || activeProject?.project_name || state.businessInfo.projectName,
-            ...mapBusinessInfo,
-            ...(mapBusinessInfo.domain ? {} : { domain: activeProject?.domain || state.businessInfo.domain }),
+            domain: mapBusinessContext.domain || activeProject?.domain || state.businessInfo.domain,
+            projectName: mapBusinessContext.projectName || activeProject?.project_name || state.businessInfo.projectName,
+            ...mapBusinessContext,
+            ...(mapBusinessContext.domain ? {} : { domain: activeProject?.domain || state.businessInfo.domain }),
+            // AI settings ALWAYS from global (user_settings), not from map's business_info
+            aiProvider: state.businessInfo.aiProvider,
+            aiModel: state.businessInfo.aiModel,
+            geminiApiKey: state.businessInfo.geminiApiKey,
+            openAiApiKey: state.businessInfo.openAiApiKey,
+            anthropicApiKey: state.businessInfo.anthropicApiKey,
+            perplexityApiKey: state.businessInfo.perplexityApiKey,
+            openRouterApiKey: state.businessInfo.openRouterApiKey,
         };
 
         for (let i = 0; i < topicsWithoutBriefs.length; i++) {

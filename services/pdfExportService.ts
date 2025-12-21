@@ -443,3 +443,294 @@ export const exportToHtml = (
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+/**
+ * Generate enhanced audit metrics HTML report
+ */
+export interface EnhancedMetricsReportData {
+  projectName: string;
+  semanticCompliance: {
+    score: number;
+    target: number;
+    eavCoverage: number;
+    categoryDistribution: Record<string, number>;
+    classificationDistribution: Record<string, number>;
+    recommendations: string[];
+  };
+  authorityIndicators: {
+    eavAuthorityScore: number;
+    uniqueEavCount: number;
+    rootEavCount: number;
+    rareEavCount: number;
+    commonEavCount: number;
+    topicalDepthScore: number;
+  };
+  topicCount: number;
+  actionRoadmap?: Array<{
+    priority: string;
+    category: string;
+    action: string;
+    impact: string;
+  }>;
+}
+
+export const generateEnhancedMetricsHtmlReport = (data: EnhancedMetricsReportData): string => {
+  const { projectName, semanticCompliance, authorityIndicators, topicCount, actionRoadmap } = data;
+
+  const getScoreColor = (score: number): string => {
+    if (score >= 85) return '#22c55e';
+    if (score >= 70) return '#eab308';
+    if (score >= 50) return '#f97316';
+    return '#ef4444';
+  };
+
+  const getPriorityBadge = (priority: string): string => {
+    const colors: Record<string, string> = {
+      critical: 'background: #fee2e2; color: #dc2626;',
+      high: 'background: #ffedd5; color: #ea580c;',
+      medium: 'background: #fef3c7; color: #d97706;',
+      low: 'background: #dbeafe; color: #2563eb;'
+    };
+    return colors[priority] || colors.low;
+  };
+
+  const categoryRows = Object.entries(semanticCompliance.categoryDistribution)
+    .map(([cat, count]) => {
+      const total = Object.values(semanticCompliance.categoryDistribution).reduce((a, b) => a + b, 0);
+      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
+      return `<tr><td>${cat}</td><td>${count}</td><td>${pct}%</td></tr>`;
+    })
+    .join('');
+
+  const classificationRows = Object.entries(semanticCompliance.classificationDistribution)
+    .map(([cls, count]) => {
+      const total = Object.values(semanticCompliance.classificationDistribution).reduce((a, b) => a + b, 0);
+      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
+      return `<tr><td>${cls}</td><td>${count}</td><td>${pct}%</td></tr>`;
+    })
+    .join('');
+
+  const recommendationsList = semanticCompliance.recommendations
+    .map(rec => `<li>${rec}</li>`)
+    .join('');
+
+  const roadmapItems = (actionRoadmap || [])
+    .map(item => `
+      <div style="padding: 12px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #e5e7eb; ${getPriorityBadge(item.priority)}">
+        <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+          <span style="font-weight: bold; text-transform: uppercase; font-size: 12px;">${item.priority}</span>
+          <span style="color: #6b7280;">|</span>
+          <span style="color: #6b7280; font-size: 12px;">${item.category}</span>
+        </div>
+        <p style="margin: 0 0 4px 0; font-weight: 500;">${item.action}</p>
+        <p style="margin: 0; font-size: 12px; color: #6b7280;">${item.impact}</p>
+      </div>
+    `)
+    .join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Audit Report - ${projectName}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f9fafb;
+      color: #1f2937;
+    }
+    h1 { color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+    h2 { color: #374151; margin-top: 30px; }
+    h3 { color: #4b5563; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .metric-box {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .metric-value { font-size: 36px; font-weight: bold; }
+    .metric-label { font-size: 14px; color: #6b7280; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th { background: #f9fafb; font-weight: 600; }
+    .score-gauge {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(
+        ${getScoreColor(semanticCompliance.score)} 0deg ${(semanticCompliance.score / 100) * 360}deg,
+        #e5e7eb ${(semanticCompliance.score / 100) * 360}deg 360deg
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+    .score-gauge-inner {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-value { font-size: 24px; font-weight: bold; }
+    .score-target { font-size: 12px; color: #6b7280; }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    @media print {
+      body { background: white; }
+      .card { box-shadow: none; border: 1px solid #e5e7eb; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Enhanced Audit Report</h1>
+  <p style="color: #6b7280;">Project: <strong>${projectName}</strong> | Generated: ${new Date().toLocaleDateString()}</p>
+
+  <div class="card">
+    <h2 style="margin-top: 0;">Overview Scores</h2>
+    <div class="metrics-grid">
+      <div style="text-align: center;">
+        <div class="score-gauge">
+          <div class="score-gauge-inner">
+            <span class="score-value">${semanticCompliance.score}%</span>
+            <span class="score-target">Target: ${semanticCompliance.target}%</span>
+          </div>
+        </div>
+        <p style="margin-top: 8px; font-weight: 500;">Semantic Compliance</p>
+      </div>
+      <div class="metric-box">
+        <div class="metric-value" style="color: ${getScoreColor(authorityIndicators.eavAuthorityScore)}">
+          ${authorityIndicators.eavAuthorityScore}%
+        </div>
+        <div class="metric-label">EAV Authority Score</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-value" style="color: ${getScoreColor(authorityIndicators.topicalDepthScore)}">
+          ${authorityIndicators.topicalDepthScore}%
+        </div>
+        <div class="metric-label">Topical Depth</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-value">${semanticCompliance.eavCoverage}</div>
+        <div class="metric-label">Total EAVs</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top: 0;">Authority Indicators</h2>
+    <div class="metrics-grid">
+      <div class="metric-box">
+        <div class="metric-value" style="color: #8b5cf6;">${authorityIndicators.uniqueEavCount}</div>
+        <div class="metric-label">UNIQUE EAVs</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-value" style="color: #3b82f6;">${authorityIndicators.rootEavCount}</div>
+        <div class="metric-label">ROOT EAVs</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-value" style="color: #10b981;">${authorityIndicators.rareEavCount}</div>
+        <div class="metric-label">RARE EAVs</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-value" style="color: #6b7280;">${authorityIndicators.commonEavCount}</div>
+        <div class="metric-label">COMMON EAVs</div>
+      </div>
+    </div>
+    <p style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 8px; font-size: 14px;">
+      <strong>Authority Strategy:</strong> Focus on UNIQUE and ROOT EAVs to establish topical authority.
+      Current ratio: ${topicCount > 0 ? (semanticCompliance.eavCoverage / topicCount).toFixed(1) : 0} EAVs per topic (target: 3+).
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top: 0;">Category Distribution</h2>
+    <table>
+      <thead>
+        <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
+      </thead>
+      <tbody>${categoryRows || '<tr><td colspan="3" style="text-align: center; color: #6b7280;">No data</td></tr>'}</tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top: 0;">Classification Distribution</h2>
+    <table>
+      <thead>
+        <tr><th>Classification</th><th>Count</th><th>Percentage</th></tr>
+      </thead>
+      <tbody>${classificationRows || '<tr><td colspan="3" style="text-align: center; color: #6b7280;">No data</td></tr>'}</tbody>
+    </table>
+  </div>
+
+  ${semanticCompliance.recommendations.length > 0 ? `
+  <div class="card">
+    <h2 style="margin-top: 0;">Recommendations</h2>
+    <ul>${recommendationsList}</ul>
+  </div>
+  ` : ''}
+
+  ${roadmapItems ? `
+  <div class="card">
+    <h2 style="margin-top: 0;">Action Roadmap</h2>
+    ${roadmapItems}
+  </div>
+  ` : ''}
+
+  <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+    Generated by Holistic SEO Tool | ${new Date().toLocaleDateString()}
+  </footer>
+</body>
+</html>
+  `.trim();
+};
+
+/**
+ * Export enhanced metrics report as HTML file
+ */
+export const exportEnhancedMetricsToHtml = (
+  data: EnhancedMetricsReportData,
+  filename: string
+): void => {
+  const html = generateEnhancedMetricsHtmlReport(data);
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename.endsWith('.html') ? filename : `${filename}.html`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};

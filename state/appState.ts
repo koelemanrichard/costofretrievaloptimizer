@@ -1,7 +1,41 @@
 
 // state/appState.ts
+//
+// REFACTORING IN PROGRESS: This reducer is being split into domain slices.
+// See state/slices/ for the extracted reducers.
+//
 import React, { createContext, useContext, Dispatch } from 'react';
 import { User } from '@supabase/supabase-js';
+
+// Import slices
+import {
+  type UIState,
+  type UIAction,
+  initialUIState,
+  uiReducer,
+} from './slices/uiSlice';
+
+import {
+  type SiteAnalysisState,
+  type SiteAnalysisAction,
+  initialSiteAnalysisState,
+  siteAnalysisReducer,
+} from './slices/siteAnalysisSlice';
+
+import {
+  type AuditState,
+  type AuditAction,
+  initialAuditState,
+  auditReducer,
+} from './slices/auditSlice';
+
+import {
+  type PublicationPlanningState,
+  type PublicationPlanningAction,
+  initialPublicationPlanningState,
+  publicationPlanningReducer,
+} from './slices/publicationPlanningSlice';
+
 import {
     AppStep,
     BusinessInfo,
@@ -143,19 +177,8 @@ export interface AppState {
         lastAuditId: string | null;
     };
 
-    // Publication Planning state
-    publicationPlanning: {
-        viewMode: 'calendar' | 'list';
-        calendarMode: 'month' | 'week';
-        currentDate: string;                              // ISO date for calendar focus
-        filters: PlanningFilters;
-        selectedTopicIds: string[];                       // For bulk operations
-        snapshotsByMap: Record<string, PerformanceSnapshot[]>;
-        baselinesByTopic: Record<string, PerformanceSnapshot>;
-        planResult: PublicationPlanResult | null;         // Latest AI-generated plan
-        isGeneratingPlan: boolean;
-        batchLaunchDate: string | null;                   // Configurable batch launch date
-    };
+    // Publication Planning state - delegated to publicationPlanningSlice
+    publicationPlanning: PublicationPlanningState;
 }
 
 export type AppAction =
@@ -343,18 +366,7 @@ export const initialState: AppState = {
         fixHistory: [],
         lastAuditId: null,
     },
-    publicationPlanning: {
-        viewMode: 'list',
-        calendarMode: 'month',
-        currentDate: new Date().toISOString().split('T')[0],
-        filters: {},
-        selectedTopicIds: [],
-        snapshotsByMap: {},
-        baselinesByTopic: {},
-        planResult: null,
-        isGeneratingPlan: false,
-        batchLaunchDate: null,
-    },
+    publicationPlanning: initialPublicationPlanningState,
 };
 
 export const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -445,24 +457,15 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         // Content generation job refresh trigger
         case 'TRIGGER_JOB_REFRESH': return { ...state, jobRefreshTrigger: state.jobRefreshTrigger + 1 };
 
-        // Site Analysis V2 reducers
+        // Site Analysis V2 reducers - delegated to siteAnalysisSlice
         case 'SET_SITE_ANALYSIS_VIEW_MODE':
-            return { ...state, siteAnalysis: { ...state.siteAnalysis, viewMode: action.payload } };
         case 'SET_SITE_ANALYSIS_PROJECT':
-            return { ...state, siteAnalysis: { ...state.siteAnalysis, currentProject: action.payload } };
         case 'SET_SITE_ANALYSIS_SELECTED_PAGE':
-            return { ...state, siteAnalysis: { ...state.siteAnalysis, selectedPageId: action.payload } };
         case 'SET_SITE_ANALYSIS_PILLARS':
-            return { ...state, siteAnalysis: { ...state.siteAnalysis, discoveredPillars: action.payload } };
         case 'RESET_SITE_ANALYSIS':
             return {
                 ...state,
-                siteAnalysis: {
-                    viewMode: 'project_list',
-                    currentProject: null,
-                    selectedPageId: null,
-                    discoveredPillars: null,
-                }
+                siteAnalysis: siteAnalysisReducer(state.siteAnalysis, action as SiteAnalysisAction)
             };
 
         // Foundation Pages & Navigation reducers
@@ -653,97 +656,24 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
                 }
             };
 
-        // Publication Planning reducers
+        // Publication Planning reducers - delegated to publicationPlanningSlice
         case 'SET_PLANNING_VIEW_MODE':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, viewMode: action.payload }
-            };
         case 'SET_PLANNING_CALENDAR_MODE':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, calendarMode: action.payload }
-            };
         case 'SET_PLANNING_CURRENT_DATE':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, currentDate: action.payload }
-            };
         case 'SET_PLANNING_FILTERS':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, filters: action.payload }
-            };
         case 'SET_PLANNING_SELECTED_TOPICS':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, selectedTopicIds: action.payload }
-            };
-        case 'TOGGLE_PLANNING_TOPIC_SELECTION': {
-            const topicId = action.payload;
-            const current = state.publicationPlanning.selectedTopicIds;
-            const newSelection = current.includes(topicId)
-                ? current.filter(id => id !== topicId)
-                : [...current, topicId];
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, selectedTopicIds: newSelection }
-            };
-        }
+        case 'TOGGLE_PLANNING_TOPIC_SELECTION':
         case 'CLEAR_PLANNING_SELECTION':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, selectedTopicIds: [] }
-            };
         case 'SET_PERFORMANCE_SNAPSHOTS':
-            return {
-                ...state,
-                publicationPlanning: {
-                    ...state.publicationPlanning,
-                    snapshotsByMap: {
-                        ...state.publicationPlanning.snapshotsByMap,
-                        [action.payload.mapId]: action.payload.snapshots
-                    }
-                }
-            };
-        case 'ADD_PERFORMANCE_SNAPSHOT': {
-            const mapSnapshots = state.publicationPlanning.snapshotsByMap[action.payload.mapId] || [];
-            return {
-                ...state,
-                publicationPlanning: {
-                    ...state.publicationPlanning,
-                    snapshotsByMap: {
-                        ...state.publicationPlanning.snapshotsByMap,
-                        [action.payload.mapId]: [...mapSnapshots, action.payload.snapshot]
-                    }
-                }
-            };
-        }
+        case 'ADD_PERFORMANCE_SNAPSHOT':
         case 'SET_TOPIC_BASELINE':
-            return {
-                ...state,
-                publicationPlanning: {
-                    ...state.publicationPlanning,
-                    baselinesByTopic: {
-                        ...state.publicationPlanning.baselinesByTopic,
-                        [action.payload.topicId]: action.payload.snapshot
-                    }
-                }
-            };
         case 'SET_PUBLICATION_PLAN_RESULT':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, planResult: action.payload }
-            };
         case 'SET_GENERATING_PLAN':
-            return {
-                ...state,
-                publicationPlanning: { ...state.publicationPlanning, isGeneratingPlan: action.payload }
-            };
         case 'SET_BATCH_LAUNCH_DATE':
+        case 'RESET_PUBLICATION_PLANNING':
             return {
                 ...state,
-                publicationPlanning: { ...state.publicationPlanning, batchLaunchDate: action.payload }
+                publicationPlanning: publicationPlanningReducer(state.publicationPlanning, action as PublicationPlanningAction)
             };
         case 'UPDATE_TOPIC_PUBLICATION_STATUS':
         case 'UPDATE_TOPIC_PUBLICATION_PHASE':
@@ -760,23 +690,6 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
                 topicalMaps: newTopicalMaps
             };
         }
-        case 'RESET_PUBLICATION_PLANNING':
-            return {
-                ...state,
-                publicationPlanning: {
-                    viewMode: 'list',
-                    calendarMode: 'month',
-                    currentDate: new Date().toISOString().split('T')[0],
-                    filters: {},
-                    selectedTopicIds: [],
-                    snapshotsByMap: {},
-                    baselinesByTopic: {},
-                    planResult: null,
-                    isGeneratingPlan: false,
-                    batchLaunchDate: null,
-                }
-            };
-
         default: return state;
     }
 };

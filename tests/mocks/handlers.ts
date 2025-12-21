@@ -1,7 +1,7 @@
 // tests/mocks/handlers.ts
 import { http, HttpResponse } from 'msw';
 
-const SUPABASE_URL = 'https://blucvnmncvwzlwxoyoum.supabase.co';
+const SUPABASE_URL = 'https://shtqshmmsrmtquuhyupl.supabase.co';
 
 export const handlers = [
   // Auth endpoints

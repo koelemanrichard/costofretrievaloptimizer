@@ -24,11 +24,14 @@ const OPENAI_MODELS = [
 ];
 
 const ANTHROPIC_MODELS = [
-    'claude-opus-4-5-20251124',
+    'claude-opus-4-5-20251101',
     'claude-sonnet-4-5-20250929',
-    'claude-haiku-4-5-20251022',
-    'claude-opus-4-20250522',
-    'claude-sonnet-4-20250522'
+    'claude-haiku-4-5-20251001',
+    'claude-opus-4-1-20250805',
+    'claude-sonnet-4-20250514',
+    'claude-opus-4-20250514',
+    'claude-3-7-sonnet-20250219',
+    'claude-3-5-haiku-20241022'
 ];
 
 const PERPLEXITY_MODELS = [

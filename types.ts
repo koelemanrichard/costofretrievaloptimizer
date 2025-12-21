@@ -1,12 +1,38 @@
 
 // types.ts
+//
+// REFACTORING COMPLETE: This file re-exports from domain-specific modules.
+// See docs/TYPES_REFACTORING_PLAN.md for details.
+//
+// Re-exports from domain modules:
+// - types/core.ts - Core enums (AppStep, WebsiteType, StylometryType, AIProvider)
+// - types/business.ts - Business types (BusinessInfo, AuthorProfile, SEOPillars, BrandKit, EntityIdentity)
+// - types/semantic.ts - Semantic types (SemanticTriple, AttributeCategory, FreshnessProfile)
+// - types/content.ts - Content types (EnrichedTopic, ContentBrief, BriefSection, GscRow)
+// - types/audit.ts - Audit types (ValidationResult, AuditRule, UnifiedAuditResult, PageAuditResult)
+// - types/schema.ts - JSON-LD schema types (SchemaPageType, Pass9Config, EnhancedSchemaResult)
+// - types/publication.ts - Publication types (PublicationStatus, TopicPublicationPlan)
+// - types/navigation.ts - Navigation types (FoundationPage, NavigationStructure, NAPData)
+// - types/migration.ts - Migration types (TransitionStatus, MapMergeState, SiteInventoryItem)
+// - types/siteAnalysis.ts - Site analysis V2 types (SiteAnalysisProject, SitePageRecord, JinaExtraction)
+// - types/contentGeneration.ts - Content generation V2 types
 
 // FIX: Corrected import path for database types to be a relative path, fixing module resolution error.
 import { Json } from './database.types';
 // FIX: Export KnowledgeGraph to be available for other modules.
 export { KnowledgeGraph } from './lib/knowledgeGraph';
 
-// Content Generation V2 Types - Priority-based generation with user control
+// Re-export from domain modules for backward compatibility
+export * from './types/core';
+export * from './types/business';
+export * from './types/semantic';
+export * from './types/content';
+export * from './types/audit';
+export * from './types/schema';
+export * from './types/publication';
+export * from './types/navigation';
+export * from './types/migration';
+export * from './types/siteAnalysis';
 export * from './types/contentGeneration';
 
 export enum AppStep {
@@ -73,6 +99,94 @@ export const WEBSITE_TYPE_CONFIG: Record<WebsiteType, {
 
 export type StylometryType = 'ACADEMIC_FORMAL' | 'DIRECT_TECHNICAL' | 'PERSUASIVE_SALES' | 'INSTRUCTIONAL_CLEAR';
 
+// ============================================================================
+// KNOWLEDGE PANEL (KP) TYPES
+// ============================================================================
+
+/**
+ * Seed source entry for tracking external authoritative sources
+ * that confirm entity facts for Knowledge Panel building
+ */
+export interface SeedSourceEntry {
+  name: string;
+  url: string;
+  verified?: boolean;
+}
+
+/**
+ * Seed Source Category for Knowledge Panel corroboration
+ * Based on Kalicube's methodology for building entity credibility
+ */
+export type SeedSourceCategory =
+  | 'authority'      // Wikipedia, Wikidata - highest trust
+  | 'business'       // Crunchbase, LinkedIn, GBP
+  | 'social'         // YouTube, Twitter, Instagram, Facebook
+  | 'developer'      // GitHub, GitLab, npm, PyPI
+  | 'industry'       // Industry directories, review sites
+  | 'media';         // Podcast directories, press mentions
+
+/**
+ * Seed Source Definition for Knowledge Panel optimization
+ * Defines sources that contribute to entity corroboration
+ */
+export interface SeedSourceDefinition {
+  id: string;
+  name: string;
+  category: SeedSourceCategory;
+  icon: string;
+  createUrl: string;
+  kpWeight: number;             // Importance for Knowledge Panel (1-10)
+  entityTypes: string[];        // Which entity types this applies to
+  verificationMethod?: string;  // How Google verifies this source
+}
+
+/**
+ * Entity Identity for Knowledge Panel strategy
+ * Defines the core identity attributes needed for KP eligibility
+ */
+export interface EntityIdentity {
+  legalName: string;                    // Official registered name
+  foundedYear?: number;                 // Year established
+  headquartersLocation?: string;        // City, Country
+  founderOrCEO: string;                 // Key person for E-A-T
+  founderCredential?: string;           // Their primary credential
+  primaryAttribute: string;             // Desired KP subtitle (e.g., "SEO Agency", "Dentist")
+  secondaryAttributes?: string[];       // Backup subtitles
+  existingSeedSources: {
+    // Authority sources (highest KP weight)
+    wikipedia?: string;                 // URL if exists
+    wikidata?: string;                  // QID if exists (e.g., "Q12345")
+    // Business sources
+    crunchbase?: string;                // URL if exists
+    linkedinCompany?: string;           // URL if exists
+    googleBusinessProfile?: boolean;    // Claimed or not
+    // Social sources (corroborative)
+    youtube?: string;                   // Channel URL
+    twitter?: string;                   // Profile URL (X)
+    instagram?: string;                 // Profile URL
+    facebook?: string;                  // Page URL
+    // Developer sources
+    github?: string;                    // Organization/user URL
+    // Industry directories (custom entries)
+    industryDirectories?: SeedSourceEntry[];
+  };
+  brandSearchDemand?: number;           // Monthly branded searches (from GSC/tools)
+  brandSearchDemandTarget?: number;     // Target monthly branded searches
+}
+
+/**
+ * KP Metadata for SemanticTriple
+ * Tracks which EAVs contribute to Knowledge Panel building
+ */
+export interface KPMetadata {
+  isFactual: boolean;                   // Declarative fact vs opinion
+  isKPEligible: boolean;                // User-flagged for KP strategy
+  seedSourcesRequired: string[];        // Which sources should confirm this fact
+  seedSourcesConfirmed: string[];       // Which sources already confirm this fact
+  consensusScore: number;               // 0-100 based on source agreement
+  generatedStatement?: string;          // Auto-generated declarative sentence
+}
+
 export interface AuthorProfile {
     name: string;
     bio: string;
@@ -137,6 +251,12 @@ export interface BusinessInfo {
   cloudinaryApiKey?: string;
   cloudinaryUploadPreset?: string;
   markupGoApiKey?: string;
+
+  // Entity Authority & Knowledge Graph
+  googleKnowledgeGraphApiKey?: string;
+
+  // Knowledge Panel Strategy
+  entityIdentity?: EntityIdentity;
 }
 
 export interface SEOPillars {
@@ -209,6 +329,7 @@ export interface SemanticTriple {
       antonyms?: string[];    // Opposite/contrasting concepts
       hypernyms?: string[];   // Broader category terms
   };
+  kpMetadata?: KPMetadata;    // Knowledge Panel contribution tracking
 }
 
 export enum FreshnessProfile {
@@ -217,7 +338,7 @@ export enum FreshnessProfile {
   FREQUENT = 'FREQUENT',
 }
 
-export type ExpansionMode = 'ATTRIBUTE' | 'ENTITY' | 'CONTEXT';
+export type ExpansionMode = 'ATTRIBUTE' | 'ENTITY' | 'CONTEXT' | 'FRAME' | 'CHILD';
 
 export interface TopicBlueprint {
     contextual_vector: string; // H2 sequence
@@ -234,10 +355,11 @@ export interface EnrichedTopic {
   id: string;
   map_id: string;
   parent_topic_id: string | null;
+  display_parent_id?: string | null; // Visual parent for business presentations (does NOT affect SEO)
   title: string;
   slug: string;
   description: string;
-  type: 'core' | 'outer';
+  type: 'core' | 'outer' | 'child';
   freshness: FreshnessProfile;
 
   // Database timestamps
@@ -261,8 +383,8 @@ export interface EnrichedTopic {
 
   decay_score?: number; // 0-100
   
-  // Generic metadata container
-  metadata?: Record<string, any>;
+  // Typed metadata container (see TopicMetadata in types/content.ts)
+  metadata?: Record<string, unknown>;
 }
 
 export interface TopicViabilityResult {
@@ -565,6 +687,9 @@ export interface ContentBrief {
   visual_semantics?: VisualSemantics[];
   discourse_anchors?: string[]; // List of mutual words for transitions
 
+  // Enhanced Visual Semantics (Koray's "Pixels, Letters, and Bytes" Framework)
+  enhanced_visual_semantics?: BriefVisualSemantics;
+
   // Business fields
   cta?: string; // Call to action for business conversion
 }
@@ -689,7 +814,7 @@ export interface MapImprovementSuggestion {
   newTopics: {
     title: string;
     description: string;
-    type: 'core' | 'outer';
+    type: 'core' | 'outer' | 'child';
     topic_class?: 'monetization' | 'informational';
     parentTopicTitle?: string | null;
     reasoning?: string;
@@ -2048,7 +2173,7 @@ export interface FoundationPage {
   // Publication status
   status?: 'draft' | 'published';
 
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 }
@@ -2104,7 +2229,7 @@ export interface NavigationStructure {
   // Sticky header behavior
   sticky?: boolean;
 
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 }
@@ -2642,7 +2767,7 @@ export interface ContentGenerationContext {
   topic: {
     id: string;
     title: string;
-    type: 'core' | 'outer';
+    type: 'core' | 'outer' | 'child';
     parentTopicId?: string;
     topicClass?: 'monetization' | 'informational';
   };
@@ -2944,7 +3069,7 @@ export interface MergeExportTopicRow {
   sourceMap: string;
   title: string;
   description: string;
-  type: 'core' | 'outer';
+  type: 'core' | 'outer' | 'child';
   parentTitle: string | null;
   mergeDecision: 'keep' | 'merge' | 'delete' | 'new';
   mergePartnerTitle: string | null;
@@ -3268,4 +3393,939 @@ export interface LinkBridgeAnalysis {
   relevanceScore: number;
   suggestedBridge?: string;
   reasons: string[];
+}
+
+// ============================================================================
+// QUERY NETWORK AUDIT TYPES
+// For LLM-driven competitive analysis and content gap identification
+// ============================================================================
+
+/**
+ * Query intent classification for SERP analysis
+ */
+export type QueryIntent = 'informational' | 'commercial' | 'transactional' | 'navigational';
+
+/**
+ * A query within the network with metadata
+ */
+export interface QueryNetworkNode {
+  query: string;
+  intent: QueryIntent;
+  searchVolume?: number;
+  difficulty?: number;
+  relatedQueries: string[];
+  questions: string[];
+}
+
+/**
+ * SERP competitor data for a single query
+ */
+export interface SerpCompetitorData {
+  url: string;
+  title: string;
+  position: number;
+  domain: string;
+  wordCount?: number;
+  headings?: { level: number; text: string }[];
+  featuredSnippet?: boolean;
+}
+
+/**
+ * EAV (Entity-Attribute-Value) extracted from competitor content
+ */
+export interface CompetitorEAV {
+  entity: string;
+  attribute: string;
+  value: string;
+  source: string; // URL where this was found
+  confidence: number;
+  category?: AttributeCategory;
+}
+
+/**
+ * Information density metrics for a piece of content
+ */
+export interface InformationDensityScore {
+  factsPerSentence: number;
+  uniqueEntitiesCount: number;
+  uniqueAttributesCount: number;
+  totalEAVs: number;
+  densityScore: number; // 0-100
+  benchmark?: number; // Industry/competitor average
+}
+
+/**
+ * Content gap identified through competitive analysis
+ */
+export interface ContentGap {
+  missingAttribute: string;
+  foundInCompetitors: string[]; // URLs where this attribute exists
+  frequency: number; // How many competitors cover this
+  priority: 'high' | 'medium' | 'low';
+  suggestedContent?: string;
+}
+
+/**
+ * Heading hierarchy analysis for a competitor page
+ */
+export interface HeadingHierarchy {
+  url: string;
+  headings: {
+    level: number;
+    text: string;
+    wordCount: number;
+  }[];
+  hierarchyScore: number; // 0-100, how well-structured
+  issues: string[];
+}
+
+/**
+ * Complete Query Network analysis result
+ */
+export interface QueryNetworkAnalysisResult {
+  seedKeyword: string;
+  queryNetwork: QueryNetworkNode[];
+  serpResults: Map<string, SerpCompetitorData[]>;
+  competitorEAVs: CompetitorEAV[];
+  ownContentEAVs?: CompetitorEAV[];
+  contentGaps: ContentGap[];
+  informationDensity: {
+    own?: InformationDensityScore;
+    competitorAverage: InformationDensityScore;
+    topCompetitor: InformationDensityScore;
+  };
+  headingAnalysis: HeadingHierarchy[];
+  recommendations: QueryNetworkRecommendation[];
+  timestamp: string;
+}
+
+/**
+ * Actionable recommendation from Query Network analysis
+ */
+export interface QueryNetworkRecommendation {
+  type: 'content_gap' | 'density_improvement' | 'structure_fix' | 'new_topic';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  affectedQueries: string[];
+  estimatedImpact: string;
+  suggestedAction: string;
+}
+
+/**
+ * Wikipedia entity verification result
+ */
+export interface WikipediaEntityResult {
+  found: boolean;
+  title?: string;
+  extract?: string;
+  pageUrl?: string;
+  wikidataId?: string;
+  categories?: string[];
+  relatedEntities?: string[];
+}
+
+/**
+ * Wikidata entity data
+ */
+export interface WikidataEntityResult {
+  id: string;
+  label: string;
+  description?: string;
+  aliases?: string[];
+  claims?: Record<string, unknown>;
+  sitelinks?: Record<string, string>;
+}
+
+/**
+ * Google Knowledge Graph entity result
+ */
+export interface KnowledgeGraphEntityResult {
+  id: string;
+  name: string;
+  type: string[];
+  description?: string;
+  detailedDescription?: {
+    articleBody: string;
+    url: string;
+    license: string;
+  };
+  image?: {
+    url: string;
+    contentUrl: string;
+  };
+  url?: string;
+  resultScore: number;
+}
+
+/**
+ * Combined entity authority validation result
+ */
+export interface EntityAuthorityResult {
+  entityName: string;
+  wikipedia: WikipediaEntityResult | null;
+  wikidata: WikidataEntityResult | null;
+  knowledgeGraph: KnowledgeGraphEntityResult | null;
+  authorityScore: number; // 0-100
+  verificationStatus: 'verified' | 'partial' | 'unverified';
+  recommendations: string[];
+}
+
+/**
+ * Query Network Audit configuration
+ */
+export interface QueryNetworkAuditConfig {
+  seedKeyword: string;
+  targetDomain?: string;
+  language: string;
+  region?: string;
+  maxQueries?: number;
+  maxCompetitors?: number;
+  includeEntityValidation?: boolean;
+  includeOwnContent?: boolean;
+}
+
+/**
+ * Query Network Audit progress tracking
+ */
+export interface QueryNetworkAuditProgress {
+  phase: 'generating_network' | 'fetching_serps' | 'extracting_eavs' | 'analyzing_gaps' | 'validating_entities' | 'complete' | 'error';
+  currentStep: string;
+  totalSteps: number;
+  completedSteps: number;
+  progress: number; // 0-100
+  error?: string;
+}
+
+/**
+ * Audit report section for business/technical toggle
+ */
+export interface AuditReportSection {
+  id: string;
+  title: string;
+  businessSummary: string; // High-level for business stakeholders
+  technicalDetails: string; // Detailed for technical users
+  metrics: Record<string, number | string>;
+  visualizationType?: 'chart' | 'table' | 'list' | 'heatmap';
+  data: unknown;
+}
+
+/**
+ * Complete audit report with business/technical views
+ */
+export interface ComprehensiveAuditReport {
+  id: string;
+  title: string;
+  generatedAt: string;
+  auditType: 'query_network' | 'single_page' | 'multi_page' | 'authority';
+  overallScore: number;
+  sections: AuditReportSection[];
+  executiveSummary: string;
+  technicalSummary: string;
+  prioritizedActions: QueryNetworkRecommendation[];
+  exportFormats: ('xlsx' | 'pdf' | 'html')[];
+}
+
+// ============================================
+// MENTION SCANNER TYPES
+// ============================================
+
+/**
+ * Reputation signal from external source
+ */
+export interface ReputationSignal {
+  source: string;
+  sourceType: 'review_platform' | 'news' | 'social' | 'industry' | 'government';
+  sentiment: 'positive' | 'neutral' | 'negative';
+  mentionCount: number;
+  avgRating?: number;
+  url?: string;
+  lastUpdated?: string;
+}
+
+/**
+ * Entity co-occurrence in content
+ */
+export interface EntityCoOccurrence {
+  entity: string;
+  frequency: number;
+  contexts: string[];
+  associationType: 'competitor' | 'partner' | 'industry_term' | 'related_brand';
+}
+
+/**
+ * E-A-T (Expertise, Authority, Trust) breakdown
+ */
+export interface EATBreakdown {
+  expertise: {
+    score: number;
+    signals: string[];
+  };
+  authority: {
+    score: number;
+    signals: string[];
+  };
+  trust: {
+    score: number;
+    signals: string[];
+  };
+}
+
+/**
+ * Mention Scanner configuration
+ */
+export interface MentionScannerConfig {
+  entityName: string;
+  domain?: string;
+  industry?: string;
+  language: string;
+  includeReviews: boolean;
+  includeSocialMentions: boolean;
+  includeNewsArticles: boolean;
+}
+
+/**
+ * Mention Scanner progress
+ */
+export interface MentionScannerProgress {
+  phase: 'initializing' | 'verifying_identity' | 'scanning_reputation' | 'analyzing_cooccurrences' | 'calculating_score' | 'complete' | 'error';
+  currentStep: string;
+  totalSteps: number;
+  completedSteps: number;
+  progress: number;
+  error?: string;
+}
+
+/**
+ * Complete Mention Scanner result
+ */
+export interface MentionScannerResult {
+  entityName: string;
+  domain?: string;
+  timestamp: string;
+
+  // Identity verification
+  entityAuthority: EntityAuthorityResult;
+
+  // Reputation signals
+  reputationSignals: ReputationSignal[];
+  overallSentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
+
+  // Co-occurrences
+  coOccurrences: EntityCoOccurrence[];
+  topicalAssociations: string[];
+
+  // E-A-T Analysis
+  eatBreakdown: EATBreakdown;
+  eatScore: number; // 0-100
+
+  // Recommendations
+  recommendations: MentionScannerRecommendation[];
+}
+
+/**
+ * Mention Scanner recommendation
+ */
+export interface MentionScannerRecommendation {
+  type: 'identity' | 'reputation' | 'authority' | 'trust' | 'visibility';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  suggestedAction: string;
+  estimatedImpact: string;
+}
+
+// ============================================
+// CORPUS AUDIT TYPES
+// ============================================
+
+/**
+ * Content overlap detection result
+ */
+export interface ContentOverlap {
+  pageA: string;
+  pageB: string;
+  overlapPercentage: number;
+  sharedPhrases: string[];
+  overlapType: 'duplicate' | 'near_duplicate' | 'partial' | 'thematic';
+}
+
+/**
+ * Anchor text pattern analysis
+ */
+export interface AnchorTextPattern {
+  anchorText: string;
+  frequency: number;
+  targetUrls: string[];
+  isGeneric: boolean;
+  isOverOptimized: boolean;
+}
+
+/**
+ * Page in the corpus
+ */
+export interface CorpusPage {
+  url: string;
+  title: string;
+  wordCount: number;
+  headings: { level: number; text: string }[];
+  internalLinks: { url: string; anchorText: string }[];
+  externalLinks: { url: string; anchorText: string }[];
+  publishDate?: string;
+  lastModified?: string;
+}
+
+/**
+ * Corpus-wide metrics
+ */
+export interface CorpusMetrics {
+  totalPages: number;
+  totalWordCount: number;
+  avgWordCount: number;
+  avgInternalLinks: number;
+  avgExternalLinks: number;
+  avgHeadings: number;
+  topicalCoverage: number; // 0-100
+  contentFreshness: number; // 0-100
+}
+
+/**
+ * Corpus Audit configuration
+ */
+export interface CorpusAuditConfig {
+  domain: string;
+  sitemapUrl?: string;
+  maxPages?: number;
+  targetEAVs?: SemanticTriple[];
+  checkDuplicates: boolean;
+  checkAnchors: boolean;
+  checkCoverage: boolean;
+}
+
+/**
+ * Corpus Audit progress
+ */
+export interface CorpusAuditProgress {
+  phase: 'discovering' | 'crawling' | 'analyzing' | 'detecting_overlaps' | 'calculating_metrics' | 'complete' | 'error';
+  currentStep: string;
+  totalPages: number;
+  processedPages: number;
+  progress: number;
+  error?: string;
+}
+
+/**
+ * Complete Corpus Audit result
+ */
+export interface CorpusAuditResult {
+  domain: string;
+  timestamp: string;
+
+  // Pages analyzed
+  pages: CorpusPage[];
+
+  // Content analysis
+  contentOverlaps: ContentOverlap[];
+  anchorPatterns: AnchorTextPattern[];
+
+  // Coverage
+  semanticCoverage: {
+    covered: SemanticTriple[];
+    missing: SemanticTriple[];
+    coveragePercentage: number;
+  };
+
+  // Metrics
+  metrics: CorpusMetrics;
+
+  // Issues and recommendations
+  issues: CorpusAuditIssue[];
+  recommendations: CorpusAuditRecommendation[];
+}
+
+/**
+ * Corpus audit issue
+ */
+export interface CorpusAuditIssue {
+  type: 'duplicate_content' | 'thin_content' | 'orphan_page' | 'anchor_over_optimization' | 'generic_anchors' | 'coverage_gap';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  affectedUrls: string[];
+  description: string;
+  details?: string;
+}
+
+/**
+ * Corpus audit recommendation
+ */
+export interface CorpusAuditRecommendation {
+  type: 'consolidate' | 'expand' | 'relink' | 'diversify_anchors' | 'add_content';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  affectedUrls: string[];
+  suggestedAction: string;
+}
+
+// =============================================================================
+// SEMANTIC SEO FRAMEWORK ENHANCEMENTS
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// FEATURE 1: FRAME SEMANTICS (Fillmore's Linguistic Theory)
+// Scene-based topic expansion for low keyword data scenarios
+// -----------------------------------------------------------------------------
+
+/**
+ * Frame role types based on Fillmore's Frame Semantics
+ */
+export type FrameRole = 'agent' | 'patient' | 'instrument' | 'location' | 'time' | 'manner' | 'cause' | 'result' | 'beneficiary' | 'experiencer';
+
+/**
+ * An action within a semantic frame (verb + participants)
+ */
+export interface FrameAction {
+  verb: string;
+  agent: string;
+  patient?: string;
+  instrument?: string;
+  result?: string;
+}
+
+/**
+ * A single element within a semantic frame
+ */
+export interface FrameElement {
+  role: FrameRole;
+  entity: string;
+  semantic_type: string;
+  is_core: boolean; // Core vs peripheral frame element
+}
+
+/**
+ * Scene setting for a semantic frame
+ */
+export interface SceneSetting {
+  environment: string;
+  temporal_context: string;
+  social_context?: string;
+  physical_context?: string;
+}
+
+/**
+ * Complete semantic frame analysis result
+ */
+export interface SemanticFrame {
+  frame_name: string;
+  frame_description: string;
+  actions: FrameAction[];
+  core_elements: FrameElement[];
+  peripheral_elements: FrameElement[];
+  scene_setting: SceneSetting;
+  related_frames?: string[]; // Linked frames for expanded coverage
+}
+
+/**
+ * Result of frame-based topic expansion
+ */
+export interface FrameExpansionResult {
+  source_topic: EnrichedTopic;
+  frame_analysis: SemanticFrame;
+  generated_topics: {
+    topic: Partial<EnrichedTopic>;
+    frame_derivation: string; // How this topic was derived from the frame
+    element_source: FrameElement | FrameAction;
+  }[];
+  bridged_eavs: SemanticTriple[]; // EAVs extracted from frame analysis
+}
+
+// -----------------------------------------------------------------------------
+// FEATURE 2: MONEY PAGE 4 PILLARS
+// Commercial page optimization scoring system
+// -----------------------------------------------------------------------------
+
+/**
+ * The four pillars of a money page
+ */
+export type MoneyPagePillar = 'verbalization' | 'contextualization' | 'monetization' | 'visualization';
+
+/**
+ * Single checklist item for pillar scoring
+ */
+export interface PillarChecklistItem {
+  id: string;
+  label: string;
+  description: string;
+  weight: number; // Points toward pillar score (0-100)
+  checked: boolean;
+  category?: string; // Sub-category within pillar
+}
+
+/**
+ * Score for a single pillar
+ */
+export interface MoneyPagePillarScore {
+  pillar: MoneyPagePillar;
+  score: number; // 0-100
+  max_score: number;
+  checklist: PillarChecklistItem[];
+  suggestions: string[];
+  critical_missing: string[]; // Must-have items that are missing
+}
+
+/**
+ * Complete 4-pillar analysis result
+ */
+export interface MoneyPagePillarsResult {
+  overall_score: number; // 0-100
+  overall_grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  pillars: MoneyPagePillarScore[];
+  missing_critical: string[]; // Aggregated critical issues
+  improvement_priority: MoneyPagePillar[]; // Pillars to focus on first
+  recommendations: string[];
+}
+
+/**
+ * Configuration for 4 Pillars analysis
+ */
+export interface MoneyPagePillarsConfig {
+  weights: Record<MoneyPagePillar, number>; // Relative weight of each pillar
+  passing_threshold: number; // Minimum score to pass (e.g., 70)
+  critical_items: string[]; // Item IDs that are mandatory
+}
+
+// -----------------------------------------------------------------------------
+// FEATURE 3: QUERY TEMPLATES
+// Search pattern templates for Local SEO and service variations
+// -----------------------------------------------------------------------------
+
+/**
+ * Category of query template
+ */
+export type QueryTemplateCategory = 'local' | 'comparison' | 'how-to' | 'problem-solution' | 'best-of' | 'review' | 'cost' | 'custom';
+
+/**
+ * Single placeholder within a query template
+ */
+export interface TemplatePlaceholder {
+  name: string; // Display name (e.g., "City")
+  bracket_syntax: string; // How it appears in template (e.g., "[City]")
+  entity_type: string; // Schema.org or custom type (e.g., "AdministrativeArea")
+  validation_pattern?: string; // Regex for validation
+  example_values: string[];
+  required: boolean;
+}
+
+/**
+ * Query template definition
+ */
+export interface QueryTemplate {
+  id: string;
+  name: string;
+  pattern: string; // "Best [Service] in [City] for [Audience]"
+  description: string;
+  placeholders: TemplatePlaceholder[];
+  category: QueryTemplateCategory;
+  search_intent: 'informational' | 'transactional' | 'navigational' | 'commercial';
+  example_output: string;
+  suggested_topic_class: 'monetization' | 'informational';
+}
+
+/**
+ * Location entity for Local SEO templates
+ */
+export interface LocationEntity {
+  id: string;
+  name: string;
+  type: 'city' | 'region' | 'neighborhood' | 'country' | 'district';
+  parent_location_id?: string;
+  population?: number;
+  coordinates?: { lat: number; lng: number };
+  language?: string;
+  country_code?: string;
+}
+
+/**
+ * Variable set for template expansion
+ */
+export interface TemplateVariableSet {
+  [placeholderName: string]: string | string[];
+}
+
+/**
+ * Result of template expansion
+ */
+export interface ExpandedTemplateResult {
+  original_template: QueryTemplate;
+  variable_combinations: TemplateVariableSet[];
+  generated_queries: string[];
+  generated_topics: Partial<EnrichedTopic>[];
+  parent_topic_id?: string;
+}
+
+/**
+ * Batch expansion configuration
+ */
+export interface TemplateBatchConfig {
+  template: QueryTemplate;
+  locations?: LocationEntity[];
+  services?: string[];
+  audiences?: string[];
+  max_combinations?: number;
+  parent_topic_id?: string;
+}
+
+// -----------------------------------------------------------------------------
+// FEATURE 4: VISUAL SEMANTICS
+// "Pixels, Letters, and Bytes" framework implementation
+// -----------------------------------------------------------------------------
+
+/**
+ * Type of visual semantic rule
+ */
+export type VisualSemanticRuleType = 'alt_text' | 'placement' | 'format' | 'structure' | 'file_naming' | 'semantic_html';
+
+/**
+ * Visual semantic validation rule
+ */
+export interface VisualSemanticRule {
+  id: string;
+  rule_type: VisualSemanticRuleType;
+  name: string;
+  description: string;
+  validation_fn?: string; // Function name for programmatic validation
+  weight: number; // Importance weight (0-100)
+  is_critical: boolean; // Must pass for valid image
+}
+
+/**
+ * Image format specification
+ */
+export interface ImageOptimizationSpec {
+  recommended_format: 'avif' | 'webp' | 'jpeg' | 'png';
+  max_width: number; // 600px standard
+  max_file_size_kb: number;
+  required_attributes: string[];
+  semantic_html_structure: string; // figure > picture > img pattern
+}
+
+/**
+ * Complete visual semantic analysis for a single image
+ */
+export interface VisualSemanticAnalysis {
+  image_description: string;
+  alt_text_recommendation: string;
+  title_attribute: string;
+  file_name_recommendation: string;
+  placement_context: string; // Where in content this should appear
+  entity_connections: string[]; // Entities this image reinforces
+  format_recommendation: ImageOptimizationSpec;
+  html_template: string; // Ready-to-use HTML
+  figcaption_text: string;
+  n_gram_match: string[]; // Image types expected from SERP analysis
+  centerpiece_alignment: number; // 0-100 score for topic alignment
+}
+
+/**
+ * Complete visual semantics for a content brief
+ */
+export interface BriefVisualSemantics {
+  hero_image: VisualSemanticAnalysis;
+  section_images: Record<string, VisualSemanticAnalysis>; // Keyed by section ID
+  image_n_grams: string[]; // Expected image types from SERP
+  total_images_recommended: number;
+  visual_hierarchy: {
+    above_fold: string[]; // Image IDs to show above fold
+    centerpiece: string; // Primary image reinforcing main topic
+    supporting: string[]; // Secondary images
+  };
+  brand_alignment: {
+    uses_brand_colors: boolean;
+    has_logo_placement: boolean;
+    consistent_style: boolean;
+  };
+}
+
+/**
+ * Alt text validation result
+ */
+export interface AltTextValidationResult {
+  is_valid: boolean;
+  score: number; // 0-100
+  issues: {
+    rule_id: string;
+    message: string;
+    severity: 'error' | 'warning' | 'suggestion';
+  }[];
+  suggestions: string[];
+  entity_coverage: number; // % of entities mentioned
+  keyword_stuffing_detected: boolean;
+}
+
+/**
+ * File naming validation result
+ */
+export interface FileNameValidationResult {
+  is_valid: boolean;
+  original_name: string;
+  recommended_name: string;
+  issues: string[];
+  pattern_match: boolean; // Follows [entity]-[descriptor]-[context] pattern
+}
+
+/**
+ * Visual semantics validation result for entire brief
+ */
+export interface VisualSemanticsValidationResult {
+  overall_score: number; // 0-100
+  hero_image_score: number;
+  section_images_score: number;
+  n_gram_alignment_score: number;
+  centerpiece_alignment_score: number;
+  issues: {
+    image_id: string;
+    issue_type: VisualSemanticRuleType;
+    message: string;
+    severity: 'error' | 'warning';
+    auto_fixable: boolean;
+  }[];
+  recommendations: string[];
+}
+
+// -----------------------------------------------------------------------------
+// SOCIAL MEDIA SIGNALS
+// Based on Google Patents for Social Media & Brand Signals
+// -----------------------------------------------------------------------------
+
+/**
+ * Supported social media platforms
+ */
+export type SocialPlatform =
+  | 'linkedin'
+  | 'twitter'
+  | 'facebook'
+  | 'instagram'
+  | 'youtube'
+  | 'pinterest'
+  | 'tiktok'
+  | 'github';
+
+/**
+ * Type of social signal being measured
+ */
+export type SocialSignalType =
+  | 'profile_completeness'
+  | 'entity_consistency'
+  | 'topical_relevance'
+  | 'engagement'
+  | 'influence'
+  | 'expertise'
+  | 'brand_mentions';
+
+/**
+ * Brand signal categories from Google Patents
+ */
+export type BrandSignalCategory =
+  | 'brand_mentions'      // Implied Links Patent
+  | 'entity_authority'    // Agent Rank Patent
+  | 'social_influence'    // Social influence determination patent
+  | 'reference_queries'   // Branded search impact
+  | 'entity_consistency'; // Website Representation Vectors Patent
+
+/**
+ * Social signal rule definition
+ */
+export interface SocialSignalRule {
+  id: string;
+  signal_type: SocialSignalType;
+  name: string;
+  description: string;
+  validation_fn?: string;
+  weight: number;
+  is_critical: boolean;
+  patent_reference?: string;
+}
+
+/**
+ * Social presence score result
+ */
+export interface SocialPresenceScore {
+  overall_score: number;
+  platform_scores: Record<SocialPlatform, number>;
+  signal_scores: Record<SocialSignalType, number>;
+  recommendations: string[];
+  kp_readiness: number; // Knowledge Panel readiness from social signals
+}
+
+// -----------------------------------------------------------------------------
+// E-COMMERCE SEMANTICS
+// Semantic content network patterns for e-commerce sites
+// -----------------------------------------------------------------------------
+
+/**
+ * Semantic modifier types for e-commerce
+ */
+export type EcommerceSemanticModifierType =
+  | 'season'
+  | 'material'
+  | 'age_group'
+  | 'gender'
+  | 'size'
+  | 'color'
+  | 'style'
+  | 'price_range'
+  | 'use_case'
+  | 'brand'
+  | 'certification'
+  | 'audience';
+
+/**
+ * Contextual hierarchy level for e-commerce
+ */
+export interface EcommerceHierarchyLevel {
+  level: number; // 1 = Parent Category, 2 = Semantic Hub, 3 = Context Page, 4 = Product
+  title: string;
+  modifiers: EcommerceSemanticModifierType[];
+  parent_id?: string;
+}
+
+/**
+ * Query processing pattern for e-commerce
+ */
+export interface EcommerceQueryPattern {
+  id: string;
+  pattern: string;
+  intent: 'informational' | 'transactional' | 'commercial' | 'navigational';
+  modifiers: EcommerceSemanticModifierType[];
+  topic_class: 'monetization' | 'informational';
+}
+
+/**
+ * Rare attribute for SEO differentiation
+ */
+export interface EcommerceRareAttribute {
+  id: string;
+  category: string;
+  attribute: string;
+  seo_value: 'high' | 'medium' | 'low';
+  differentiator: boolean;
+}
+
+/**
+ * Interlinking rule for e-commerce semantic network
+ */
+export interface EcommerceInterlinkingRule {
+  link_type: 'parent' | 'child' | 'sibling' | 'cross-contextual';
+  anchor_pattern: string;
+  weight: number;
+}
+
+/**
+ * Contextual coverage assessment for e-commerce content
+ */
+export interface EcommerceContextualCoverage {
+  category: string;
+  covered_items: string[];
+  total_items: number;
+  coverage_score: number;
+  missing_critical: string[];
 }

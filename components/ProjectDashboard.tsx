@@ -2,7 +2,8 @@
 // components/ProjectDashboard.tsx
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useAppState } from '../state/appState';
-import { TopicalMap, EnrichedTopic, ContentBrief, BusinessInfo, SEOPillars, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure } from '../types';
+import { TopicalMap, EnrichedTopic, ContentBrief, BusinessInfo, SEOPillars, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure, ExpandedTemplateResult } from '../types';
+import { getSupabaseClient } from '../services/supabaseClient';
 import { KnowledgeGraph as KnowledgeGraphClass } from '../lib/knowledgeGraph';
 import { calculateDashboardMetrics } from '../utils/helpers';
 import { calculateNextSteps, RecommendationType } from '../services/recommendationEngine';
@@ -13,35 +14,47 @@ import { NextStepsWidget } from './dashboard/NextStepsWidget';
 import { FoundationPagesPanel } from './FoundationPagesPanel';
 
 // Modals
-import AddTopicModal from './AddTopicModal';
-import ContentBriefModal from './ContentBriefModal';
-import KnowledgeDomainModal from './KnowledgeDomainModal';
-import GscExpansionHubModal from './GscExpansionHubModal';
-import ValidationResultModal from './ValidationResultModal';
-import MergeSuggestionsModal from './MergeSuggestionsModal';
-import SemanticAnalysisModal from './SemanticAnalysisModal';
-import ContextualCoverageModal from './ContextualCoverageModal';
-import { InternalLinkingAuditModal } from './InternalLinkingAuditModal';
-import { LinkingAuditModal } from './LinkingAuditModal';
-import TopicalAuthorityModal from './TopicalAuthorityModal';
-import PublicationPlanModal from './PublicationPlanModal';
-import ImprovementLogModal from './ImprovementLogModal';
-import DraftingModal from './DraftingModal';
-import SchemaModal from './SchemaModal';
-import ContentIntegrityModal from './ContentIntegrityModal';
-import ResponseCodeSelectionModal from './ResponseCodeSelectionModal';
-import BriefReviewModal from './BriefReviewModal';
-import { InternalLinkingModal } from './InternalLinkingModal';
-import PillarChangeConfirmationModal from './PillarChangeConfirmationModal';
-import EavManagerModal from './EavManagerModal';
-import CompetitorManagerModal from './CompetitorManagerModal';
-import TopicExpansionModal from './TopicExpansionModal';
-import TopicResourcesModal from './TopicResourcesModal';
-import BusinessInfoModal from './BusinessInfoModal';
-import PillarEditModal from './PillarEditModal';
+import {
+  AddTopicModal,
+  ContentBriefModal,
+  KnowledgeDomainModal,
+  GscExpansionHubModal,
+  ValidationResultModal,
+  MergeSuggestionsModal,
+  SemanticAnalysisModal,
+  ContextualCoverageModal,
+  InternalLinkingAuditModal,
+  LinkingAuditModal,
+  TopicalAuthorityModal,
+  PublicationPlanModal,
+  ImprovementLogModal,
+  DraftingModal,
+  SchemaModal,
+  ContentIntegrityModal,
+  ResponseCodeSelectionModal,
+  BriefReviewModal,
+  InternalLinkingModal,
+  PillarChangeConfirmationModal,
+  EavManagerModal,
+  CompetitorManagerModal,
+  TopicExpansionModal,
+  TopicResourcesModal,
+  BusinessInfoModal,
+  PillarEditModal,
+} from './modals';
+import { LocationManagerModal } from './templates/LocationManagerModal';
 import { PlanningDashboard, PerformanceImportModal } from './planning';
+import { KPStrategyPage } from './KPStrategyPage';
+import { EntityAuthorityPage } from './EntityAuthorityPage';
+import { QueryNetworkAudit } from './QueryNetworkAudit';
+import { MentionScannerDashboard } from './MentionScannerDashboard';
+import { CorpusAuditReport } from './CorpusAuditReport';
+import { EnhancedMetricsDashboard } from './dashboard/EnhancedMetricsDashboard';
+import { ComprehensiveAuditDashboard } from './dashboard/ComprehensiveAuditDashboard';
+import { InsightsHub } from './insights';
 
 import { Button } from './ui/Button';
+import { FeatureErrorBoundary } from './ui/FeatureErrorBoundary';
 import TabNavigation, { createDashboardTabs, NavIcons } from './dashboard/TabNavigation';
 import StrategyOverview from './dashboard/StrategyOverview';
 import CollapsiblePanel from './dashboard/CollapsiblePanel';
@@ -234,6 +247,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
     const coreTopics = useMemo(() => allTopics.filter(t => t.type === 'core'), [allTopics]);
     const outerTopics = useMemo(() => allTopics.filter(t => t.type === 'outer'), [allTopics]);
+    const childTopics = useMemo(() => allTopics.filter(t => t.type === 'child'), [allTopics]);
     const briefs = useMemo(() => topicalMap.briefs || {}, [topicalMap.briefs]);
 
     const metrics = useMemo(() => calculateDashboardMetrics({
@@ -300,6 +314,71 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         }
     };
 
+    // Handle topics generated from query templates
+    const handleTemplateGeneratedTopics = useCallback(async (result: ExpandedTemplateResult) => {
+        if (!topicalMap.id || result.generated_topics.length === 0) return;
+
+        const user = state.user;
+        if (!user?.id) {
+            dispatch({ type: 'SET_ERROR', payload: 'User not authenticated' });
+            return;
+        }
+
+        dispatch({ type: 'SET_LOADING', payload: { key: 'templateExpansion', value: true } });
+        try {
+            const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+
+            // Insert generated topics to database
+            const topicsToInsert = result.generated_topics.map(topic => ({
+                id: topic.id,
+                map_id: topicalMap.id,
+                parent_topic_id: topic.parent_topic_id,
+                title: topic.title,
+                slug: topic.slug,
+                description: topic.description,
+                type: topic.type || 'outer',
+                freshness: topic.freshness || 'EVERGREEN',
+                user_id: user.id,
+            }));
+
+            const { data, error } = await supabase
+                .from('topics')
+                .insert(topicsToInsert)
+                .select();
+
+            if (error) throw error;
+
+            // Update local state
+            if (data) {
+                dispatch({
+                    type: 'SET_TOPICS_FOR_MAP',
+                    payload: {
+                        mapId: topicalMap.id,
+                        topics: [...allTopics, ...data as EnrichedTopic[]],
+                    },
+                });
+            }
+
+            dispatch({
+                type: 'SET_NOTIFICATION',
+                payload: `Generated ${result.generated_topics.length} topics from template "${result.original_template.name}"`,
+            });
+
+        } catch (e) {
+            console.error('Template topic generation error:', e);
+            dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to generate topics from template' });
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: { key: 'templateExpansion', value: false } });
+        }
+    }, [topicalMap.id, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, allTopics, dispatch, state.user]);
+
+    // Location Manager Modal state
+    const [showLocationManager, setShowLocationManager] = useState(false);
+
+    // KP Strategy and Entity Authority page states
+    const [showKPStrategy, setShowKPStrategy] = useState(false);
+    const [showEntityAuthority, setShowEntityAuthority] = useState(false);
+
     // Create navigation tabs configuration
     const dashboardTabs = createDashboardTabs({
         onEditPillars: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'pillarEdit', visible: true } }),
@@ -312,6 +391,11 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         onValidate: onValidateMap,
         onLinkAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'multiPassLinkingAudit', visible: true } }),
         onUnifiedAudit: onRunUnifiedAudit,
+        onQueryNetworkAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'queryNetworkAudit', visible: true } }),
+        onMentionScanner: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'mentionScanner', visible: true } }),
+        onCorpusAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'corpusAudit', visible: true } }),
+        onEnhancedMetrics: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'enhancedMetrics', visible: true } }),
+        onComprehensiveAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'comprehensiveAudit', visible: true } }),
         onRegenerateMap: onRegenerateMap,
         onRepairBriefs: onRepairBriefs,
         onExport: () => onExportData('xlsx'),
@@ -332,6 +416,9 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         onImportPerformance: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'performanceImport', visible: true } }),
         isGeneratingPlan: state.publicationPlanning?.isGeneratingPlan,
         hasPlan: !!state.publicationPlanning?.planResult,
+        // KP Strategy and Entity Authority
+        onKPStrategy: () => setShowKPStrategy(true),
+        onEntityAuthority: () => setShowEntityAuthority(true),
     });
 
     return (
@@ -387,21 +474,24 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             )}
 
             {/* Main Content: Topical Map */}
-            <TopicalMapDisplay
-                coreTopics={coreTopics}
-                outerTopics={outerTopics}
-                briefs={briefs}
-                onSelectTopicForBrief={handleSelectTopicForBrief}
-                onExpandCoreTopic={(topic, mode) => onExpandCoreTopic(topic, mode, undefined, undefined)} // Default no override for direct click
-                expandingCoreTopicId={expandingCoreTopicId}
-                onExecuteMerge={() => {}} // Placeholder
-                canExpandTopics={canExpandTopics}
-                canGenerateBriefs={canGenerateBriefs}
-                onGenerateInitialMap={onGenerateInitialMap}
-                onUpdateTopic={onUpdateTopic}
-                onRepairFoundationPages={onGenerateMissingFoundationPages}
-                isRepairingFoundation={isLoadingFoundationPages}
-            />
+            <FeatureErrorBoundary featureName="Topical Map">
+                <TopicalMapDisplay
+                    coreTopics={coreTopics}
+                    outerTopics={outerTopics}
+                    childTopics={childTopics}
+                    briefs={briefs}
+                    onSelectTopicForBrief={handleSelectTopicForBrief}
+                    onExpandCoreTopic={(topic, mode) => onExpandCoreTopic(topic, mode, undefined, undefined)} // Default no override for direct click
+                    expandingCoreTopicId={expandingCoreTopicId}
+                    onExecuteMerge={() => {}} // Placeholder
+                    canExpandTopics={canExpandTopics}
+                    canGenerateBriefs={canGenerateBriefs}
+                    onGenerateInitialMap={onGenerateInitialMap}
+                    onUpdateTopic={onUpdateTopic}
+                    onRepairFoundationPages={onGenerateMissingFoundationPages}
+                    isRepairingFoundation={isLoadingFoundationPages}
+                />
+            </FeatureErrorBoundary>
 
             {/* Website Structure - Foundation Pages */}
             <div ref={websiteStructureRef}>
@@ -434,7 +524,11 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 onAddTopic={onAddTopic}
                 onBulkAddTopics={onBulkAddTopics}
                 coreTopics={coreTopics}
+                outerTopics={outerTopics}
                 isLoading={!!isLoading.addTopic}
+                mapId={topicalMap.id}
+                onGenerateTopicsFromTemplate={handleTemplateGeneratedTopics}
+                onOpenLocationManager={() => setShowLocationManager(true)}
             />
             <ContentBriefModal
                 allTopics={allTopics}
@@ -635,6 +729,111 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 userId={state.user?.id || ''}
                 supabaseUrl={effectiveBusinessInfo.supabaseUrl || ''}
                 supabaseKey={effectiveBusinessInfo.supabaseAnonKey || ''}
+            />
+            {/* Query Network Audit Modal */}
+            {modals.queryNetworkAudit && (
+                <div className="fixed inset-0 z-50">
+                    <QueryNetworkAudit
+                        initialKeyword={topicalMap.pillars?.centralEntity || ''}
+                        mapId={topicalMap.id}
+                        onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'queryNetworkAudit', visible: false } })}
+                    />
+                </div>
+            )}
+
+            {modals.mentionScanner && (
+                <MentionScannerDashboard
+                    businessInfo={effectiveBusinessInfo}
+                    initialEntityName={topicalMap.pillars?.centralEntity || effectiveBusinessInfo.projectName || ''}
+                    mapId={topicalMap.id}
+                    onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'mentionScanner', visible: false } })}
+                />
+            )}
+
+            {modals.corpusAudit && (
+                <CorpusAuditReport
+                    businessInfo={effectiveBusinessInfo}
+                    targetEAVs={topicalMap.eavs as any[] || []}
+                    mapId={topicalMap.id}
+                    onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'corpusAudit', visible: false } })}
+                />
+            )}
+
+            {/* Enhanced Metrics Dashboard Modal */}
+            {modals.enhancedMetrics && (
+                <div className="fixed inset-0 z-50 bg-gray-900/95 overflow-auto">
+                    <div className="min-h-full p-6">
+                        <div className="max-w-7xl mx-auto">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-semibold text-white">Enhanced Audit Metrics</h2>
+                                <button
+                                    onClick={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'enhancedMetrics', visible: false } })}
+                                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <EnhancedMetricsDashboard
+                                eavs={topicalMap.eavs as SemanticTriple[] || []}
+                                topicCount={allTopics.length}
+                                issues={unifiedAudit?.issues || []}
+                                projectName={projectName}
+                                mapName={topicalMap.name}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SEO Insights Hub Modal */}
+            {modals.comprehensiveAudit && (
+                <div className="fixed inset-0 z-50 bg-gray-900/95 overflow-auto">
+                    <div className="min-h-full p-6">
+                        <div className="max-w-7xl mx-auto">
+                            <FeatureErrorBoundary featureName="SEO Insights Hub">
+                                <InsightsHub
+                                    mapId={topicalMap.id}
+                                    projectName={projectName}
+                                    mapName={topicalMap.name}
+                                    onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'comprehensiveAudit', visible: false } })}
+                                    onOpenQueryNetworkAudit={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'queryNetworkAudit', visible: true } })}
+                                    onOpenEATScanner={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eatScanner', visible: true } })}
+                                    onOpenCorpusAudit={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'corpusAudit', visible: true } })}
+                                />
+                            </FeatureErrorBoundary>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Location Manager Modal - for managing locations used in templates */}
+            <LocationManagerModal
+                isOpen={showLocationManager}
+                onClose={() => setShowLocationManager(false)}
+            />
+
+            {/* KP Strategy Page */}
+            <KPStrategyPage
+                isOpen={showKPStrategy}
+                onClose={() => setShowKPStrategy(false)}
+                businessInfo={effectiveBusinessInfo}
+                entityIdentity={effectiveBusinessInfo.entityIdentity}
+                eavs={topicalMap.eavs as SemanticTriple[] || []}
+            />
+
+            {/* Entity Authority Page */}
+            <EntityAuthorityPage
+                isOpen={showEntityAuthority}
+                onClose={() => setShowEntityAuthority(false)}
+                businessInfo={effectiveBusinessInfo}
+                entityIdentity={effectiveBusinessInfo.entityIdentity}
+                eavs={topicalMap.eavs as SemanticTriple[] || []}
+                onOpenKPStrategy={() => {
+                    setShowEntityAuthority(false);
+                    setShowKPStrategy(true);
+                }}
             />
         </div>
     );

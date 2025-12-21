@@ -194,6 +194,7 @@ const callPerplexityForResearch = async (
       headers: {
         'Content-Type': 'application/json',
         'apikey': businessInfo.supabaseAnonKey,
+        'Authorization': `Bearer ${businessInfo.supabaseAnonKey}`,
       },
       body: JSON.stringify({
         url: PERPLEXITY_API_URL,

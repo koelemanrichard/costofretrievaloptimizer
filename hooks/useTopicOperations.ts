@@ -3,7 +3,7 @@ import React, { useCallback } from 'react';
 import { AppAction } from '../state/appState';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { BusinessInfo, EnrichedTopic } from '../types';
-import * as aiService from '../services/ai/index';
+import * as aiService from '../services/aiService';
 import { sanitizeTopicFromDb } from '../utils/parsers';
 import { User } from '@supabase/supabase-js';
 

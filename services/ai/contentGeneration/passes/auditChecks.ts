@@ -50,6 +50,39 @@ const INSTRUCTIONAL_PREDICATES = [
   'process', 'method', 'approach', 'strategy', 'techniques'
 ];
 
+// Generic headings that should be avoided (topic-specific is better)
+const GENERIC_HEADINGS = [
+  'introduction',
+  'conclusion',
+  'overview',
+  'summary',
+  'getting started',
+  'final thoughts',
+  'wrapping up',
+  'in closing'
+];
+
+// Passive voice indicator patterns
+const PASSIVE_PATTERNS = [
+  /\b(is|are|was|were|been|being)\s+(being\s+)?(done|made|created|used|considered|known|found|seen|given|taken|called|named|built|written|designed|developed|established|implemented|performed|executed|completed|achieved)\b/gi,
+  /\b(is|are|was|were|been|being)\s+\w+ed\s+by\b/gi  // "is loved by", "was created by"
+];
+
+// Future tense patterns that should be avoided for factual statements
+const FUTURE_TENSE_PATTERNS = [
+  /\b(will be|will have|will become|will make|will provide|will help|will allow|will enable)\b/gi,
+  /\b(is going to|are going to|is about to|are about to)\b/gi,
+  /\b(shall be|shall have|shall become)\b/gi
+];
+
+// Comprehensive stop words list for density checking
+const STOP_WORDS_FULL = [
+  'also', 'basically', 'very', 'maybe', 'actually', 'really', 'just', 'quite', 'simply',
+  'definitely', 'certainly', 'obviously', 'clearly', 'literally', 'absolutely',
+  'pretty much', 'kind of', 'sort of', 'in order to', 'due to the fact that',
+  'at this point in time', 'for the purpose of', 'in the event that'
+];
+
 export function runAlgorithmicAudit(
   draft: string,
   brief: ContentBrief,
@@ -68,6 +101,21 @@ export function runAlgorithmicAudit(
 
   // 4. Heading Hierarchy
   results.push(checkHeadingHierarchy(draft));
+
+  // NEW: Generic Headings Check (avoid "Introduction", "Conclusion")
+  results.push(checkGenericHeadings(draft));
+
+  // NEW: Passive Voice Check
+  results.push(checkPassiveVoice(draft));
+
+  // NEW: Heading-Entity Alignment Check
+  results.push(checkHeadingEntityAlignment(draft, info.seedKeyword, brief.title));
+
+  // NEW: Future Tense for Facts Check
+  results.push(checkFutureTenseForFacts(draft));
+
+  // NEW: Stop Word Density (full document)
+  results.push(checkStopWordDensity(draft));
 
   // 5. List Count Specificity
   results.push(checkListCountSpecificity(draft));
@@ -220,6 +268,192 @@ function checkHeadingHierarchy(text: string): AuditRuleResult {
     };
   }
   return { ruleName: 'Heading Hierarchy', isPassing: true, details: 'Heading levels are properly nested.' };
+}
+
+/**
+ * Check for generic headings like "Introduction", "Conclusion", "Overview"
+ * These should be replaced with topic-specific headings
+ */
+function checkGenericHeadings(text: string): AuditRuleResult {
+  const headings = text.match(/^#{2,4}\s+.+$/gm) || [];
+  const genericFound: string[] = [];
+
+  headings.forEach(h => {
+    const headingText = h.replace(/^#+\s*/, '').trim().toLowerCase();
+    if (GENERIC_HEADINGS.some(generic => headingText === generic || headingText.startsWith(generic + ':'))) {
+      genericFound.push(h.replace(/^#+\s*/, '').trim());
+    }
+  });
+
+  if (genericFound.length > 0) {
+    return {
+      ruleName: 'Generic Headings',
+      isPassing: false,
+      details: `Found ${genericFound.length} generic heading(s): ${genericFound.join(', ')}`,
+      affectedTextSnippet: genericFound[0],
+      remediation: 'Replace generic headings with topic-specific ones. Instead of "Introduction" use "Wat is [Topic]" or "[Topic]: Een Overzicht".'
+    };
+  }
+  return { ruleName: 'Generic Headings', isPassing: true, details: 'All headings are topic-specific.' };
+}
+
+/**
+ * Check for excessive passive voice usage
+ * Passive voice reduces clarity and authoritativeness
+ */
+function checkPassiveVoice(text: string): AuditRuleResult {
+  let passiveCount = 0;
+  const passiveExamples: string[] = [];
+
+  PASSIVE_PATTERNS.forEach(pattern => {
+    const matches = text.match(pattern) || [];
+    passiveCount += matches.length;
+    if (passiveExamples.length < 3) {
+      passiveExamples.push(...matches.slice(0, 3 - passiveExamples.length));
+    }
+  });
+
+  const wordCount = text.split(/\s+/).length;
+  const passiveRatio = wordCount > 0 ? passiveCount / (wordCount / 100) : 0; // per 100 words
+
+  // Allow up to 2 passive constructions per 100 words
+  if (passiveRatio > 2) {
+    return {
+      ruleName: 'Passive Voice',
+      isPassing: false,
+      details: `Found ${passiveCount} passive constructions (${passiveRatio.toFixed(1)} per 100 words).`,
+      affectedTextSnippet: passiveExamples.slice(0, 2).join(', '),
+      remediation: 'Rewrite passive sentences to active voice. Instead of "X is done by Y" use "Y does X".'
+    };
+  }
+  return { ruleName: 'Passive Voice', isPassing: true, details: 'Good use of active voice.' };
+}
+
+/**
+ * Check that headings contain or relate to the central entity
+ * H2s should include terms that link back to the main topic
+ */
+function checkHeadingEntityAlignment(text: string, centralEntity: string, topicTitle: string): AuditRuleResult {
+  const headings = text.match(/^## .+$/gm) || [];
+
+  if (headings.length < 2) {
+    return { ruleName: 'Heading-Entity Alignment', isPassing: true, details: 'Not enough headings to check.' };
+  }
+
+  // Extract key terms from central entity and topic title
+  const keyTerms = new Set<string>();
+  const stopWords = ['the', 'a', 'an', 'of', 'and', 'or', 'for', 'to', 'in', 'on', 'with', 'is', 'are', 'wat', 'een', 'de', 'het', 'van', 'voor', 'en', 'naar'];
+
+  [centralEntity, topicTitle].forEach(term => {
+    if (term) {
+      term.toLowerCase().split(/\s+/).forEach(word => {
+        if (word.length > 2 && !stopWords.includes(word)) {
+          keyTerms.add(word);
+        }
+      });
+    }
+  });
+
+  if (keyTerms.size === 0) {
+    return { ruleName: 'Heading-Entity Alignment', isPassing: true, details: 'No key terms identified for alignment check.' };
+  }
+
+  // Check each H2 for at least one key term
+  const misalignedHeadings: string[] = [];
+
+  headings.forEach(h => {
+    const headingLower = h.toLowerCase();
+    const hasKeyTerm = Array.from(keyTerms).some(term => headingLower.includes(term));
+
+    // Skip introduction/conclusion headings for this check (they're caught by generic heading check)
+    const isBoilerplate = GENERIC_HEADINGS.some(g => headingLower.includes(g));
+
+    if (!hasKeyTerm && !isBoilerplate) {
+      misalignedHeadings.push(h.replace(/^## /, ''));
+    }
+  });
+
+  // Allow up to 1 heading without key terms (for "Related Topics" etc.)
+  if (misalignedHeadings.length > 1) {
+    return {
+      ruleName: 'Heading-Entity Alignment',
+      isPassing: false,
+      details: `${misalignedHeadings.length} headings don't reference the central entity.`,
+      affectedTextSnippet: misalignedHeadings.slice(0, 2).join(', '),
+      remediation: `Include terms from "${centralEntity}" in H2 headings for contextual overlap.`
+    };
+  }
+  return { ruleName: 'Heading-Entity Alignment', isPassing: true, details: 'Headings maintain contextual link to central entity.' };
+}
+
+/**
+ * Check for inappropriate future tense usage for factual statements
+ * Facts should use present tense ("X is") not future ("X will be")
+ */
+function checkFutureTenseForFacts(text: string): AuditRuleResult {
+  let futureTenseCount = 0;
+  const futureTenseExamples: string[] = [];
+
+  FUTURE_TENSE_PATTERNS.forEach(pattern => {
+    const matches = text.match(pattern) || [];
+    futureTenseCount += matches.length;
+    if (futureTenseExamples.length < 3) {
+      futureTenseExamples.push(...matches.slice(0, 3 - futureTenseExamples.length));
+    }
+  });
+
+  const wordCount = text.split(/\s+/).length;
+  const futureTenseRatio = wordCount > 0 ? futureTenseCount / (wordCount / 100) : 0; // per 100 words
+
+  // Allow up to 1 future tense construction per 100 words (some may be legitimately about future events)
+  if (futureTenseRatio > 1) {
+    return {
+      ruleName: 'Future Tense for Facts',
+      isPassing: false,
+      details: `Found ${futureTenseCount} future tense phrases (${futureTenseRatio.toFixed(1)} per 100 words).`,
+      affectedTextSnippet: futureTenseExamples.slice(0, 2).join(', '),
+      remediation: 'Use present tense for factual statements. Instead of "X will provide" use "X provides". Reserve future tense for actual predictions.'
+    };
+  }
+  return { ruleName: 'Future Tense for Facts', isPassing: true, details: 'Good use of present tense for facts.' };
+}
+
+/**
+ * Check stop word density across the full document
+ * High density of filler words reduces content quality
+ */
+function checkStopWordDensity(text: string): AuditRuleResult {
+  const textLower = text.toLowerCase();
+  let stopWordCount = 0;
+  const foundStopWords: string[] = [];
+
+  STOP_WORDS_FULL.forEach(stopWord => {
+    const regex = new RegExp(`\\b${stopWord.replace(/\s+/g, '\\s+')}\\b`, 'gi');
+    const matches = textLower.match(regex) || [];
+    stopWordCount += matches.length;
+    if (matches.length > 0 && !foundStopWords.includes(stopWord)) {
+      foundStopWords.push(stopWord);
+    }
+  });
+
+  const wordCount = text.split(/\s+/).length;
+  const densityPercentage = wordCount > 0 ? (stopWordCount / wordCount) * 100 : 0;
+
+  // Flag if stop word density exceeds 3% of total content
+  if (densityPercentage > 3) {
+    return {
+      ruleName: 'Stop Word Density',
+      isPassing: false,
+      details: `Stop word density: ${densityPercentage.toFixed(1)}% (${stopWordCount} occurrences). Maximum: 3%`,
+      affectedTextSnippet: foundStopWords.slice(0, 4).join(', '),
+      remediation: 'Remove filler words like "very", "basically", "actually", "really", "just". These add no semantic value.'
+    };
+  }
+  return {
+    ruleName: 'Stop Word Density',
+    isPassing: true,
+    details: `Stop word density: ${densityPercentage.toFixed(1)}% (acceptable).`
+  };
 }
 
 function checkListCountSpecificity(text: string): AuditRuleResult {

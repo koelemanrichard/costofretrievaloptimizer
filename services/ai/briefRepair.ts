@@ -11,20 +11,19 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { getGenerateTextFunction } from './providerDispatcher';
 
 /**
  * Get the appropriate AI service generateText function based on provider
  */
 function getGenerateText(businessInfo: BusinessInfo): (prompt: string, bi: BusinessInfo, dispatch: React.Dispatch<any>) => Promise<string> {
-  switch (businessInfo.aiProvider) {
-    case 'openai': return openAiService.generateText;
-    case 'anthropic': return anthropicService.generateText;
-    case 'perplexity': return perplexityService.generateText;
-    case 'openrouter': return openRouterService.generateText;
-    case 'gemini':
-    default:
-      return geminiService.generateText;
-  }
+  return getGenerateTextFunction(businessInfo, {
+    gemini: geminiService,
+    openai: openAiService,
+    anthropic: anthropicService,
+    perplexity: perplexityService,
+    openrouter: openRouterService,
+  }) as (prompt: string, bi: BusinessInfo, dispatch: React.Dispatch<any>) => Promise<string>;
 }
 
 /**

@@ -259,8 +259,19 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
 
       // Build resolved context from conflict resolutions
       // START with base business_info from first map to preserve non-conflicting fields
+      // BUT strip AI settings - they should come from global user_settings, not be saved per-map
       const baseBusinessInfo = mergeState.sourceMaps[0]?.business_info as Partial<BusinessInfo> || {};
-      const resolvedBusinessInfo: Partial<BusinessInfo> = { ...baseBusinessInfo };
+      const {
+          aiProvider: _ap,
+          aiModel: _am,
+          geminiApiKey: _gk,
+          openAiApiKey: _ok,
+          anthropicApiKey: _ak,
+          perplexityApiKey: _pk,
+          openRouterApiKey: _ork,
+          ...baseBusinessContext
+      } = baseBusinessInfo;
+      const resolvedBusinessInfo: Partial<BusinessInfo> = { ...baseBusinessContext };
       const basePillars = mergeState.sourceMaps[0]?.pillars;
       const resolvedPillars = basePillars ? { ...basePillars } : null;
 

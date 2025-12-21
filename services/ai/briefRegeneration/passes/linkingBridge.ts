@@ -8,6 +8,7 @@ import * as openAiService from '../../../openAiService';
 import * as anthropicService from '../../../anthropicService';
 import * as perplexityService from '../../../perplexityService';
 import * as openRouterService from '../../../openRouterService';
+import { dispatchToProvider } from '../../providerDispatcher';
 import React from 'react';
 
 export interface LinkingBridgeResult {
@@ -128,27 +129,14 @@ export async function regenerateLinkingAndBridge(
   };
 
   try {
-    let result: any;
-
     // Call the appropriate provider
-    switch (businessInfo.aiProvider) {
-      case 'openai':
-        result = await openAiService.generateJson(prompt, businessInfo, dispatch, fallback);
-        break;
-      case 'anthropic':
-        result = await anthropicService.generateJson(prompt, businessInfo, dispatch, fallback);
-        break;
-      case 'perplexity':
-        result = await perplexityService.generateJson(prompt, businessInfo, dispatch, fallback);
-        break;
-      case 'openrouter':
-        result = await openRouterService.generateJson(prompt, businessInfo, dispatch, fallback);
-        break;
-      case 'gemini':
-      default:
-        result = await geminiService.generateJson(prompt, businessInfo, dispatch, fallback);
-        break;
-    }
+    const result = await dispatchToProvider(businessInfo, {
+      gemini: () => geminiService.generateJson(prompt, businessInfo, dispatch, fallback),
+      openai: () => openAiService.generateJson(prompt, businessInfo, dispatch, fallback),
+      anthropic: () => anthropicService.generateJson(prompt, businessInfo, dispatch, fallback),
+      perplexity: () => perplexityService.generateJson(prompt, businessInfo, dispatch, fallback),
+      openrouter: () => openRouterService.generateJson(prompt, businessInfo, dispatch, fallback),
+    });
 
     // Validate the result
     const contextualBridge = result.contextualBridge && typeof result.contextualBridge === 'object'

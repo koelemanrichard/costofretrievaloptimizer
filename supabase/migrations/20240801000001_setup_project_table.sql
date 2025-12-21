@@ -1,3 +1,4 @@
--- Project table setup migration (table already exists in database)
--- This file was corrupted and has been replaced with a placeholder
+-- Project table setup (no-op)
+-- Project table configured in 20240725000000_initial_schema.sql
+-- This file is kept for migration history compatibility
 SELECT 1;

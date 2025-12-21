@@ -5,17 +5,16 @@ import { AppStateContext, appReducer, initialState } from './state/appState';
 import { AppStep, BusinessInfo, Project, TopicalMap } from './types';
 import { getSupabaseClient } from './services/supabaseClient';
 import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
+import { setGlobalUsageContext, clearGlobalUsageContext } from './services/telemetryService';
 
 // Import Screens
-import AuthScreen from './components/AuthScreen';
-import ProjectSelectionScreen from './components/ProjectSelectionScreen';
+import { AuthScreen, ProjectSelectionScreen, AnalysisStatusScreen } from './components/screens';
 import ProjectWorkspace from './components/ProjectWorkspace';
-import AnalysisStatusScreen from './components/AnalysisStatusScreen';
 import { SiteAnalysisToolV2 } from './components/site-analysis';
 import AdminDashboard from './components/admin/AdminDashboard';
 
 // Import Global UI
-import SettingsModal from './components/SettingsModal';
+import { SettingsModal } from './components/modals';
 import { NotificationBanner } from './components/ui/NotificationBanner';
 import ConfirmationModal from './components/ui/ConfirmationModal';
 import GlobalLoadingBar from './components/ui/GlobalLoadingBar';
@@ -39,18 +38,33 @@ const App: React.FC = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             dispatch({ type: 'SET_USER', payload: session?.user ?? null });
             if (session?.user) {
+                // Set global usage context for AI telemetry tracking
+                setGlobalUsageContext({ userId: session.user.id });
                 // Only redirect to selection if we are currently on the Auth screen (login/signup)
                 // This prevents resetting the view when switching tabs (which triggers session refresh)
                 if (appStepRef.current === AppStep.AUTH) {
                     dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION });
                 }
             } else {
+                // Clear usage context on logout
+                clearGlobalUsageContext();
                 dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
             }
         });
 
         return () => subscription.unsubscribe();
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
+
+    // Update global usage context when project/map changes for AI telemetry
+    useEffect(() => {
+        if (state.user) {
+            setGlobalUsageContext({
+                userId: state.user.id,
+                projectId: state.activeProjectId || undefined,
+                mapId: state.activeMapId || undefined
+            });
+        }
+    }, [state.user, state.activeProjectId, state.activeMapId]);
 
     // Expose utility functions to window for console access
     useEffect(() => {
@@ -76,7 +90,27 @@ const App: React.FC = () => {
         (window as any).getActiveMapId = () => state.activeMapId;
         (window as any).getActiveProjectId = () => state.activeProjectId;
 
-        console.log('[App] Console utilities available: window.repairBriefs(), window.getActiveMapId(), window.getActiveProjectId()');
+        // Force refresh topics - clears cached topics to force a re-fetch from database
+        (window as any).forceRefreshTopics = () => {
+            const targetMapId = state.activeMapId;
+            if (!targetMapId) {
+                console.error('[ForceRefresh] No active map. Navigate to a map first.');
+                return;
+            }
+            console.log(`[ForceRefresh] Clearing cached topics for map: ${targetMapId}`);
+
+            // Clear topics from the map to force useMapData to refetch
+            dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: targetMapId, topics: undefined as any } });
+
+            // Briefly deselect and reselect the map to trigger data reload
+            dispatch({ type: 'SET_ACTIVE_MAP', payload: null });
+            setTimeout(() => {
+                dispatch({ type: 'SET_ACTIVE_MAP', payload: targetMapId });
+                console.log('[ForceRefresh] Map reselected - useMapData should now fetch fresh data.');
+            }, 100);
+        };
+
+        console.log('[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.getActiveMapId(), window.getActiveProjectId()');
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, state.activeMapId, state.activeProjectId]);
 
     useEffect(() => {
@@ -116,6 +150,18 @@ const App: React.FC = () => {
                                 filteredSettings[key] = settingsData[key];
                             }
                         }
+
+                        // Debug: Log API key sources to help diagnose auth issues
+                        const envKey = state.businessInfo.anthropicApiKey;
+                        const dbKey = filteredSettings.anthropicApiKey;
+                        console.log('[Settings] API Key Sources:', {
+                            envKeyPreview: envKey ? `${envKey.substring(0, 15)}...` : 'NOT SET',
+                            dbKeyPreview: dbKey ? `${dbKey.substring(0, 15)}...` : 'NOT SET',
+                            usingSource: dbKey ? 'DATABASE (overrides env)' : 'ENV FILE',
+                            dbKeyLength: dbKey?.length || 0,
+                            envKeyLength: envKey?.length || 0
+                        });
+
                         dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...filteredSettings } });
                     }
                 } catch (e) {

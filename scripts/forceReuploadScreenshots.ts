@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const SUPABASE_URL = 'https://blucvnmncvwzlwxoyoum.supabase.co';
+const SUPABASE_URL = 'https://shtqshmmsrmtquuhyupl.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SCREENSHOT_DIR = path.join(process.cwd(), 'public', 'help-screenshots');
 

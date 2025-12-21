@@ -20,6 +20,7 @@ import {
   getBusinessTranslation,
   getHealthStatus,
 } from '../config/businessLanguageMap';
+import { autoClassifyEavs } from './ai/eavClassifier';
 
 /**
  * Generate a complete SEO audit report
@@ -320,5 +321,268 @@ export const groupIssuesByPhase = (issues: ReportIssue[]): Record<string, Report
     linkStructure: issues.filter(i => i.phase === 'linkStructure'),
     contentQuality: issues.filter(i => i.phase === 'contentQuality'),
     visualSchema: issues.filter(i => i.phase === 'visualSchema'),
+  };
+};
+
+// =============================================================================
+// ENHANCED METRICS - New Semantic & Authority Analysis
+// =============================================================================
+
+export interface EnhancedAuditMetrics {
+  semanticCompliance: {
+    score: number;
+    target: number;
+    eavCoverage: number;
+    categoryDistribution: Record<string, number>;
+    classificationDistribution: Record<string, number>;
+    recommendations: string[];
+  };
+  informationDensity: {
+    avgFactsPerSection: number;
+    targetFactsPerSection: number;
+    lowDensityPages: string[];
+    highDensityPages: string[];
+  };
+  authorityIndicators: {
+    eavAuthorityScore: number;
+    uniqueEavCount: number;
+    rootEavCount: number;
+    rareEavCount: number;
+    commonEavCount: number;
+    topicalDepthScore: number;
+  };
+  actionRoadmap: {
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    category: string;
+    action: string;
+    impact: string;
+  }[];
+}
+
+/**
+ * Calculate semantic compliance metrics
+ */
+export const calculateSemanticComplianceMetrics = (
+  eavs: Array<{
+    subject?: { label?: string };
+    predicate?: { category?: string; classification?: string; relation?: string };
+    object?: { value?: string | number };
+  }>
+): EnhancedAuditMetrics['semanticCompliance'] => {
+  const TARGET_SCORE = 85;
+
+  if (!eavs || eavs.length === 0) {
+    return {
+      score: 0,
+      target: TARGET_SCORE,
+      eavCoverage: 0,
+      categoryDistribution: {},
+      classificationDistribution: {},
+      recommendations: ['Create EAV triples to establish semantic foundation'],
+    };
+  }
+
+  // Calculate category distribution
+  const categoryDistribution: Record<string, number> = {};
+  const classificationDistribution: Record<string, number> = {};
+
+  for (const eav of eavs) {
+    const category = eav.predicate?.category || 'UNCLASSIFIED';
+    const classification = eav.predicate?.classification || 'UNCLASSIFIED';
+
+    categoryDistribution[category] = (categoryDistribution[category] || 0) + 1;
+    classificationDistribution[classification] = (classificationDistribution[classification] || 0) + 1;
+  }
+
+  // Calculate compliance score based on:
+  // - Category coverage (UNIQUE, ROOT, RARE, COMMON)
+  // - Classification diversity
+  // - Overall EAV count
+  const expectedCategories = ['UNIQUE', 'ROOT', 'RARE', 'COMMON'];
+  const presentCategories = expectedCategories.filter(cat => categoryDistribution[cat] > 0);
+  const categoryCoverage = (presentCategories.length / expectedCategories.length) * 100;
+
+  const expectedClassifications = ['TYPE', 'COMPONENT', 'BENEFIT', 'RISK', 'PROCESS', 'SPECIFICATION'];
+  const presentClassifications = expectedClassifications.filter(cls => classificationDistribution[cls] > 0);
+  const classificationDiversity = (presentClassifications.length / expectedClassifications.length) * 100;
+
+  // Weighted score
+  const score = Math.round(
+    categoryCoverage * 0.4 +
+    classificationDiversity * 0.3 +
+    Math.min(100, eavs.length * 5) * 0.3
+  );
+
+  // Generate recommendations
+  const recommendations: string[] = [];
+  const missingCategories = expectedCategories.filter(cat => !categoryDistribution[cat]);
+  if (missingCategories.length > 0) {
+    recommendations.push(`Add EAVs with ${missingCategories.join(', ')} categories for authority`);
+  }
+
+  const missingClassifications = expectedClassifications.filter(cls => !classificationDistribution[cls]);
+  if (missingClassifications.length > 2) {
+    recommendations.push(`Diversify predicate types: add ${missingClassifications.slice(0, 3).join(', ')}`);
+  }
+
+  if (eavs.length < 10) {
+    recommendations.push('Increase EAV count to at least 10 for comprehensive semantic coverage');
+  }
+
+  if (score < TARGET_SCORE) {
+    recommendations.push(`Target semantic compliance score is ${TARGET_SCORE}%, currently at ${score}%`);
+  }
+
+  return {
+    score,
+    target: TARGET_SCORE,
+    eavCoverage: eavs.length,
+    categoryDistribution,
+    classificationDistribution,
+    recommendations,
+  };
+};
+
+/**
+ * Calculate authority indicators from EAVs
+ */
+export const calculateAuthorityIndicators = (
+  eavs: Array<{
+    predicate?: { category?: string };
+  }>,
+  topicCount: number
+): EnhancedAuditMetrics['authorityIndicators'] => {
+  if (!eavs || eavs.length === 0) {
+    return {
+      eavAuthorityScore: 0,
+      uniqueEavCount: 0,
+      rootEavCount: 0,
+      rareEavCount: 0,
+      commonEavCount: 0,
+      topicalDepthScore: 0,
+    };
+  }
+
+  // Count by category
+  const uniqueEavCount = eavs.filter(e => e.predicate?.category === 'UNIQUE').length;
+  const rootEavCount = eavs.filter(e => e.predicate?.category === 'ROOT').length;
+  const rareEavCount = eavs.filter(e => e.predicate?.category === 'RARE').length;
+  const commonEavCount = eavs.filter(e => e.predicate?.category === 'COMMON').length;
+
+  // Authority score weighted by category importance
+  // UNIQUE (highest authority) = 4 points, ROOT = 3, RARE = 2, COMMON = 1
+  const weightedSum = uniqueEavCount * 4 + rootEavCount * 3 + rareEavCount * 2 + commonEavCount * 1;
+  const maxPossible = eavs.length * 4;
+  const eavAuthorityScore = maxPossible > 0 ? Math.round((weightedSum / maxPossible) * 100) : 0;
+
+  // Topical depth = EAVs per topic
+  const topicalDepthScore = topicCount > 0 ? Math.round((eavs.length / topicCount) * 20) : 0;
+
+  return {
+    eavAuthorityScore,
+    uniqueEavCount,
+    rootEavCount,
+    rareEavCount,
+    commonEavCount,
+    topicalDepthScore: Math.min(100, topicalDepthScore),
+  };
+};
+
+/**
+ * Generate prioritized action roadmap
+ */
+export const generateActionRoadmap = (
+  semanticMetrics: EnhancedAuditMetrics['semanticCompliance'],
+  authorityIndicators: EnhancedAuditMetrics['authorityIndicators'],
+  issues: ReportIssue[]
+): EnhancedAuditMetrics['actionRoadmap'] => {
+  const roadmap: EnhancedAuditMetrics['actionRoadmap'] = [];
+
+  // Add semantic compliance actions
+  if (semanticMetrics.score < 50) {
+    roadmap.push({
+      priority: 'critical',
+      category: 'Semantic Foundation',
+      action: 'Establish EAV semantic triples for core topics',
+      impact: 'High - Creates foundation for search engine understanding',
+    });
+  }
+
+  if (authorityIndicators.uniqueEavCount === 0) {
+    roadmap.push({
+      priority: 'high',
+      category: 'Topical Authority',
+      action: 'Add UNIQUE category EAVs with proprietary data/insights',
+      impact: 'High - Differentiates content from competitors',
+    });
+  }
+
+  if (authorityIndicators.topicalDepthScore < 50) {
+    roadmap.push({
+      priority: 'medium',
+      category: 'Content Depth',
+      action: 'Increase EAV coverage per topic to improve semantic density',
+      impact: 'Medium - Improves topical authority signals',
+    });
+  }
+
+  // Add from semantic recommendations
+  for (const rec of semanticMetrics.recommendations.slice(0, 2)) {
+    roadmap.push({
+      priority: 'medium',
+      category: 'Semantic Optimization',
+      action: rec,
+      impact: 'Medium - Improves semantic compliance score',
+    });
+  }
+
+  // Add critical issues from report
+  const criticalIssues = issues.filter(i => i.priority === 'critical').slice(0, 3);
+  for (const issue of criticalIssues) {
+    roadmap.push({
+      priority: 'critical',
+      category: issue.phase || 'Technical',
+      action: issue.suggestedAction || issue.headline,
+      impact: issue.businessImpact || 'Critical - Requires immediate attention',
+    });
+  }
+
+  // Sort by priority
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  return roadmap.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+};
+
+/**
+ * Generate enhanced audit metrics combining all new analyses
+ */
+export const generateEnhancedMetrics = (
+  eavs: Array<{
+    subject?: { label?: string };
+    predicate?: { category?: string; classification?: string; relation?: string };
+    object?: { value?: string | number };
+  }>,
+  topicCount: number,
+  issues: ReportIssue[]
+): EnhancedAuditMetrics => {
+  // Auto-classify EAVs that don't have categories assigned
+  const classifiedEavs = autoClassifyEavs(eavs as any) as typeof eavs;
+
+  const semanticCompliance = calculateSemanticComplianceMetrics(classifiedEavs);
+  const authorityIndicators = calculateAuthorityIndicators(classifiedEavs, topicCount);
+  const actionRoadmap = generateActionRoadmap(semanticCompliance, authorityIndicators, issues);
+
+  // Information density - simplified calculation
+  const informationDensity: EnhancedAuditMetrics['informationDensity'] = {
+    avgFactsPerSection: eavs.length > 0 && topicCount > 0 ? Math.round(eavs.length / topicCount * 10) / 10 : 0,
+    targetFactsPerSection: 3,
+    lowDensityPages: [],
+    highDensityPages: [],
+  };
+
+  return {
+    semanticCompliance,
+    informationDensity,
+    authorityIndicators,
+    actionRoadmap,
   };
 };

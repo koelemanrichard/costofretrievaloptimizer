@@ -1,0 +1,1234 @@
+(index):64 cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+(anonymous) @ (index):64
+client:789 [vite] connecting...
+chunk-KPD4VVXB.js?v=c014b8b2:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+App.tsx:95 [App] Console utilities available: window.repairBriefs(), window.getActiveMapId(), window.getActiveProjectId()
+App.tsx:95 [App] Console utilities available: window.repairBriefs(), window.getActiveMapId(), window.getActiveProjectId()
+client:912 [vite] connected.
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:95 [App] Console utilities available: window.repairBriefs(), window.getActiveMapId(), window.getActiveProjectId()
+App.tsx:95 [App] Console utilities available: window.repairBriefs(), window.getActiveMapId(), window.getActiveProjectId()
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+pass1DraftGeneration.ts:236 [Pass1] Section "Introduction" has 13 validation warnings: (13) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Wat zijn bitumen dakbedekking soorten: definitie en basiscategorieën" has 11 validation warnings: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+pass1DraftGeneration.ts:236 [Pass1] Section "APP bitumen versus SBS bitumen: kernverschillen in samenstelling" has 11 validation warnings: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Standaard bitumen dakbedekking: eenvoudige installatie en basis bescherming" has 11 validation warnings: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+pass1DraftGeneration.ts:236 [Pass1] Section "Premium en duurzame bitumen dakbedekking: versterkte systemen met langere levensduur" has 7 validation warnings: (7) [{…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Kwaliteitsgraden en certificeringen: hoe je bitumen dakbedekking evalueert" has 9 validation warnings: (9) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Gespecialiseerde bitumen dakbedekking soorten: witte reflecterende en antiwortelystemen" has 11 validation warnings: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Installatiemethoden voor verschillende bitumen dakbedekking soorten: welding versus adhesive" has 9 validation warnings: (9) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Keuzecriterium: hoe je de juiste bitumen dakbedekking soort selecteert voor jouw situatie" has 13 validation warnings: (13) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+pass1DraftGeneration.ts:236 [Pass1] Section "Conclusion" has 9 validation warnings: (9) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+generateSectionWithRetry @ pass1DraftGeneration.ts:236
+await in generateSectionWithRetry
+executePass1 @ pass1DraftGeneration.ts:117
+await in executePass1
+runPasses @ useContentGeneration.ts:259
+(anonymous) @ useContentGeneration.ts:493
+await in (anonymous)
+handleGenerateDraft @ ContentBriefModal.tsx:199
+callCallback2 @ chunk-KPD4VVXB.js?v=c014b8b2:3680
+invokeGuardedCallbackDev @ chunk-KPD4VVXB.js?v=c014b8b2:3705
+invokeGuardedCallback @ chunk-KPD4VVXB.js?v=c014b8b2:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-KPD4VVXB.js?v=c014b8b2:3742
+executeDispatch @ chunk-KPD4VVXB.js?v=c014b8b2:7046
+processDispatchQueueItemsInOrder @ chunk-KPD4VVXB.js?v=c014b8b2:7066
+processDispatchQueue @ chunk-KPD4VVXB.js?v=c014b8b2:7075
+dispatchEventsForPlugins @ chunk-KPD4VVXB.js?v=c014b8b2:7083
+(anonymous) @ chunk-KPD4VVXB.js?v=c014b8b2:7206
+batchedUpdates$1 @ chunk-KPD4VVXB.js?v=c014b8b2:18966
+batchedUpdates @ chunk-KPD4VVXB.js?v=c014b8b2:3585
+dispatchEventForPluginEventSystem @ chunk-KPD4VVXB.js?v=c014b8b2:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-KPD4VVXB.js?v=c014b8b2:5484
+dispatchEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5478
+dispatchDiscreteEvent @ chunk-KPD4VVXB.js?v=c014b8b2:5455
+baseSectionPass.ts:59 [Pass2] Phase A: Building holistic summary + format budget from 10 sections...
+baseSectionPass.ts:63 [Pass2] Holistic context: 2300 words, TTR: 42.2%
+baseSectionPass.ts:64 [Pass2] Format Budget:
+  Current: 0/10 lists, 0/10 tables
+  Prose ratio: 100% (target: 70%)
+  Budget remaining: 4 lists, 1 tables
+  Sections needing optimization:
+    - Lists: 2
+    - Tables: 1
+    - Images: 5
+    - Discourse: 6
+baseSectionPass.ts:97 [Pass2] Phase C: Processing 10 sections...
+baseSectionPass.ts:252 [Pass2] Processing section 1/10: Introduction (1736 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4733 chars)
+baseSectionPass.ts:286 [Pass2] Section intro optimized: 1736 → 1699 chars
+baseSectionPass.ts:252 [Pass2] Processing section 2/10: Wat zijn bitumen dakbedekking soorten: definitie en basiscategorieën (1683 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5038 chars)
+baseSectionPass.ts:286 [Pass2] Section section_1 optimized: 1683 → 1752 chars
+baseSectionPass.ts:252 [Pass2] Processing section 3/10: APP bitumen versus SBS bitumen: kernverschillen in samenstelling (2100 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5445 chars)
+baseSectionPass.ts:286 [Pass2] Section section_2 optimized: 2100 → 2377 chars
+baseSectionPass.ts:252 [Pass2] Processing section 4/10: Standaard bitumen dakbedekking: eenvoudige installatie en basis bescherming (1593 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4963 chars)
+baseSectionPass.ts:286 [Pass2] Section section_3 optimized: 1593 → 1858 chars
+baseSectionPass.ts:252 [Pass2] Processing section 5/10: Premium en duurzame bitumen dakbedekking: versterkte systemen met langere levensduur (2022 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5392 chars)
+baseSectionPass.ts:286 [Pass2] Section section_4 optimized: 2022 → 2018 chars
+baseSectionPass.ts:252 [Pass2] Processing section 6/10: Kwaliteitsgraden en certificeringen: hoe je bitumen dakbedekking evalueert (4220 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 7676 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass2] Section section_5 optimized: 4220 → 4330 chars
+baseSectionPass.ts:252 [Pass2] Processing section 7/10: Gespecialiseerde bitumen dakbedekking soorten: witte reflecterende en antiwortelystemen (1775 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5239 chars)
+baseSectionPass.ts:286 [Pass2] Section section_6 optimized: 1775 → 2008 chars
+baseSectionPass.ts:252 [Pass2] Processing section 8/10: Installatiemethoden voor verschillende bitumen dakbedekking soorten: welding versus adhesive (2488 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5908 chars)
+baseSectionPass.ts:286 [Pass2] Section section_7 optimized: 2488 → 2685 chars
+baseSectionPass.ts:252 [Pass2] Processing section 9/10: Keuzecriterium: hoe je de juiste bitumen dakbedekking soort selecteert voor jouw situatie (2002 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5404 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass2] Section section_8 optimized: 2002 → 2418 chars
+baseSectionPass.ts:252 [Pass2] Processing section 10/10: Conclusion (1649 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4747 chars)
+baseSectionPass.ts:286 [Pass2] Section conclusion optimized: 1649 → 1770 chars
+baseSectionPass.ts:134 [Pass2] Pass complete. Assembled draft: 23638 chars
+baseSectionPass.ts:59 [Pass3] Phase A: Building holistic summary + format budget from 10 sections...
+baseSectionPass.ts:63 [Pass3] Holistic context: 2473 words, TTR: 40.5%
+baseSectionPass.ts:64 [Pass3] Format Budget:
+  Current: 0/10 lists, 0/10 tables
+  Prose ratio: 100% (target: 70%)
+  Budget remaining: 4 lists, 1 tables
+  Sections needing optimization:
+    - Lists: 2
+    - Tables: 1
+    - Images: 6
+    - Discourse: 9
+baseSectionPass.ts:78 [Pass3] Selective processing: 3/10 sections need optimization
+baseSectionPass.ts:97 [Pass3] Phase C: Processing 3 sections...
+baseSectionPass.ts:164 [Pass3] Processing 3 sections in 1 batches (batch size: 3)
+baseSectionPass.ts:175 [Pass3] Processing batch 1/1: section_2, section_5, section_8
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 11044 chars)
+baseSectionPass.ts:205 [Pass3] Section section_2: 2377 → 2505 chars
+baseSectionPass.ts:205 [Pass3] Section section_5: 4330 → 5394 chars
+baseSectionPass.ts:205 [Pass3] Section section_8: 2418 → 4002 chars
+baseSectionPass.ts:134 [Pass3] Pass complete. Assembled draft: 26414 chars
+baseSectionPass.ts:59 [Pass4] Phase A: Building holistic summary + format budget from 10 sections...
+baseSectionPass.ts:63 [Pass4] Holistic context: 2779 words, TTR: 37.7%
+baseSectionPass.ts:64 [Pass4] Format Budget:
+  Current: 2/10 lists, 1/10 tables
+  Prose ratio: 83% (target: 70%)
+  Budget remaining: 2 lists, 0 tables
+  Sections needing optimization:
+    - Lists: 0
+    - Tables: 0
+    - Images: 6
+    - Discourse: 9
+baseSectionPass.ts:78 [Pass4] Selective processing: 6/10 sections need optimization
+baseSectionPass.ts:97 [Pass4] Phase C: Processing 6 sections...
+baseSectionPass.ts:252 [Pass4] Processing section 1/6: APP bitumen versus SBS bitumen: kernverschillen in samenstelling (2505 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4201 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass4] Section section_2 optimized: 2505 → 2931 chars
+baseSectionPass.ts:252 [Pass4] Processing section 2/6: Premium en duurzame bitumen dakbedekking: versterkte systemen met langere levensduur (2018 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3734 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass4] Section section_4 optimized: 2018 → 2549 chars
+baseSectionPass.ts:252 [Pass4] Processing section 3/6: Kwaliteitsgraden en certificeringen: hoe je bitumen dakbedekking evalueert (5394 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 7100 chars)
+baseSectionPass.ts:286 [Pass4] Section section_5 optimized: 5394 → 5884 chars
+baseSectionPass.ts:252 [Pass4] Processing section 4/6: Gespecialiseerde bitumen dakbedekking soorten: witte reflecterende en antiwortelystemen (2008 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3727 chars)
+baseSectionPass.ts:286 [Pass4] Section section_6 optimized: 2008 → 2441 chars
+baseSectionPass.ts:252 [Pass4] Processing section 5/6: Installatiemethoden voor verschillende bitumen dakbedekking soorten: welding versus adhesive (2685 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4409 chars)
+baseSectionPass.ts:286 [Pass4] Section section_7 optimized: 2685 → 3259 chars
+baseSectionPass.ts:252 [Pass4] Processing section 6/6: Keuzecriterium: hoe je de juiste bitumen dakbedekking soort selecteert voor jouw situatie (4002 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5723 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass4] Section section_8 optimized: 4002 → 4571 chars
+baseSectionPass.ts:134 [Pass4] Pass complete. Assembled draft: 29437 chars
+baseSectionPass.ts:59 [Pass5] Phase A: Building holistic summary + format budget from 10 sections...
+baseSectionPass.ts:63 [Pass5] Holistic context: 3074 words, TTR: 37.2%
+baseSectionPass.ts:64 [Pass5] Format Budget:
+  Current: 2/10 lists, 1/10 tables
+  Prose ratio: 85% (target: 70%)
+  Budget remaining: 2 lists, 0 tables
+  Sections needing optimization:
+    - Lists: 0
+    - Tables: 0
+    - Images: 0
+    - Discourse: 9
+baseSectionPass.ts:97 [Pass5] Phase C: Processing 10 sections...
+baseSectionPass.ts:252 [Pass5] Processing section 1/10: Introduction (1699 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3327 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass5] Section intro optimized: 1699 → 1491 chars
+baseSectionPass.ts:252 [Pass5] Processing section 2/10: Wat zijn bitumen dakbedekking soorten: definitie en basiscategorieën (1752 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3436 chars)
+baseSectionPass.ts:286 [Pass5] Section section_1 optimized: 1752 → 1635 chars
+baseSectionPass.ts:252 [Pass5] Processing section 3/10: APP bitumen versus SBS bitumen: kernverschillen in samenstelling (2931 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4611 chars)
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+baseSectionPass.ts:286 [Pass5] Section section_2 optimized: 2931 → 2554 chars
+baseSectionPass.ts:252 [Pass5] Processing section 4/10: Standaard bitumen dakbedekking: eenvoudige installatie en basis bescherming (1858 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3549 chars)
+baseSectionPass.ts:286 [Pass5] Section section_3 optimized: 1858 → 1553 chars
+baseSectionPass.ts:252 [Pass5] Processing section 5/10: Premium en duurzame bitumen dakbedekking: versterkte systemen met langere levensduur (2549 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4249 chars)
+baseSectionPass.ts:286 [Pass5] Section section_4 optimized: 2549 → 2485 chars
+baseSectionPass.ts:252 [Pass5] Processing section 6/10: Kwaliteitsgraden en certificeringen: hoe je bitumen dakbedekking evalueert (5884 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 7574 chars)
+baseSectionPass.ts:286 [Pass5] Section section_5 optimized: 5884 → 5232 chars
+baseSectionPass.ts:252 [Pass5] Processing section 7/10: Gespecialiseerde bitumen dakbedekking soorten: witte reflecterende en antiwortelystemen (2441 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4144 chars)
+baseSectionPass.ts:286 [Pass5] Section section_6 optimized: 2441 → 2272 chars
+baseSectionPass.ts:252 [Pass5] Processing section 8/10: Installatiemethoden voor verschillende bitumen dakbedekking soorten: welding versus adhesive (3259 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 4967 chars)
+baseSectionPass.ts:286 [Pass5] Section section_7 optimized: 3259 → 2727 chars
+baseSectionPass.ts:252 [Pass5] Processing section 9/10: Keuzecriterium: hoe je de juiste bitumen dakbedekking soort selecteert voor jouw situatie (4571 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 6276 chars)
+baseSectionPass.ts:286 [Pass5] Section section_8 optimized: 4571 → 4119 chars
+baseSectionPass.ts:252 [Pass5] Processing section 10/10: Conclusion (1770 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3396 chars)
+baseSectionPass.ts:286 [Pass5] Section conclusion optimized: 1770 → 1731 chars
+baseSectionPass.ts:134 [Pass5] Pass complete. Assembled draft: 26522 chars
+baseSectionPass.ts:59 [Pass6] Phase A: Building holistic summary + format budget from 10 sections...
+baseSectionPass.ts:63 [Pass6] Holistic context: 2698 words, TTR: 41.3%
+baseSectionPass.ts:64 [Pass6] Format Budget:
+  Current: 2/10 lists, 1/10 tables
+  Prose ratio: 85% (target: 70%)
+  Budget remaining: 2 lists, 0 tables
+  Sections needing optimization:
+    - Lists: 0
+    - Tables: 0
+    - Images: 0
+    - Discourse: 9
+baseSectionPass.ts:78 [Pass6] Selective processing: 9/10 sections need optimization
+baseSectionPass.ts:97 [Pass6] Phase C: Processing 9 sections...
+baseSectionPass.ts:252 [Pass6] Processing section 1/9: Wat zijn bitumen dakbedekking soorten: definitie en basiscategorieën (1635 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5577 chars)
+baseSectionPass.ts:286 [Pass6] Section section_1 optimized: 1635 → 2895 chars
+baseSectionPass.ts:252 [Pass6] Processing section 2/9: APP bitumen versus SBS bitumen: kernverschillen in samenstelling (2554 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 6567 chars)
+baseSectionPass.ts:286 [Pass6] Section section_2 optimized: 2554 → 3608 chars
+baseSectionPass.ts:252 [Pass6] Processing section 3/9: Standaard bitumen dakbedekking: eenvoudige installatie en basis bescherming (1553 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5580 chars)
+baseSectionPass.ts:286 [Pass6] Section section_3 optimized: 1553 → 2650 chars
+baseSectionPass.ts:252 [Pass6] Processing section 4/9: Premium en duurzame bitumen dakbedekking: versterkte systemen met langere levensduur (2485 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 6540 chars)
+baseSectionPass.ts:286 [Pass6] Section section_4 optimized: 2485 → 4003 chars
+baseSectionPass.ts:252 [Pass6] Processing section 5/9: Kwaliteitsgraden en certificeringen: hoe je bitumen dakbedekking evalueert (5232 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 9284 chars)
+baseSectionPass.ts:286 [Pass6] Section section_5 optimized: 5232 → 6877 chars
+baseSectionPass.ts:252 [Pass6] Processing section 6/9: Gespecialiseerde bitumen dakbedekking soorten: witte reflecterende en antiwortelystemen (2272 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 6339 chars)
+baseSectionPass.ts:286 [Pass6] Section section_6 optimized: 2272 → 3510 chars
+baseSectionPass.ts:252 [Pass6] Processing section 7/9: Installatiemethoden voor verschillende bitumen dakbedekking soorten: welding versus adhesive (2727 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 6735 chars)
+baseSectionPass.ts:286 [Pass6] Section section_7 optimized: 2727 → 3835 chars
+baseSectionPass.ts:252 [Pass6] Processing section 8/9: Keuzecriterium: hoe je de juiste bitumen dakbedekking soort selecteert voor jouw situatie (4119 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 8099 chars)
+baseSectionPass.ts:286 [Pass6] Section section_8 optimized: 4119 → 5659 chars
+baseSectionPass.ts:252 [Pass6] Processing section 9/9: Conclusion (1731 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 5519 chars)
+baseSectionPass.ts:286 [Pass6] Section conclusion optimized: 1731 → 2732 chars
+baseSectionPass.ts:134 [Pass6] Pass complete. Assembled draft: 37983 chars
+baseSectionPass.ts:59 [Pass7] Phase A: Building holistic summary + format budget from 10 sections...
+baseSectionPass.ts:63 [Pass7] Holistic context: 4146 words, TTR: 32.1%
+baseSectionPass.ts:64 [Pass7] Format Budget:
+  Current: 2/10 lists, 1/10 tables
+  Prose ratio: 89% (target: 70%)
+  Budget remaining: 2 lists, 0 tables
+  Sections needing optimization:
+    - Lists: 0
+    - Tables: 0
+    - Images: 2
+    - Discourse: 9
+baseSectionPass.ts:97 [Pass7] Phase C: Processing 1 sections...
+baseSectionPass.ts:252 [Pass7] Processing section 1/1: Introduction (1491 chars)
+providerUtils.ts:98 [ContentGen] Using AI provider: anthropic (from businessInfo.aiProvider: anthropic)
+providerUtils.ts:107 [ContentGen] Attempt 1/2 with anthropic (prompt: 3977 chars)
+baseSectionPass.ts:286 [Pass7] Section intro optimized: 1491 → 1365 chars
+baseSectionPass.ts:134 [Pass7] Pass complete. Assembled draft: 37857 chars
+pass8Audit.ts:40 [Pass8Audit] Auditing 37857 chars from 10 sections
+pass8Audit.ts:44 [Pass8Audit] Holistic context: TTR=31.8%, 4149 words
+pass8Audit.ts:77 [Pass8Audit] Compliance Score: 72% (C) - NEEDS IMPROVEMENT
+pass8Audit.ts:79 [Pass8Audit] Compliance Issues: 4 (1 critical)
+pass8Audit.ts:117 [Pass8Audit] Synced to brief: 37857 chars, score: 67%
+pass9SchemaGeneration.ts:44 Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+_GoTrueClient @ @supabase_supabase-js.js?v=c014b8b2:4640
+SupabaseAuthClient @ @supabase_supabase-js.js?v=c014b8b2:6408
+_initSupabaseAuthClient @ @supabase_supabase-js.js?v=c014b8b2:6591
+SupabaseClient @ @supabase_supabase-js.js?v=c014b8b2:6476
+createClient @ @supabase_supabase-js.js?v=c014b8b2:6631
+executePass9 @ pass9SchemaGeneration.ts:44
+runPasses @ useContentGeneration.ts:405
+await in runPasses
+(anonymous) @ useContentGeneration.ts:493
+schemaGenerator.ts:79 [SchemaGenerator] Starting schema generation...
+schemaGenerator.ts:93 [SchemaGenerator] Page type: Article (detected: Article, confidence: 0.35714285714285715)
+schemaGenerator.ts:97 [SchemaGenerator] Extracted 15 entity candidates
+entityResolutionCache.ts:23 Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+_GoTrueClient @ @supabase_supabase-js.js?v=c014b8b2:4640
+SupabaseAuthClient @ @supabase_supabase-js.js?v=c014b8b2:6408
+_initSupabaseAuthClient @ @supabase_supabase-js.js?v=c014b8b2:6591
+SupabaseClient @ @supabase_supabase-js.js?v=c014b8b2:6476
+createClient @ @supabase_supabase-js.js?v=c014b8b2:6631
+getSupabaseClient @ entityResolutionCache.ts:23
+getCachedEntities @ entityResolutionCache.ts:138
+batchGetOrResolveEntities @ entityResolutionCache.ts:300
+generateSchema @ schemaGenerator.ts:104
+executePass9 @ pass9SchemaGeneration.ts:92
+await in executePass9
+runPasses @ useContentGeneration.ts:405
+await in runPasses
+(anonymous) @ useContentGeneration.ts:493
+wikidataService.ts:292 [WikidataService] No results found for "Bitumen dakbedekking"
+wikidataService.ts:292 [WikidataService] No results found for "Atactisch Polypropylene"
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+wikidataService.ts:292 [WikidataService] No results found for "Waar SBS"
+entityResolutionCache.ts:23 Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+_GoTrueClient @ @supabase_supabase-js.js?v=c014b8b2:4640
+SupabaseAuthClient @ @supabase_supabase-js.js?v=c014b8b2:6408
+_initSupabaseAuthClient @ @supabase_supabase-js.js?v=c014b8b2:6591
+SupabaseClient @ @supabase_supabase-js.js?v=c014b8b2:6476
+createClient @ @supabase_supabase-js.js?v=c014b8b2:6631
+getSupabaseClient @ entityResolutionCache.ts:23
+cacheEntities @ entityResolutionCache.ts:219
+batchGetOrResolveEntities @ entityResolutionCache.ts:327
+await in batchGetOrResolveEntities
+generateSchema @ schemaGenerator.ts:104
+executePass9 @ pass9SchemaGeneration.ts:92
+await in executePass9
+runPasses @ useContentGeneration.ts:405
+await in runPasses
+(anonymous) @ useContentGeneration.ts:493
+schemaGenerator.ts:113 [SchemaGenerator] Resolved 7 entities, 8 skipped
+schemaGenerator.ts:157 [SchemaGenerator] Schema generation completed in 2874ms
+ContentBriefModal.tsx:128 [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+DraftingModal.tsx:280 [DraftingModal] State updated with new draft: 37857 chars
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+DraftingModal.tsx:170 [DraftingModal] Using existing draft from state: 37857 chars
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 37857
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:417 [DraftingModal] No newer/longer content found, current is already the best version
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+anthropicService.ts?t=1765898942333:299 [Anthropic callApi] Making request to proxy: {proxyUrl: 'https://shtqshmmsrmtquuhyupl.supabase.co/functions/v1/anthropic-proxy', model: 'claude-haiku-4-5-20251001', hasApiKey: true, apiKeyPreview: 'sk-ant-api...', hasAnonKey: true, …}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+anthropicService.ts?t=1765898942333:332 [Anthropic callApi] Response received: {hasError: false, hasContent: true, contentLength: 1, stopReason: 'end_turn'}
+anthropicService.ts?t=1765898942333:345 [Anthropic callApi] Extracted text: {blockType: 'text', textLength: 35949, textPreview: '```json\n{\n  "polished_article": "# Bitumen dakbede… primaire factoren: **bindmiddel** (APP of SBS), '}
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 35949
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:371 [DraftingModal] Using job draft_content - has 1908 more chars than current
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:439 [DraftingModal] Found newer/different database content: {currentLength: 35949, dbLength: 37857, diff: 1908, dbIsSignificantlyLonger: true, auditScore: 67, …}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+anthropicService.ts?t=1765898942333:299 [Anthropic callApi] Making request to proxy: {proxyUrl: 'https://shtqshmmsrmtquuhyupl.supabase.co/functions/v1/anthropic-proxy', model: 'claude-haiku-4-5-20251001', hasApiKey: true, apiKeyPreview: 'sk-ant-api...', hasAnonKey: true, …}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+anthropicService.ts?t=1765898942333:332 [Anthropic callApi] Response received: {hasError: false, hasContent: true, contentLength: 1, stopReason: 'end_turn'}
+anthropicService.ts?t=1765898942333:345 [Anthropic callApi] Extracted text: {blockType: 'text', textLength: 34670, textPreview: '```json\n{\n  "polished_article": "# Bitumen dakbede… primaire factoren: **bindmiddel** (APP of SBS), '}
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34670
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:371 [DraftingModal] Using job draft_content - has 3187 more chars than current
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:439 [DraftingModal] Found newer/different database content: {currentLength: 34670, dbLength: 37857, diff: 3187, dbIsSignificantlyLonger: true, auditScore: 67, …}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34637
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:371 [DraftingModal] Using job draft_content - has 3220 more chars than current
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:439 [DraftingModal] Found newer/different database content: {currentLength: 34637, dbLength: 37857, diff: 3220, dbIsSignificantlyLonger: true, auditScore: 67, …}
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34636
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:371 [DraftingModal] Using job draft_content - has 3221 more chars than current
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:439 [DraftingModal] Found newer/different database content: {currentLength: 34636, dbLength: 37857, diff: 3221, dbIsSignificantlyLonger: true, auditScore: 67, …}
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34631
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:371 [DraftingModal] Using job draft_content - has 3226 more chars than current
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:439 [DraftingModal] Found newer/different database content: {currentLength: 34631, dbLength: 37857, diff: 3226, dbIsSignificantlyLonger: true, auditScore: 67, …}
+DraftingModal.tsx:335 [DraftingModal] Assembled from 10 sections: 37857 chars
+DraftingModal.tsx:345 [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+DraftingModal.tsx:352 [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+DraftingModal.tsx:371 [DraftingModal] Using job draft_content - has 3227 more chars than current
+DraftingModal.tsx:396 [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+DraftingModal.tsx:397 [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+DraftingModal.tsx:398 [DraftingModal] Job status: completed current_pass: 9
+DraftingModal.tsx:439 [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+App.tsx:139 [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+client:883 [vite] hot updated: /components/ProjectWorkspace.tsx
+client:883 [vite] hot updated: /components/ProjectDashboardContainer.tsx
+client:883 [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+client:883 [vite] hot updated: /components/PillarDefinitionWizard.tsx
+client:883 [vite] hot updated: /components/EavDiscoveryWizard.tsx
+client:883 [vite] hot updated: /components/EavManagerModal.tsx
+client:883 [vite] hot updated: /components/TopicalMapDisplay.tsx
+client:883 [vite] hot updated: /components/InternalLinkingModal.tsx
+client:883 [vite] hot updated: /components/insights/InsightsHub.tsx
+client:883 [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+client:883 [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+client:883 [vite] hot updated: /components/AddTopicModal.tsx
+client:883 [vite] hot updated: /components/DraftingModal.tsx
+client:883 [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+client:883 [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+client:883 [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [vite] hot updated: /components/ProjectWorkspace.tsx
+ [vite] hot updated: /components/site-analysis/SiteAnalysisToolV2.tsx
+ [vite] hot updated: /components/PillarDefinitionWizard.tsx
+ [vite] hot updated: /components/EavDiscoveryWizard.tsx
+ [vite] hot updated: /components/ProjectDashboardContainer.tsx
+ [vite] hot updated: /components/EavManagerModal.tsx
+ [vite] hot updated: /components/TopicalMapDisplay.tsx
+ [vite] hot updated: /components/InternalLinkingModal.tsx
+ [vite] hot updated: /components/insights/InsightsHub.tsx
+ [vite] hot updated: /components/ResponseCodeSelectionModal.tsx
+ [vite] hot updated: /components/migration/MigrationDashboardContainer.tsx
+ [vite] hot updated: /components/AddTopicModal.tsx
+ [vite] hot updated: /components/DraftingModal.tsx
+ [vite] hot updated: /components/strategist/ContextChatPanel.tsx
+ [vite] hot updated: /components/site-analysis/PageAuditDetailV2.tsx
+ [vite] hot updated: /components/migration/MigrationWorkbenchModal.tsx
+ [vite] hot updated: /components/ui/SmartFixButton.tsx
+ [vite] hot updated: /components/ContentBriefModal.tsx
+ [vite] hot updated: /components/migration/StrategySelectionModal.tsx
+ [vite] hot updated: /components/merge/MergeMapWizard.tsx
+ [vite] hot updated: /components/brief/BriefEditModal.tsx
+ [DraftingModal] Already loaded draft for this brief, skipping fetch
+ [useContentGeneration] Content comparison - job.draft_content: 37857 chars, assembled sections: 37857 chars
+ [useContentGeneration] Syncing draft to brief from job.draft_content: 37857 chars
+ [ContentBriefModal] handleGenerationComplete called: {draftLength: 37857, auditScore: 67, hasSchema: true, activeBriefTopic: '55c24a35-c198-49de-b89d-be85e7a21165', activeMapId: 'c3b4f6a5-c899-4aa8-b3d8-26e860291a9c'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 34630
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 3227 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 34630, dbLength: 37857, diff: 3227, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Anthropic callApi] Making request to proxy: {proxyUrl: 'https://shtqshmmsrmtquuhyupl.supabase.co/functions/v1/anthropic-proxy', model: 'claude-haiku-4-5-20251001', hasApiKey: true, apiKeyPreview: 'sk-ant-api...', hasAnonKey: true, …}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Anthropic callApi] Response received: {hasError: false, hasContent: true, contentLength: 1, stopReason: 'end_turn'}
+ [Anthropic callApi] Extracted text: {blockType: 'text', textLength: 35183, textPreview: '```json\n{\n  "status": "pass_2_polish_complete",\n  …tot premium duurzame systemen\\n\\n## Introductie\\n'}
+ [DraftingModal] Assembled from 10 sections: 37857 chars
+ [DraftingModal] Content lengths - job.draft_content: 37857 assembled sections: 37857 current display: 35183
+ [DraftingModal] Timestamp check - job updated: 2025-12-17T06:33:15.285779+00:00 loaded at: 2025-12-17T08:20:45.792Z isJobNewer: false
+ [DraftingModal] Using job draft_content - has 2674 more chars than current
+ [DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "completed",
+  "pass_9_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "completed",
+  "pass_6_discourse": "completed",
+  "pass_5_microsemantics": "completed"
+}
+ [DraftingModal] Completed passes count: 9 from keys: (9) ['pass_1_draft=completed', 'pass_2_headers=completed', 'pass_3_lists=completed', 'pass_4_visuals=completed', 'pass_5_microsemantics=completed', 'pass_6_discourse=completed', 'pass_7_intro=completed', 'pass_8_audit=completed', 'pass_9_schema=completed']
+ [DraftingModal] Job status: completed current_pass: 9
+ [DraftingModal] Found newer/different database content: {currentLength: 35183, dbLength: 37857, diff: 2674, dbIsSignificantlyLonger: true, auditScore: 67, …}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}
+ [Settings] API Key Sources: {envKeyPreview: 'sk-ant-api03-Zu...', dbKeyPreview: 'sk-ant-api03-Zu...', usingSource: 'DATABASE (overrides env)', dbKeyLength: 108, envKeyLength: 108}

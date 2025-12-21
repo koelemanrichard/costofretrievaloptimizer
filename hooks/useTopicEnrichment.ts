@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { AppAction } from '../state/appState';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { BusinessInfo, EnrichedTopic, SEOPillars, SemanticTriple } from '../types';
-import * as aiService from '../services/ai/index';
+import * as aiService from '../services/aiService';
 import { fetchKeywordSearchVolume } from '../services/serpApiService';
 
 // ============================================

@@ -196,10 +196,17 @@ export class ContentGenerationOrchestrator {
   parseSectionsFromBrief(brief: ContentBrief): SectionDefinition[] {
     const sections: SectionDefinition[] = [];
 
-    // Add introduction
+    // Add introduction with topic-aware heading (avoid generic "Introduction")
+    // Priority: targetKeyword > title > fallback
+    const introHeading = brief.targetKeyword
+      ? `Wat is ${brief.targetKeyword}`
+      : brief.title
+        ? `${brief.title}: Een Overzicht`
+        : 'Introductie';
+
     sections.push({
       key: 'intro',
-      heading: 'Introduction',
+      heading: introHeading,
       level: 2,
       order: 0,
       subordinateTextHint: brief.metaDescription
@@ -246,10 +253,17 @@ export class ContentGenerationOrchestrator {
       });
     }
 
-    // Add conclusion
+    // Add conclusion with topic-aware heading (avoid generic "Conclusion")
+    // Priority: targetKeyword > title > fallback
+    const conclusionHeading = brief.targetKeyword
+      ? `Conclusie: ${brief.targetKeyword} Samengevat`
+      : brief.title
+        ? `Samenvatting: ${brief.title}`
+        : 'Conclusie';
+
     sections.push({
       key: 'conclusion',
-      heading: 'Conclusion',
+      heading: conclusionHeading,
       level: 2,
       order: 999
     });
@@ -263,8 +277,19 @@ export class ContentGenerationOrchestrator {
     return sections
       .sort((a, b) => a.section_order - b.section_order)
       .map(s => {
-        const heading = s.section_level === 2 ? `## ${s.section_heading}` : `### ${s.section_heading}`;
-        return `${heading}\n\n${s.current_content || ''}`;
+        const content = (s.current_content || '').trim();
+        const expectedHeading = s.section_level === 2 ? `## ${s.section_heading}` : `### ${s.section_heading}`;
+
+        // Check if content already starts with a markdown heading (## or ###)
+        // This prevents duplicate headers when passes add headings to content
+        const headingPattern = /^#{2,3}\s+/;
+        if (headingPattern.test(content)) {
+          // Content already has a heading - use as-is
+          return content;
+        }
+
+        // No heading in content - add it
+        return `${expectedHeading}\n\n${content}`;
       })
       .join('\n\n');
   }

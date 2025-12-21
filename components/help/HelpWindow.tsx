@@ -23,6 +23,340 @@ import { HelpArticleView } from './HelpArticleView';
 import { HelpSearch } from './HelpSearch';
 import { HelpBreadcrumbs } from './HelpBreadcrumbs';
 
+/**
+ * Generate full help documentation as HTML for export
+ */
+const generateFullHelpHTML = (categories: HelpCategoryWithArticles[]): string => {
+  const now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Holistic SEO Topical Map Generator - Help Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 2.5rem; color: #1a1a1a; margin-bottom: 1rem; border-bottom: 3px solid #0891b2; padding-bottom: 0.5rem; }
+    h2 { font-size: 1.8rem; color: #1a1a1a; margin: 2rem 0 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+    h3 { font-size: 1.4rem; color: #374151; margin: 1.5rem 0 0.75rem; }
+    h4 { font-size: 1.1rem; color: #4b5563; margin: 1rem 0 0.5rem; }
+    p { margin: 0.5rem 0; }
+    ul, ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+    li { margin: 0.25rem 0; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    pre { background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; }
+    pre code { background: none; padding: 0; color: inherit; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+    th { background: #f9fafb; font-weight: 600; }
+    blockquote { border-left: 4px solid #0891b2; padding-left: 1rem; margin: 1rem 0; color: #4b5563; font-style: italic; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 2rem 0; }
+    .toc { background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin: 2rem 0; }
+    .toc h2 { margin-top: 0; border: none; }
+    .toc ul { list-style: none; margin: 0; padding: 0; }
+    .toc li { margin: 0.5rem 0; }
+    .toc a { color: #0891b2; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .category-header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 1.5rem; border-radius: 8px; margin: 3rem 0 1.5rem; }
+    .category-header h2 { color: white; border: none; margin: 0; }
+    .article { margin-bottom: 3rem; page-break-inside: avoid; }
+    .article-meta { color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem; }
+    .footer { margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #e5e7eb; color: #6b7280; text-align: center; }
+    @media print {
+      body { max-width: none; }
+      .category-header { break-before: page; }
+      .toc { break-after: page; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Holistic SEO Topical Map Generator</h1>
+    <p style="font-size: 1.25rem; color: #6b7280;">Complete Help Documentation</p>
+    <p style="color: #9ca3af; font-size: 0.875rem;">Generated: ${now}</p>
+  </header>
+
+  <nav class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+`;
+
+  // Generate Table of Contents
+  categories.forEach(category => {
+    html += `      <li><strong>${category.name}</strong>
+        <ul>
+`;
+    category.articles.forEach(article => {
+      const anchor = `${category.slug}-${article.slug}`;
+      html += `          <li><a href="#${anchor}">${article.title}</a></li>
+`;
+    });
+    html += `        </ul>
+      </li>
+`;
+  });
+
+  html += `    </ul>
+  </nav>
+
+  <main>
+`;
+
+  // Generate content for each category and article
+  categories.forEach(category => {
+    html += `    <section>
+      <div class="category-header">
+        <h2>${category.name}</h2>
+        ${category.description ? `<p>${category.description}</p>` : ''}
+      </div>
+`;
+
+    category.articles.forEach(article => {
+      const anchor = `${category.slug}-${article.slug}`;
+      // Convert markdown to basic HTML (simplified)
+      const contentHtml = article.content
+        .replace(/^### (.*$)/gm, '<h4>$1</h4>')
+        .replace(/^## (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^# (.*$)/gm, '<h3>$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        .replace(/\n\n/g, '</p><p>');
+
+      html += `      <article class="article" id="${anchor}">
+        <h3>${article.title}</h3>
+        <div class="article-meta">
+          ${article.summary ? `<p>${article.summary}</p>` : ''}
+        </div>
+        <div class="article-content">
+          ${contentHtml}
+        </div>
+      </article>
+      <hr>
+`;
+    });
+
+    html += `    </section>
+`;
+  });
+
+  html += `  </main>
+
+  <footer class="footer">
+    <p>Holistic SEO Topical Map Generator - Help Documentation</p>
+    <p>Generated on ${now}</p>
+  </footer>
+</body>
+</html>`;
+
+  return html;
+};
+
+/**
+ * Download helper function
+ */
+const downloadAsFile = (content: string, filename: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * Generate full help documentation as Markdown
+ */
+const generateFullHelpMarkdown = (categories: HelpCategoryWithArticles[]): string => {
+  const now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  let md = `# Holistic SEO Topical Map Generator\n\n`;
+  md += `## Complete Help Documentation\n\n`;
+  md += `*Generated: ${now}*\n\n`;
+  md += `---\n\n`;
+
+  // Table of Contents
+  md += `## Table of Contents\n\n`;
+  categories.forEach(category => {
+    md += `### ${category.name}\n`;
+    category.articles.forEach(article => {
+      const anchor = `${category.slug}-${article.slug}`.replace(/[^a-z0-9-]/g, '-');
+      md += `- [${article.title}](#${anchor})\n`;
+    });
+    md += `\n`;
+  });
+
+  md += `---\n\n`;
+
+  // Content
+  categories.forEach(category => {
+    md += `# ${category.name}\n\n`;
+    if (category.description) {
+      md += `*${category.description}*\n\n`;
+    }
+
+    category.articles.forEach(article => {
+      const anchor = `${category.slug}-${article.slug}`.replace(/[^a-z0-9-]/g, '-');
+      md += `<a name="${anchor}"></a>\n\n`;
+      md += `## ${article.title}\n\n`;
+      if (article.summary) {
+        md += `> ${article.summary}\n\n`;
+      }
+      md += `${article.content}\n\n`;
+      md += `---\n\n`;
+    });
+  });
+
+  md += `\n---\n\n`;
+  md += `*Holistic SEO Topical Map Generator - Help Documentation*\n`;
+  md += `*Generated on ${now}*\n`;
+
+  return md;
+};
+
+/**
+ * Open print dialog for all documentation (for PDF export)
+ */
+const openPrintAllDocumentation = (categories: HelpCategoryWithArticles[]) => {
+  const html = generateFullHelpHTML(categories);
+
+  // Create a blob URL for the HTML content
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  // Open in new window
+  const printWindow = window.open(url, '_blank');
+  if (printWindow) {
+    // Wait for the window to load, then trigger print
+    printWindow.onload = () => {
+      // Give extra time for styles to apply
+      setTimeout(() => {
+        printWindow.print();
+        // Clean up blob URL after printing (with delay to ensure print dialog has opened)
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 1000);
+      }, 800);
+    };
+  } else {
+    // Fallback: if popup was blocked, offer direct download
+    URL.revokeObjectURL(url);
+    downloadAsFile(html, 'holistic-seo-help-documentation-print.html', 'text/html');
+    alert('Pop-up blocked. The HTML file has been downloaded instead. Open it in a browser and use Print > Save as PDF.');
+  }
+};
+
+// =============================================================================
+// EXPORT DROPDOWN
+// =============================================================================
+
+interface ExportDropdownProps {
+  categories: HelpCategoryWithArticles[];
+}
+
+const ExportDropdown: React.FC<ExportDropdownProps> = ({ categories }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleExportMarkdown = () => {
+    const md = generateFullHelpMarkdown(categories);
+    downloadAsFile(md, 'holistic-seo-help-documentation.md', 'text/markdown');
+    setIsOpen(false);
+  };
+
+  const handleExportHTML = () => {
+    const html = generateFullHelpHTML(categories);
+    downloadAsFile(html, 'holistic-seo-help-documentation.html', 'text/html');
+    setIsOpen(false);
+  };
+
+  const handlePrintAllPDF = () => {
+    openPrintAllDocumentation(categories);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative print:hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors text-sm"
+        title="Export Documentation"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        <span>Export All</span>
+        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+          />
+          {/* Dropdown menu */}
+          <div className="absolute right-0 top-full mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 overflow-hidden">
+            <div className="p-2">
+              <p className="text-xs text-gray-500 uppercase tracking-wide px-3 py-2">Download Complete Documentation</p>
+
+              <button
+                onClick={handleExportMarkdown}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div>
+                  <div className="font-medium">Markdown (.md)</div>
+                  <div className="text-xs text-gray-500">Raw text with formatting</div>
+                </div>
+              </button>
+
+              <button
+                onClick={handleExportHTML}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+                <div>
+                  <div className="font-medium">HTML (.html)</div>
+                  <div className="text-xs text-gray-500">Styled web page format</div>
+                </div>
+              </button>
+
+              <div className="border-t border-gray-700 my-2" />
+
+              <button
+                onClick={handlePrintAllPDF}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <div>
+                  <div className="font-medium">Print to PDF</div>
+                  <div className="text-xs text-gray-500">All pages in one document</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 interface HelpWindowProps {
   supabase: SupabaseClient;
   navigation: HelpNavigationState;
@@ -163,11 +497,15 @@ export const HelpWindow: React.FC<HelpWindowProps> = ({
       <main className="flex-1 overflow-y-auto">
         {/* Header */}
         <header className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur border-b border-gray-800 px-8 py-4">
-          <HelpBreadcrumbs
-            category={currentCategory || undefined}
-            article={currentArticle || undefined}
-            onNavigate={onNavigate}
-          />
+          <div className="flex items-center justify-between gap-4">
+            <HelpBreadcrumbs
+              category={currentCategory || undefined}
+              article={currentArticle || undefined}
+              onNavigate={onNavigate}
+            />
+            {/* Export Dropdown Menu */}
+            <ExportDropdown categories={categories} />
+          </div>
         </header>
 
         {/* Content */}

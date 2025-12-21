@@ -5,7 +5,7 @@
  * identify empty, partial, or complete briefs at a glance.
  */
 
-import { ContentBrief } from '../types';
+import { ContentBrief, BriefVisualSemantics } from '../types';
 
 export type BriefHealthLevel = 'complete' | 'partial' | 'empty';
 
@@ -16,6 +16,7 @@ export interface BriefQualityResult {
   sectionCount: number;
   targetWordCount: number | null;
   summary: string;
+  visualSemanticsScore?: number;
 }
 
 export interface BriefHealthStats {
@@ -33,12 +34,14 @@ export interface BriefHealthStats {
  * targetKeyword and searchIntent exist in TypeScript interface but NOT in DB schema.
  */
 const FIELD_WEIGHTS = {
-  metaDescription: 15,
-  structuredOutline: 30,  // Increased from 25 to compensate for removed fields
-  serpAvgWordCount: 15,   // Increased from 10
-  serpPeopleAlsoAsk: 10,
-  contextualBridge: 15,   // Increased from 10
-  visualsFeaturedImage: 15, // Increased from 10
+  metaDescription: 12,
+  structuredOutline: 25,
+  serpAvgWordCount: 12,
+  serpPeopleAlsoAsk: 8,
+  contextualBridge: 12,
+  visualsFeaturedImage: 11,
+  // New Visual Semantics weight (Koray's "Pixels, Letters, and Bytes" framework)
+  visualSemantics: 20,
 } as const;
 
 /**
@@ -48,6 +51,71 @@ const THRESHOLDS = {
   complete: 80,
   partial: 40,
 } as const;
+
+/**
+ * Calculate Visual Semantics score based on completeness
+ * Evaluates hero image, section images, n-grams, and overall structure
+ */
+function calculateVisualSemanticsScore(visualSemantics: BriefVisualSemantics | undefined): number {
+  if (!visualSemantics) return 0;
+
+  let score = 0;
+  const maxScore = 100;
+
+  // Hero image (30 points)
+  if (visualSemantics.hero_image) {
+    const hero = visualSemantics.hero_image;
+    if (hero.image_description) score += 5;
+    if (hero.alt_text_recommendation && hero.alt_text_recommendation.length > 10) score += 8;
+    if (hero.file_name_recommendation) score += 4;
+    if (hero.format_recommendation) score += 5;
+    if (hero.html_template) score += 5;
+    if (hero.centerpiece_alignment && hero.centerpiece_alignment >= 70) score += 3;
+  }
+
+  // Section images (30 points)
+  const sectionImages = visualSemantics.section_images || {};
+  const sectionCount = Object.keys(sectionImages).length;
+  if (sectionCount > 0) {
+    score += Math.min(15, sectionCount * 5); // Up to 15 points for having sections
+
+    // Check quality of first 3 section images
+    const sectionKeys = Object.keys(sectionImages).slice(0, 3);
+    sectionKeys.forEach(key => {
+      const section = sectionImages[key];
+      if (section?.alt_text_recommendation) score += 2;
+      if (section?.file_name_recommendation) score += 1;
+      if (section?.entity_connections?.length > 0) score += 2;
+    });
+  }
+
+  // Image N-grams from SERP analysis (20 points)
+  if (visualSemantics.image_n_grams && visualSemantics.image_n_grams.length > 0) {
+    score += Math.min(20, visualSemantics.image_n_grams.length * 4);
+  }
+
+  // Total images recommended (10 points)
+  if (visualSemantics.total_images_recommended) {
+    const imgCount = visualSemantics.total_images_recommended;
+    if (imgCount >= 3 && imgCount <= 10) {
+      score += 10; // Optimal range
+    } else if (imgCount > 0) {
+      score += 5; // At least has recommendation
+    }
+  }
+
+  // Visual hierarchy defined (5 points)
+  if (visualSemantics.visual_hierarchy) {
+    score += 5;
+  }
+
+  // Brand alignment (5 points)
+  if (visualSemantics.brand_alignment) {
+    score += 5;
+  }
+
+  return Math.min(score, maxScore);
+}
 
 /**
  * Calculate brief quality score
@@ -100,7 +168,8 @@ export function calculateBriefQualityScore(brief: ContentBrief | null | undefine
   const hasContextualBridge = brief.contextualBridge && (
     Array.isArray(brief.contextualBridge)
       ? brief.contextualBridge.length > 0
-      : (brief.contextualBridge as any)?.suggested_internal_links?.length > 0 ||
+      : (brief.contextualBridge as any)?.links?.length > 0 ||
+        (brief.contextualBridge as any)?.suggested_internal_links?.length > 0 ||
         (brief.contextualBridge as any)?.semantic_bridges?.length > 0
   );
   if (hasContextualBridge) {
@@ -109,11 +178,21 @@ export function calculateBriefQualityScore(brief: ContentBrief | null | undefine
     missingFields.push('Internal linking strategy');
   }
 
-  // Featured Image Prompt (15%)
+  // Featured Image Prompt (11%)
   if (brief.visuals?.featuredImagePrompt && brief.visuals.featuredImagePrompt.length > 10) {
     score += FIELD_WEIGHTS.visualsFeaturedImage;
   } else {
     missingFields.push('Featured image guidance');
+  }
+
+  // Visual Semantics (20%) - Koray's "Pixels, Letters, and Bytes" framework
+  const visualSemanticsScore = calculateVisualSemanticsScore(brief.enhanced_visual_semantics);
+  if (visualSemanticsScore > 0) {
+    // Scale the visual semantics score (0-100) to the weight (0-20)
+    const scaledScore = Math.round((visualSemanticsScore / 100) * FIELD_WEIGHTS.visualSemantics);
+    score += scaledScore;
+  } else {
+    missingFields.push('Visual semantics specifications');
   }
 
   // Note: targetKeyword and searchIntent are not checked because they can't be persisted to DB
@@ -134,6 +213,7 @@ export function calculateBriefQualityScore(brief: ContentBrief | null | undefine
     sectionCount,
     targetWordCount,
     summary,
+    visualSemanticsScore: visualSemanticsScore > 0 ? visualSemanticsScore : undefined,
   };
 }
 

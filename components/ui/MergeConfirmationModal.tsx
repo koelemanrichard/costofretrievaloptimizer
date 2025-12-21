@@ -1,6 +1,15 @@
+/**
+ * MergeConfirmationModal Component
+ *
+ * Confirmation dialog for merging topics, with editable suggestion fields.
+ * Uses the accessible Modal component with full keyboard navigation and ARIA support.
+ *
+ * Updated: 2024-12-19 - Migrated to accessible Modal component
+ */
+
 import React, { useState, useEffect } from 'react';
 import { MergeSuggestion } from '../../types';
-import { Card } from './Card';
+import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Label } from './Label';
@@ -32,7 +41,7 @@ const MergeConfirmationModal: React.FC<MergeConfirmationModalProps> = ({
     }
   }, [suggestion]);
 
-  if (!isOpen || !suggestion) return null;
+  if (!suggestion) return null;
 
   const handleConfirm = () => {
     onConfirm({
@@ -42,55 +51,63 @@ const MergeConfirmationModal: React.FC<MergeConfirmationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-[60] flex justify-center items-center p-4" onClick={onClose}>
-      <Card className="w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Confirm Topic Merge</h2>
-
-          <div className="space-y-4">
-            <div>
-              <Label>Topics to Merge:</Label>
-              <ul className="flex flex-wrap gap-2">
-                {suggestion.topicTitles.map((title) => (
-                  <li key={title} className="bg-gray-700 text-gray-200 text-xs font-medium px-2.5 py-1 rounded-full">
-                    {title}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="text-sm text-cyan-300/90 italic border-l-2 border-cyan-500/20 pl-3">
-              <strong>AI Reasoning:</strong> {suggestion.reasoning}
-            </div>
-
-            <div className="pt-4 border-t border-gray-700">
-              <Label htmlFor="new-topic-title">Suggested New Topic (Editable)</Label>
-              <Input
-                id="new-topic-title"
-                value={newTopicTitle}
-                onChange={(e) => setNewTopicTitle(e.target.value)}
-                disabled={isLoading}
-              />
-              <Textarea
-                value={newTopicDescription}
-                onChange={(e) => setNewTopicDescription(e.target.value)}
-                rows={4}
-                className="mt-2"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="p-4 bg-gray-800 border-t border-gray-700 flex justify-end gap-4">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Confirm Topic Merge"
+      description={`Merge ${suggestion.topicTitles.length} topics into one`}
+      maxWidth="max-w-2xl"
+      zIndex="z-[60]"
+      footer={
+        <>
           <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={isLoading || !newTopicTitle}>
             {isLoading ? <Loader className="w-5 h-5" /> : 'Confirm Merge'}
           </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <Label>Topics to Merge:</Label>
+          <ul className="flex flex-wrap gap-2" role="list" aria-label="Topics to be merged">
+            {suggestion.topicTitles.map((title) => (
+              <li key={title} className="bg-gray-700 text-gray-200 text-xs font-medium px-2.5 py-1 rounded-full">
+                {title}
+              </li>
+            ))}
+          </ul>
         </div>
-      </Card>
-    </div>
+
+        <div className="text-sm text-cyan-300/90 italic border-l-2 border-cyan-500/20 pl-3">
+          <strong>AI Reasoning:</strong> {suggestion.reasoning}
+        </div>
+
+        <div className="pt-4 border-t border-gray-700">
+          <Label htmlFor="new-topic-title">Suggested New Topic (Editable)</Label>
+          <Input
+            id="new-topic-title"
+            value={newTopicTitle}
+            onChange={(e) => setNewTopicTitle(e.target.value)}
+            disabled={isLoading}
+            aria-describedby="new-topic-hint"
+          />
+          <span id="new-topic-hint" className="sr-only">
+            Enter the title for the merged topic
+          </span>
+          <Textarea
+            value={newTopicDescription}
+            onChange={(e) => setNewTopicDescription(e.target.value)}
+            rows={4}
+            className="mt-2"
+            disabled={isLoading}
+            aria-label="Topic description"
+          />
+        </div>
+      </div>
+    </Modal>
   );
 };
 

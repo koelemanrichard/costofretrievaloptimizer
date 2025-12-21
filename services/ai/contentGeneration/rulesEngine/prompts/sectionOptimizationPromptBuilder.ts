@@ -403,13 +403,14 @@ export function buildPass7Prompt(ctx: SectionOptimizationContext): string {
 
   // This pass only processes the introduction section
   // It rewrites the intro AFTER the full article exists
+  // Now also generates a topic-specific heading (not generic "Introduction")
 
   return `You are a Holistic SEO editor rewriting the introduction AFTER the full article exists.
 
 **LANGUAGE: ${lang}**
 
 ## Your Task
-Write a NEW introduction that synthesizes the complete article. Return ONLY the introduction content.
+Write a NEW introduction with a TOPIC-SPECIFIC heading. Return both the heading and content.
 
 ## Current Introduction
 ${section.current_content}
@@ -427,22 +428,89 @@ Key Takeaways: ${brief.keyTakeaways?.slice(0, 3).join(', ') || 'N/A'}
 ${holistic.featuredSnippetTarget ? `Featured Snippet Target: ${holistic.featuredSnippetTarget.question}` : ''}
 
 ## Introduction Synthesis Rules:
-1. **Centerpiece Annotation**: Core answer/definition in FIRST 400 characters
-2. **Summary Alignment**: Preview ALL H2/H3 topics in SAME ORDER as article
-3. **Key Terms**: Include at least one term from each major section
-4. **Featured Snippet**: Address the featured snippet target immediately
-5. **No Fluff**: Maximum information density
-6. **Word Count**: 150-250 words
+1. **Topic-Specific Heading**: NEVER use "Introduction" or "Overview" - use heading that includes central entity
+   - Good examples: "Wat is ${holistic.centralEntity}", "${holistic.centralEntity}: Een Overzicht", "Alles over ${holistic.centralEntity}"
+   - Bad examples: "Introduction", "Overview", "Getting Started"
+2. **Centerpiece Annotation**: Core answer/definition in FIRST 400 characters after heading
+3. **Summary Alignment**: Preview ALL H2/H3 topics in SAME ORDER as article
+4. **Key Terms**: Include at least one term from each major section
+5. **Featured Snippet**: Address the featured snippet target immediately
+6. **No Fluff**: Maximum information density
+7. **Word Count**: 150-250 words for content
 
 ## Instructions:
 Write a NEW introduction (NOT just edit the old one) that:
-1. Starts with direct definition/answer (centerpiece annotation)
-2. Previews ALL major sections in order they appear
-3. Includes key terms from each section
-4. Sets reader expectations clearly
-5. Is written entirely in ${lang}
+1. Has a topic-specific H2 heading containing "${holistic.centralEntity}" or key topic terms
+2. Starts with direct definition/answer (centerpiece annotation)
+3. Previews ALL major sections in order they appear
+4. Includes key terms from each section
+5. Sets reader expectations clearly
+6. Is written entirely in ${lang}
 
-**OUTPUT ONLY the introduction paragraph content in ${lang}. Do NOT include "## Introduction" heading.**`;
+**OUTPUT FORMAT:**
+## [Topic-specific heading in ${lang}]
+
+[Introduction content in ${lang}]`;
+}
+
+// ============================================
+// Pass 7: Conclusion Synthesis
+// ============================================
+
+export function buildPass7ConclusionPrompt(ctx: SectionOptimizationContext): string {
+  const { section, holistic, brief, businessInfo } = ctx;
+  const lang = businessInfo.language || 'English';
+
+  // Determine if this is a monetization topic (needs CTA)
+  const isMonetization = brief.topic_class === 'monetization' ||
+    (brief as any).topicClass === 'monetization';
+
+  return `You are a Holistic SEO editor rewriting the conclusion AFTER the full article exists.
+
+**LANGUAGE: ${lang}**
+
+## Your Task
+Write a NEW conclusion with a TOPIC-SPECIFIC heading. Return both the heading and content.
+
+## Current Conclusion
+${section.current_content}
+
+## Full Article Structure (summarize key points from each section)
+${holistic.articleStructure.headingOutline
+  .filter(h => h.key !== 'conclusion' && !h.heading.toLowerCase().includes('conclusion'))
+  .map((h, i) => `${i + 1}. ${h.heading}`)
+  .join('\n')}
+
+## Brief Info
+Title: ${holistic.articleStructure.title}
+Central Entity: ${holistic.centralEntity}
+Key Takeaways: ${brief.keyTakeaways?.slice(0, 5).join(', ') || 'N/A'}
+${isMonetization ? `Business CTA: Contact for ${holistic.centralEntity} services/products` : ''}
+
+## Conclusion Synthesis Rules:
+1. **Topic-Specific Heading**: NEVER use "Conclusion" or "Summary" - use heading that includes central entity
+   - Good examples: "Conclusie: ${holistic.centralEntity} voor Uw Project", "${holistic.centralEntity} Samengevat", "De Keuze voor ${holistic.centralEntity}"
+   - Bad examples: "Conclusion", "Summary", "Final Thoughts", "Wrapping Up"
+2. **Key Points Summary**: Summarize 3-5 main takeaways from the article
+3. **Central Entity Reinforcement**: Reference ${holistic.centralEntity} explicitly
+4. **Actionable Close**: End with clear next step for the reader
+${isMonetization ? `5. **Call-to-Action**: Include CTA for ${holistic.centralEntity} services/consultation` : '5. **Educational Close**: Reinforce the learning value'}
+6. **No Fluff**: Maximum information density
+7. **Word Count**: 100-200 words for content
+
+## Instructions:
+Write a NEW conclusion (NOT just edit the old one) that:
+1. Has a topic-specific H2 heading containing "${holistic.centralEntity}" or key topic terms
+2. Summarizes key insights from ALL major sections
+3. Reinforces the central entity's importance
+4. Provides clear next steps/actionable advice
+${isMonetization ? '5. Includes appropriate call-to-action' : '5. Closes with educational value statement'}
+6. Is written entirely in ${lang}
+
+**OUTPUT FORMAT:**
+## [Topic-specific conclusion heading in ${lang}]
+
+[Conclusion content in ${lang}]`;
 }
 
 // ============================================
@@ -456,7 +524,8 @@ export const SectionOptimizationPromptBuilder = {
   buildPass4Prompt,
   buildPass5Prompt,
   buildPass6Prompt,
-  buildPass7Prompt
+  buildPass7Prompt,
+  buildPass7ConclusionPrompt
 };
 
 export default SectionOptimizationPromptBuilder;

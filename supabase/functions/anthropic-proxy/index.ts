@@ -1,21 +1,22 @@
 // supabase/functions/anthropic-proxy/index.ts
 // Proxy for Anthropic API calls to avoid CORS issues in browser environments
+// Supports both regular and streaming requests
 // deno-lint-ignore-file no-explicit-any
 
 const Deno = (globalThis as any).Deno;
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-// Supabase Edge Functions have different timeout limits:
-// - Free plan: ~10 seconds
-// - Pro plan: ~150 seconds
-// Set internal timeout slightly below to provide better error messages
-const FETCH_TIMEOUT_MS = 120000; // 120 seconds - allows for long AI responses
+// Supabase Edge Functions Pro plan limits:
+// - Request timeout: 150 seconds
+// - Wall clock timeout: 400 seconds
+// Set internal timeout to 140 seconds to allow for network overhead
+const FETCH_TIMEOUT_MS = 140000; // 140 seconds
 
 function corsHeaders(origin = "*") {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-anthropic-api-key",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-anthropic-api-key, x-stream-response",
   };
 }
 
@@ -57,7 +58,10 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'Missing required fields: model and messages' }, 400, origin);
     }
 
-    console.log(`[anthropic-proxy] Starting request to model: ${body.model}, max_tokens: ${body.max_tokens || 4096}`);
+    // Check if client wants streaming
+    const wantStreaming = body.stream === true;
+
+    console.log(`[anthropic-proxy] Starting request to model: ${body.model}, max_tokens: ${body.max_tokens || 4096}, streaming: ${wantStreaming}`);
 
     // Create AbortController for timeout management
     const controller = new AbortController();
@@ -80,6 +84,7 @@ Deno.serve(async (req: Request) => {
           max_tokens: body.max_tokens || 4096,
           messages: body.messages,
           system: body.system,
+          stream: wantStreaming,
         }),
         signal: controller.signal,
       });
@@ -92,15 +97,69 @@ Deno.serve(async (req: Request) => {
       // Check for errors from Anthropic
       if (!anthropicResponse.ok) {
         const errorText = await anthropicResponse.text();
-        console.error('[anthropic-proxy] Anthropic API error:', errorText);
+        console.error('[anthropic-proxy] Anthropic API error:', anthropicResponse.status, errorText);
+
+        // Parse error for better messages
+        let errorMessage = `Anthropic API error: ${anthropicResponse.status}`;
+        let suggestion = '';
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error?.message) {
+            errorMessage = errorJson.error.message;
+          }
+        } catch {
+          // Use raw text if not JSON
+        }
+
+        // Provide helpful suggestions based on status code
+        switch (anthropicResponse.status) {
+          case 401:
+            suggestion = 'Your Anthropic API key may be invalid or expired. Please check your API key in Settings.';
+            if (errorText.includes('invalid_api_key') || errorText.includes('Could not resolve authentication')) {
+              errorMessage = 'Invalid Anthropic API key';
+            }
+            break;
+          case 400:
+            if (errorText.includes('model')) {
+              suggestion = `The model "${body.model}" may not exist. Valid models include: claude-3-5-sonnet-20241022, claude-3-opus-20240229, claude-3-haiku-20240307`;
+            }
+            break;
+          case 429:
+            suggestion = 'Rate limit exceeded. Please wait a moment before retrying, or switch to Gemini.';
+            break;
+          case 529:
+            suggestion = 'Anthropic API is currently overloaded. Please try again later or switch to Gemini.';
+            break;
+        }
+
         return json(
-          { error: `Anthropic API error: ${anthropicResponse.status} ${anthropicResponse.statusText}`, details: errorText },
+          {
+            error: errorMessage,
+            suggestion,
+            details: errorText,
+            model_requested: body.model
+          },
           anthropicResponse.status,
           origin
         );
       }
 
-      // Return the Anthropic response
+      // If streaming, return the stream directly
+      if (wantStreaming && anthropicResponse.body) {
+        console.log('[anthropic-proxy] Returning streaming response');
+        return new Response(anthropicResponse.body, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            ...corsHeaders(origin),
+          },
+        });
+      }
+
+      // Return the Anthropic response as JSON
       const data = await anthropicResponse.json();
       return json(data, 200, origin);
 
@@ -108,10 +167,12 @@ Deno.serve(async (req: Request) => {
       clearTimeout(timeoutId);
 
       if (fetchError.name === 'AbortError') {
-        console.error(`[anthropic-proxy] Request aborted due to timeout (${FETCH_TIMEOUT_MS}ms)`);
+        const elapsed = Date.now() - startTime;
+        console.error(`[anthropic-proxy] Request aborted due to timeout after ${elapsed}ms`);
         return json({
-          error: `Request timed out after ${FETCH_TIMEOUT_MS / 1000} seconds. The Anthropic API may be slow or your Supabase plan may have lower timeout limits.`,
-          suggestion: 'Try a simpler request or upgrade your Supabase plan for longer timeouts.'
+          error: `Request timed out after ${Math.round(elapsed / 1000)} seconds. This can happen with complex content generation requests.`,
+          suggestion: 'Try breaking your request into smaller parts, use streaming mode, or switch to Gemini which is typically faster.',
+          timeout_ms: elapsed
         }, 504, origin);
       }
 

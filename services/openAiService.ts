@@ -16,14 +16,71 @@ import { AIResponseSanitizer } from './aiResponseSanitizer';
 import { AppAction } from '../state/appState';
 import React from 'react';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
+import { logAiUsage, estimateTokens, AIUsageContext } from './telemetryService';
+import { getSupabaseClient } from './supabaseClient';
+
+// Current operation context for logging (set by callers)
+let currentUsageContext: AIUsageContext = {};
+let currentOperation: string = 'unknown';
+
+/**
+ * Extract markdown content from potentially JSON-wrapped AI responses.
+ * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
+ * This function gracefully handles such cases.
+ */
+const extractMarkdownFromResponse = (text: string): string => {
+    if (!text) return text;
+
+    // Strip markdown code block wrapper if present (```json ... ``` or ``` ... ```)
+    let cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+        const firstNewline = cleaned.indexOf('\n');
+        if (firstNewline !== -1) {
+            cleaned = cleaned.substring(firstNewline + 1);
+        }
+        if (cleaned.endsWith('```')) {
+            cleaned = cleaned.substring(0, cleaned.length - 3).trimEnd();
+        }
+    }
+
+    // Try to parse as JSON and extract content
+    try {
+        const parsed = JSON.parse(cleaned);
+        // Check common key names for polished content (order matters - most specific first)
+        const content = parsed.polished_content || parsed.polished_article ||
+                       parsed.polishedContent || parsed.polishedArticle ||
+                       parsed.polishedDraft || parsed.content || parsed.article ||
+                       parsed.markdown || parsed.text || parsed.draft;
+        if (typeof content === 'string') {
+            console.log('[extractMarkdownFromResponse] Successfully extracted content from JSON wrapper');
+            return content;
+        }
+    } catch (e) {
+        // Not valid JSON, return original text (which is the expected case)
+    }
+
+    return text;
+};
+
+/**
+ * Set the context for AI usage logging (should be called before AI operations)
+ */
+export function setUsageContext(context: AIUsageContext, operation?: string): void {
+    currentUsageContext = context;
+    if (operation) currentOperation = operation;
+}
 
 const callApi = async <T>(
     prompt: string,
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<AppAction>,
     sanitizerFn: (text: string) => T,
-    isJson: boolean = true
+    isJson: boolean = true,
+    operationName?: string
 ): Promise<T> => {
+    const startTime = Date.now();
+    const operation = operationName || currentOperation;
+
     dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Sending request to ${businessInfo.aiModel}...`, status: 'info', timestamp: Date.now() } });
 
     if (!businessInfo.openAiApiKey) {
@@ -50,25 +107,79 @@ const callApi = async <T>(
     const isValidModel = businessInfo.aiModel && validOpenAIModels.includes(businessInfo.aiModel);
     const modelToUse = isValidModel ? businessInfo.aiModel : defaultModel;
 
+    // Get supabase client for database logging (if available)
+    let supabase: any;
     try {
+        if (businessInfo.supabaseUrl && businessInfo.supabaseAnonKey) {
+            supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+        }
+    } catch (e) {
+        // Ignore if supabase not available
+    }
+
+    try {
+        // Determine which token parameter to use based on model
+        // O-series (o3, o4-mini) and GPT-5+ use max_completion_tokens
+        // Legacy models (gpt-4o, gpt-4.1) use max_tokens
+        const usesNewTokenParam = modelToUse.startsWith('o') ||
+            modelToUse.startsWith('gpt-5') ||
+            modelToUse.startsWith('gpt-4.1');
+
+        const tokenParams = usesNewTokenParam
+            ? { max_completion_tokens: 8192 }
+            : { max_tokens: 8192 };
+
         const completion = await openai.chat.completions.create({
             model: modelToUse,
             messages: [
                 { role: "system", content: "You are a helpful, expert SEO strategist and content architect. You output strict JSON when requested." },
                 { role: "user", content: prompt }
             ],
-            max_tokens: 8192, // Prevent truncation for long content
+            ...tokenParams, // Use appropriate token parameter for model
             response_format: isJson ? { type: "json_object" } : undefined,
         });
 
         const responseText = completion.choices[0].message.content || '';
-        
+        const durationMs = Date.now() - startTime;
+
+        // Log successful usage
+        const tokensIn = completion.usage?.prompt_tokens || estimateTokens(prompt.length);
+        const tokensOut = completion.usage?.completion_tokens || estimateTokens(responseText.length);
+
+        logAiUsage({
+            provider: 'openai',
+            model: modelToUse,
+            operation,
+            tokensIn,
+            tokensOut,
+            durationMs,
+            success: true,
+            requestSizeBytes: prompt.length,
+            responseSizeBytes: responseText.length,
+            context: currentUsageContext
+        }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
         dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Received response.`, status: 'info', timestamp: Date.now() } });
-        
+
         return sanitizerFn(responseText);
 
     } catch (error) {
+        const durationMs = Date.now() - startTime;
         const message = error instanceof Error ? error.message : "Unknown OpenAI error";
+
+        // Log failed usage
+        logAiUsage({
+            provider: 'openai',
+            model: modelToUse,
+            operation,
+            tokensIn: estimateTokens(prompt.length),
+            tokensOut: 0,
+            durationMs,
+            success: false,
+            errorMessage: message,
+            context: currentUsageContext
+        }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
         dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Error: ${message}`, status: 'failure', timestamp: Date.now(), data: error } });
         throw new Error(`OpenAI API Call Failed: ${message}`);
     }
@@ -78,22 +189,22 @@ const callApi = async <T>(
 
 export const suggestCentralEntityCandidates = async (info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<CandidateEntity[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.SUGGEST_CENTRAL_ENTITY_CANDIDATES_PROMPT(info), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+    return callApi(prompts.SUGGEST_CENTRAL_ENTITY_CANDIDATES_PROMPT(info), info, dispatch, (text) => sanitizer.sanitizeArray(text, []), true, 'suggestCentralEntityCandidates');
 };
 
 export const suggestSourceContextOptions = async (info: BusinessInfo, entity: string, dispatch: React.Dispatch<any>): Promise<SourceContextOption[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.SUGGEST_SOURCE_CONTEXT_OPTIONS_PROMPT(info, entity), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+    return callApi(prompts.SUGGEST_SOURCE_CONTEXT_OPTIONS_PROMPT(info, entity), info, dispatch, (text) => sanitizer.sanitizeArray(text, []), true, 'suggestSourceContextOptions');
 };
 
 export const suggestCentralSearchIntent = async (info: BusinessInfo, entity: string, context: string, dispatch: React.Dispatch<any>): Promise<{ intent: string, reasoning: string }[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT(info, entity, context), info, dispatch, (text) => sanitizer.sanitizeArray<{ intent: string, reasoning: string }>(text, []));
+    return callApi(prompts.SUGGEST_CENTRAL_SEARCH_INTENT_PROMPT(info, entity, context), info, dispatch, (text) => sanitizer.sanitizeArray<{ intent: string, reasoning: string }>(text, []), true, 'suggestCentralSearchIntent');
 };
 
 export const discoverCoreSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, dispatch: React.Dispatch<any>): Promise<SemanticTriple[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT(info, pillars), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+    return callApi(prompts.DISCOVER_CORE_SEMANTIC_TRIPLES_PROMPT(info, pillars), info, dispatch, (text) => sanitizer.sanitizeArray(text, []), true, 'discoverCoreSemanticTriples');
 };
 
 export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPillars, existing: SemanticTriple[], dispatch: React.Dispatch<any>, count: number = 15): Promise<SemanticTriple[]> => {
@@ -103,7 +214,7 @@ export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPill
     const BATCH_SIZE = 30;
 
     if (count <= BATCH_SIZE) {
-        return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+        return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []), true, 'expandSemanticTriples');
     }
 
     // Batched generation for larger counts
@@ -204,7 +315,7 @@ export const generateContentBrief = async (
     const schema = {
         title: String, slug: String, metaDescription: String, keyTakeaways: Array, outline: String,
         structured_outline: Array, perspectives: Array, methodology_note: String,
-        serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array },
+        serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array, avgWordCount: Number, avgHeadings: Number, commonStructure: String, contentGaps: Array },
         visuals: { featuredImagePrompt: String, imageAltText: String },
         contextualVectors: Array,
         contextualBridge: { type: String, content: String, links: Array },
@@ -221,7 +332,7 @@ export const generateArticleDraft = async (brief: ContentBrief, info: BusinessIn
 };
 
 export const polishDraft = async (draft: string, brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<string> => {
-    return callApi(prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, info), info, dispatch, (text) => text, false);
+    return callApi(prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, info), info, dispatch, extractMarkdownFromResponse, false);
 };
 
 export const auditContentIntegrity = async (brief: ContentBrief, draft: string, info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<ContentIntegrityResult> => {
@@ -517,7 +628,7 @@ export const regenerateBrief = async (
   const schema = {
     title: String, slug: String, metaDescription: String, keyTakeaways: Array, outline: String,
     structured_outline: Array, perspectives: Array, methodology_note: String,
-    serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array },
+    serpAnalysis: { peopleAlsoAsk: Array, competitorHeadings: Array, avgWordCount: Number, avgHeadings: Number, commonStructure: String, contentGaps: Array },
     visuals: { featuredImagePrompt: String, imageAltText: String },
     contextualVectors: Array,
     contextualBridge: { type: String, content: String, links: Array },

@@ -1,8 +1,11 @@
 
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import { EnrichedTopic, ContentBrief, SEOPillars, ValidationResult, ContextualBridgeLink, BriefSection, BusinessInfo, FoundationPage, NAPData, NavigationStructure, BrandKit, SemanticTriple } from '../types';
+import { EnrichedTopic, ContentBrief, SEOPillars, ValidationResult, ContextualBridgeLink, BriefSection, BusinessInfo, FoundationPage, NAPData, NavigationStructure, BrandKit, SemanticTriple, UnifiedAuditResult, MoneyPagePillarsResult, BriefVisualSemantics, QueryTemplate, ExpandedTemplateResult } from '../types';
 import { safeString } from './parsers';
+import { calculateSemanticComplianceMetrics, calculateAuthorityIndicators, EnhancedAuditMetrics } from '../services/reportGenerationService';
+import { calculateMoneyPagePillarsScore, shouldAnalyze4Pillars } from './moneyPagePillarScore';
+import { exportVisualSemanticsData } from '../services/visualSemanticsService';
 
 interface ExportDataInput {
     topics: EnrichedTopic[];
@@ -15,6 +18,11 @@ interface ExportDataInput {
     navigation?: NavigationStructure | null;
     brandKit?: BrandKit;
     eavs?: SemanticTriple[];
+    // Enhanced metrics
+    unifiedAuditResult?: UnifiedAuditResult | null;
+    // Query templates (Local SEO)
+    queryTemplates?: QueryTemplate[];
+    expandedTemplateResults?: ExpandedTemplateResult[];
 }
 
 // Helper to flatten structured outline into a readable vector string
@@ -52,8 +60,47 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
 
     const workbook = XLSX.utils.book_new();
 
-    // === TAB 1: Topics Master View ===
-    const topicRows = topics.map(topic => {
+    // === TAB 1: Topics Master View (with hierarchy) ===
+    // Build topic lookup map
+    const topicMap = new Map(topics.map(t => [t.id, t]));
+
+    // Sort topics hierarchically: core → outer → child, maintaining parent-child grouping
+    const sortedTopics: EnrichedTopic[] = [];
+    const coreTopics = topics.filter(t => t.type === 'core');
+    const outerTopics = topics.filter(t => t.type === 'outer');
+    const childTopics = topics.filter(t => t.type === 'child');
+
+    coreTopics.forEach(core => {
+        sortedTopics.push(core);
+        // Find outer topics under this core
+        const outersUnderCore = outerTopics.filter(o => o.parent_topic_id === core.id);
+        outersUnderCore.forEach(outer => {
+            sortedTopics.push(outer);
+            // Find child topics under this outer
+            const childrenUnderOuter = childTopics.filter(c => c.parent_topic_id === outer.id);
+            childrenUnderOuter.forEach(child => {
+                sortedTopics.push(child);
+            });
+        });
+    });
+
+    // Add orphaned outer topics (no parent or parent not found)
+    outerTopics.filter(o => !o.parent_topic_id || !topicMap.has(o.parent_topic_id)).forEach(outer => {
+        if (!sortedTopics.includes(outer)) {
+            sortedTopics.push(outer);
+            const childrenUnderOuter = childTopics.filter(c => c.parent_topic_id === outer.id);
+            childrenUnderOuter.forEach(child => {
+                if (!sortedTopics.includes(child)) sortedTopics.push(child);
+            });
+        }
+    });
+
+    // Add orphaned child topics
+    childTopics.filter(c => !sortedTopics.includes(c)).forEach(child => {
+        sortedTopics.push(child);
+    });
+
+    const topicRows = sortedTopics.map(topic => {
         const brief = briefs[topic.id];
         const blueprint = topic.blueprint;
         const bridgeData = brief?.contextualBridge;
@@ -72,22 +119,31 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
             return '';
         };
 
+        // Create hierarchical title with visual indentation
+        let hierarchyPrefix = '';
+        if (topic.type === 'outer') {
+            hierarchyPrefix = '├─ ';
+        } else if (topic.type === 'child') {
+            hierarchyPrefix = '    └─ ';
+        }
+
+        // Get parent topic title
+        const parentTopic = topic.parent_topic_id ? topicMap.get(topic.parent_topic_id) : null;
+        const parentTitle = parentTopic ? parentTopic.title : (topic.type === 'core' ? 'ROOT' : '');
+
         return {
-            'Topic Title': topic.title,
+            'Topic Title': hierarchyPrefix + topic.title,
             'Slug': topic.slug,
             'Type': topic.type,
-            'Section': topic.topic_class === 'monetization' || topic.type === 'core' ? 'Core' : 'Author',
-            'Description': truncateForExcel(topic.description, 500),
-            'Canonical Query': getMeta('canonical_query', 'canonical_query'),
-            'Query Type': getMeta('query_type', 'query_type'),
+            'Status': brief?.articleDraft ? 'AMBER' : (brief ? 'AMBER' : 'RED'),
             'Has Brief': brief ? 'Yes' : 'No',
             'Has Draft': brief?.articleDraft ? 'Yes' : 'No',
-            'Hub-Spoke Ratio': topic.type === 'core' ? `1:${spokeCount}` : 'N/A',
-            'Parent ID': topic.parent_topic_id || 'ROOT',
-            'Topic ID': topic.id
+            'Description': truncateForExcel(topic.description, 500),
+            'Canonical Query': getMeta('canonical_query', 'canonical_query'),
+            'Parent': parentTitle,
         };
     });
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(topicRows), "Topics");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(topicRows), "Topical Map");
 
     // === TAB 2: Content Briefs (truncated) ===
     const briefRows = topics.filter(t => briefs[t.id]).map(topic => {
@@ -172,7 +228,7 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
         XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(serpRows), "SERP Analysis");
     }
 
-    // === TAB 6: Visual Semantics ===
+    // === TAB 6: Visual Semantics (Legacy) ===
     const visualRows: any[] = [];
     topics.forEach(topic => {
         const brief = briefs[topic.id];
@@ -190,6 +246,57 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
     });
     if (visualRows.length > 0) {
         XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(visualRows), "Visual Semantics");
+    }
+
+    // === TAB 6b: Enhanced Visual Semantics (Koray's "Pixels, Letters, Bytes" Framework) ===
+    const enhancedVisualRows: any[] = [];
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        if (brief?.enhanced_visual_semantics) {
+            const exportData = exportVisualSemanticsData(brief.enhanced_visual_semantics);
+            exportData.forEach(item => {
+                enhancedVisualRows.push({
+                    'Topic': topic.title,
+                    'Image ID': item.image_id,
+                    'Description': truncateForExcel(item.description, 300),
+                    'Alt Text': truncateForExcel(item.alt_text, 200),
+                    'File Name': item.file_name,
+                    'Format': item.format,
+                    'Max Width': item.max_width,
+                    'Placement': truncateForExcel(item.placement, 200),
+                    'Entity Connections': item.entities,
+                    'Centerpiece Alignment': item.centerpiece_alignment ? `${item.centerpiece_alignment}%` : '',
+                    'HTML Template': truncateForExcel(item.html_template, 500)
+                });
+            });
+        }
+    });
+    if (enhancedVisualRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(enhancedVisualRows), "Visual Semantics Enhanced");
+    }
+
+    // === TAB 6c: Money Page 4 Pillars ===
+    const pillarRows: any[] = [];
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        // Only analyze monetization topics
+        if (brief && shouldAnalyze4Pillars(topic.topic_class)) {
+            const pillarsResult = calculateMoneyPagePillarsScore(brief);
+            pillarRows.push({
+                'Topic': topic.title,
+                'Overall Score': pillarsResult.overall_score,
+                'Grade': pillarsResult.overall_grade,
+                'Verbalization': pillarsResult.pillars.find(p => p.pillar === 'verbalization')?.score || 0,
+                'Contextualization': pillarsResult.pillars.find(p => p.pillar === 'contextualization')?.score || 0,
+                'Monetization': pillarsResult.pillars.find(p => p.pillar === 'monetization')?.score || 0,
+                'Visualization': pillarsResult.pillars.find(p => p.pillar === 'visualization')?.score || 0,
+                'Missing Critical': truncateForExcel(pillarsResult.missing_critical.join(', '), 300),
+                'Top Recommendations': truncateForExcel(pillarsResult.recommendations.slice(0, 3).join(' | '), 500)
+            });
+        }
+    });
+    if (pillarRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(pillarRows), "Money Page Pillars");
     }
 
     // === TAB 7: Hub-Spoke Metrics (if available) ===
@@ -339,13 +446,207 @@ export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xl
             'Object (Value)': String(eav.object?.value || ''),
             'Object Type': eav.object?.type || '',
             'Synonyms': eav.lexical?.synonyms?.join(', ') || '',
-            'Antonyms': eav.lexical?.antonyms?.join(', ') || ''
+            'Antonyms': eav.lexical?.antonyms?.join(', ') || '',
+            // KP Metadata
+            'KP Eligible': eav.kpMetadata?.isKPEligible ? 'Yes' : 'No',
+            'KP Consensus Score': eav.kpMetadata?.consensusScore ?? '',
+            'Seeds Confirmed': eav.kpMetadata?.seedSourcesConfirmed?.join(', ') || '',
+            'Seeds Required': eav.kpMetadata?.seedSourcesRequired?.join(', ') || '',
+            'Generated Statement': eav.kpMetadata?.generatedStatement || ''
         }));
         XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(eavRows), "Semantic Triples");
+
+        // === TAB 13b: KP-Eligible EAVs Summary ===
+        const kpEavs = input.eavs.filter(e => e.kpMetadata?.isKPEligible);
+        if (kpEavs.length > 0) {
+            const kpRows = kpEavs.map(eav => ({
+                'Statement': eav.kpMetadata?.generatedStatement || `${eav.subject?.label || ''} ${eav.predicate?.relation || ''}: ${eav.object?.value || ''}`,
+                'Subject': eav.subject?.label || '',
+                'Category': eav.predicate?.category || 'COMMON',
+                'Consensus Score': eav.kpMetadata?.consensusScore ?? 0,
+                'Seeds Confirmed': (eav.kpMetadata?.seedSourcesConfirmed?.length || 0),
+                'Seeds Required': (eav.kpMetadata?.seedSourcesRequired?.length || 0),
+                'Sources Confirmed': eav.kpMetadata?.seedSourcesConfirmed?.join(', ') || '',
+                'Sources Required': eav.kpMetadata?.seedSourcesRequired?.join(', ') || ''
+            }));
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(kpRows), "KP-Eligible EAVs");
+        }
+    }
+
+    // === TAB 14: Enhanced Audit Metrics ===
+    if (input.eavs && input.eavs.length > 0) {
+        const semanticMetrics = calculateSemanticComplianceMetrics(input.eavs);
+        const authorityMetrics = calculateAuthorityIndicators(input.eavs, topics.length);
+
+        // Overview metrics
+        const metricsOverviewRows = [{
+            'Metric': 'Semantic Compliance Score',
+            'Value': semanticMetrics.score,
+            'Target': semanticMetrics.target,
+            'Status': semanticMetrics.score >= semanticMetrics.target ? 'Target Met' : 'Below Target'
+        }, {
+            'Metric': 'EAV Coverage',
+            'Value': semanticMetrics.eavCoverage,
+            'Target': topics.length * 3, // 3 EAVs per topic target
+            'Status': semanticMetrics.eavCoverage >= topics.length * 3 ? 'Good' : 'Needs Improvement'
+        }, {
+            'Metric': 'EAV Authority Score',
+            'Value': authorityMetrics.eavAuthorityScore,
+            'Target': 75,
+            'Status': authorityMetrics.eavAuthorityScore >= 75 ? 'Strong' : 'Needs Improvement'
+        }, {
+            'Metric': 'Topical Depth Score',
+            'Value': authorityMetrics.topicalDepthScore,
+            'Target': 60,
+            'Status': authorityMetrics.topicalDepthScore >= 60 ? 'Deep' : 'Shallow'
+        }, {
+            'Metric': 'UNIQUE EAVs',
+            'Value': authorityMetrics.uniqueEavCount,
+            'Target': Math.ceil(topics.length * 0.2), // 20% of topics
+            'Status': authorityMetrics.uniqueEavCount > 0 ? 'Present' : 'Missing'
+        }, {
+            'Metric': 'ROOT EAVs',
+            'Value': authorityMetrics.rootEavCount,
+            'Target': Math.ceil(topics.length * 0.3),
+            'Status': authorityMetrics.rootEavCount > 0 ? 'Present' : 'Missing'
+        }, {
+            'Metric': 'RARE EAVs',
+            'Value': authorityMetrics.rareEavCount,
+            'Target': Math.ceil(topics.length * 0.2),
+            'Status': authorityMetrics.rareEavCount > 0 ? 'Present' : 'Missing'
+        }, {
+            'Metric': 'COMMON EAVs',
+            'Value': authorityMetrics.commonEavCount,
+            'Target': Math.ceil(topics.length * 0.3),
+            'Status': authorityMetrics.commonEavCount > 0 ? 'Present' : 'Baseline'
+        }];
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(metricsOverviewRows), "Audit Metrics");
+
+        // Category distribution
+        const categoryRows = Object.entries(semanticMetrics.categoryDistribution).map(([category, count]) => ({
+            'Category': category,
+            'Count': count,
+            'Percentage': input.eavs ? ((count / input.eavs.length) * 100).toFixed(1) + '%' : '0%',
+            'Authority Weight': category === 'UNIQUE' ? 'Highest' : category === 'ROOT' ? 'High' : category === 'RARE' ? 'Medium' : 'Base'
+        }));
+        if (categoryRows.length > 0) {
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(categoryRows), "Category Distribution");
+        }
+
+        // Classification distribution
+        const classificationRows = Object.entries(semanticMetrics.classificationDistribution).map(([classification, count]) => ({
+            'Classification': classification,
+            'Count': count,
+            'Percentage': input.eavs ? ((count / input.eavs.length) * 100).toFixed(1) + '%' : '0%',
+            'Description': getClassificationDescription(classification)
+        }));
+        if (classificationRows.length > 0) {
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(classificationRows), "Classification Dist");
+        }
+
+        // Recommendations
+        const recommendationRows = semanticMetrics.recommendations.map((rec, idx) => ({
+            'Priority': idx + 1,
+            'Recommendation': rec,
+            'Category': 'Semantic Optimization'
+        }));
+        if (recommendationRows.length > 0) {
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(recommendationRows), "Recommendations");
+        }
+    }
+
+    // === TAB 15: Unified Audit Results ===
+    if (input.unifiedAuditResult) {
+        const auditResult = input.unifiedAuditResult;
+
+        // Summary row
+        const auditSummaryRows = [{
+            'Overall Score': auditResult.overallScore,
+            'Total Issues': auditResult.totalIssues,
+            'Critical Issues': auditResult.criticalCount,
+            'Warnings': auditResult.warningCount,
+            'Suggestions': auditResult.suggestionCount,
+            'Auto-Fixable': auditResult.autoFixableCount,
+            'Run At': auditResult.runAt
+        }];
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(auditSummaryRows), "Audit Summary");
+
+        // Category breakdown
+        const categoryBreakdownRows = auditResult.categories.map(cat => ({
+            'Category': cat.categoryName,
+            'Score': cat.score,
+            'Weight': cat.weight + '%',
+            'Issues': cat.issueCount,
+            'Auto-Fixable': cat.autoFixableCount
+        }));
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(categoryBreakdownRows), "Audit Categories");
+
+        // All issues
+        const allIssues = auditResult.categories.flatMap(cat =>
+            cat.issues.map(issue => ({
+                'Category': cat.categoryName,
+                'Issue': issue.ruleName,
+                'Severity': issue.severity,
+                'Description': truncateForExcel(issue.message + (issue.details ? ` - ${issue.details}` : ''), 500),
+                'Affected Items': issue.affectedItems?.slice(0, 5).join(', ') || '',
+                'Auto-Fixable': issue.autoFixable ? 'Yes' : 'No',
+                'Suggested Fix': truncateForExcel(issue.suggestedFix, 500)
+            }))
+        );
+        if (allIssues.length > 0) {
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(allIssues), "Audit Issues");
+        }
+    }
+
+    // === TAB 16: Query Templates ===
+    if (input.queryTemplates && input.queryTemplates.length > 0) {
+        const templateRows = input.queryTemplates.map(template => ({
+            'Template ID': template.id,
+            'Name': template.name,
+            'Pattern': template.pattern,
+            'Category': template.category,
+            'Search Intent': template.search_intent,
+            'Placeholders': template.placeholders.map(p => p.name).join(', '),
+            'Example Output': template.example_output || '',
+            'Suggested Topic Class': template.suggested_topic_class || ''
+        }));
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(templateRows), "Query Templates");
+    }
+
+    // === TAB 17: Expanded Template Results ===
+    if (input.expandedTemplateResults && input.expandedTemplateResults.length > 0) {
+        const expandedRows: any[] = [];
+        input.expandedTemplateResults.forEach(result => {
+            result.generated_queries.forEach((query, idx) => {
+                expandedRows.push({
+                    'Template': result.original_template.name,
+                    'Generated Query': query,
+                    'Variables': JSON.stringify(result.variable_combinations[idx] || {}),
+                    'Generated Topic': result.generated_topics[idx]?.title || ''
+                });
+            });
+        });
+        if (expandedRows.length > 0) {
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(expandedRows), "Template Expansions");
+        }
     }
 
     // Trigger Download
     XLSX.writeFile(workbook, `${filename}.${format}`);
+};
+
+// Helper function for classification descriptions
+const getClassificationDescription = (classification: string): string => {
+    const descriptions: Record<string, string> = {
+        'TYPE': 'Defines what something is',
+        'COMPONENT': 'Parts or elements of something',
+        'BENEFIT': 'Advantages or positive outcomes',
+        'RISK': 'Potential dangers or negatives',
+        'PROCESS': 'How something works or is done',
+        'SPECIFICATION': 'Technical details or measurements',
+        'UNCLASSIFIED': 'Not yet categorized'
+    };
+    return descriptions[classification] || 'Unknown classification';
 };
 
 /**
@@ -364,6 +665,11 @@ interface FullExportInput {
     navigation?: NavigationStructure | null;
     brandKit?: BrandKit;
     eavs?: SemanticTriple[];
+    // Enhanced metrics
+    unifiedAuditResult?: UnifiedAuditResult | null;
+    // Query templates (Local SEO)
+    queryTemplates?: QueryTemplate[];
+    expandedTemplateResults?: ExpandedTemplateResult[];
 }
 
 export const generateFullZipExport = async (input: FullExportInput, filename: string) => {
@@ -462,6 +768,7 @@ export const generateFullZipExport = async (input: FullExportInput, filename: st
             totalTopics: topics.length,
             coreTopics: topics.filter(t => t.type === 'core').length,
             outerTopics: topics.filter(t => t.type === 'outer').length,
+            childTopics: topics.filter(t => t.type === 'child').length,
             briefsGenerated: Object.keys(briefs).length,
             draftsGenerated: Object.values(briefs).filter(b => b.articleDraft).length
         }
@@ -497,6 +804,39 @@ export const generateFullZipExport = async (input: FullExportInput, filename: st
         zip.file('nap-data.json', JSON.stringify(input.napData, null, 2));
     }
 
+    // 7b. Add Entity Identity (KP Strategy)
+    if (businessInfo?.entityIdentity) {
+        zip.file('entity-identity.json', JSON.stringify({
+            legalName: businessInfo.entityIdentity.legalName,
+            foundedYear: businessInfo.entityIdentity.foundedYear,
+            headquartersLocation: businessInfo.entityIdentity.headquartersLocation,
+            founderOrCEO: businessInfo.entityIdentity.founderOrCEO,
+            founderCredential: businessInfo.entityIdentity.founderCredential,
+            primaryAttribute: businessInfo.entityIdentity.primaryAttribute,
+            secondaryAttributes: businessInfo.entityIdentity.secondaryAttributes,
+            existingSeedSources: businessInfo.entityIdentity.existingSeedSources,
+            brandSearchDemand: businessInfo.entityIdentity.brandSearchDemand
+        }, null, 2));
+
+        // Add KP Strategy Summary
+        const kpSummary = {
+            entityIdentityComplete: !!(
+                businessInfo.entityIdentity.legalName &&
+                businessInfo.entityIdentity.founderOrCEO &&
+                businessInfo.entityIdentity.primaryAttribute
+            ),
+            seedSourcesStatus: {
+                wikipedia: businessInfo.entityIdentity.existingSeedSources?.wikipedia ? 'claimed' : 'missing',
+                wikidata: businessInfo.entityIdentity.existingSeedSources?.wikidata ? 'claimed' : 'missing',
+                crunchbase: businessInfo.entityIdentity.existingSeedSources?.crunchbase ? 'claimed' : 'missing',
+                linkedinCompany: businessInfo.entityIdentity.existingSeedSources?.linkedinCompany ? 'claimed' : 'missing',
+                googleBusinessProfile: businessInfo.entityIdentity.existingSeedSources?.googleBusinessProfile ? 'claimed' : 'missing'
+            },
+            kpEligibleEavsCount: input.eavs?.filter(e => e.kpMetadata?.isKPEligible).length || 0
+        };
+        zip.file('kp-strategy-summary.json', JSON.stringify(kpSummary, null, 2));
+    }
+
     // 8. Add Navigation Structure
     if (input.navigation) {
         zip.file('navigation.json', JSON.stringify({
@@ -528,6 +868,99 @@ export const generateFullZipExport = async (input: FullExportInput, filename: st
     // 10. Add Semantic Triples (EAVs)
     if (input.eavs && input.eavs.length > 0) {
         zip.file('semantic-triples.json', JSON.stringify(input.eavs, null, 2));
+    }
+
+    // 11. Add Enhanced Audit Metrics
+    if (input.eavs && input.eavs.length > 0) {
+        const semanticMetrics = calculateSemanticComplianceMetrics(input.eavs);
+        const authorityMetrics = calculateAuthorityIndicators(input.eavs, topics.length);
+
+        const enhancedMetrics = {
+            generatedAt: new Date().toISOString(),
+            semanticCompliance: {
+                score: semanticMetrics.score,
+                target: semanticMetrics.target,
+                eavCoverage: semanticMetrics.eavCoverage,
+                categoryDistribution: semanticMetrics.categoryDistribution,
+                classificationDistribution: semanticMetrics.classificationDistribution,
+                recommendations: semanticMetrics.recommendations
+            },
+            authorityIndicators: {
+                eavAuthorityScore: authorityMetrics.eavAuthorityScore,
+                uniqueEavCount: authorityMetrics.uniqueEavCount,
+                rootEavCount: authorityMetrics.rootEavCount,
+                rareEavCount: authorityMetrics.rareEavCount,
+                commonEavCount: authorityMetrics.commonEavCount,
+                topicalDepthScore: authorityMetrics.topicalDepthScore
+            },
+            summary: {
+                totalTopics: topics.length,
+                totalEavs: input.eavs.length,
+                eavsPerTopic: topics.length > 0 ? (input.eavs.length / topics.length).toFixed(1) : '0',
+                complianceStatus: semanticMetrics.score >= semanticMetrics.target ? 'Target Met' : 'Below Target'
+            }
+        };
+        zip.file('enhanced-audit-metrics.json', JSON.stringify(enhancedMetrics, null, 2));
+    }
+
+    // 12. Add Unified Audit Results
+    if (input.unifiedAuditResult) {
+        zip.file('unified-audit-result.json', JSON.stringify(input.unifiedAuditResult, null, 2));
+    }
+
+    // 13. Add Enhanced Visual Semantics (Koray's "Pixels, Letters, Bytes" Framework)
+    const visualSemanticsFolder = zip.folder('visual-semantics');
+    topics.forEach(topic => {
+        const brief = briefs[topic.id];
+        if (brief?.enhanced_visual_semantics) {
+            const safeSlug = safeString(topic.slug || topic.id).replace(/[^a-z0-9-]/gi, '-');
+            visualSemanticsFolder?.file(`${safeSlug}-visual-specs.json`, JSON.stringify({
+                topic_title: topic.title,
+                topic_slug: topic.slug,
+                visual_semantics: brief.enhanced_visual_semantics,
+                export_data: exportVisualSemanticsData(brief.enhanced_visual_semantics)
+            }, null, 2));
+        }
+    });
+
+    // 14. Add Money Page 4 Pillars Analysis
+    const monetizationTopics = topics.filter(t => shouldAnalyze4Pillars(t.topic_class) && briefs[t.id]);
+    if (monetizationTopics.length > 0) {
+        const pillarAnalysis = monetizationTopics.map(topic => {
+            const brief = briefs[topic.id];
+            const pillarsResult = calculateMoneyPagePillarsScore(brief);
+            return {
+                topic_title: topic.title,
+                topic_slug: topic.slug,
+                topic_class: topic.topic_class,
+                pillars_analysis: pillarsResult
+            };
+        });
+        zip.file('money-page-pillars.json', JSON.stringify({
+            generatedAt: new Date().toISOString(),
+            totalMonetizationTopics: monetizationTopics.length,
+            averageScore: pillarAnalysis.reduce((sum, p) => sum + p.pillars_analysis.overall_score, 0) / pillarAnalysis.length,
+            topics: pillarAnalysis
+        }, null, 2));
+    }
+
+    // 15. Add Query Templates
+    if (input.queryTemplates && input.queryTemplates.length > 0) {
+        zip.file('query-templates.json', JSON.stringify({
+            templates: input.queryTemplates,
+            totalTemplates: input.queryTemplates.length
+        }, null, 2));
+    }
+
+    // 16. Add Expanded Template Results
+    if (input.expandedTemplateResults && input.expandedTemplateResults.length > 0) {
+        zip.file('template-expansions.json', JSON.stringify({
+            generatedAt: new Date().toISOString(),
+            expansions: input.expandedTemplateResults,
+            totalGeneratedQueries: input.expandedTemplateResults.reduce(
+                (sum, r) => sum + r.generated_queries.length, 0
+            )
+        }, null, 2));
     }
 
     // Generate and download

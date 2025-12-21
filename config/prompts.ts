@@ -3,6 +3,7 @@
 import { BusinessInfo, SEOPillars, SemanticTriple, EnrichedTopic, ContentBrief, BriefSection, ResponseCode, GscRow, ValidationIssue, ExpansionMode, AuthorProfile, ContextualFlowIssue, FoundationPage, NavigationStructure, WebsiteType } from '../types';
 import { KnowledgeGraph } from '../lib/knowledgeGraph';
 import { getWebsiteTypeConfig } from './websiteTypeTemplates';
+import { getMonetizationPromptEnhancement, shouldApplyMonetizationEnhancement } from '../utils/monetizationPromptUtils';
 
 const jsonResponseInstruction = `
 Respond with a valid JSON object. Do not include any explanatory text or markdown formatting before or after the JSON.
@@ -599,11 +600,30 @@ ${businessContext(info)}
 3.  **Discourse Integration (Rule III.H):** Generate a list of 'discourse_anchors'. These are specific mutual words/phrases to use at the end of Paragraph A and the start of Paragraph B to ensure flow.
 4.  **Featured Snippet Target (Rule III.C):** Identify the SINGLE most important question this article answers. Define it as the 'featured_snippet_target'. The answer target length must be < 40 words.
 
-#### **IV. VISUAL SEMANTICS**
+#### **IV. VISUAL SEMANTICS (Pixels, Letters, and Bytes Framework)**
 1.  **Data over Photos (Rule IV.A):** Do not request generic stock photos. Populate 'visual_semantics' with specific descriptions of **Infographics**, **Charts**, or **Data Tables** that represent the EAVs.
+2.  **Centerpiece Alignment (Rule IV.B):** Each image MUST reinforce the page's centerpiece annotation. Include at least one entity name in the description.
+3.  **Alt Text Requirements (Rule IV.C):**
+    - Alt text must contain at least one entity name from the topic
+    - Use vocabulary that EXTENDS the page content (synonyms, related terms NOT in headings)
+    - Keep under 125 characters, natural language flow
+    - Describe both visual content AND contextual purpose
+4.  **File Naming Convention (Rule IV.D):** Specify filenames following pattern: [primary-entity]-[descriptor]-[context].jpg
+5.  **Image Placement (Rule IV.E):** NEVER suggest placing an image between a heading and its first paragraph. Images go AFTER the definitional text.
+6.  **Hero Image (Rule IV.F):** For transactional/monetization topics, specify a hero image that demonstrates the service/product with strong entity relevance.
+7.  **Expected Image Types (Rule IV.G):** Based on search intent, suggest appropriate image types:
+    - Informational: Diagrams, infographics, process charts, data visualizations
+    - Transactional: Product photos, before/after, trust badges, team photos
+    - Commercial: Comparison tables, feature matrices, pricing visuals
 
 #### **V. INTERLINKING**
 1.  **Post-Definition Linking (Rule V.C):** In the 'contextualBridge' instructions, specify that links must be placed *after* the entity has been defined, never in the first sentence of a paragraph.
+2.  **Generate 2-4 Internal Links (Rule V.A):** You MUST populate the 'contextualBridge.links' array with 2-4 internal link suggestions. For each link:
+    - **targetTopic**: Select a topic from "Available Topics for Linking" that is semantically related
+    - **anchorText**: Craft a natural anchor phrase (2-5 words) that fits naturally in content
+    - **annotation_text_hint**: Provide context on where this link should be placed
+    - **reasoning**: Explain why this link adds value for the reader's journey
+3.  **Semantic Relevance (Rule V.B):** Prioritize links to topics that share semantic overlap with this article. Sibling topics and parent topics are ideal candidates.
 
 #### **VI. FORMAT CODE ASSIGNMENT**
 1.  **[FS] Featured Snippet**: Assign to the primary definition/answer section. 40-50 words max.
@@ -666,7 +686,11 @@ Respond with a SINGLE valid JSON object. Generate the 'structured_outline' FIRST
   "discourse_anchors": ["string", "string"],
   "serpAnalysis": {
     "peopleAlsoAsk": ["string"],
-    "competitorHeadings": []
+    "competitorHeadings": [],
+    "avgWordCount": 1500,
+    "avgHeadings": 8,
+    "commonStructure": "Introduction, Overview, Key Features, Implementation, Examples, FAQ, Conclusion",
+    "contentGaps": ["string - topics competitors miss"]
   },
   "visuals": {
     "featuredImagePrompt": "string",
@@ -675,13 +699,28 @@ Respond with a SINGLE valid JSON object. Generate the 'structured_outline' FIRST
   "contextualVectors": [],
   "contextualBridge": {
     "type": "section",
-    "content": "string (The transition paragraph text)",
-    "links": []
+    "content": "string (The transition paragraph text that bridges macro context to this article's micro context)",
+    "links": [
+      {
+        "targetTopic": "Related Topic Title (REQUIRED - must be actual topic title from the map)",
+        "anchorText": "natural anchor phrase (REQUIRED - the exact text to use as hyperlink)",
+        "annotation_text_hint": "Context sentence explaining where this link fits",
+        "reasoning": "Why this link adds value for the reader"
+      }
+    ]
   },
   "predicted_user_journey": "string"
 }
 
-**REMINDER: You MUST include 'structured_outline' with 5-8 detailed section objects. This is the most critical field.**
+**CRITICAL REQUIREMENTS:**
+1. **structured_outline** MUST contain 5-8 detailed section objects. This is the most critical field.
+2. **serpAnalysis.avgWordCount** MUST be a realistic word count estimate (typically 1500-3000 based on topic complexity). Do NOT skip this field.
+3. **serpAnalysis.avgHeadings** MUST be a realistic heading count estimate (typically 6-12).
+4. **contextualBridge.links** MUST contain 2-4 internal link suggestions to related topics from the "Available Topics for Linking" list.
+
+All of these fields are MANDATORY and will cause brief validation to fail if missing or empty.
+
+${shouldApplyMonetizationEnhancement(topic.topic_class) ? getMonetizationPromptEnhancement(info.language || 'English') : ''}
 
 ${jsonResponseInstruction}
 `;
@@ -1407,6 +1446,42 @@ export const EXPAND_CORE_TOPIC_PROMPT = (
             break;
         case 'ENTITY':
             specificInstruction = "EXPANSION MODE: ENTITY (BREADTH). Identify related entities, direct competitors, alternatives, or complimentary concepts. Generate 'Comparison' or 'Alternative' topics.";
+            break;
+        case 'FRAME':
+            specificInstruction = `EXPANSION MODE: FRAME SEMANTICS (SCENE-BASED).
+Use Fillmore's Frame Semantics to analyze the SCENE this topic evokes:
+1. Core Actions: What verbs/processes are central to this concept?
+2. Participants: Who performs the action (agent)? Who/what receives it (patient)? What tools are used (instrument)?
+3. Setting: Where/when does this typically occur? In what social/professional context?
+4. Consequences: What results or outcomes follow from these actions?
+
+Generate topics exploring:
+- Different participant perspectives (agent vs beneficiary viewpoints)
+- Prerequisite actions (what must happen before)
+- Consequent actions (what happens after, results, outcomes)
+- Environmental variations (different settings/contexts)
+- Instrument/method alternatives (different ways to accomplish)
+- Manner variations (how it's done differently)
+
+This mode is especially effective for abstract concepts, process-oriented topics, or topics with limited keyword data.`;
+            break;
+        case 'CHILD':
+            specificInstruction = `EXPANSION MODE: CHILD (SUB-TOPIC GENERATION).
+Generate granular child topics that drill deeper into this specific topic:
+1. FAQ Topics: Common questions people ask about this exact topic
+2. Variation Topics: Different versions, types, or categories
+3. Audience-Specific Topics: The same topic tailored for specific user segments
+4. Use-Case Topics: Specific applications or scenarios
+5. Comparison Sub-topics: Comparing aspects within this topic
+
+Examples of child topic patterns:
+- "[Topic] FAQ" or "Common [Topic] Questions"
+- "[Topic] for [Audience]" (beginners, professionals, small businesses)
+- "[Topic] vs [Alternative within same category]"
+- "Best [Topic] for [Use Case]"
+- "[Topic] [Variation/Type]"
+
+These become child-level content pieces that support the parent outer topic.`;
             break;
         case 'CONTEXT':
         default:
@@ -2872,6 +2947,14 @@ Return the complete regenerated brief as a JSON object with this structure:
     { "type": "INFOGRAPHIC | CHART | PHOTO | DIAGRAM", "description": "string", "caption_data": "string" }
   ],
   "discourse_anchors": ["string"],
+  "serpAnalysis": {
+    "peopleAlsoAsk": ["string"],
+    "competitorHeadings": [],
+    "avgWordCount": 1500,
+    "avgHeadings": 8,
+    "commonStructure": "string",
+    "contentGaps": ["string"]
+  },
   "contextualBridge": {
     "type": "section",
     "content": "string",
@@ -2880,6 +2963,11 @@ Return the complete regenerated brief as a JSON object with this structure:
   "predicted_user_journey": "string",
   "query_type_format": "string"
 }
+
+**CRITICAL REQUIREMENTS:**
+1. **structured_outline** MUST contain sections. DO NOT return empty.
+2. **serpAnalysis.avgWordCount** MUST be a realistic word count estimate (1500-3000).
+3. **contextualBridge.links** MUST contain 2-4 internal link suggestions.
 `;
 
 /**

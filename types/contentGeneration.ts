@@ -19,12 +19,21 @@ export interface ContentGenerationPriorities {
 /**
  * Content tone options
  */
-export type ContentTone = 'conversational' | 'professional' | 'academic' | 'sales';
+export enum ContentTone {
+  CONVERSATIONAL = 'conversational',
+  PROFESSIONAL = 'professional',
+  ACADEMIC = 'academic',
+  SALES = 'sales',
+}
 
 /**
  * Audience expertise level
  */
-export type AudienceExpertise = 'beginner' | 'intermediate' | 'expert';
+export enum AudienceExpertise {
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  EXPERT = 'expert',
+}
 
 /**
  * Configuration for individual refinement passes
@@ -262,7 +271,12 @@ export interface ContentVersionRow {
 /**
  * Importance level for missing fields
  */
-export type FieldImportance = 'critical' | 'high' | 'medium' | 'low';
+export enum FieldImportance {
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+}
 
 /**
  * Description of a missing field in the content brief

@@ -234,6 +234,11 @@ export interface DashboardNavConfig {
   onValidate: () => void;
   onLinkAudit: () => void;
   onUnifiedAudit: () => void;
+  onQueryNetworkAudit?: () => void;
+  onMentionScanner?: () => void;
+  onCorpusAudit?: () => void;
+  onEnhancedMetrics?: () => void;
+  onComprehensiveAudit?: () => void;
   onRegenerateMap?: () => void;
   onRepairBriefs?: () => void;
   onExport: () => void;
@@ -250,6 +255,9 @@ export interface DashboardNavConfig {
   onImportPerformance?: () => void;
   isGeneratingPlan?: boolean;
   hasPlan?: boolean;
+  // Knowledge Panel (KP) Strategy
+  onKPStrategy?: () => void;
+  onEntityAuthority?: () => void;
 }
 
 export function createDashboardTabs(config: DashboardNavConfig): NavTab[] {
@@ -289,6 +297,13 @@ export function createDashboardTabs(config: DashboardNavConfig): NavTab[] {
           onClick: config.onBusinessInfo,
           helpText: 'Update project details and value proposition',
         },
+        ...(config.onKPStrategy ? [{
+          id: 'kp-strategy',
+          label: 'KP Strategy',
+          onClick: config.onKPStrategy,
+          helpText: 'Define entity identity and track seed sources for Knowledge Panel',
+          variant: 'primary' as const,
+        }] : []),
       ],
     },
     {
@@ -309,9 +324,9 @@ export function createDashboardTabs(config: DashboardNavConfig): NavTab[] {
         },
         {
           id: 'add-topic',
-          label: 'Add Topic Manually',
+          label: 'Add Topics',
           onClick: config.onAddTopic,
-          helpText: 'Add a new topic to the topical map',
+          helpText: 'Add topics manually, from templates, or with AI assistance',
         },
       ],
     },
@@ -384,6 +399,45 @@ export function createDashboardTabs(config: DashboardNavConfig): NavTab[] {
           helpText: 'Comprehensive audit of map quality',
           variant: 'primary',
         },
+        ...(config.onQueryNetworkAudit ? [{
+          id: 'query-network',
+          label: 'Query Network Audit',
+          onClick: config.onQueryNetworkAudit,
+          helpText: 'Competitive content analysis and gap identification',
+        }] : []),
+        ...(config.onMentionScanner ? [{
+          id: 'mention-scanner',
+          label: 'E-A-T Scanner',
+          onClick: config.onMentionScanner,
+          helpText: 'Analyze entity authority and trust signals',
+        }] : []),
+        ...(config.onCorpusAudit ? [{
+          id: 'corpus-audit',
+          label: 'Corpus Audit',
+          onClick: config.onCorpusAudit,
+          helpText: 'Site-wide content analysis and duplicate detection',
+        }] : []),
+        ...(config.onEnhancedMetrics ? [{
+          id: 'enhanced-metrics',
+          label: 'Enhanced Metrics Dashboard',
+          onClick: config.onEnhancedMetrics,
+          helpText: 'Semantic compliance, authority scores, and action roadmap',
+          variant: 'primary' as const,
+        }] : []),
+        ...(config.onComprehensiveAudit ? [{
+          id: 'comprehensive-audit',
+          label: 'Full Research Dashboard',
+          onClick: config.onComprehensiveAudit,
+          helpText: 'Combined view of all research: Query Network, E-A-T, Corpus, and historical data',
+          variant: 'primary' as const,
+        }] : []),
+        ...(config.onEntityAuthority ? [{
+          id: 'entity-authority',
+          label: 'Entity Authority',
+          onClick: config.onEntityAuthority,
+          helpText: 'Knowledge Panel readiness, EAV consensus tracking, and priority actions',
+          variant: 'primary' as const,
+        }] : []),
       ],
     },
     {

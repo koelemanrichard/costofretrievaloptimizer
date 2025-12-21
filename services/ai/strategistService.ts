@@ -5,18 +5,8 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { dispatchToProvider } from './providerDispatcher';
 import React from 'react';
-
-const getService = (info: BusinessInfo) => {
-    switch (info.aiProvider) {
-        case 'openai': return openAiService;
-        case 'anthropic': return anthropicService;
-        case 'perplexity': return perplexityService;
-        case 'openrouter': return openRouterService;
-        case 'gemini':
-        default: return geminiService;
-    }
-};
 
 interface StrategistContext {
     appStep: AppStep;
@@ -68,5 +58,11 @@ export const askStrategist = async (
     If the user asks what to do next, suggest a specific action based on the current state (e.g. "You have 0 topics, generate the map" or "You have a core topic, expand it").
     `;
 
-    return getService(businessInfo).generateText(prompt, businessInfo, dispatch);
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.generateText(prompt, businessInfo, dispatch),
+        openai: () => openAiService.generateText(prompt, businessInfo, dispatch),
+        anthropic: () => anthropicService.generateText(prompt, businessInfo, dispatch),
+        perplexity: () => perplexityService.generateText(prompt, businessInfo, dispatch),
+        openrouter: () => openRouterService.generateText(prompt, businessInfo, dispatch),
+    });
 };

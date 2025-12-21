@@ -34,7 +34,7 @@ function getSupabaseCredentials(): { url: string; key: string } | null {
   }
 
   // Fallback to hardcoded defaults (update these if env vars aren't available)
-  const defaultUrl = 'https://blucvnmncvwzlwxoyoum.supabase.co';
+  const defaultUrl = 'https://shtqshmmsrmtquuhyupl.supabase.co';
   const defaultKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
   if (defaultUrl && defaultKey) {

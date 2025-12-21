@@ -312,6 +312,25 @@ const checkHierarchyStructure = (context: UnifiedAuditContext): UnifiedAuditIssu
     ));
   }
 
+  // Check for child topics with wrong parent type (should have outer parent, not core)
+  const childTopicsWithWrongParent = topics.filter(t => {
+    if (t.type !== 'child' || !t.parent_topic_id) return false;
+    const parent = topics.find(p => p.id === t.parent_topic_id);
+    return parent && parent.type !== 'outer';
+  });
+  if (childTopicsWithWrongParent.length > 0) {
+    issues.push(createIssue(
+      'hierarchy-child-wrong-parent',
+      'Child topics with invalid parent',
+      'hierarchy-structure',
+      'warning',
+      `${childTopicsWithWrongParent.length} child topics have non-outer parents`,
+      childTopicsWithWrongParent.map(t => t.title),
+      true,
+      'Child topics should be placed under outer topics, not core topics'
+    ));
+  }
+
   // Check for excessive nesting depth
   const getDepth = (topicId: string, visited: Set<string> = new Set()): number => {
     if (visited.has(topicId)) return 0; // Circular reference protection
@@ -630,71 +649,121 @@ const checkSemanticConsistency = (context: UnifiedAuditContext): UnifiedAuditIss
       false,
       'Use the EAV Discovery wizard to define semantic relationships'
     ));
+    return issues; // No point checking other semantic issues without EAVs
   }
 
   // Check for inconsistent entity naming
-  if (eavs && eavs.length > 0) {
-    const entityVariations: Record<string, string[]> = {};
-    for (const eav of eavs) {
-      const entityLabel = eav.subject?.label || '';
-      const normalized = entityLabel.toLowerCase().trim();
-      if (!entityVariations[normalized]) {
-        entityVariations[normalized] = [];
-      }
-      if (!entityVariations[normalized].includes(entityLabel)) {
-        entityVariations[normalized].push(entityLabel);
-      }
+  const entityVariations: Record<string, string[]> = {};
+  for (const eav of eavs) {
+    const entityLabel = eav.subject?.label || '';
+    const normalized = entityLabel.toLowerCase().trim();
+    if (!entityVariations[normalized]) {
+      entityVariations[normalized] = [];
     }
-
-    const inconsistentEntities = Object.entries(entityVariations)
-      .filter(([, variations]) => variations.length > 1)
-      .map(([, variations]) => variations.join(' / '));
-
-    if (inconsistentEntities.length > 0) {
-      issues.push(createIssue(
-        'semantic-inconsistent-entities',
-        'Inconsistent entity naming',
-        'semantic-consistency',
-        'warning',
-        'Same entity appears with different naming variations',
-        inconsistentEntities,
-        false,
-        'Standardize entity names for consistency'
-      ));
+    if (!entityVariations[normalized].includes(entityLabel)) {
+      entityVariations[normalized].push(entityLabel);
     }
+  }
 
-    // Check for conflicting attribute values
-    const attributePairs: Record<string, { values: string[]; sources: string[] }> = {};
-    for (const eav of eavs) {
-      const entityLabel = eav.subject?.label || '';
-      const predicateRelation = eav.predicate?.relation || '';
-      const objectValue = String(eav.object?.value || '');
-      const key = `${entityLabel.toLowerCase()}::${predicateRelation.toLowerCase()}`;
-      if (!attributePairs[key]) {
-        attributePairs[key] = { values: [], sources: [] };
-      }
-      if (!attributePairs[key].values.includes(objectValue)) {
-        attributePairs[key].values.push(objectValue);
-        attributePairs[key].sources.push(`${entityLabel}.${predicateRelation}`);
-      }
+  const inconsistentEntities = Object.entries(entityVariations)
+    .filter(([, variations]) => variations.length > 1)
+    .map(([, variations]) => variations.join(' / '));
+
+  if (inconsistentEntities.length > 0) {
+    issues.push(createIssue(
+      'semantic-inconsistent-entities',
+      'Inconsistent entity naming',
+      'semantic-consistency',
+      'warning',
+      'Same entity appears with different naming variations',
+      inconsistentEntities,
+      false,
+      'Standardize entity names for consistency'
+    ));
+  }
+
+  // Check for conflicting attribute values
+  const attributePairs: Record<string, { values: string[]; sources: string[] }> = {};
+  for (const eav of eavs) {
+    const entityLabel = eav.subject?.label || '';
+    const predicateRelation = eav.predicate?.relation || '';
+    const objectValue = String(eav.object?.value || '');
+    const key = `${entityLabel.toLowerCase()}::${predicateRelation.toLowerCase()}`;
+    if (!attributePairs[key]) {
+      attributePairs[key] = { values: [], sources: [] };
     }
-
-    const conflicts = Object.entries(attributePairs)
-      .filter(([, data]) => data.values.length > 1)
-      .map(([key, data]) => `${key}: ${data.values.join(' vs ')}`);
-
-    if (conflicts.length > 0) {
-      issues.push(createIssue(
-        'semantic-conflicting-attributes',
-        'Conflicting attribute values',
-        'semantic-consistency',
-        'warning',
-        'Same entity-attribute pair has different values',
-        conflicts,
-        false,
-        'Resolve conflicting values for consistency'
-      ));
+    if (!attributePairs[key].values.includes(objectValue)) {
+      attributePairs[key].values.push(objectValue);
+      attributePairs[key].sources.push(`${entityLabel}.${predicateRelation}`);
     }
+  }
+
+  const conflicts = Object.entries(attributePairs)
+    .filter(([, data]) => data.values.length > 1)
+    .map(([key, data]) => `${key}: ${data.values.join(' vs ')}`);
+
+  if (conflicts.length > 0) {
+    issues.push(createIssue(
+      'semantic-conflicting-attributes',
+      'Conflicting attribute values',
+      'semantic-consistency',
+      'warning',
+      'Same entity-attribute pair has different values',
+      conflicts,
+      false,
+      'Resolve conflicting values for consistency'
+    ));
+  }
+
+  // Check for EAV density (at least 3 EAVs per topic for good coverage)
+  const eavsPerTopic = topics.length > 0 ? eavs.length / topics.length : 0;
+  if (eavsPerTopic < 3 && topics.length > 0) {
+    issues.push(createIssue(
+      'semantic-low-eav-density',
+      'Low EAV density per topic',
+      'semantic-consistency',
+      'suggestion',
+      `Average of ${eavsPerTopic.toFixed(1)} EAVs per topic (recommended: 3+)`,
+      [`${eavs.length} EAVs across ${topics.length} topics`],
+      false,
+      'Add more EAV triples to improve semantic coverage per topic'
+    ));
+  }
+
+  // Check for missing EAV categories (UNIQUE, ROOT, RARE, COMMON)
+  const categories = new Set(eavs.map(eav => eav.predicate?.category).filter(Boolean));
+  const expectedCategories = ['UNIQUE', 'ROOT', 'RARE', 'COMMON'];
+  const missingCategories = expectedCategories.filter(cat => !categories.has(cat as any));
+
+  if (missingCategories.length > 0) {
+    issues.push(createIssue(
+      'semantic-missing-categories',
+      'Missing EAV categories',
+      'semantic-consistency',
+      'suggestion',
+      `Missing ${missingCategories.length} EAV categories for comprehensive authority`,
+      missingCategories.map(cat => `Missing: ${cat}`),
+      false,
+      'Add EAVs with UNIQUE/ROOT/RARE/COMMON categories for topical authority'
+    ));
+  }
+
+  // Check for predicate diversity (TYPE, COMPONENT, BENEFIT, RISK, PROCESS, SPECIFICATION)
+  const classifications = new Set(eavs.map(eav => eav.predicate?.classification).filter(Boolean));
+  const expectedClassifications = ['TYPE', 'COMPONENT', 'BENEFIT', 'RISK', 'PROCESS', 'SPECIFICATION'];
+  const presentClassifications = expectedClassifications.filter(cls => classifications.has(cls as any));
+
+  if (presentClassifications.length < 3 && eavs.length > 5) {
+    issues.push(createIssue(
+      'semantic-predicate-diversity',
+      'Low predicate diversity',
+      'semantic-consistency',
+      'suggestion',
+      `Only ${presentClassifications.length} predicate classifications used (recommended: 3+ for diverse semantic coverage)`,
+      [`Present: ${presentClassifications.join(', ') || 'None'}`],
+      false,
+      'Use diverse predicate types: TYPE, COMPONENT, BENEFIT, RISK, PROCESS, SPECIFICATION'
+    ));
   }
 
   return issues;

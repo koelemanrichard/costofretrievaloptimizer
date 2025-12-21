@@ -15,6 +15,10 @@ interface AnalysisToolsPanelProps {
     onCalculateTopicalAuthority: () => void;
     onGeneratePublicationPlan: () => void;
     onRunUnifiedAudit: () => void;
+    onQueryNetworkAudit?: () => void;
+    onMentionScanner?: () => void;
+    onCorpusAudit?: () => void;
+    onComprehensiveAudit?: () => void;
     onRepairBriefs?: () => Promise<{ repaired: number; skipped: number; errors: string[] }>;
     auditProgress?: AuditProgress | null;
 }
@@ -29,6 +33,10 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
     onCalculateTopicalAuthority,
     onGeneratePublicationPlan,
     onRunUnifiedAudit,
+    onQueryNetworkAudit,
+    onMentionScanner,
+    onCorpusAudit,
+    onComprehensiveAudit,
     onRepairBriefs,
     auditProgress
 }) => {
@@ -98,6 +106,18 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
                 <Button onClick={onCalculateTopicalAuthority} disabled={isLoading.authority} variant="secondary">{isLoading.authority ? <Loader /> : 'Authority'}</Button>
                 <Button onClick={onGeneratePublicationPlan} disabled={isLoading.plan} variant="secondary">{isLoading.plan ? <Loader /> : 'Plan'}</Button>
                 <Button onClick={onRunUnifiedAudit} disabled={isLoading.unifiedAudit} className="bg-purple-700 hover:bg-purple-600">{renderAuditButton()}</Button>
+                {onQueryNetworkAudit && (
+                    <Button onClick={onQueryNetworkAudit} className="bg-blue-700 hover:bg-blue-600">Query Network</Button>
+                )}
+                {onMentionScanner && (
+                    <Button onClick={onMentionScanner} className="bg-green-700 hover:bg-green-600">E-A-T Scanner</Button>
+                )}
+                {onCorpusAudit && (
+                    <Button onClick={onCorpusAudit} className="bg-indigo-700 hover:bg-indigo-600">Corpus Audit</Button>
+                )}
+                {onComprehensiveAudit && (
+                    <Button onClick={onComprehensiveAudit} className="bg-amber-700 hover:bg-amber-600">Full Research</Button>
+                )}
             </div>
 
             {/* Progress bar when audit is running */}

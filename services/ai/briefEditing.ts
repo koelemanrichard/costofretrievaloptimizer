@@ -7,6 +7,7 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { dispatchToProvider } from './providerDispatcher';
 import { regenerateBriefMultiPass, RegenerationProgress, RegenerationResult } from './briefRegeneration';
 import React from 'react';
 
@@ -72,19 +73,13 @@ export const regenerateBrief = async (
     }
 
     // For smaller briefs, use single-pass regeneration (original behavior)
-    switch (businessInfo.aiProvider) {
-        case 'openai':
-            return openAiService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch);
-        case 'anthropic':
-            return anthropicService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch);
-        case 'perplexity':
-            return perplexityService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch);
-        case 'openrouter':
-            return openRouterService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch),
+        openai: () => openAiService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch),
+        anthropic: () => anthropicService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch),
+        perplexity: () => perplexityService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch),
+        openrouter: () => openRouterService.regenerateBrief(businessInfo, topic, currentBrief, userInstructions, pillars, allTopics, dispatch),
+    });
 };
 
 /**
@@ -99,19 +94,13 @@ export const refineBriefSection = async (
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<any>
 ): Promise<BriefSection> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai':
-            return openAiService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch);
-        case 'anthropic':
-            return anthropicService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch);
-        case 'perplexity':
-            return perplexityService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch);
-        case 'openrouter':
-            return openRouterService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch),
+        openai: () => openAiService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch),
+        anthropic: () => anthropicService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch),
+        perplexity: () => perplexityService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch),
+        openrouter: () => openRouterService.refineBriefSection(section, userInstruction, briefContext, businessInfo, dispatch),
+    });
 };
 
 /**
@@ -128,17 +117,11 @@ export const generateNewSection = async (
     pillars: SEOPillars,
     dispatch: React.Dispatch<any>
 ): Promise<BriefSection> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai':
-            return openAiService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch);
-        case 'anthropic':
-            return anthropicService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch);
-        case 'perplexity':
-            return perplexityService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch);
-        case 'openrouter':
-            return openRouterService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch),
+        openai: () => openAiService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch),
+        anthropic: () => anthropicService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch),
+        perplexity: () => perplexityService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch),
+        openrouter: () => openRouterService.generateNewSection(insertPosition, parentHeading, userInstruction, briefContext, businessInfo, pillars, dispatch),
+    });
 };

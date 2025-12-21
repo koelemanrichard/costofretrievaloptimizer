@@ -211,6 +211,34 @@ const semanticConsistencyRules: AuditRule[] = [
     category: 'semantic-consistency',
     description: 'Same entity-attribute pairs should not have conflicting values',
   },
+  {
+    id: 'semantic-low-eav-density',
+    name: 'Low EAV density per topic',
+    severity: 'suggestion',
+    category: 'semantic-consistency',
+    description: 'Topics should have at least 3 EAV triples for comprehensive semantic coverage',
+  },
+  {
+    id: 'semantic-missing-categories',
+    name: 'Missing EAV categories',
+    severity: 'suggestion',
+    category: 'semantic-consistency',
+    description: 'EAV triples should cover UNIQUE, ROOT, RARE, and COMMON categories for authority',
+  },
+  {
+    id: 'semantic-predicate-diversity',
+    name: 'Low predicate diversity',
+    severity: 'suggestion',
+    category: 'semantic-consistency',
+    description: 'EAV triples should use diverse predicates (TYPE, COMPONENT, BENEFIT, RISK, PROCESS, SPECIFICATION)',
+  },
+  {
+    id: 'semantic-orphan-eavs',
+    name: 'EAVs not linked to topics',
+    severity: 'warning',
+    category: 'semantic-consistency',
+    description: 'EAV triples should be associated with specific topics for content planning',
+  },
 ];
 
 // =============================================================================

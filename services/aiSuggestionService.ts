@@ -66,8 +66,8 @@ const callSuggestionApi = async (
   const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
 
   // Use Claude model
-  const validClaudeModels = ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku', 'claude-sonnet-4-5-20250929', 'claude-3-5-sonnet', 'claude-3-5-haiku'];
-  const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.some(m => businessInfo.aiModel.includes(m.split('-').slice(0, 2).join('-')));
+  const validClaudeModels = ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4', 'claude-3-7-sonnet', 'claude-3-5-haiku'];
+  const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.some(m => businessInfo.aiModel.includes(m));
   const modelToUse = isValidClaudeModel ? businessInfo.aiModel : 'claude-sonnet-4-5-20250929';
 
   try {
@@ -77,6 +77,7 @@ const callSuggestionApi = async (
         'Content-Type': 'application/json',
         'x-anthropic-api-key': businessInfo.anthropicApiKey,
         'apikey': businessInfo.supabaseAnonKey || '',
+        'Authorization': `Bearer ${businessInfo.supabaseAnonKey || ''}`,
       },
       body: JSON.stringify({
         model: modelToUse,

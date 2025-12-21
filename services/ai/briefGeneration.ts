@@ -1,13 +1,50 @@
 
-import { BusinessInfo, ResponseCode, ContentBrief, EnrichedTopic, SEOPillars, KnowledgeGraph, ContentIntegrityResult, SchemaGenerationResult, AuditRuleResult } from '../../types';
+import { BusinessInfo, ResponseCode, ContentBrief, EnrichedTopic, SEOPillars, KnowledgeGraph, ContentIntegrityResult, SchemaGenerationResult, AuditRuleResult, BriefVisualSemantics } from '../../types';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { dispatchToProvider } from './providerDispatcher';
 import * as prompts from '../../config/prompts';
 import { AIResponseSanitizer } from '../aiResponseSanitizer';
+import { analyzeImageRequirements } from '../visualSemanticsService';
+import { shouldApplyMonetizationEnhancement, getMonetizationValidationRules } from './briefOptimization';
 import React from 'react';
+
+/**
+ * Validate monetization brief meets minimum requirements
+ * Logs warnings if critical fields are missing (won't block generation)
+ */
+const validateMonetizationBrief = (
+    brief: Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>,
+    dispatch: React.Dispatch<any>
+): void => {
+    const rules = getMonetizationValidationRules();
+    const warnings: string[] = [];
+
+    for (const rule of rules) {
+        const value = rule.field.includes('.')
+            ? rule.field.split('.').reduce((obj: any, key) => obj?.[key], brief)
+            : (brief as any)[rule.field];
+
+        if (!rule.rule(value)) {
+            warnings.push(rule.message);
+        }
+    }
+
+    if (warnings.length > 0) {
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'BriefGeneration',
+                message: `Monetization brief missing recommended fields: ${warnings.join('; ')}`,
+                status: 'warning',
+                timestamp: Date.now()
+            }
+        });
+    }
+};
 
 // --- Algorithmic Audit Helpers ---
 
@@ -230,57 +267,86 @@ const checkSentenceDensity = (text: string): AuditRuleResult => {
 export const suggestResponseCode = (
     businessInfo: BusinessInfo, topicTitle: string, dispatch: React.Dispatch<any>
 ): Promise<{ responseCode: ResponseCode; reasoning: string }> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.suggestResponseCode(businessInfo, topicTitle, dispatch);
-        case 'anthropic': return anthropicService.suggestResponseCode(businessInfo, topicTitle, dispatch);
-        case 'perplexity': return perplexityService.suggestResponseCode(businessInfo, topicTitle, dispatch);
-        case 'openrouter': return openRouterService.suggestResponseCode(businessInfo, topicTitle, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.suggestResponseCode(businessInfo, topicTitle, dispatch);
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.suggestResponseCode(businessInfo, topicTitle, dispatch),
+        openai: () => openAiService.suggestResponseCode(businessInfo, topicTitle, dispatch),
+        anthropic: () => anthropicService.suggestResponseCode(businessInfo, topicTitle, dispatch),
+        perplexity: () => perplexityService.suggestResponseCode(businessInfo, topicTitle, dispatch),
+        openrouter: () => openRouterService.suggestResponseCode(businessInfo, topicTitle, dispatch),
+    });
+};
+
+/**
+ * Enrich a brief with enhanced visual semantics analysis
+ * This applies Koray's "Pixels, Letters, and Bytes" framework
+ */
+export const enrichBriefWithVisualSemantics = (
+    brief: Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>,
+    topic: EnrichedTopic
+): Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'> => {
+    try {
+        // Determine search intent from topic metadata
+        const searchIntent = topic.metadata?.search_intent ||
+            (topic.topic_class === 'monetization' ? 'transactional' : 'informational');
+
+        // Generate enhanced visual semantics
+        const enhancedVisualSemantics = analyzeImageRequirements(
+            brief as ContentBrief,
+            searchIntent
+        );
+
+        return {
+            ...brief,
+            enhanced_visual_semantics: enhancedVisualSemantics,
+        };
+    } catch (error) {
+        console.warn('[briefGeneration] Failed to enrich visual semantics:', error);
+        return brief;
     }
 };
 
-export const generateContentBrief = (
+export const generateContentBrief = async (
     businessInfo: BusinessInfo, topic: EnrichedTopic, allTopics: EnrichedTopic[], pillars: SEOPillars, knowledgeGraph: KnowledgeGraph, responseCode: ResponseCode, dispatch: React.Dispatch<any>
 ): Promise<Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch);
-        case 'anthropic': return anthropicService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch);
-        case 'perplexity': return perplexityService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch);
-        case 'openrouter': return openRouterService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch);
+    const brief = await dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch),
+        openai: () => openAiService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch),
+        anthropic: () => anthropicService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch),
+        perplexity: () => perplexityService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch),
+        openrouter: () => openRouterService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch),
+    });
+
+    // Validate monetization briefs meet minimum requirements
+    if (shouldApplyMonetizationEnhancement(topic.topic_class)) {
+        validateMonetizationBrief(brief, dispatch);
     }
+
+    // Enrich with enhanced visual semantics
+    return enrichBriefWithVisualSemantics(brief, topic);
 };
 
 export const generateArticleDraft = (
     brief: ContentBrief, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<string> => {
-     switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.generateArticleDraft(brief, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.generateArticleDraft(brief, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.generateArticleDraft(brief, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.generateArticleDraft(brief, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.generateArticleDraft(brief, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.generateArticleDraft(brief, businessInfo, dispatch),
+        openai: () => openAiService.generateArticleDraft(brief, businessInfo, dispatch),
+        anthropic: () => anthropicService.generateArticleDraft(brief, businessInfo, dispatch),
+        perplexity: () => perplexityService.generateArticleDraft(brief, businessInfo, dispatch),
+        openrouter: () => openRouterService.generateArticleDraft(brief, businessInfo, dispatch),
+    });
 };
 
 export const polishDraft = async (
     draft: string, brief: ContentBrief, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<string> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.polishDraft(draft, brief, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.polishDraft(draft, brief, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.polishDraft(draft, brief, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.polishDraft(draft, brief, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.polishDraft(draft, brief, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.polishDraft(draft, brief, businessInfo, dispatch),
+        openai: () => openAiService.polishDraft(draft, brief, businessInfo, dispatch),
+        anthropic: () => anthropicService.polishDraft(draft, brief, businessInfo, dispatch),
+        perplexity: () => perplexityService.polishDraft(draft, brief, businessInfo, dispatch),
+        openrouter: () => openRouterService.polishDraft(draft, brief, businessInfo, dispatch),
+    });
 };
 
 // Deprecated alias for backward compatibility during refactor
@@ -290,16 +356,13 @@ export const auditContentIntegrity = async (
     brief: ContentBrief, draft: string, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<ContentIntegrityResult> => {
     // 1. Run AI Audit (Semantic & Contextual Checks)
-    let aiResult: ContentIntegrityResult;
-    switch (businessInfo.aiProvider) {
-        case 'openai': aiResult = await openAiService.auditContentIntegrity(brief, draft, businessInfo, dispatch); break;
-        case 'anthropic': aiResult = await anthropicService.auditContentIntegrity(brief, draft, businessInfo, dispatch); break;
-        case 'perplexity': aiResult = await perplexityService.auditContentIntegrity(brief, draft, businessInfo, dispatch); break;
-        case 'openrouter': aiResult = await openRouterService.auditContentIntegrity(brief, draft, businessInfo, dispatch); break;
-        case 'gemini':
-        default:
-            aiResult = await geminiService.auditContentIntegrity(brief, draft, businessInfo, dispatch);
-    }
+    const aiResult = await dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
+        openai: () => openAiService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
+        anthropic: () => anthropicService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
+        perplexity: () => perplexityService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
+        openrouter: () => openRouterService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
+    });
 
     // 2. Run Algorithmic Checks (Pattern Matching)
     // These checks are deterministic and enforce the "Cost of Retrieval" rules strictly.
@@ -338,33 +401,29 @@ export const auditContentIntegrity = async (
 };
 
 export const refineDraftSection = (
-    originalText: string, 
-    violationType: string, 
-    instruction: string, 
-    businessInfo: BusinessInfo, 
+    originalText: string,
+    violationType: string,
+    instruction: string,
+    businessInfo: BusinessInfo,
     dispatch: React.Dispatch<any>
 ): Promise<string> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch),
+        openai: () => openAiService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch),
+        anthropic: () => anthropicService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch),
+        perplexity: () => perplexityService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch),
+        openrouter: () => openRouterService.refineDraftSection(originalText, violationType, instruction, businessInfo, dispatch),
+    });
 };
 
 export const generateSchema = (
     brief: ContentBrief, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
 ): Promise<SchemaGenerationResult> => {
-    switch (businessInfo.aiProvider) {
-        case 'openai': return openAiService.generateSchema(brief, businessInfo, dispatch);
-        case 'anthropic': return anthropicService.generateSchema(brief, businessInfo, dispatch);
-        case 'perplexity': return perplexityService.generateSchema(brief, businessInfo, dispatch);
-        case 'openrouter': return openRouterService.generateSchema(brief, businessInfo, dispatch);
-        case 'gemini':
-        default:
-            return geminiService.generateSchema(brief, businessInfo, dispatch);
-    }
+    return dispatchToProvider(businessInfo, {
+        gemini: () => geminiService.generateSchema(brief, businessInfo, dispatch),
+        openai: () => openAiService.generateSchema(brief, businessInfo, dispatch),
+        anthropic: () => anthropicService.generateSchema(brief, businessInfo, dispatch),
+        perplexity: () => perplexityService.generateSchema(brief, businessInfo, dispatch),
+        openrouter: () => openRouterService.generateSchema(brief, businessInfo, dispatch),
+    });
 };

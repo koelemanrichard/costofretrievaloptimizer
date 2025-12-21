@@ -16,6 +16,14 @@ interface HelpArticleViewProps {
   onNavigate: (categorySlug?: string, articleSlug?: string) => void;
 }
 
+/**
+ * Print to PDF button handler
+ */
+const handlePrintToPDF = () => {
+  // Open print dialog which allows saving as PDF
+  window.print();
+};
+
 export const HelpArticleView: React.FC<HelpArticleViewProps> = ({
   article,
   supabase,
@@ -47,19 +55,34 @@ export const HelpArticleView: React.FC<HelpArticleViewProps> = ({
     <article className="help-article">
       {/* Article Header */}
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-3">{article.title}</h1>
-        {article.summary && (
-          <p className="text-lg text-gray-400">{article.summary}</p>
-        )}
-        {article.published_at && (
-          <p className="text-sm text-gray-500 mt-2">
-            Last updated: {new Date(article.published_at).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </p>
-        )}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-3">{article.title}</h1>
+            {article.summary && (
+              <p className="text-lg text-gray-400">{article.summary}</p>
+            )}
+            {article.published_at && (
+              <p className="text-sm text-gray-500 mt-2">
+                Last updated: {new Date(article.published_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            )}
+          </div>
+          {/* Print to PDF Button */}
+          <button
+            onClick={handlePrintToPDF}
+            className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg border border-gray-700 transition-colors print:hidden"
+            title="Print to PDF"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span className="text-sm">Print to PDF</span>
+          </button>
+        </div>
       </header>
 
       {/* Article Content */}

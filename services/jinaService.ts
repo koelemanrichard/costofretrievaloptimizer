@@ -153,6 +153,7 @@ const doExtraction = async (
       headers: {
         'Content-Type': 'application/json',
         'apikey': proxyConfig.supabaseAnonKey,
+        'Authorization': `Bearer ${proxyConfig.supabaseAnonKey}`,
       },
       body: JSON.stringify({
         url: jinaUrl,

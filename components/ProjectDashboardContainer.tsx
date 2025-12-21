@@ -5,7 +5,7 @@ import { useAppState } from '../state/appState';
 import { AppStep, SEOPillars, EnrichedTopic, ContentBrief, BusinessInfo, TopicalMap, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, FreshnessProfile, MapImprovementSuggestion, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure, EnhancedSchemaResult } from '../types';
 import { ContentGenerationOrchestrator } from '../services/ai/contentGeneration/orchestrator';
 import { executePass9 } from '../services/ai/contentGeneration/passes/pass9SchemaGeneration';
-import * as aiService from '../services/ai/index';
+import * as aiService from '../services/aiService';
 import * as foundationPagesService from '../services/ai/foundationPages';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,23 +17,28 @@ import { useKnowledgeGraph } from '../hooks/useKnowledgeGraph';
 import { useTopicEnrichment } from '../hooks/useTopicEnrichment';
 import { sanitizeTopicFromDb, sanitizeBriefFromDb, safeString, normalizeRpcData, parseTopicalMap, repairBriefsInMap } from '../utils/parsers';
 import { generateMasterExport, generateFullZipExport } from '../utils/exportUtils';
-import { ExportSettingsModal, ExportSettings } from './ExportSettingsModal';
 import { generateEnhancedExport, EnhancedExportInput } from '../utils/enhancedExportUtils';
 
 // Import Screens
-import MapSelectionScreen from './MapSelectionScreen';
+import { MapSelectionScreen } from './screens';
 import ProjectDashboard from './ProjectDashboard';
-import NewMapModal from './NewMapModal';
 import MigrationDashboardContainer from './migration/MigrationDashboardContainer';
 import { Loader } from './ui/Loader';
 import { Button } from './ui/Button';
 import DebugStatePanel from './ui/DebugStatePanel';
-import BriefReviewModal from './BriefReviewModal';
-import FlowAuditModal from './FlowAuditModal';
 import AuditDashboard from './AuditDashboard';
 import BulkGenerationSummary from './BulkGenerationSummary';
 import BulkBriefProgress from './BulkBriefProgress';
-import ImprovementConfirmationModal from './ImprovementConfirmationModal';
+
+// Modals
+import {
+  ExportSettingsModal,
+  type ExportSettings,
+  NewMapModal,
+  BriefReviewModal,
+  FlowAuditModal,
+  ImprovementConfirmationModal,
+} from './modals';
 import { runUnifiedAudit, UnifiedAuditContext, AuditProgress } from '../services/ai/unifiedAudit';
 import { applyFix, generateFix, generateBatchFixes, FixContext } from '../services/ai/auditFixes';
 
@@ -88,19 +93,43 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     useKnowledgeGraph(activeMap, knowledgeGraph, dispatch);
 
     // Build effective business info: global settings + project domain + map overrides
-    // Priority: map.business_info > project.domain > global businessInfo
+    // Priority:
+    //   - AI settings (provider, model, API keys): Always from global businessInfo
+    //   - Domain/project: map.business_info > project > global
+    //   - Business context: map.business_info > global
     const effectiveBusinessInfo = useMemo<BusinessInfo>(() => {
         const mapBusinessInfo = activeMap?.business_info as Partial<BusinessInfo> || {};
+
+        // Extract map business context fields (NOT AI settings - those come from global)
+        // This prevents stale map business_info.aiProvider from overriding user's current global settings
+        const {
+            aiProvider: _mapAiProvider,
+            aiModel: _mapAiModel,
+            geminiApiKey: _gk,
+            openAiApiKey: _ok,
+            anthropicApiKey: _ak,
+            perplexityApiKey: _pk,
+            openRouterApiKey: _ork,
+            ...mapBusinessContext
+        } = mapBusinessInfo;
 
         return {
             ...businessInfo,
             // Use project domain if map doesn't have one set
-            domain: mapBusinessInfo.domain || activeProject?.domain || businessInfo.domain,
-            projectName: mapBusinessInfo.projectName || activeProject?.project_name || businessInfo.projectName,
-            // Spread map-specific overrides last
-            ...mapBusinessInfo,
+            domain: mapBusinessContext.domain || activeProject?.domain || businessInfo.domain,
+            projectName: mapBusinessContext.projectName || activeProject?.project_name || businessInfo.projectName,
+            // Spread map-specific business context (NOT AI settings)
+            ...mapBusinessContext,
             // But ensure domain is always from project if map didn't override it
-            ...(mapBusinessInfo.domain ? {} : { domain: activeProject?.domain || businessInfo.domain }),
+            ...(mapBusinessContext.domain ? {} : { domain: activeProject?.domain || businessInfo.domain }),
+            // AI settings ALWAYS from global (user_settings), not from map's business_info
+            aiProvider: businessInfo.aiProvider,
+            aiModel: businessInfo.aiModel,
+            geminiApiKey: businessInfo.geminiApiKey,
+            openAiApiKey: businessInfo.openAiApiKey,
+            anthropicApiKey: businessInfo.anthropicApiKey,
+            perplexityApiKey: businessInfo.perplexityApiKey,
+            openRouterApiKey: businessInfo.openRouterApiKey,
         };
     }, [businessInfo, activeMap, activeProject]);
     
@@ -674,12 +703,14 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         dispatch({ type: 'SET_LOADING', payload: { key: 'addTopic', value: true } });
         
         try {
-            // Separate inputs into Core (Potential Parents) and Outer (Children)
+            // Separate inputs into Core, Outer, and Child types
             const coreInputs = topics.filter(t => t.data.type === 'core');
             const outerInputs = topics.filter(t => t.data.type === 'outer');
-            
-            // Temp store for new Core IDs: Title -> UUID
+            const childInputs = topics.filter(t => t.data.type === 'child');
+
+            // Temp store for new topic IDs: Title -> UUID
             const newCoreIdMap = new Map<string, string>();
+            const newOuterIdMap = new Map<string, string>();
             
             const coreTopicsToInsert: any[] = [];
 
@@ -769,15 +800,70 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 const { error: outerError } = await supabase.from('topics').insert(outerTopicsToInsert);
                 if (outerError) throw outerError;
 
-                // Dispatch Outer Topics
+                // Track outer topic IDs for child topic resolution & Dispatch Outer Topics
                 outerTopicsToInsert.forEach(topic => {
+                    newOuterIdMap.set(topic.title, topic.id);
+                    const safeTopic = sanitizeTopicFromDb(topic);
+                    dispatch({ type: 'ADD_TOPIC', payload: { mapId: activeMapId, topic: safeTopic } });
+                });
+            }
+
+            // --- PASS 3: Process & Insert Child Topics ---
+            const childTopicsToInsert = childInputs.map(({ data: topicData, placement }) => {
+                let parentId: string | null = null;
+
+                // Resolve Parent ID (should be an outer topic)
+                if (placement && placement !== 'ai' && placement !== 'root') {
+                    // Check if it's a newly created outer topic from Pass 2
+                    if (newOuterIdMap.has(placement)) {
+                        parentId = newOuterIdMap.get(placement) || null;
+                    } else {
+                        // Check if it's an existing topic ID or Title
+                        const existingTopic = [...allTopics, ...outerTopicsToInsert].find(t => t.id === placement || t.title === placement);
+                        if (existingTopic) {
+                            parentId = existingTopic.id;
+                        }
+                    }
+                }
+
+                // Resolve Slug
+                let parentSlug = '';
+                if (parentId) {
+                    const newParent = outerTopicsToInsert.find(t => t.id === parentId);
+                    if (newParent) {
+                        parentSlug = newParent.slug;
+                    } else {
+                        const existingParent = allTopics.find(t => t.id === parentId);
+                        if (existingParent) parentSlug = existingParent.slug;
+                    }
+                }
+
+                return {
+                    ...topicData,
+                    id: uuidv4(),
+                    map_id: activeMapId,
+                    slug: `${parentSlug}/${cleanSlug(parentSlug, topicData.title)}`.replace(/^\//, ''),
+                    parent_topic_id: parentId,
+                    type: 'child',
+                    user_id: user.id
+                };
+            });
+
+            // Insert Child Topics
+            if (childTopicsToInsert.length > 0) {
+                const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+                const { error: childError } = await supabase.from('topics').insert(childTopicsToInsert);
+                if (childError) throw childError;
+
+                // Dispatch Child Topics
+                childTopicsToInsert.forEach(topic => {
                     const safeTopic = sanitizeTopicFromDb(topic);
                     dispatch({ type: 'ADD_TOPIC', payload: { mapId: activeMapId, topic: safeTopic } });
                 });
             }
 
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'addTopic', visible: false } });
-            dispatch({ type: 'SET_NOTIFICATION', payload: `Successfully added ${coreTopicsToInsert.length + outerTopicsToInsert.length} new topics.` });
+            dispatch({ type: 'SET_NOTIFICATION', payload: `Successfully added ${coreTopicsToInsert.length + outerTopicsToInsert.length + childTopicsToInsert.length} new topics.` });
 
         } catch (e) {
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to add topics.' });
@@ -1636,15 +1722,32 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     }, [activeMapId, businessInfo, dispatch]);
 
     const handleUpdateTopic = useCallback(async (topicId: string, updates: Partial<EnrichedTopic>) => {
-        if (!activeMapId) return;
+        console.log('[handleUpdateTopic] Called with:', { topicId, updates });
+
+        if (!activeMapId) {
+            console.warn('[handleUpdateTopic] No activeMapId, returning early');
+            return;
+        }
         const user = state.user;
-        if (!user) return;
+        if (!user) {
+            console.warn('[handleUpdateTopic] No user, returning early');
+            return;
+        }
 
         const loadingKey = `update_${topicId}`;
         dispatch({ type: 'SET_LOADING', payload: { key: loadingKey, value: true } });
 
         try {
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+
+            // Verify we have an active session for RLS
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log('[handleUpdateTopic] Auth session:', session ? `User ${session.user.id}` : 'NO SESSION');
+
+            if (!session) {
+                console.error('[handleUpdateTopic] No active session - RLS will block updates');
+                throw new Error('No active session. Please log in again to make changes.');
+            }
 
             // List of fields that live in the `metadata` JSONB column, NOT as root columns
             const metaFields = [
@@ -1695,15 +1798,95 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
             // Only perform update if we have something to update
             if (Object.keys(dbUpdates).length > 0) {
-                const { error } = await supabase
+                // Always set updated_at for tracking
+                dbUpdates.updated_at = new Date().toISOString();
+
+                console.log('[handleUpdateTopic] Sending to Supabase:', { topicId, dbUpdates });
+
+                const { error, data } = await supabase
                     .from('topics')
                     .update(dbUpdates)
-                    .eq('id', topicId);
+                    .eq('id', topicId)
+                    .select();
+
+                console.log('[handleUpdateTopic] Supabase response:', { error, data, rowsAffected: data?.length });
 
                 if (error) throw error;
+
+                // Check if RLS blocked the update (no error but 0 rows affected)
+                if (!data || data.length === 0) {
+                    console.error('[handleUpdateTopic] Update blocked by RLS - 0 rows affected');
+                    throw new Error('Update failed: You may not have permission to update this topic, or your session may have expired. Please try refreshing the page.');
+                }
+
+                // CASCADE TYPE CHANGES TO CHILDREN
+                // When a topic's type changes, its children need to be updated too
+                if (updates.type) {
+                    const activeMap = state.topicalMaps.find(m => m.id === activeMapId);
+                    const oldTopic = activeMap?.topics?.find(t => t.id === topicId);
+                    const oldType = oldTopic?.type;
+                    const newType = updates.type;
+
+                    if (oldType && oldType !== newType) {
+                        console.log('[handleUpdateTopic] Type change detected:', oldType, '->', newType);
+
+                        // Get all direct children of this topic
+                        const { data: children } = await supabase
+                            .from('topics')
+                            .select('id, title, type')
+                            .eq('parent_topic_id', topicId)
+                            .eq('map_id', activeMapId);
+
+                        if (children && children.length > 0) {
+                            console.log('[handleUpdateTopic] Found', children.length, 'children to cascade');
+
+                            // Determine new child type based on parent's new type
+                            let newChildType: 'core' | 'outer' | 'child' | null = null;
+
+                            if (newType === 'outer') {
+                                // Parent became outer -> children become child
+                                newChildType = 'child';
+                            } else if (newType === 'core') {
+                                // Parent became core -> children become outer
+                                newChildType = 'outer';
+                            }
+                            // Note: If parent becomes 'child', children can't exist (max 3 levels)
+
+                            if (newChildType) {
+                                for (const child of children) {
+                                    if (child.type !== newChildType) {
+                                        console.log('[handleUpdateTopic] Cascading type change for child:', child.title, '->', newChildType);
+                                        const { error: childError } = await supabase
+                                            .from('topics')
+                                            .update({ type: newChildType, updated_at: new Date().toISOString() })
+                                            .eq('id', child.id);
+
+                                        if (childError) {
+                                            console.error('[handleUpdateTopic] Failed to cascade to child:', child.title, childError);
+                                        } else {
+                                            // Update local state for this child too
+                                            dispatch({
+                                                type: 'UPDATE_TOPIC',
+                                                payload: {
+                                                    mapId: activeMapId,
+                                                    topicId: child.id,
+                                                    updates: { type: newChildType }
+                                                }
+                                            });
+                                        }
+                                    }
+                                }
+                                dispatch({ type: 'SET_NOTIFICATION', payload: `Updated ${children.length} child topic(s) to type "${newChildType}"` });
+                            }
+                        }
+                    }
+                }
+            } else {
+                console.warn('[handleUpdateTopic] No dbUpdates to send');
             }
 
             // Update local state
+            console.log('[handleUpdateTopic] Updating local state');
             dispatch({
                 type: 'UPDATE_TOPIC',
                 payload: {
@@ -1714,11 +1897,12 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             });
 
         } catch (e) {
+            console.error('[handleUpdateTopic] Error:', e);
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to update topic.' });
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { key: loadingKey, value: false } });
         }
-    }, [activeMapId, businessInfo, dispatch, state.user]);
+    }, [activeMapId, businessInfo, dispatch, state.user, state.topicalMaps]);
 
     const handleAnalyzeFlow = useCallback(async (draft: string) => {
         if (!activeMap || !activeMap.pillars) {

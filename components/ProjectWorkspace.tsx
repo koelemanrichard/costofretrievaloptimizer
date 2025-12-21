@@ -4,10 +4,13 @@ import React from 'react';
 import { useAppState } from '../state/appState';
 import { AppStep, SEOPillars, SemanticTriple, TopicalMap, BusinessInfo, EnrichedTopic, FreshnessProfile, NAPData } from '../types';
 import BusinessInfoForm from './BusinessInfoForm';
-import PillarDefinitionWizard from './PillarDefinitionWizard';
-import EavDiscoveryWizard from './EavDiscoveryWizard';
-import CompetitorRefinementWizard from './CompetitorRefinementWizard';
-import { WebsiteBlueprintWizard, BlueprintConfig } from './WebsiteBlueprintWizard';
+import {
+  PillarDefinitionWizard,
+  EavDiscoveryWizard,
+  CompetitorRefinementWizard,
+  WebsiteBlueprintWizard,
+  type BlueprintConfig,
+} from './wizards';
 import ProjectDashboardContainer from './ProjectDashboardContainer';
 import { getSupabaseClient } from '../services/supabaseClient';
 import * as aiService from '../services/aiService';
@@ -166,9 +169,15 @@ const ProjectWorkspace: React.FC = () => {
 
             // 2. Generate Initial Topics with AI
             // Use effective business info (global keys + map strategy)
+            // AI settings ALWAYS from global user_settings, not map's business_info
+            const mapBusinessInfo = currentMap.business_info as Partial<BusinessInfo> || {};
+            const { aiProvider: _ap, aiModel: _am, geminiApiKey: _g, openAiApiKey: _o, anthropicApiKey: _a, perplexityApiKey: _p, openRouterApiKey: _or, ...mapBusinessContext } = mapBusinessInfo;
             const effectiveBusinessInfo = {
                 ...state.businessInfo,
-                ...(currentMap.business_info as Partial<BusinessInfo> || {})
+                ...mapBusinessContext,
+                // AI settings ALWAYS from global
+                aiProvider: state.businessInfo.aiProvider,
+                aiModel: state.businessInfo.aiModel,
             };
             console.log('effectiveBusinessInfo.aiProvider:', effectiveBusinessInfo.aiProvider);
 
@@ -192,8 +201,11 @@ const ProjectWorkspace: React.FC = () => {
             const topicMap = new Map<string, string>(); // Maps temp ID (e.g. "core_1") to real UUID
             const finalTopics: EnrichedTopic[] = [];
 
-            // Process Core Topics first
-            coreTopics.forEach(core => {
+            // Helper to validate topic has required fields
+            const isValidTopic = (t: any): boolean => t && t.title && typeof t.title === 'string' && t.title.trim().length > 0;
+
+            // Process Core Topics first (filter out invalid ones)
+            coreTopics.filter(isValidTopic).forEach(core => {
                 const realId = uuidv4();
                 topicMap.set(core.id, realId); // Store mapping
 
@@ -208,12 +220,12 @@ const ProjectWorkspace: React.FC = () => {
                 } as EnrichedTopic);
             });
 
-            // Process Outer Topics
-            outerTopics.forEach(outer => {
+            // Process Outer Topics (filter out invalid ones)
+            outerTopics.filter(isValidTopic).forEach(outer => {
                 const parentRealId = outer.parent_topic_id ? topicMap.get(outer.parent_topic_id) : null;
                 const parentTopic = finalTopics.find(t => t.id === parentRealId);
                 const parentSlug = parentTopic ? parentTopic.slug : '';
-                
+
                 finalTopics.push({
                     ...outer,
                     id: uuidv4(),
@@ -226,7 +238,21 @@ const ProjectWorkspace: React.FC = () => {
             });
 
             // 4. Save Topics to DB
-            const dbTopics = finalTopics.map(t => ({
+            // Filter out any malformed topics (missing title) to prevent DB constraint violations
+            const validTopics = finalTopics.filter(t => t.title && typeof t.title === 'string' && t.title.trim().length > 0);
+
+            if (validTopics.length < finalTopics.length) {
+                const skippedCount = finalTopics.length - validTopics.length;
+                console.warn(`[MapGeneration] Filtered out ${skippedCount} malformed topics (missing title)`);
+                dispatch({ type: 'LOG_EVENT', payload: {
+                    service: 'MapGeneration',
+                    message: `Warning: ${skippedCount} topics were skipped due to missing titles`,
+                    status: 'warning',
+                    timestamp: Date.now()
+                }});
+            }
+
+            const dbTopics = validTopics.map(t => ({
                 id: t.id,
                 map_id: t.map_id,
                 user_id: user.id,
@@ -263,9 +289,9 @@ const ProjectWorkspace: React.FC = () => {
             }
 
             // 5. Update State
-            // NOTE: We use finalTopics directly here. Using sanitizeTopicFromDb might accidentally strip
-            // the 'metadata' properties if the function expects a different DB structure than the flat object we just created.
-            dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: activeMapId, topics: finalTopics } });
+            // NOTE: We use validTopics (filtered) to ensure state matches what was saved to DB.
+            // Using sanitizeTopicFromDb might accidentally strip the 'metadata' properties.
+            dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: activeMapId, topics: validTopics } });
 
             // 6. Generate Foundation Pages (non-blocking)
             try {
@@ -418,9 +444,15 @@ const ProjectWorkspace: React.FC = () => {
                     />;
         case AppStep.BLUEPRINT_WIZARD: {
             const currentMap = state.topicalMaps.find(m => m.id === activeMapId);
+            // AI settings ALWAYS from global user_settings, not map's business_info
+            const mapBusinessInfo = currentMap?.business_info as Partial<BusinessInfo> || {};
+            const { aiProvider: _ap, aiModel: _am, geminiApiKey: _g, openAiApiKey: _o, anthropicApiKey: _a, perplexityApiKey: _p, openRouterApiKey: _or, ...mapBusinessContext } = mapBusinessInfo;
             const effectiveBusinessInfo = {
                 ...state.businessInfo,
-                ...(currentMap?.business_info as Partial<BusinessInfo> || {})
+                ...mapBusinessContext,
+                // AI settings ALWAYS from global
+                aiProvider: state.businessInfo.aiProvider,
+                aiModel: state.businessInfo.aiModel,
             };
             return <WebsiteBlueprintWizard
                         businessInfo={effectiveBusinessInfo}

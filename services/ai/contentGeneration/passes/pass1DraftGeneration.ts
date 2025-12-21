@@ -11,6 +11,7 @@ import * as openAiService from '../../../openAiService';
 import * as anthropicService from '../../../anthropicService';
 import * as perplexityService from '../../../perplexityService';
 import * as openRouterService from '../../../openRouterService';
+import { dispatchToProvider } from '../../providerDispatcher';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -22,19 +23,13 @@ async function callProviderWithPrompt(
   info: BusinessInfo,
   prompt: string
 ): Promise<string> {
-  switch (info.aiProvider) {
-    case 'openai':
-      return openAiService.generateText(prompt, info, noOpDispatch);
-    case 'anthropic':
-      return anthropicService.generateText(prompt, info, noOpDispatch);
-    case 'perplexity':
-      return perplexityService.generateText(prompt, info, noOpDispatch);
-    case 'openrouter':
-      return openRouterService.generateText(prompt, info, noOpDispatch);
-    case 'gemini':
-    default:
-      return geminiService.generateText(prompt, info, noOpDispatch);
-  }
+  return dispatchToProvider(info, {
+    gemini: () => geminiService.generateText(prompt, info, noOpDispatch),
+    openai: () => openAiService.generateText(prompt, info, noOpDispatch),
+    anthropic: () => anthropicService.generateText(prompt, info, noOpDispatch),
+    perplexity: () => perplexityService.generateText(prompt, info, noOpDispatch),
+    openrouter: () => openRouterService.generateText(prompt, info, noOpDispatch),
+  });
 }
 
 export async function executePass1(

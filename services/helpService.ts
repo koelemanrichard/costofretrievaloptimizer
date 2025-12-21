@@ -39,7 +39,6 @@ export async function getCategories(
   const { data, error } = await supabase
     .from('help_categories')
     .select('*')
-    .eq('is_published', true)
     .order('sort_order', { ascending: true });
 
   if (error) throw new Error(`Failed to fetch categories: ${error.message}`);
@@ -70,7 +69,6 @@ export async function getCategoriesWithArticles(
   const { data: categories, error: catError } = await supabase
     .from('help_categories')
     .select('*')
-    .eq('is_published', true)
     .order('sort_order', { ascending: true });
 
   if (catError) throw new Error(`Failed to fetch categories: ${catError.message}`);
@@ -100,7 +98,6 @@ export async function getCategoryBySlug(
     .from('help_categories')
     .select('*')
     .eq('slug', slug)
-    .eq('is_published', true)
     .single();
 
   if (error && error.code !== 'PGRST116') {

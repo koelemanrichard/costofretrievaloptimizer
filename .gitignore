@@ -38,3 +38,5 @@ build/
 
 # Git worktrees
 .worktrees/
+nul
+backup/

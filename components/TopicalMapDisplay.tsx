@@ -1,8 +1,9 @@
 
 // FIX: Implemented the TopicalMapDisplay component to render the topical map UI.
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { EnrichedTopic, ContentBrief, MergeSuggestion, FreshnessProfile, ExpansionMode } from '../types';
 import TopicItem from './TopicItem';
+import { TopicTableView } from './TopicTableView';
 import { Button } from './ui/Button';
 import TopicalMapGraphView from './TopicalMapGraphView';
 import { ReportExportButton, ReportModal } from './reports';
@@ -16,10 +17,16 @@ import MergeConfirmationModal from './ui/MergeConfirmationModal';
 import { InfoTooltip } from './ui/InfoTooltip';
 import { BriefHealthStatsBar } from './ui/BriefHealthBadge';
 import { calculateBriefHealthStats } from '../utils/briefQualityScore';
+import MapUsageReport from './admin/MapUsageReport';
+// Template panel moved to AddTopicModal
+// import { QueryTemplatePanel } from './templates/QueryTemplatePanel';
+// import { LocationManagerModal } from './templates/LocationManagerModal';
+import type { ExpandedTemplateResult } from '../types';
 
 interface TopicalMapDisplayProps {
   coreTopics: EnrichedTopic[];
   outerTopics: EnrichedTopic[];
+  childTopics?: EnrichedTopic[]; // Level 3: children of outer topics
   briefs: Record<string, ContentBrief>;
   onSelectTopicForBrief: (topic: EnrichedTopic) => void;
   onExpandCoreTopic: (coreTopic: EnrichedTopic, mode: ExpansionMode) => void;
@@ -43,6 +50,7 @@ export type { TopicalMapDisplayProps };
 const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   coreTopics,
   outerTopics,
+  childTopics = [],
   briefs,
   onSelectTopicForBrief,
   onExpandCoreTopic,
@@ -65,17 +73,52 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
     return match ? match[1] : null;
   }, [briefGenerationStatus]);
 
-  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'table' | 'graph'>(() => {
+    // Default to table view for maps with 30+ topics
+    const totalTopics = coreTopics.length + outerTopics.length + childTopics.length;
+    if (totalTopics >= 30) return 'table';
+    // Try to load from localStorage
+    const saved = localStorage.getItem('topicViewMode');
+    if (saved === 'list' || saved === 'table' || saved === 'graph') return saved;
+    return 'list';
+  });
+  const [hierarchyMode, setHierarchyMode] = useState<'seo' | 'business'>('seo');
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [mergeSuggestion, setMergeSuggestion] = useState<MergeSuggestion | null>(null);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   
   const [highlightedTopicId, setHighlightedTopicId] = useState<string | null>(null);
   const [draggedTopicId, setDraggedTopicId] = useState<string | null>(null);
+  const [openDetailPanelTopicId, setOpenDetailPanelTopicId] = useState<string | null>(null);
   const [collapsedCoreIds, setCollapsedCoreIds] = useState<Set<string>>(new Set());
   const [isRepairingLabels, setIsRepairingLabels] = useState(false);
   const [repairingTopicId, setRepairingTopicId] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<'created_desc' | 'created_asc' | 'title_asc' | 'title_desc' | 'updated_desc' | 'updated_asc'>('created_desc');
+  const [showUsageReport, setShowUsageReport] = useState(false);
+  // Template panel moved to AddTopicModal - no longer needed here
+  // const [showTemplatePanel, setShowTemplatePanel] = useState(false);
+  // const [showLocationManager, setShowLocationManager] = useState(false);
+
+  // Persist view mode to localStorage
+  useEffect(() => {
+    localStorage.setItem('topicViewMode', viewMode);
+  }, [viewMode]);
+
+  // Track which topics are expanding or generating briefs (for table view)
+  const expandingTopicIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (expandingCoreTopicId) ids.add(expandingCoreTopicId);
+    return ids;
+  }, [expandingCoreTopicId]);
+
+  const generatingBriefTopicIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (generatingTopicTitle) {
+      const topic = [...coreTopics, ...outerTopics, ...childTopics].find(t => t.title === generatingTopicTitle);
+      if (topic) ids.add(topic.id);
+    }
+    return ids;
+  }, [generatingTopicTitle, coreTopics, outerTopics, childTopics]);
 
   // Report generation hook
   const allTopicsForReport = useMemo(() => [...coreTopics, ...outerTopics], [coreTopics, outerTopics]);
@@ -123,7 +166,88 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
     return map;
   }, [outerTopics, sortTopics]);
 
-  const allTopics = useMemo(() => [...coreTopics, ...outerTopics], [coreTopics, outerTopics]);
+  // Sorted outer topics (flat list for table view)
+  const sortedOuterTopics = useMemo(() => sortTopics(outerTopics), [outerTopics, sortTopics]);
+
+  // Convert briefs object to Map (for table view)
+  const briefsMap = useMemo(() => {
+    const map = new Map<string, ContentBrief>();
+    Object.entries(briefs).forEach(([id, brief]) => {
+      if (brief) map.set(id, brief);
+    });
+    return map;
+  }, [briefs]);
+
+  // Convert selectedTopicIds array to Set (for table view)
+  const selectedTopicIdsSet = useMemo(() => new Set(selectedTopicIds), [selectedTopicIds]);
+
+  // Group child topics by their outer topic parent (Level 3)
+  const childTopicsByParent = useMemo(() => {
+    const map = new Map<string, EnrichedTopic[]>();
+    childTopics.forEach(topic => {
+      const parentId = topic.parent_topic_id || 'uncategorized';
+      if (!map.has(parentId)) {
+        map.set(parentId, []);
+      }
+      map.get(parentId)!.push(topic);
+    });
+    // Sort child topics within each parent group
+    map.forEach((topics, key) => {
+      map.set(key, sortTopics(topics));
+    });
+    return map;
+  }, [childTopics, sortTopics]);
+
+  // Get uncategorized outer topics (no parent or parent is not a core topic)
+  const uncategorizedOuterTopics = useMemo(() => {
+    const coreTopicIds = new Set(coreTopics.map(t => t.id));
+    return outerTopics.filter(topic =>
+      !topic.parent_topic_id || !coreTopicIds.has(topic.parent_topic_id)
+    );
+  }, [outerTopics, coreTopics]);
+
+  // Get uncategorized child topics (no parent or parent is not an outer topic)
+  const uncategorizedChildTopics = useMemo(() => {
+    const outerTopicIds = new Set(outerTopics.map(t => t.id));
+    return childTopics.filter(topic =>
+      !topic.parent_topic_id || !outerTopicIds.has(topic.parent_topic_id)
+    );
+  }, [childTopics, outerTopics]);
+
+  const allTopics = useMemo(() => [...coreTopics, ...outerTopics, ...childTopics], [coreTopics, outerTopics, childTopics]);
+
+  // Business View: Group topics by display_parent_id (visual hierarchy)
+  const topicsByDisplayParent = useMemo(() => {
+    const map = new Map<string, EnrichedTopic[]>();
+    // All topics can have a display_parent, regardless of their SEO type
+    allTopics.forEach(topic => {
+      const displayParentId = topic.display_parent_id || 'no-visual-parent';
+      if (!map.has(displayParentId)) {
+        map.set(displayParentId, []);
+      }
+      map.get(displayParentId)!.push(topic);
+    });
+    // Sort within each group
+    map.forEach((topics, key) => {
+      map.set(key, sortTopics(topics));
+    });
+    return map;
+  }, [allTopics, sortTopics]);
+
+  // Get topics without display_parent (root level in business view)
+  const rootBusinessTopics = useMemo(() => {
+    // Topics that either have no display_parent OR are themselves display parents
+    const topicsWithDisplayChildren = new Set<string>();
+    allTopics.forEach(t => {
+      if (t.display_parent_id) {
+        topicsWithDisplayChildren.add(t.display_parent_id);
+      }
+    });
+    // Root topics are those without a display_parent OR that have children
+    return sortTopics(allTopics.filter(t =>
+      !t.display_parent_id || topicsWithDisplayChildren.has(t.id)
+    ).filter(t => !t.display_parent_id));
+  }, [allTopics, sortTopics]);
 
   // Calculate brief health statistics
   const briefHealthStats = useMemo(() => {
@@ -335,6 +459,9 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
     }
   };
 
+  // Template generation moved to ProjectDashboard - no longer needed here
+  // const handleTemplateGeneratedTopics = useCallback(async ...
+
   const handleToggleSelection = (topicId: string) => {
     setSelectedTopicIds(prev =>
       prev.includes(topicId) ? prev.filter(id => id !== topicId) : [...prev, topicId]
@@ -344,12 +471,13 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   const handleFindMergeOpportunities = async () => {
     if (selectedTopicIds.length < 2 || !activeMapId) return;
     const activeMap = state.topicalMaps.find(m => m.id === activeMapId);
-    if (!activeMap || !activeMap.business_info) return;
+    if (!activeMap || !businessInfo) return;
 
     dispatch({ type: 'SET_LOADING', payload: { key: 'merge', value: true } });
     try {
         const selected = allTopics.filter(t => selectedTopicIds.includes(t.id));
-        const suggestion = await aiService.findMergeOpportunitiesForSelection(activeMap.business_info as any, selected, dispatch);
+        // Use global businessInfo which has correct AI settings from user_settings
+        const suggestion = await aiService.findMergeOpportunitiesForSelection(businessInfo, selected, dispatch);
         setMergeSuggestion(suggestion);
         setIsMergeModalOpen(true);
     } catch(e) {
@@ -391,18 +519,34 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   
   const handleReparent = useCallback((topicId: string, newParentId: string) => {
     if(!activeMapId) return;
-    const topic = outerTopics.find(t => t.id === topicId);
-    const newParent = coreTopics.find(t => t.id === newParentId);
-    if (!topic || !newParent) return;
 
-    const newSlug = `${newParent.slug}/${slugify(topic.title)}`;
-    // This update is primarily structural, so we assume it's safe to call the prop
-    onUpdateTopic(topicId, { parent_topic_id: newParentId, slug: newSlug });
-  }, [activeMapId, coreTopics, outerTopics, onUpdateTopic]);
+    // Find the topic being moved (can be outer or child)
+    const outerTopic = outerTopics.find(t => t.id === topicId);
+    const childTopic = childTopics.find(t => t.id === topicId);
+    const topic = outerTopic || childTopic;
+
+    if (!topic) return;
+
+    // Determine valid parent based on topic type
+    if (topic.type === 'outer') {
+      // Outer topics can only be parented to core topics
+      const newParent = coreTopics.find(t => t.id === newParentId);
+      if (!newParent) return;
+      const newSlug = `${newParent.slug}/${slugify(topic.title)}`;
+      onUpdateTopic(topicId, { parent_topic_id: newParentId, slug: newSlug });
+    } else if (topic.type === 'child') {
+      // Child topics can only be parented to outer topics
+      const newParent = outerTopics.find(t => t.id === newParentId);
+      if (!newParent) return;
+      const newSlug = `${newParent.slug}/${slugify(topic.title)}`;
+      onUpdateTopic(topicId, { parent_topic_id: newParentId, slug: newSlug });
+    }
+  }, [activeMapId, coreTopics, outerTopics, childTopics, onUpdateTopic]);
   
   const handleDragStart = (e: React.DragEvent, topicId: string) => {
     const topic = allTopics.find(t => t.id === topicId);
-    if(topic && topic.type === 'outer') {
+    // Allow dragging outer and child topics (not core topics)
+    if(topic && (topic.type === 'outer' || topic.type === 'child')) {
         e.dataTransfer.effectAllowed = 'move';
         setDraggedTopicId(topicId);
     } else {
@@ -413,9 +557,26 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   const handleDropOnTopic = (e: React.DragEvent, targetTopicId: string) => {
     e.preventDefault();
     if (!draggedTopicId) return;
-    const targetTopic = coreTopics.find(t => t.id === targetTopicId);
-    if (targetTopic && draggedTopicId !== targetTopicId) {
-        handleReparent(draggedTopicId, targetTopicId);
+
+    const draggedTopic = allTopics.find(t => t.id === draggedTopicId);
+    if (!draggedTopic || draggedTopicId === targetTopicId) {
+        setDraggedTopicId(null);
+        return;
+    }
+
+    // Determine valid drop targets based on dragged topic type
+    if (draggedTopic.type === 'outer') {
+        // Outer topics can only be dropped on core topics
+        const targetTopic = coreTopics.find(t => t.id === targetTopicId);
+        if (targetTopic) {
+            handleReparent(draggedTopicId, targetTopicId);
+        }
+    } else if (draggedTopic.type === 'child') {
+        // Child topics can only be dropped on outer topics
+        const targetTopic = outerTopics.find(t => t.id === targetTopicId);
+        if (targetTopic) {
+            handleReparent(draggedTopicId, targetTopicId);
+        }
     }
     setDraggedTopicId(null);
   };
@@ -429,7 +590,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                  <Button onClick={handleFindMergeOpportunities} disabled={selectedTopicIds.length < 2 || isLoading.merge}>
                     {isLoading.merge ? 'Analyzing...' : `Merge Selected (${selectedTopicIds.length})`}
                 </Button>
-                {viewMode === 'list' && coreTopics.length > 0 && (
+                {(viewMode === 'list' || viewMode === 'table') && coreTopics.length > 0 && (
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Sorting dropdown */}
                         <select
@@ -488,10 +649,40 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                 label="Generate Report"
                             />
                         )}
+                        {activeMapId && (
+                            <Button
+                                onClick={() => setShowUsageReport(true)}
+                                variant="secondary"
+                                className="!py-1 !px-3 text-xs bg-amber-900/30 border-amber-700 hover:bg-amber-800/40"
+                            >
+                                AI Usage
+                            </Button>
+                        )}
+                        {/* Template button removed - templates now accessible via Content > Add Topics */}
+                    </div>
+                )}
+                {/* Hierarchy Mode Toggle - SEO vs Business view */}
+                {viewMode === 'list' && (
+                    <div className="flex rounded-lg bg-gray-700 p-1" title="SEO View shows behavioral hierarchy (affects SEO). Business View shows visual groupings (for presentations).">
+                        <Button
+                            onClick={() => setHierarchyMode('seo')}
+                            variant={hierarchyMode === 'seo' ? 'primary' : 'secondary'}
+                            className="!py-1 !px-3 text-sm"
+                        >
+                            SEO View
+                        </Button>
+                        <Button
+                            onClick={() => setHierarchyMode('business')}
+                            variant={hierarchyMode === 'business' ? 'primary' : 'secondary'}
+                            className="!py-1 !px-3 text-sm"
+                        >
+                            Business View
+                        </Button>
                     </div>
                 )}
                 <div className="flex rounded-lg bg-gray-700 p-1">
-                    <Button onClick={() => setViewMode('list')} variant={viewMode === 'list' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">List</Button>
+                    <Button onClick={() => setViewMode('list')} variant={viewMode === 'list' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">Cards</Button>
+                    <Button onClick={() => setViewMode('table')} variant={viewMode === 'table' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">Table</Button>
                     <Button onClick={() => setViewMode('graph')} variant={viewMode === 'graph' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">Graph</Button>
                 </div>
             </div>
@@ -520,11 +711,191 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                         />
                     </div>
                 )}
+
+                {/* Query Template Panel moved to AddTopicModal */}
+
+                {/* Business View - Visual hierarchy by display_parent_id */}
+                {hierarchyMode === 'business' ? (
+                    <div className="space-y-6">
+                        <div className="px-3 py-2 bg-purple-900/20 rounded-lg border border-purple-700/50">
+                            <p className="text-xs text-purple-300">
+                                <strong>Business View:</strong> Topics are grouped by their visual display parent for business presentations.
+                                This grouping does NOT affect SEO behavior - use SEO View to see the actual behavioral hierarchy.
+                            </p>
+                        </div>
+
+                        {/* Render root-level topics (no display_parent) */}
+                        {rootBusinessTopics.map(topic => {
+                            const displayChildren = topicsByDisplayParent.get(topic.id) || [];
+                            const hasDisplayChildren = displayChildren.length > 0;
+                            const isCollapsed = collapsedCoreIds.has(topic.id);
+
+                            return (
+                                <div key={topic.id} className="rounded-lg border-l-4 border-purple-500 bg-purple-900/10 p-2">
+                                    <div className="flex items-center gap-2">
+                                        {hasDisplayChildren && (
+                                            <button onClick={() => handleToggleCollapse(topic.id)} className="p-1 text-gray-500 hover:text-white">
+                                                <svg className={`w-5 h-5 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                        {!hasDisplayChildren && <div className="w-7" />}
+                                        <div className="flex-grow relative">
+                                            <div className="absolute -top-3 left-2 flex gap-2">
+                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 rounded border ${
+                                                    topic.type === 'core'
+                                                        ? 'text-green-400 bg-green-900/30 border-green-700/50'
+                                                        : topic.type === 'child'
+                                                        ? 'text-orange-400 bg-orange-900/30 border-orange-700/50'
+                                                        : 'text-purple-400 bg-purple-900/30 border-purple-700/50'
+                                                }`}>
+                                                    {topic.type.toUpperCase()}
+                                                </span>
+                                                {hasDisplayChildren && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 bg-purple-900/30 px-1.5 rounded border border-purple-700/50">
+                                                        {displayChildren.length} Visual Children
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <TopicItem
+                                                topic={topic}
+                                                hasBrief={!!briefs[topic.id]}
+                                                brief={briefs[topic.id]}
+                                                onHighlight={() => setHighlightedTopicId(topic.id)}
+                                                onGenerateBrief={() => onSelectTopicForBrief(topic)}
+                                                onDelete={() => handleDeleteTopic(topic.id)}
+                                                onUpdateTopic={onUpdateTopic}
+                                                isChecked={selectedTopicIds.includes(topic.id)}
+                                                onToggleSelection={handleToggleSelection}
+                                                isHighlighted={highlightedTopicId === topic.id}
+                                                onDragStart={handleDragStart}
+                                                onDropOnTopic={handleDropOnTopic}
+                                                onDragEnd={() => setDraggedTopicId(null)}
+                                                onExpand={topic.type === 'core' ? onExpandCoreTopic : undefined}
+                                                isExpanding={expandingCoreTopicId === topic.id}
+                                                canExpand={topic.type === 'core' && canExpandTopics}
+                                                canGenerateBriefs={canGenerateBriefs}
+                                                allCoreTopics={coreTopics}
+                                                allOuterTopics={outerTopics}
+                                                allTopics={allTopics}
+                                                onReparent={handleReparent}
+                                                isGeneratingBrief={generatingTopicTitle === topic.title}
+                                                onRepairMissing={(missingFields) => handleRepairBriefMissing(topic.id, missingFields)}
+                                                isRepairingBrief={repairingTopicId === topic.id}
+                                                isDetailPanelOpen={openDetailPanelTopicId === topic.id}
+                                                onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                            />
+                                        </div>
+                                    </div>
+                                    {!isCollapsed && hasDisplayChildren && (
+                                        <div className="pl-4 sm:pl-8 mt-2 space-y-2 border-l-2 border-purple-700/50 ml-6">
+                                            {displayChildren.map(child => (
+                                                <div key={child.id} className="relative">
+                                                    <div className="absolute -top-1 left-2">
+                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 rounded border ${
+                                                            child.type === 'core'
+                                                                ? 'text-green-400 bg-green-900/30 border-green-700/50'
+                                                                : child.type === 'child'
+                                                                ? 'text-orange-400 bg-orange-900/30 border-orange-700/50'
+                                                                : 'text-purple-400 bg-purple-900/30 border-purple-700/50'
+                                                        }`}>
+                                                            {child.type.toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <TopicItem
+                                                        topic={child}
+                                                        hasBrief={!!briefs[child.id]}
+                                                        brief={briefs[child.id]}
+                                                        onHighlight={() => setHighlightedTopicId(child.id)}
+                                                        onGenerateBrief={() => onSelectTopicForBrief(child)}
+                                                        onDelete={() => handleDeleteTopic(child.id)}
+                                                        onUpdateTopic={onUpdateTopic}
+                                                        isChecked={selectedTopicIds.includes(child.id)}
+                                                        onToggleSelection={handleToggleSelection}
+                                                        isHighlighted={highlightedTopicId === child.id}
+                                                        onDragStart={handleDragStart}
+                                                        onDropOnTopic={handleDropOnTopic}
+                                                        onDragEnd={() => setDraggedTopicId(null)}
+                                                        onExpand={child.type === 'core' ? onExpandCoreTopic : undefined}
+                                                        isExpanding={expandingCoreTopicId === child.id}
+                                                        canExpand={child.type === 'core' && canExpandTopics}
+                                                        canGenerateBriefs={canGenerateBriefs}
+                                                        allCoreTopics={coreTopics}
+                                                        allOuterTopics={outerTopics}
+                                                        allTopics={allTopics}
+                                                        onReparent={handleReparent}
+                                                        isGeneratingBrief={generatingTopicTitle === child.title}
+                                                        onRepairMissing={(missingFields) => handleRepairBriefMissing(child.id, missingFields)}
+                                                        isRepairingBrief={repairingTopicId === child.id}
+                                                        isDetailPanelOpen={openDetailPanelTopicId === child.id}
+                                                        onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {/* Topics with display_parent but parent doesn't exist */}
+                        {(() => {
+                            const orphanedDisplayTopics = allTopics.filter(t =>
+                                t.display_parent_id && !allTopics.some(p => p.id === t.display_parent_id)
+                            );
+                            if (orphanedDisplayTopics.length === 0) return null;
+                            return (
+                                <div className="mt-6 pt-4 border-t-2 border-dashed border-orange-600/50">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-orange-500">⚠️</span>
+                                        <h3 className="text-sm font-semibold text-orange-400 uppercase tracking-wider">
+                                            Orphaned Visual Topics ({orphanedDisplayTopics.length})
+                                        </h3>
+                                        <span className="text-xs text-gray-500">— Visual parent no longer exists</span>
+                                    </div>
+                                    <div className="space-y-2 pl-4 border-l-2 border-orange-600/30">
+                                        {orphanedDisplayTopics.map(topic => (
+                                            <TopicItem
+                                                key={topic.id}
+                                                topic={topic}
+                                                hasBrief={!!briefs[topic.id]}
+                                                brief={briefs[topic.id]}
+                                                onHighlight={() => setHighlightedTopicId(topic.id)}
+                                                onGenerateBrief={() => onSelectTopicForBrief(topic)}
+                                                onDelete={() => handleDeleteTopic(topic.id)}
+                                                onUpdateTopic={onUpdateTopic}
+                                                isChecked={selectedTopicIds.includes(topic.id)}
+                                                onToggleSelection={handleToggleSelection}
+                                                isHighlighted={highlightedTopicId === topic.id}
+                                                onDragStart={handleDragStart}
+                                                onDropOnTopic={handleDropOnTopic}
+                                                onDragEnd={() => setDraggedTopicId(null)}
+                                                canExpand={topic.type === 'core' && canExpandTopics}
+                                                canGenerateBriefs={canGenerateBriefs}
+                                                allCoreTopics={coreTopics}
+                                                allOuterTopics={outerTopics}
+                                                allTopics={allTopics}
+                                                onReparent={handleReparent}
+                                                isGeneratingBrief={generatingTopicTitle === topic.title}
+                                                onRepairMissing={(missingFields) => handleRepairBriefMissing(topic.id, missingFields)}
+                                                isRepairingBrief={repairingTopicId === topic.id}
+                                                isDetailPanelOpen={openDetailPanelTopicId === topic.id}
+                                                onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                ) : (
+                /* SEO View - Behavioral hierarchy by parent_topic_id (default) */
                 <div className="space-y-6">
                 {sortedCoreTopics.map(core => {
                     const isCollapsed = collapsedCoreIds.has(core.id);
-                    const childTopics = topicsByParent.get(core.id) || [];
-                    const spokeCount = childTopics.length;
+                    const outerTopicsOfCore = topicsByParent.get(core.id) || [];
+                    const spokeCount = outerTopicsOfCore.length;
                     const isMonetization = core.topic_class === 'monetization';
                     const isLowRatio = isMonetization && spokeCount < 7;
 
@@ -573,18 +944,110 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                         canExpand={canExpandTopics}
                                         canGenerateBriefs={canGenerateBriefs}
                                         allCoreTopics={coreTopics}
+                                        allOuterTopics={outerTopics}
+                                        allTopics={allTopics}
                                         onReparent={handleReparent}
                                         isGeneratingBrief={generatingTopicTitle === core.title}
                                         onRepairMissing={(missingFields) => handleRepairBriefMissing(core.id, missingFields)}
                                         isRepairingBrief={repairingTopicId === core.id}
+                                        isDetailPanelOpen={openDetailPanelTopicId === core.id}
+                                        onOpenDetailPanel={setOpenDetailPanelTopicId}
                                     />
                                 </div>
                             </div>
                             {!isCollapsed && (
                                 <div className="pl-4 sm:pl-8 mt-2 space-y-2 border-l-2 border-gray-700 ml-6">
-                                {childTopics.map(outer => (
-                                    <TopicItem
-                                            key={outer.id}
+                                {outerTopicsOfCore.map(outer => {
+                                    const childrenOfOuter = childTopicsByParent.get(outer.id) || [];
+                                    const hasChildren = childrenOfOuter.length > 0;
+                                    return (
+                                        <div key={outer.id} className="space-y-1">
+                                            <TopicItem
+                                                topic={outer}
+                                                hasBrief={!!briefs[outer.id]}
+                                                brief={briefs[outer.id]}
+                                                onHighlight={() => setHighlightedTopicId(outer.id)}
+                                                onGenerateBrief={() => onSelectTopicForBrief(outer)}
+                                                onDelete={() => handleDeleteTopic(outer.id)}
+                                                onUpdateTopic={onUpdateTopic}
+                                                isChecked={selectedTopicIds.includes(outer.id)}
+                                                onToggleSelection={handleToggleSelection}
+                                                isHighlighted={highlightedTopicId === outer.id}
+                                                onDragStart={handleDragStart}
+                                                onDropOnTopic={handleDropOnTopic}
+                                                onDragEnd={() => setDraggedTopicId(null)}
+                                                canExpand={false} // Only core topics can be expanded
+                                                canGenerateBriefs={canGenerateBriefs}
+                                                allCoreTopics={coreTopics}
+                                                allOuterTopics={outerTopics}
+                                                allTopics={allTopics}
+                                                onReparent={handleReparent}
+                                                isGeneratingBrief={generatingTopicTitle === outer.title}
+                                                onRepairMissing={(missingFields) => handleRepairBriefMissing(outer.id, missingFields)}
+                                                isRepairingBrief={repairingTopicId === outer.id}
+                                                isDetailPanelOpen={openDetailPanelTopicId === outer.id}
+                                                onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                            />
+                                            {/* Level 3: Child topics under outer topics */}
+                                            {hasChildren && (
+                                                <div className="pl-4 sm:pl-6 mt-1 space-y-1 border-l-2 border-gray-600 ml-4">
+                                                    {childrenOfOuter.map(child => (
+                                                        <TopicItem
+                                                            key={child.id}
+                                                            topic={child}
+                                                            hasBrief={!!briefs[child.id]}
+                                                            brief={briefs[child.id]}
+                                                            onHighlight={() => setHighlightedTopicId(child.id)}
+                                                            onGenerateBrief={() => onSelectTopicForBrief(child)}
+                                                            onDelete={() => handleDeleteTopic(child.id)}
+                                                            onUpdateTopic={onUpdateTopic}
+                                                            isChecked={selectedTopicIds.includes(child.id)}
+                                                            onToggleSelection={handleToggleSelection}
+                                                            isHighlighted={highlightedTopicId === child.id}
+                                                            onDragStart={handleDragStart}
+                                                            onDropOnTopic={handleDropOnTopic}
+                                                            onDragEnd={() => setDraggedTopicId(null)}
+                                                            canExpand={false}
+                                                            canGenerateBriefs={canGenerateBriefs}
+                                                            allCoreTopics={coreTopics}
+                                                            allOuterTopics={outerTopics}
+                                                            allTopics={allTopics}
+                                                            onReparent={handleReparent}
+                                                            isGeneratingBrief={generatingTopicTitle === child.title}
+                                                            onRepairMissing={(missingFields) => handleRepairBriefMissing(child.id, missingFields)}
+                                                            isRepairingBrief={repairingTopicId === child.id}
+                                                            isDetailPanelOpen={openDetailPanelTopicId === child.id}
+                                                            onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+
+                {/* Uncategorized Outer Topics - outer topics without a valid core parent */}
+                {uncategorizedOuterTopics.length > 0 && (
+                    <div className="mt-6 pt-4 border-t-2 border-dashed border-orange-600/50">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-orange-500">⚠️</span>
+                            <h3 className="text-sm font-semibold text-orange-400 uppercase tracking-wider">
+                                Orphaned Outer Topics ({uncategorizedOuterTopics.length})
+                            </h3>
+                            <span className="text-xs text-gray-500">— Assign to a Core topic using the parent dropdown</span>
+                        </div>
+                        <div className="space-y-2 pl-4 border-l-2 border-orange-600/30">
+                            {uncategorizedOuterTopics.map(outer => {
+                                // Get any child topics for this orphaned outer topic
+                                const children = childTopicsByParent.get(outer.id) || [];
+                                return (
+                                    <div key={outer.id}>
+                                        <TopicItem
                                             topic={outer}
                                             hasBrief={!!briefs[outer.id]}
                                             brief={briefs[outer.id]}
@@ -598,24 +1061,131 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                             onDragStart={handleDragStart}
                                             onDropOnTopic={handleDropOnTopic}
                                             onDragEnd={() => setDraggedTopicId(null)}
-                                            canExpand={false} // Only core topics can be expanded
+                                            canExpand={false}
                                             canGenerateBriefs={canGenerateBriefs}
                                             allCoreTopics={coreTopics}
+                                            allOuterTopics={outerTopics}
+                                            allTopics={allTopics}
                                             onReparent={handleReparent}
                                             isGeneratingBrief={generatingTopicTitle === outer.title}
                                             onRepairMissing={(missingFields) => handleRepairBriefMissing(outer.id, missingFields)}
                                             isRepairingBrief={repairingTopicId === outer.id}
+                                            isDetailPanelOpen={openDetailPanelTopicId === outer.id}
+                                            onOpenDetailPanel={setOpenDetailPanelTopicId}
                                         />
-                                ))}
-                                </div>
-                            )}
+                                        {/* Show child topics under this orphaned outer topic */}
+                                        {children.length > 0 && (
+                                            <div className="ml-6 mt-1 space-y-1 border-l-2 border-orange-700/30 pl-3">
+                                                {children.map(child => (
+                                                    <TopicItem
+                                                        key={child.id}
+                                                        topic={child}
+                                                        hasBrief={!!briefs[child.id]}
+                                                        brief={briefs[child.id]}
+                                                        onHighlight={() => setHighlightedTopicId(child.id)}
+                                                        onGenerateBrief={() => onSelectTopicForBrief(child)}
+                                                        onDelete={() => handleDeleteTopic(child.id)}
+                                                        onUpdateTopic={onUpdateTopic}
+                                                        isChecked={selectedTopicIds.includes(child.id)}
+                                                        onToggleSelection={handleToggleSelection}
+                                                        isHighlighted={highlightedTopicId === child.id}
+                                                        onDragStart={handleDragStart}
+                                                        onDropOnTopic={handleDropOnTopic}
+                                                        onDragEnd={() => setDraggedTopicId(null)}
+                                                        canExpand={false}
+                                                        canGenerateBriefs={canGenerateBriefs}
+                                                        allCoreTopics={coreTopics}
+                                                        allOuterTopics={outerTopics}
+                                                        allTopics={allTopics}
+                                                        onReparent={handleReparent}
+                                                        isGeneratingBrief={generatingTopicTitle === child.title}
+                                                        onRepairMissing={(missingFields) => handleRepairBriefMissing(child.id, missingFields)}
+                                                        isRepairingBrief={repairingTopicId === child.id}
+                                                        isDetailPanelOpen={openDetailPanelTopicId === child.id}
+                                                        onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )
-                })}
+                    </div>
+                )}
+
+                {/* Uncategorized Child Topics - topics that need a parent */}
+                {uncategorizedChildTopics.length > 0 && (
+                    <div className="mt-6 pt-4 border-t-2 border-dashed border-amber-600/50">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-amber-500">⚠️</span>
+                            <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider">
+                                Uncategorized Child Topics ({uncategorizedChildTopics.length})
+                            </h3>
+                            <span className="text-xs text-gray-500">— Assign to an Outer topic</span>
+                        </div>
+                        <div className="space-y-2 pl-4 border-l-2 border-amber-600/30">
+                            {uncategorizedChildTopics.map(child => (
+                                <TopicItem
+                                    key={child.id}
+                                    topic={child}
+                                    hasBrief={!!briefs[child.id]}
+                                    brief={briefs[child.id]}
+                                    onHighlight={() => setHighlightedTopicId(child.id)}
+                                    onGenerateBrief={() => onSelectTopicForBrief(child)}
+                                    onDelete={() => handleDeleteTopic(child.id)}
+                                    onUpdateTopic={onUpdateTopic}
+                                    isChecked={selectedTopicIds.includes(child.id)}
+                                    onToggleSelection={handleToggleSelection}
+                                    isHighlighted={highlightedTopicId === child.id}
+                                    onDragStart={handleDragStart}
+                                    onDropOnTopic={handleDropOnTopic}
+                                    onDragEnd={() => setDraggedTopicId(null)}
+                                    canExpand={false}
+                                    canGenerateBriefs={canGenerateBriefs}
+                                    allCoreTopics={coreTopics}
+                                    allOuterTopics={outerTopics}
+                                    allTopics={allTopics}
+                                    onReparent={handleReparent}
+                                    isGeneratingBrief={generatingTopicTitle === child.title}
+                                    onRepairMissing={(missingFields) => handleRepairBriefMissing(child.id, missingFields)}
+                                    isRepairingBrief={repairingTopicId === child.id}
+                                    isDetailPanelOpen={openDetailPanelTopicId === child.id}
+                                    onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
+            )}
             </div>
+        ) : viewMode === 'table' ? (
+            <TopicTableView
+                coreTopics={sortedCoreTopics}
+                outerTopics={sortedOuterTopics}
+                childTopics={childTopics}
+                briefs={briefsMap}
+                selectedTopicIds={selectedTopicIdsSet}
+                onToggleSelection={handleToggleSelection}
+                onSelectAll={() => {
+                  const allIds = [...sortedCoreTopics, ...sortedOuterTopics, ...childTopics].map(t => t.id);
+                  setSelectedTopicIds(allIds);
+                }}
+                onDeselectAll={() => setSelectedTopicIds([])}
+                onGenerateBrief={onSelectTopicForBrief}
+                onExpand={onExpandCoreTopic}
+                onDelete={handleDeleteTopic}
+                onHighlight={(topic) => setHighlightedTopicId(topic.id)}
+                expandingTopicIds={expandingTopicIds}
+                generatingBriefTopicIds={generatingBriefTopicIds}
+                canExpand={canExpandTopics}
+                canGenerateBriefs={canGenerateBriefs}
+                hierarchyMode={hierarchyMode}
+                onUpdateTopic={onUpdateTopic}
+            />
         ) : (
-            <TopicalMapGraphView 
+            <TopicalMapGraphView
                 coreTopics={coreTopics}
                 outerTopics={outerTopics}
                 briefs={briefs}
@@ -624,6 +1194,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 onDeleteTopic={(topicId) => handleDeleteTopic(topicId)}
                 expandingCoreTopicId={expandingCoreTopicId}
                 allCoreTopics={coreTopics}
+                allTopics={allTopics}
                 onReparent={handleReparent}
                 canExpandTopics={canExpandTopics}
                 onUpdateTopic={onUpdateTopic}
@@ -647,6 +1218,21 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
           projectName={currentMap?.name || businessInfo?.projectName}
         />
       )}
+
+      {/* AI Usage Report Modal */}
+      {showUsageReport && activeMapId && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg">
+            <MapUsageReport
+              mapId={activeMapId}
+              mapName={currentMap?.name}
+              onClose={() => setShowUsageReport(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Location Manager Modal moved to ProjectDashboard */}
     </div>
   );
 };

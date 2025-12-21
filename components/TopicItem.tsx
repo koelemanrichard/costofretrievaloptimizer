@@ -28,10 +28,15 @@ interface TopicItemProps {
   canExpand: boolean;
   canGenerateBriefs: boolean;
   allCoreTopics?: EnrichedTopic[]; // Added for reparenting
+  allOuterTopics?: EnrichedTopic[]; // For child topic reparenting
+  allTopics?: EnrichedTopic[]; // All topics for visual parent selection
   onReparent?: (topicId: string, newParentId: string) => void; // Added for reparenting
   isGeneratingBrief?: boolean; // Pulsing indicator when brief is being generated
   onRepairMissing?: (missingFields: string[]) => void; // Repair missing brief fields
   isRepairingBrief?: boolean; // Indicator when brief is being repaired
+  // Controlled detail panel props - when provided, parent manages panel state
+  isDetailPanelOpen?: boolean;
+  onOpenDetailPanel?: (topicId: string | null) => void;
 }
 
 const ActionButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode }> = ({ icon, ...props }) => (
@@ -67,12 +72,19 @@ const TopicItem: React.FC<TopicItemProps> = ({
     canExpand,
     canGenerateBriefs,
     allCoreTopics = [],
+    allOuterTopics = [],
+    allTopics = [],
     onReparent = () => {},
     isGeneratingBrief = false,
     onRepairMissing,
     isRepairingBrief = false,
+    isDetailPanelOpen: controlledIsOpen,
+    onOpenDetailPanel,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
+
+    // Use controlled mode if onOpenDetailPanel is provided, otherwise use internal state
+    const isControlled = onOpenDetailPanel !== undefined;
 
     const title = safeString(topic.title);
     const slug = safeString(topic.slug);
@@ -92,11 +104,19 @@ const TopicItem: React.FC<TopicItemProps> = ({
         setEditableSlug(slug);
     }, [title, slug]);
 
-    const topicTypeColor = topic.type === 'core' ? 'border-green-500/50' : 'border-purple-500/50';
+    const topicTypeColor = topic.type === 'core'
+        ? 'border-green-500/50'
+        : topic.type === 'child'
+        ? 'border-orange-500/50'
+        : 'border-purple-500/50';
 
     const handleContainerClick = () => {
         if (!isEditing) {
-            setShowDetailPanel(true);
+            if (isControlled) {
+                onOpenDetailPanel!(topic.id);
+            } else {
+                setShowDetailPanel(true);
+            }
             onHighlight(topic);
         }
     };
@@ -207,7 +227,7 @@ const TopicItem: React.FC<TopicItemProps> = ({
             <div
                 className={`group p-4 bg-gray-800 rounded-lg hover:bg-gray-700/80 transition-all duration-200 border flex items-start gap-3 cursor-pointer ${topicTypeColor} ${isHighlighted || isEditing ? 'ring-2 ring-blue-500' : ''} ${isDragOver ? 'ring-2 ring-blue-500 border-blue-400' : ''} ${isGeneratingBrief ? 'ring-2 ring-blue-400 animate-pulse' : ''}`}
                 onClick={handleContainerClick}
-                draggable={topic.type === 'outer'}
+                draggable={topic.type === 'outer' || topic.type === 'child'}
                 onDragStart={(e) => onDragStart(e, topic.id)}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -284,13 +304,15 @@ const TopicItem: React.FC<TopicItemProps> = ({
                     <p className="text-sm text-gray-400 mt-2 pr-2">{description}</p>
                 </div>
             </div>
-            {showDetailPanel && (
-                 <TopicDetailPanel 
+            {(isControlled ? controlledIsOpen : showDetailPanel) && (
+                 <TopicDetailPanel
                     topic={topic}
                     allCoreTopics={allCoreTopics}
+                    allOuterTopics={allOuterTopics}
+                    allTopics={allTopics}
                     hasBrief={hasBrief}
                     isExpanding={!!isExpanding}
-                    onClose={() => setShowDetailPanel(false)}
+                    onClose={() => isControlled ? onOpenDetailPanel!(null) : setShowDetailPanel(false)}
                     onGenerateBrief={onGenerateBrief}
                     onExpand={(t, m) => onExpand && onExpand(t, m)}
                     onDelete={onDelete}

@@ -1,3 +1,4 @@
--- Additional initial schema migration (tables already exist in database)
--- This file was corrupted and has been replaced with a placeholder
+-- Additional Initial Schema (no-op)
+-- Base tables created in 20240725000000_initial_schema.sql
+-- This file is kept for migration history compatibility
 SELECT 1;

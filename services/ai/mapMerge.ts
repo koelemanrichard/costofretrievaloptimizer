@@ -11,6 +11,7 @@ import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import * as perplexityService from '../perplexityService';
 import * as openRouterService from '../openRouterService';
+import { dispatchToProvider } from './providerDispatcher';
 import { AppAction } from '../../state/appState';
 import React from 'react';
 
@@ -23,19 +24,13 @@ export const analyzeMapMerge = (
   businessInfo: BusinessInfo,
   dispatch: React.Dispatch<AppAction>
 ): Promise<MapMergeAnalysis> => {
-  switch (businessInfo.aiProvider) {
-    case 'openai':
-      return openAiService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch);
-    case 'anthropic':
-      return anthropicService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch);
-    case 'perplexity':
-      return perplexityService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch);
-    case 'openrouter':
-      return openRouterService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch);
-    case 'gemini':
-    default:
-      return geminiService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch);
-  }
+  return dispatchToProvider(businessInfo, {
+    gemini: () => geminiService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch),
+    openai: () => openAiService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch),
+    anthropic: () => anthropicService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch),
+    perplexity: () => perplexityService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch),
+    openrouter: () => openRouterService.analyzeMapMerge(mapsToMerge, businessInfo, dispatch),
+  });
 };
 
 /**
@@ -49,17 +44,11 @@ export const reanalyzeTopicSimilarity = (
   businessInfo: BusinessInfo,
   dispatch: React.Dispatch<AppAction>
 ): Promise<TopicSimilarityResult[]> => {
-  switch (businessInfo.aiProvider) {
-    case 'openai':
-      return openAiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch);
-    case 'anthropic':
-      return anthropicService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch);
-    case 'perplexity':
-      return perplexityService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch);
-    case 'openrouter':
-      return openRouterService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch);
-    case 'gemini':
-    default:
-      return geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch);
-  }
+  return dispatchToProvider(businessInfo, {
+    gemini: () => geminiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch),
+    openai: () => openAiService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch),
+    anthropic: () => anthropicService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch),
+    perplexity: () => perplexityService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch),
+    openrouter: () => openRouterService.reanalyzeTopicSimilarity(topicsA, topicsB, existingDecisions, businessInfo, dispatch),
+  });
 };

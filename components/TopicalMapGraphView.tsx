@@ -16,6 +16,7 @@ interface TopicalMapGraphViewProps {
   onDeleteTopic: (topicId: string) => void;
   expandingCoreTopicId: string | null;
   allCoreTopics: EnrichedTopic[];
+  allTopics?: EnrichedTopic[]; // All topics for visual parent selection
   onReparent: (topicId: string, newParentId: string) => void;
   canExpandTopics: boolean;
   onUpdateTopic: (topicId: string, updates: Partial<EnrichedTopic>) => void;
@@ -30,6 +31,7 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
   onDeleteTopic,
   expandingCoreTopicId,
   allCoreTopics,
+  allTopics = [],
   onReparent,
   canExpandTopics,
   onUpdateTopic
@@ -109,6 +111,7 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
           onExpand={onExpandCoreTopic}
           onDelete={onDeleteTopic}
           allCoreTopics={allCoreTopics}
+          allTopics={allTopics}
           onReparent={onReparent}
           canExpand={canExpandTopics}
           onUpdateTopic={onUpdateTopic}

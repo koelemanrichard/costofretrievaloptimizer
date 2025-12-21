@@ -20,6 +20,8 @@ const COLORS = {
   coreTopicText: 'FFFFFFFF',   // White
   outerTopicBg: 'FFE8F4FD',    // Light blue
   outerTopicText: 'FF1E3A5F',  // Dark blue
+  childTopicBg: 'FFFFF3E0',    // Light orange
+  childTopicText: 'FF5D4037',  // Brown
 
   // RAG Status
   statusGreen: 'FFD4EDDA',     // Success green
@@ -108,6 +110,7 @@ export class EnhancedExportGenerator {
     // Create sheets in order
     this.createExecutiveSummarySheet();
     this.createTopicalMapSheet();
+    this.createBusinessPresentationSheet(); // Visual hierarchy for business stakeholders
     this.createContentBriefsSheet();
     this.createSeoPillarsSheet();
 
@@ -139,6 +142,11 @@ export class EnhancedExportGenerator {
       this.createPublicationPlanSheet();
     }
 
+    // NEW: Semantic SEO Framework enhancements
+    this.createVisualSemanticsSheet();
+    this.createMoneyPagePillarsSheet();
+    this.createQueryTemplatesSheet();
+
     return this.workbook;
   }
 
@@ -150,6 +158,7 @@ export class EnhancedExportGenerator {
     const { topics, briefs, pillars } = this.input;
     const coreTopics = topics.filter(t => t.type === 'core');
     const outerTopics = topics.filter(t => t.type === 'outer');
+    const childTopics = topics.filter(t => t.type === 'child');
     const briefsGenerated = Object.keys(briefs).length;
     const draftsGenerated = Object.values(briefs).filter(b => b.articleDraft).length;
 
@@ -175,6 +184,7 @@ export class EnhancedExportGenerator {
       ['Total Topics', topics.length],
       ['Core Topics', coreTopics.length],
       ['Outer Topics', outerTopics.length],
+      ['Child Topics', childTopics.length],
       ['Briefs Generated', `${briefsGenerated} / ${topics.length}`],
       ['Drafts Written', `${draftsGenerated} / ${topics.length}`],
       ['Completion Rate', `${Math.round((draftsGenerated / Math.max(topics.length, 1)) * 100)}%`]
@@ -265,7 +275,7 @@ export class EnhancedExportGenerator {
     // Headers
     const headers = [
       'Topic Title', 'Slug', 'Type', 'Status', 'Has Brief',
-      'Has Draft', 'Description', 'Canonical Query', 'Parent'
+      'Has Draft', 'Description', 'Canonical Query', 'Parent', 'Display Parent'
     ];
 
     const headerRow = sheet.addRow(headers);
@@ -288,6 +298,10 @@ export class EnhancedExportGenerator {
       const ragStatus = calculateRAGStatus(coreTopic, briefs[coreTopic.id]);
 
       // Core topic row (styled as group header)
+      // Find display parent title
+      const coreDisplayParent = coreTopic.display_parent_id
+        ? topics.find(t => t.id === coreTopic.display_parent_id)?.title || ''
+        : '';
       const coreRow = sheet.addRow([
         coreTopic.title,
         coreTopic.slug,
@@ -297,7 +311,8 @@ export class EnhancedExportGenerator {
         briefs[coreTopic.id]?.articleDraft ? 'Yes' : 'No',
         this.truncate(coreTopic.description, 200),
         coreTopic.metadata?.canonical_query || coreTopic.canonical_query || '',
-        'ROOT'
+        'ROOT',
+        coreDisplayParent
       ]);
 
       // Style core topic row
@@ -322,6 +337,10 @@ export class EnhancedExportGenerator {
       // Outer topics (indented under core)
       outerTopics.forEach((outerTopic, idx) => {
         const outerRagStatus = calculateRAGStatus(outerTopic, briefs[outerTopic.id]);
+        // Find display parent title
+        const outerDisplayParent = outerTopic.display_parent_id
+          ? topics.find(t => t.id === outerTopic.display_parent_id)?.title || ''
+          : '';
 
         const outerRow = sheet.addRow([
           `    └─ ${outerTopic.title}`, // Visual indentation
@@ -332,16 +351,18 @@ export class EnhancedExportGenerator {
           briefs[outerTopic.id]?.articleDraft ? 'Yes' : 'No',
           this.truncate(outerTopic.description, 200),
           outerTopic.metadata?.canonical_query || outerTopic.canonical_query || '',
-          coreTopic.title
+          coreTopic.title,
+          outerDisplayParent
         ]);
 
-        // Style outer topic row
+        // Style outer topic row - consistent blue color for better hierarchy visibility
         outerRow.eachCell((cell) => {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: idx % 2 === 0 ? COLORS.outerTopicBg : COLORS.altRowBg }
+            fgColor: { argb: COLORS.outerTopicBg }
           };
+          cell.font = { bold: true, color: { argb: COLORS.outerTopicText } };
         });
 
         // Status cell gets RAG color
@@ -351,6 +372,48 @@ export class EnhancedExportGenerator {
           pattern: 'solid',
           fgColor: { argb: getRAGColor(outerRagStatus) }
         };
+
+        // Child topics (indented under outer - Level 3)
+        const childTopics = topics.filter(t => t.type === 'child' && t.parent_topic_id === outerTopic.id);
+        childTopics.forEach((childTopic, childIdx) => {
+          const childRagStatus = calculateRAGStatus(childTopic, briefs[childTopic.id]);
+          // Find display parent title
+          const childDisplayParent = childTopic.display_parent_id
+            ? topics.find(t => t.id === childTopic.display_parent_id)?.title || ''
+            : '';
+
+          const childRow = sheet.addRow([
+            `        └─ ${childTopic.title}`, // Deeper visual indentation
+            childTopic.slug,
+            'Child',
+            childRagStatus.toUpperCase(),
+            briefs[childTopic.id] ? 'Yes' : 'No',
+            briefs[childTopic.id]?.articleDraft ? 'Yes' : 'No',
+            this.truncate(childTopic.description, 200),
+            childTopic.metadata?.canonical_query || childTopic.canonical_query || '',
+            outerTopic.title,
+            childDisplayParent
+          ]);
+
+          // Style child topic row
+          childRow.eachCell((cell) => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: childIdx % 2 === 0 ? COLORS.childTopicBg : COLORS.altRowBg }
+            };
+            cell.font = { color: { argb: COLORS.childTopicText } };
+          });
+
+          // Status cell gets RAG color
+          const childStatusCell = childRow.getCell(4);
+          childStatusCell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: getRAGColor(childRagStatus) }
+          };
+          childStatusCell.font = { bold: true, color: { argb: 'FF000000' } };
+        });
       });
 
       // Add empty row between core topic groups
@@ -366,7 +429,150 @@ export class EnhancedExportGenerator {
     sheet.getColumn(6).width = 12; // Has Draft
     sheet.getColumn(7).width = 60; // Description
     sheet.getColumn(8).width = 30; // Canonical Query
-    sheet.getColumn(9).width = 25; // Parent
+    sheet.getColumn(9).width = 25; // Parent (SEO)
+    sheet.getColumn(10).width = 25; // Display Parent (Business)
+  }
+
+  /**
+   * Creates a Business Presentation sheet that groups topics by visual display_parent_id
+   * This is for business stakeholders and does NOT reflect SEO hierarchy.
+   */
+  private createBusinessPresentationSheet(): void {
+    const sheet = this.workbook.addWorksheet('Business Presentation', {
+      properties: { tabColor: { argb: 'FF9C27B0' } } // Purple for presentation
+    });
+
+    const { topics, briefs } = this.input;
+
+    // Info banner
+    sheet.mergeCells('A1:G1');
+    const infoCell = sheet.getCell('A1');
+    infoCell.value = 'BUSINESS PRESENTATION VIEW - Visual groupings for business stakeholders (does NOT affect SEO)';
+    infoCell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    infoCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF9C27B0' } // Purple
+    };
+    infoCell.alignment = { horizontal: 'center' };
+
+    // Headers
+    const headers = [
+      'Topic Title', 'SEO Type', 'Status', 'Has Brief', 'Has Draft', 'Description', 'Visual Children Count'
+    ];
+
+    const headerRow = sheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: COLORS.headerText } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: COLORS.headerBg }
+      };
+      cell.alignment = { horizontal: 'center' };
+    });
+
+    // Freeze header rows
+    sheet.views = [{ state: 'frozen', ySplit: 2 }];
+
+    // Group topics by display_parent_id
+    const topicsByDisplayParent = new Map<string, EnrichedTopic[]>();
+    topics.forEach(topic => {
+      const displayParentId = topic.display_parent_id || 'root';
+      if (!topicsByDisplayParent.has(displayParentId)) {
+        topicsByDisplayParent.set(displayParentId, []);
+      }
+      topicsByDisplayParent.get(displayParentId)!.push(topic);
+    });
+
+    // Get root topics (those without display_parent)
+    const rootTopics = topics.filter(t => !t.display_parent_id);
+
+    // Helper to count visual children
+    const getVisualChildCount = (topicId: string): number => {
+      return topicsByDisplayParent.get(topicId)?.length || 0;
+    };
+
+    // Render root topics first, then their visual children
+    rootTopics.forEach(rootTopic => {
+      const ragStatus = calculateRAGStatus(rootTopic, briefs[rootTopic.id]);
+      const visualChildren = topicsByDisplayParent.get(rootTopic.id) || [];
+
+      // Root topic row (styled as group header)
+      const rootRow = sheet.addRow([
+        rootTopic.title,
+        rootTopic.type.toUpperCase(),
+        ragStatus.toUpperCase(),
+        briefs[rootTopic.id] ? 'Yes' : 'No',
+        briefs[rootTopic.id]?.articleDraft ? 'Yes' : 'No',
+        this.truncate(rootTopic.description, 200),
+        visualChildren.length > 0 ? visualChildren.length.toString() : ''
+      ]);
+
+      // Style root topic row with purple theme
+      rootRow.eachCell((cell, colNum) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE1BEE7' } // Light purple
+        };
+        cell.font = { bold: true };
+      });
+
+      // Status cell gets RAG color
+      const statusCell = rootRow.getCell(3);
+      statusCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: getRAGColor(ragStatus) }
+      };
+      statusCell.font = { bold: true, color: { argb: 'FF000000' } };
+
+      // Visual children (indented)
+      visualChildren.forEach((childTopic, idx) => {
+        const childRagStatus = calculateRAGStatus(childTopic, briefs[childTopic.id]);
+        const childVisualChildren = topicsByDisplayParent.get(childTopic.id) || [];
+
+        const childRow = sheet.addRow([
+          `    └─ ${childTopic.title}`,
+          childTopic.type.toUpperCase(),
+          childRagStatus.toUpperCase(),
+          briefs[childTopic.id] ? 'Yes' : 'No',
+          briefs[childTopic.id]?.articleDraft ? 'Yes' : 'No',
+          this.truncate(childTopic.description, 200),
+          childVisualChildren.length > 0 ? childVisualChildren.length.toString() : ''
+        ]);
+
+        // Alternating row colors
+        childRow.eachCell((cell, colNum) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: idx % 2 === 0 ? 'FFF3E5F5' : 'FFFFFFFF' } // Very light purple / white
+          };
+        });
+
+        // Status cell gets RAG color
+        const childStatusCell = childRow.getCell(3);
+        childStatusCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: getRAGColor(childRagStatus) }
+        };
+      });
+
+      // Add empty row between groups
+      sheet.addRow([]);
+    });
+
+    // Set column widths
+    sheet.getColumn(1).width = 45; // Topic Title
+    sheet.getColumn(2).width = 12; // SEO Type
+    sheet.getColumn(3).width = 12; // Status
+    sheet.getColumn(4).width = 12; // Has Brief
+    sheet.getColumn(5).width = 12; // Has Draft
+    sheet.getColumn(6).width = 50; // Description
+    sheet.getColumn(7).width = 20; // Visual Children Count
   }
 
   private truncate(text: string | undefined, maxLen: number): string {
@@ -1282,6 +1488,258 @@ export class EnhancedExportGenerator {
       cell.alignment = { horizontal: 'center' };
     });
   }
+
+  /**
+   * Create Visual Semantics sheet - Image optimization specs per topic
+   * Based on Koray's "Pixels, Letters, and Bytes" framework
+   */
+  private createVisualSemanticsSheet(): void {
+    const sheet = this.workbook.addWorksheet('Visual Semantics', {
+      properties: { tabColor: { argb: 'FF9C27B0' } } // Purple for visual
+    });
+
+    const { topics, briefs } = this.input;
+
+    // Headers
+    const headers = [
+      'Topic Title',
+      'Topic Type',
+      'Hero Image Description',
+      'Hero Alt Text',
+      'Hero File Name',
+      'Hero Format',
+      'Section Images Count',
+      'Image N-grams',
+      'Total Images Recommended',
+      'Has Enhanced Visual Semantics'
+    ];
+
+    const headerRow = sheet.addRow(headers);
+    this.styleHeaderRow(headerRow);
+    sheet.getRow(1).height = 25;
+
+    // Set column widths
+    sheet.getColumn(1).width = 30;
+    sheet.getColumn(2).width = 10;
+    sheet.getColumn(3).width = 40;
+    sheet.getColumn(4).width = 50;
+    sheet.getColumn(5).width = 30;
+    sheet.getColumn(6).width = 12;
+    sheet.getColumn(7).width = 20;
+    sheet.getColumn(8).width = 40;
+    sheet.getColumn(9).width = 20;
+    sheet.getColumn(10).width = 15;
+
+    // Data rows
+    topics.forEach((topic, index) => {
+      const brief = briefs[topic.id];
+      const vs = brief?.enhanced_visual_semantics;
+
+      const row = sheet.addRow([
+        topic.title,
+        topic.type,
+        vs?.hero_image?.image_description || '',
+        vs?.hero_image?.alt_text_recommendation || '',
+        vs?.hero_image?.file_name_recommendation || '',
+        vs?.hero_image?.format_recommendation?.recommended_format || '',
+        vs?.section_images ? Object.keys(vs.section_images).length : 0,
+        vs?.image_n_grams?.join(', ') || '',
+        vs?.total_images_recommended || 0,
+        vs ? 'Yes' : 'No'
+      ]);
+
+      // Alternate row colors
+      if (index % 2 === 1) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: COLORS.altRowBg }
+          };
+        });
+      }
+    });
+
+    // Freeze header
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+  }
+
+  /**
+   * Create Money Page 4 Pillars sheet - Commercial page optimization scores
+   */
+  private createMoneyPagePillarsSheet(): void {
+    const sheet = this.workbook.addWorksheet('Money Page Pillars', {
+      properties: { tabColor: { argb: 'FF4CAF50' } } // Green for money
+    });
+
+    const { topics, briefs } = this.input;
+
+    // Filter to monetization topics only
+    const monetizationTopics = topics.filter(t =>
+      t.topic_class === 'monetization' || t.metadata?.topic_class === 'monetization'
+    );
+
+    // Headers
+    const headers = [
+      'Topic Title',
+      'Topic Type',
+      'Overall Score',
+      'Overall Grade',
+      'Verbalization Score',
+      'Contextualization Score',
+      'Monetization Score',
+      'Visualization Score',
+      'Critical Missing',
+      'Has Brief'
+    ];
+
+    const headerRow = sheet.addRow(headers);
+    this.styleHeaderRow(headerRow);
+    sheet.getRow(1).height = 25;
+
+    // Set column widths
+    sheet.getColumn(1).width = 30;
+    sheet.getColumn(2).width = 10;
+    sheet.getColumn(3).width = 15;
+    sheet.getColumn(4).width = 12;
+    sheet.getColumn(5).width = 20;
+    sheet.getColumn(6).width = 22;
+    sheet.getColumn(7).width = 20;
+    sheet.getColumn(8).width = 20;
+    sheet.getColumn(9).width = 40;
+    sheet.getColumn(10).width = 12;
+
+    // Import pillar calculation dynamically to avoid circular deps
+    monetizationTopics.forEach((topic, index) => {
+      const brief = briefs[topic.id];
+
+      // Calculate pillar scores (would need to import calculateMoneyPagePillarsScore)
+      // For now, show topic info and indicate brief status
+      const row = sheet.addRow([
+        topic.title,
+        topic.type,
+        '', // Overall score - calculated dynamically
+        '', // Grade
+        '', // Verbalization
+        '', // Contextualization
+        '', // Monetization
+        '', // Visualization
+        '', // Critical missing
+        brief ? 'Yes' : 'No'
+      ]);
+
+      // Alternate row colors
+      if (index % 2 === 1) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: COLORS.altRowBg }
+          };
+        });
+      }
+    });
+
+    // Add note if no monetization topics
+    if (monetizationTopics.length === 0) {
+      sheet.addRow(['No monetization topics found in this map.']);
+      sheet.getCell('A2').font = { italic: true, color: { argb: 'FF6C757D' } };
+    }
+
+    // Freeze header
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+  }
+
+  /**
+   * Create Query Templates sheet - Template expansion tracking
+   */
+  private createQueryTemplatesSheet(): void {
+    const sheet = this.workbook.addWorksheet('Query Templates', {
+      properties: { tabColor: { argb: 'FF2196F3' } } // Blue for templates
+    });
+
+    const { topics } = this.input;
+
+    // Filter to template-generated topics
+    const templateTopics = topics.filter(t =>
+      t.metadata?.generated_from_template
+    );
+
+    // Headers
+    const headers = [
+      'Topic Title',
+      'Template ID',
+      'Template Variables',
+      'Location',
+      'Search Intent',
+      'Topic Type',
+      'Has Brief'
+    ];
+
+    const headerRow = sheet.addRow(headers);
+    this.styleHeaderRow(headerRow);
+    sheet.getRow(1).height = 25;
+
+    // Set column widths
+    sheet.getColumn(1).width = 40;
+    sheet.getColumn(2).width = 25;
+    sheet.getColumn(3).width = 40;
+    sheet.getColumn(4).width = 20;
+    sheet.getColumn(5).width = 15;
+    sheet.getColumn(6).width = 12;
+    sheet.getColumn(7).width = 12;
+
+    // Data rows
+    templateTopics.forEach((topic, index) => {
+      const metadata = topic.metadata || {};
+      const templateVars = metadata.template_variables as Record<string, string> | undefined;
+
+      const row = sheet.addRow([
+        topic.title,
+        metadata.generated_from_template || '',
+        templateVars ? JSON.stringify(templateVars) : '',
+        metadata.location_id ? `${templateVars?.City || templateVars?.Location || 'N/A'}` : '',
+        metadata.search_intent || '',
+        topic.type,
+        this.input.briefs[topic.id] ? 'Yes' : 'No'
+      ]);
+
+      // Alternate row colors
+      if (index % 2 === 1) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: COLORS.altRowBg }
+          };
+        });
+      }
+    });
+
+    // Add summary
+    if (templateTopics.length === 0) {
+      sheet.addRow(['No template-generated topics found in this map.']);
+      sheet.getCell('A2').font = { italic: true, color: { argb: 'FF6C757D' } };
+    } else {
+      // Group by template
+      const byTemplate = new Map<string, number>();
+      templateTopics.forEach(t => {
+        const templateId = t.metadata?.generated_from_template || 'unknown';
+        byTemplate.set(templateId, (byTemplate.get(templateId) || 0) + 1);
+      });
+
+      sheet.addRow([]);
+      sheet.addRow(['Template Summary']);
+      sheet.getCell(`A${sheet.rowCount}`).font = { bold: true };
+
+      byTemplate.forEach((count, templateId) => {
+        sheet.addRow([`${templateId}: ${count} topics`]);
+      });
+    }
+
+    // Freeze header
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+  }
 }
 
 export const generateEnhancedExport = async (
@@ -1376,3 +1834,170 @@ const downloadBlob = (blob: Blob, filename: string): void => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+// =============================================================================
+// IMAGE SITEMAP GENERATION
+// Based on Koray's Visual Semantics framework - images need sitemap discovery
+// =============================================================================
+
+export interface ImageSitemapEntry {
+  imageUrl: string;
+  caption: string;
+  title: string;
+  geoLocation?: string;
+  license?: string;
+  pageUrl: string;
+}
+
+export interface ImageSitemapOptions {
+  baseUrl: string;
+  includeEnhancedVisualSemantics: boolean;
+  includeHeroImages: boolean;
+  includeSectionImages: boolean;
+}
+
+/**
+ * Generate XML Image Sitemap for all topics with visual semantics
+ * Google uses image sitemaps for discovery of images for Google Images ranking
+ */
+export function generateImageSitemap(
+  input: EnhancedExportInput,
+  options: ImageSitemapOptions
+): string {
+  const { topics, briefs } = input;
+  const { baseUrl, includeEnhancedVisualSemantics, includeHeroImages, includeSectionImages } = options;
+
+  const entries: ImageSitemapEntry[] = [];
+
+  // Process each topic with a brief that has visual semantics
+  topics.forEach(topic => {
+    const brief = briefs[topic.id];
+    if (!brief) return;
+
+    const vs = brief.enhanced_visual_semantics;
+    const pageUrl = `${baseUrl}/${topic.slug || topic.id}`;
+
+    // Hero image
+    if (includeHeroImages && vs?.hero_image) {
+      const hero = vs.hero_image;
+      const fileName = hero.file_name_recommendation || `${topic.slug}-hero.avif`;
+      entries.push({
+        imageUrl: `${baseUrl}/images/${fileName}`,
+        caption: hero.image_description || '',
+        title: hero.alt_text_recommendation || topic.title,
+        pageUrl,
+      });
+    }
+
+    // Section images
+    if (includeSectionImages && vs?.section_images) {
+      Object.entries(vs.section_images).forEach(([sectionKey, sectionImage]) => {
+        if (sectionImage && typeof sectionImage === 'object') {
+          const img = sectionImage as {
+            image_description?: string;
+            alt_text_recommendation?: string;
+            file_name_recommendation?: string;
+          };
+          const fileName = img.file_name_recommendation || `${topic.slug}-${sectionKey}.avif`;
+          entries.push({
+            imageUrl: `${baseUrl}/images/${fileName}`,
+            caption: img.image_description || '',
+            title: img.alt_text_recommendation || `${topic.title} - ${sectionKey}`,
+            pageUrl,
+          });
+        }
+      });
+    }
+
+    // Legacy visual_semantics support
+    if (!vs && brief.visual_semantics) {
+      const legacy = brief.visual_semantics;
+      if (legacy.hero_image_description) {
+        entries.push({
+          imageUrl: `${baseUrl}/images/${topic.slug}-hero.avif`,
+          caption: legacy.hero_image_description,
+          title: topic.title,
+          pageUrl,
+        });
+      }
+    }
+  });
+
+  // Generate XML
+  return generateImageSitemapXml(entries);
+}
+
+/**
+ * Generate the actual XML content for the image sitemap
+ */
+function generateImageSitemapXml(entries: ImageSitemapEntry[]): string {
+  const escapeXml = (str: string): string => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  };
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+`;
+
+  // Group entries by page URL
+  const entriesByPage = new Map<string, ImageSitemapEntry[]>();
+  entries.forEach(entry => {
+    const existing = entriesByPage.get(entry.pageUrl) || [];
+    existing.push(entry);
+    entriesByPage.set(entry.pageUrl, existing);
+  });
+
+  // Generate URL entries
+  entriesByPage.forEach((pageEntries, pageUrl) => {
+    xml += `  <url>
+    <loc>${escapeXml(pageUrl)}</loc>
+`;
+    pageEntries.forEach(entry => {
+      xml += `    <image:image>
+      <image:loc>${escapeXml(entry.imageUrl)}</image:loc>
+`;
+      if (entry.caption) {
+        xml += `      <image:caption>${escapeXml(entry.caption)}</image:caption>
+`;
+      }
+      if (entry.title) {
+        xml += `      <image:title>${escapeXml(entry.title)}</image:title>
+`;
+      }
+      if (entry.geoLocation) {
+        xml += `      <image:geo_location>${escapeXml(entry.geoLocation)}</image:geo_location>
+`;
+      }
+      if (entry.license) {
+        xml += `      <image:license>${escapeXml(entry.license)}</image:license>
+`;
+      }
+      xml += `    </image:image>
+`;
+    });
+    xml += `  </url>
+`;
+  });
+
+  xml += `</urlset>`;
+  return xml;
+}
+
+/**
+ * Download image sitemap as XML file
+ */
+export function downloadImageSitemap(
+  input: EnhancedExportInput,
+  options: ImageSitemapOptions,
+  filename: string = 'image-sitemap.xml'
+): void {
+  const xml = generateImageSitemap(input, options);
+  const blob = new Blob([xml], { type: 'application/xml' });
+  downloadBlob(blob, filename);
+}

@@ -141,10 +141,21 @@ export const CONTENT_BRIEF_FALLBACK = {
     structured_outline: [],
     perspectives: [],
     methodology_note: '',
-    serpAnalysis: { peopleAlsoAsk: [], competitorHeadings: [] },
+    serpAnalysis: {
+        peopleAlsoAsk: [],
+        competitorHeadings: [],
+        avgWordCount: 1500,  // Default competitor word count estimate
+        avgHeadings: 8,       // Default heading count estimate
+        commonStructure: 'Introduction, Overview, Key Points, Details, FAQ, Conclusion',
+        contentGaps: []
+    },
     visuals: { featuredImagePrompt: '', imageAltText: '' },
     contextualVectors: [],
-    contextualBridge: { type: 'section' as const, content: '', links: [] },
+    contextualBridge: {
+        type: 'section' as const,
+        content: '',
+        links: []
+    },
     predicted_user_journey: '',
     // New Fields
     query_type_format: '',

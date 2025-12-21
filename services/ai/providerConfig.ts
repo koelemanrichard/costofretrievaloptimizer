@@ -9,14 +9,18 @@ import { BusinessInfo } from '../../types';
  */
 export const VALID_MODELS = {
   anthropic: [
+    // Claude 4.5 models (Latest - November 2025)
     'claude-opus-4-5-20251101',
     'claude-sonnet-4-5-20250929',
     'claude-haiku-4-5-20251001',
+    // Claude 4.x models (Legacy)
     'claude-opus-4-1-20250805',
     'claude-sonnet-4-20250514',
-    // Legacy (deprecated but functional)
-    'claude-3-5-sonnet-20241022',
+    'claude-opus-4-20250514',
+    'claude-3-7-sonnet-20250219',
+    // Claude 3.5 models (Legacy)
     'claude-3-5-haiku-20241022',
+    'claude-3-haiku-20240307',
   ],
   openai: [
     'gpt-4o',

@@ -244,10 +244,11 @@ export const sanitizeTopicFromDb = (dbTopic: any): EnrichedTopic => {
         id: safeString(dbTopic.id),
         map_id: safeString(dbTopic.map_id),
         parent_topic_id: dbTopic.parent_topic_id ? safeString(dbTopic.parent_topic_id) : null,
+        display_parent_id: dbTopic.display_parent_id ? safeString(dbTopic.display_parent_id) : null,
         title: safeString(dbTopic.title),
         slug: safeString(dbTopic.slug),
         description: safeString(dbTopic.description),
-        type: dbTopic.type === 'core' ? 'core' : 'outer',
+        type: dbTopic.type === 'core' ? 'core' : (dbTopic.type === 'child' ? 'child' : 'outer'),
         freshness: (dbTopic.freshness as FreshnessProfile) || FreshnessProfile.STANDARD,
         
         // Holistic SEO Metadata Extraction

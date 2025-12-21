@@ -103,6 +103,19 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
     setGeneratedPlaceholder(null);
   }, []);
 
+  // Warn user if they try to close with an un-inserted generated image
+  const handleClose = useCallback(() => {
+    if (isComplete && generatedPlaceholder) {
+      const confirmed = window.confirm(
+        'You have a generated image that hasn\'t been inserted yet.\n\n' +
+        'If you close now, you\'ll lose this image and need to regenerate it.\n\n' +
+        'Click "Cancel" to go back and insert the image, or "OK" to discard it.'
+      );
+      if (!confirmed) return;
+    }
+    onClose();
+  }, [isComplete, generatedPlaceholder, onClose]);
+
   if (!isOpen) return null;
 
   // Determine which providers are available
@@ -112,7 +125,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
   if (businessInfo.openAiApiKey) availableProviders.push('DALL-E 3');
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]" onClick={handleClose}>
       <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <h2 className="text-xl font-bold text-white mb-4">
           Generate {placeholder.type} Image
@@ -328,7 +341,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
         <div className="flex justify-end gap-2 mt-6">
           {!isGenerating && !isComplete && (
             <>
-              <Button variant="secondary" onClick={onClose}>
+              <Button variant="secondary" onClick={handleClose}>
                 Cancel
               </Button>
               <Button onClick={handleGenerate} disabled={availableProviders.length === 0}>
@@ -337,13 +350,13 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
             </>
           )}
           {isGenerating && (
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
           )}
           {isComplete && (
-            <Button variant="secondary" onClick={onClose}>
-              Close
+            <Button variant="secondary" onClick={handleClose}>
+              Close (Discard Image)
             </Button>
           )}
         </div>

@@ -385,14 +385,29 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
     }, []);
 
     const [localBusinessInfo, setLocalBusinessInfo] = useState<Partial<BusinessInfo>>(() => {
-        // Initialize with map data if it exists, otherwise fall back to global state
-        const initialData = activeMap?.business_info 
-            ? activeMap.business_info as Partial<BusinessInfo>
-            : {
-                ...state.businessInfo,
-                aiProvider: state.businessInfo.aiProvider,
-                aiModel: state.businessInfo.aiModel,
-            };
+        // Initialize with map's business context (NOT AI settings) merged with global state
+        // AI settings (provider, model, API keys) ALWAYS come from global user_settings
+        const mapData = activeMap?.business_info as Partial<BusinessInfo> || {};
+
+        // Strip AI settings from map - they should come from global settings
+        const {
+            aiProvider: _mapAiProvider,
+            aiModel: _mapAiModel,
+            geminiApiKey: _gk,
+            openAiApiKey: _ok,
+            anthropicApiKey: _ak,
+            perplexityApiKey: _pk,
+            openRouterApiKey: _ork,
+            ...mapBusinessContext
+        } = mapData;
+
+        const initialData: Partial<BusinessInfo> = {
+            ...state.businessInfo,      // Global settings as base (includes correct AI settings)
+            ...mapBusinessContext,      // Map's business context (domain, industry, etc.)
+            // Ensure AI settings are always from global
+            aiProvider: state.businessInfo.aiProvider,
+            aiModel: state.businessInfo.aiModel,
+        };
 
         // Backward compatibility: If legacy author fields exist but profile doesn't, migrate them conceptually in the UI state
         if (!initialData.authorProfile && (initialData.authorName || initialData.authorBio)) {
@@ -408,14 +423,14 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
 
         return initialData;
     });
-    
+
     useEffect(() => {
-      // This ensures that if the global state is loaded *after* the component mounts,
-      // the local state is updated with the correct AI provider defaults.
+      // Ensure AI settings are always synced with global state
+      // This handles cases where global state loads after component mounts
       setLocalBusinessInfo(prev => ({
         ...prev,
-        aiProvider: prev.aiProvider || state.businessInfo.aiProvider,
-        aiModel: prev.aiModel || state.businessInfo.aiModel,
+        aiProvider: state.businessInfo.aiProvider,  // Always use global, not fallback
+        aiModel: state.businessInfo.aiModel,
       }));
     }, [state.businessInfo.aiProvider, state.businessInfo.aiModel]);
 
