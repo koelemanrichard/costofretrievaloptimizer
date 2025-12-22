@@ -3,11 +3,29 @@
  *
  * Generates professional PDF reports from React components using
  * html2canvas for rendering and jsPDF for PDF creation.
+ *
+ * Uses lazy loading for jsPDF and html2canvas to reduce initial bundle size.
+ * These libraries are only loaded when PDF export is actually triggered.
  */
 
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { ReportConfig, ReportGenerationState } from '../types/reports';
+
+// Lazy load heavy dependencies - only imported when needed
+let jsPDFModule: typeof import('jspdf') | null = null;
+let html2canvasModule: typeof import('html2canvas') | null = null;
+
+const loadPdfDependencies = async () => {
+  if (!jsPDFModule) {
+    jsPDFModule = await import('jspdf');
+  }
+  if (!html2canvasModule) {
+    html2canvasModule = await import('html2canvas');
+  }
+  return {
+    jsPDF: jsPDFModule.default,
+    html2canvas: html2canvasModule.default,
+  };
+};
 
 // ============================================
 // CONFIGURATION
@@ -69,11 +87,15 @@ interface PageBreakInfo {
 // ============================================
 
 export class PdfExporter {
-  private pdf: jsPDF;
+  private pdf: InstanceType<typeof import('jspdf').default> | null = null;
   private currentPage: number = 1;
   private yPosition: number = PDF_CONFIG.margin + PDF_CONFIG.headerHeight;
 
-  constructor() {
+  /**
+   * Initialize the PDF document (lazy loads jsPDF)
+   */
+  private async initPdf(): Promise<void> {
+    const { jsPDF } = await loadPdfDependencies();
     this.pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -91,6 +113,17 @@ export class PdfExporter {
     const { onProgress } = options;
 
     try {
+      onProgress?.({
+        isGenerating: true,
+        progress: 5,
+        currentStep: 'Loading PDF libraries...',
+        error: null
+      });
+
+      // Lazy load dependencies
+      const { html2canvas } = await loadPdfDependencies();
+      await this.initPdf();
+
       onProgress?.({
         isGenerating: true,
         progress: 10,
@@ -125,7 +158,7 @@ export class PdfExporter {
 
       for (let i = 0; i < totalPages; i++) {
         if (i > 0) {
-          this.pdf.addPage();
+          this.pdf!.addPage();
         }
 
         // Add header
@@ -157,7 +190,7 @@ export class PdfExporter {
         const pageImgData = pageCanvas.toDataURL('image/png');
         const drawHeight = (sourceHeight * imgWidth) / canvas.width;
 
-        this.pdf.addImage(
+        this.pdf!.addImage(
           pageImgData,
           'PNG',
           PDF_CONFIG.margin,
@@ -185,7 +218,7 @@ export class PdfExporter {
       });
 
       // Generate blob
-      const blob = this.pdf.output('blob');
+      const blob = this.pdf!.output('blob');
 
       onProgress?.({
         isGenerating: false,
@@ -214,23 +247,23 @@ export class PdfExporter {
     const { margin, contentWidth, colors, fonts } = PDF_CONFIG;
 
     // Title
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.setFontSize(fonts.heading.size);
-    this.pdf.setTextColor(colors.text);
-    this.pdf.text(title, margin, margin + 10);
+    this.pdf!.setFont('helvetica', 'bold');
+    this.pdf!.setFontSize(fonts.heading.size);
+    this.pdf!.setTextColor(colors.text);
+    this.pdf!.text(title, margin, margin + 10);
 
     // Subtitle
     if (subtitle) {
-      this.pdf.setFont('helvetica', 'normal');
-      this.pdf.setFontSize(fonts.body.size);
-      this.pdf.setTextColor(colors.textLight);
-      this.pdf.text(subtitle, margin, margin + 16);
+      this.pdf!.setFont('helvetica', 'normal');
+      this.pdf!.setFontSize(fonts.body.size);
+      this.pdf!.setTextColor(colors.textLight);
+      this.pdf!.text(subtitle, margin, margin + 16);
     }
 
     // Header line
-    this.pdf.setDrawColor(colors.border);
-    this.pdf.setLineWidth(0.5);
-    this.pdf.line(margin, margin + 18, margin + contentWidth, margin + 18);
+    this.pdf!.setDrawColor(colors.border);
+    this.pdf!.setLineWidth(0.5);
+    this.pdf!.line(margin, margin + 18, margin + contentWidth, margin + 18);
   }
 
   /**
@@ -241,15 +274,15 @@ export class PdfExporter {
     const footerY = pageHeight - margin;
 
     // Footer line
-    this.pdf.setDrawColor(colors.border);
-    this.pdf.setLineWidth(0.5);
-    this.pdf.line(margin, footerY - 8, margin + contentWidth, footerY - 8);
+    this.pdf!.setDrawColor(colors.border);
+    this.pdf!.setLineWidth(0.5);
+    this.pdf!.line(margin, footerY - 8, margin + contentWidth, footerY - 8);
 
     // Page number
-    this.pdf.setFont('helvetica', 'normal');
-    this.pdf.setFontSize(fonts.caption.size);
-    this.pdf.setTextColor(colors.textLight);
-    this.pdf.text(
+    this.pdf!.setFont('helvetica', 'normal');
+    this.pdf!.setFontSize(fonts.caption.size);
+    this.pdf!.setTextColor(colors.textLight);
+    this.pdf!.text(
       `Page ${pageNumber} of ${totalPages}`,
       margin + contentWidth / 2,
       footerY - 3,
@@ -263,11 +296,11 @@ export class PdfExporter {
         month: 'long',
         day: 'numeric'
       });
-      this.pdf.text(timestamp, margin, footerY - 3);
+      this.pdf!.text(timestamp, margin, footerY - 3);
     }
 
     // Generated by text
-    this.pdf.text(
+    this.pdf!.text(
       'Generated by Holistic SEO Tool',
       margin + contentWidth,
       footerY - 3,
@@ -279,14 +312,14 @@ export class PdfExporter {
    * Get the PDF as a data URL
    */
   getDataUrl(): string {
-    return this.pdf.output('datauristring');
+    return this.pdf!.output('datauristring');
   }
 
   /**
    * Download the PDF
    */
   download(filename: string): void {
-    this.pdf.save(filename);
+    this.pdf!.save(filename);
   }
 }
 
