@@ -1,14 +1,20 @@
 
 import { TopicalMap, SEOPillars, BusinessInfo, ContentBrief, EnrichedTopic, FreshnessProfile, SemanticTriple, Project, ContextualBridgeLink, ContextualBridgeSection, BriefSection, TopicBlueprint, AttributeCategory, AttributeClass, VisualSemantics, FeaturedSnippetTarget, AuthorProfile, StylometryType, SiteInventoryItem, TransitionStatus, ActionType, SectionType } from '../types';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+// Type aliases for improved readability in parsing functions
+// These accept unknown data from external sources (DB, AI, user input)
+type UnknownRecord = Record<string, unknown>;
+type UnknownArray = unknown[];
 
 /**
- * Converts any value to a safe string. 
+ * Converts any value to a safe string.
  * - Strings remain strings.
  * - Numbers become string representations.
  * - Objects/Arrays are JSON.stringified (prevents Error #31).
  * - Null/Undefined become empty strings.
  */
-export const safeString = (value: any): string => {
+export const safeString = (value: unknown): string => {
     if (typeof value === 'string') return value;
     if (typeof value === 'number') return String(value);
     if (value === null || value === undefined) return '';
@@ -26,7 +32,7 @@ export const safeString = (value: any): string => {
  * Ensures a value is an array. Returns empty array if not.
  * Now enhanced to try parsing stringified JSON arrays (common AI artifact).
  */
-export const safeArray = <T>(value: any): T[] => {
+export const safeArray = <T>(value: unknown): T[] => {
     if (Array.isArray(value)) return value;
     
     // Handle stringified JSON arrays (e.g. "['a', 'b']" returned by AI or DB)
@@ -49,7 +55,7 @@ export const safeArray = <T>(value: any): T[] => {
  * Safely handles RPC responses that might be returned as `[T]` or `T`.
  * Returns T or throws if empty.
  */
-export const normalizeRpcData = <T>(data: any): T => {
+export const normalizeRpcData = <T>(data: unknown): T => {
     if (!data) {
         throw new Error("Operation returned no data.");
     }
@@ -457,7 +463,7 @@ export const sanitizeInventoryFromDb = (dbItem: any): SiteInventoryItem => {
  *   await repairBriefsInMap(supabase, mapId);
  */
 export const repairBriefsInMap = async (
-    supabase: any,
+    supabase: SupabaseClient,
     mapId: string
 ): Promise<{ repaired: number; skipped: number; errors: string[] }> => {
     const results = { repaired: 0, skipped: 0, errors: [] as string[] };
