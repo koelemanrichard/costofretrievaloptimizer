@@ -6,7 +6,7 @@ import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Loader } from '../ui/Loader';
 import { Project, AppStep } from '../../types';
-import { getSupabaseClient, resetSupabaseClient } from '../../services/supabaseClient';
+import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from '../../services/supabaseClient';
 
 interface ProjectSelectionScreenProps {
   onCreateProject: (projectName: string, domain: string) => void;
@@ -24,8 +24,10 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
     const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
     // Sign out with scope: 'local' to ensure all local session data is cleared
     await supabase.auth.signOut({ scope: 'local' });
+    // Clear all Supabase auth storage from localStorage to prevent stale sessions
+    clearSupabaseAuthStorage();
     // Reset the cached Supabase client to ensure a fresh client on next login
-    resetSupabaseClient();
+    resetSupabaseClient(true);
     dispatch({ type: 'SET_USER', payload: null });
     dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
   };

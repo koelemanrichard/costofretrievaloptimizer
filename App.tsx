@@ -3,7 +3,7 @@
 import React, { useEffect, useReducer, useRef } from 'react';
 import { AppStateContext, appReducer, initialState } from './state/appState';
 import { AppStep, BusinessInfo, Project, TopicalMap } from './types';
-import { getSupabaseClient, resetSupabaseClient } from './services/supabaseClient';
+import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from './services/supabaseClient';
 import { verifiedDelete, verifiedBulkDelete } from './services/verifiedDatabaseService';
 import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
 import { setGlobalUsageContext, clearGlobalUsageContext } from './services/telemetryService';
@@ -45,13 +45,20 @@ const App: React.FC = () => {
         const checkInitialSession = async () => {
             try {
                 const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
-                const { data: { session }, error } = await supabase.auth.getSession();
+
+                // Add timeout to prevent hanging on stale sessions
+                const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) =>
+                    setTimeout(() => reject(new Error('Session check timeout')), 5000)
+                );
+
+                const sessionPromise = supabase.auth.getSession();
+                const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
 
                 if (error) {
                     console.warn('[App] Session check error, clearing stale session:', error.message);
-                    // Clear potentially corrupted session data
-                    await supabase.auth.signOut({ scope: 'local' });
-                    resetSupabaseClient();
+                    // Clear all Supabase auth storage to prevent stale data
+                    clearSupabaseAuthStorage();
+                    resetSupabaseClient(true);
                     dispatch({ type: 'SET_USER', payload: null });
                     dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
                 } else if (session?.user) {
@@ -61,11 +68,18 @@ const App: React.FC = () => {
                     if (state.appStep === AppStep.AUTH) {
                         dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION });
                     }
+                } else {
+                    // No session found - ensure clean state
+                    // This handles the case where localStorage has stale data but no valid session
+                    console.log('[App] No session found, ensuring clean auth state');
+                    clearSupabaseAuthStorage();
+                    resetSupabaseClient(true);
                 }
             } catch (e) {
                 console.error('[App] Session initialization failed:', e);
-                // Reset everything on critical error
-                resetSupabaseClient();
+                // Reset everything on critical error (including timeout)
+                clearSupabaseAuthStorage();
+                resetSupabaseClient(true);
                 dispatch({ type: 'SET_USER', payload: null });
                 dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
             }
