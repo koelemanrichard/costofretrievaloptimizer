@@ -3,7 +3,7 @@
 import React, { useEffect, useReducer, useRef } from 'react';
 import { AppStateContext, appReducer, initialState } from './state/appState';
 import { AppStep, BusinessInfo, Project, TopicalMap } from './types';
-import { getSupabaseClient } from './services/supabaseClient';
+import { getSupabaseClient, resetSupabaseClient } from './services/supabaseClient';
 import { verifiedDelete, verifiedBulkDelete } from './services/verifiedDatabaseService';
 import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
 import { setGlobalUsageContext, clearGlobalUsageContext } from './services/telemetryService';
@@ -37,6 +37,42 @@ const App: React.FC = () => {
     useEffect(() => {
         appStepRef.current = state.appStep;
     }, [state.appStep]);
+
+    // Check for existing session on app initialization
+    // This handles stale sessions after hot reload by attempting to get the current session
+    // If the session is invalid/expired, it will be cleared and user redirected to auth
+    useEffect(() => {
+        const checkInitialSession = async () => {
+            try {
+                const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+                const { data: { session }, error } = await supabase.auth.getSession();
+
+                if (error) {
+                    console.warn('[App] Session check error, clearing stale session:', error.message);
+                    // Clear potentially corrupted session data
+                    await supabase.auth.signOut({ scope: 'local' });
+                    resetSupabaseClient();
+                    dispatch({ type: 'SET_USER', payload: null });
+                    dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
+                } else if (session?.user) {
+                    // Valid session found - set user but don't navigate (let onAuthStateChange handle that)
+                    dispatch({ type: 'SET_USER', payload: session.user });
+                    setGlobalUsageContext({ userId: session.user.id });
+                    if (state.appStep === AppStep.AUTH) {
+                        dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION });
+                    }
+                }
+            } catch (e) {
+                console.error('[App] Session initialization failed:', e);
+                // Reset everything on critical error
+                resetSupabaseClient();
+                dispatch({ type: 'SET_USER', payload: null });
+                dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
+            }
+        };
+
+        checkInitialSession();
+    }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
     useEffect(() => {
         const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
@@ -494,8 +530,8 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Footer Dock - collapsible corner toolbar */}
-                    {/* Only show when logged in - settings and logs should not be accessible on login screen */}
-                    {state.user && (
+                    {/* Only show when logged in and not on auth screen - prevents showing during stale session race conditions */}
+                    {state.user && state.appStep !== AppStep.AUTH && (
                         <FooterDock
                             items={[
                                 {
