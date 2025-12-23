@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAppState } from '../../state/appState';
-import { getSupabaseClient } from '../../services/supabaseClient';
+import { getSupabaseClient, clearSupabaseAuthStorage } from '../../services/supabaseClient';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -27,12 +27,23 @@ const AuthScreen: React.FC = () => {
 
         try {
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+
+            // Clear any stale auth storage before login attempt to prevent hanging
+            // This ensures a clean slate for the authentication request
+            clearSupabaseAuthStorage();
+
             if (isSignUp) {
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;
                 setMessage('Check your email for the confirmation link!');
             } else {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                // Add timeout to prevent infinite spinner if signIn hangs
+                const signInPromise = supabase.auth.signInWithPassword({ email, password });
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Login timed out. Please try again.')), 10000)
+                );
+
+                const { data, error } = await Promise.race([signInPromise, timeoutPromise]);
                 if (error) throw error;
 
                 // Directly dispatch user and navigation state after successful login
@@ -48,6 +59,9 @@ const AuthScreen: React.FC = () => {
 
             if (errorMsg.includes('Failed to fetch')) {
                 errorMsg = 'Connection failed. Please check your Supabase credentials in Settings (⚙️ bottom right).';
+            } else if (errorMsg.includes('timed out')) {
+                // Clear storage on timeout to ensure clean state for retry
+                clearSupabaseAuthStorage();
             }
 
             setError(errorMsg);

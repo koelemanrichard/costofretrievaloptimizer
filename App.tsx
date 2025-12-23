@@ -38,32 +38,53 @@ const App: React.FC = () => {
         appStepRef.current = state.appStep;
     }, [state.appStep]);
 
-    // Clear any stale Supabase auth storage on app initialization
-    // This runs once and ensures we start with clean localStorage if there's no valid session
-    // The actual session handling is done by onAuthStateChange below
+    // Session initialization with timeout protection
+    // This ensures the app doesn't hang if getSession() is stuck
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        let didTimeout = false;
+
         const initializeAuth = async () => {
             const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
 
+            // Set a timeout to clear storage if session check hangs
+            timeoutId = setTimeout(() => {
+                didTimeout = true;
+                console.warn('[App] Session check taking too long, clearing storage for fresh start');
+                clearSupabaseAuthStorage();
+            }, 3000);
+
             try {
-                // Quick check - if getSession returns within reasonable time, use it
                 const { data: { session }, error } = await supabase.auth.getSession();
+
+                // Clear timeout if we got a response
+                clearTimeout(timeoutId);
+
+                if (didTimeout) {
+                    // Timeout already fired, don't process stale result
+                    return;
+                }
 
                 if (error) {
                     console.warn('[App] Session error, clearing stale data:', error.message);
                     clearSupabaseAuthStorage();
+                } else if (session?.user) {
+                    console.log('[App] Valid session found for:', session.user.email);
+                } else {
+                    console.log('[App] No existing session');
                 }
-                // If no session and no error, onAuthStateChange will handle showing auth screen
-                // If valid session, onAuthStateChange will handle setting user
-
             } catch (e) {
-                // Network error or other issue - clear storage to allow fresh login
-                console.warn('[App] Session check failed, clearing storage:', e);
-                clearSupabaseAuthStorage();
+                clearTimeout(timeoutId);
+                if (!didTimeout) {
+                    console.warn('[App] Session check failed, clearing storage:', e);
+                    clearSupabaseAuthStorage();
+                }
             }
         };
 
         initializeAuth();
+
+        return () => clearTimeout(timeoutId);
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
     useEffect(() => {
