@@ -38,54 +38,32 @@ const App: React.FC = () => {
         appStepRef.current = state.appStep;
     }, [state.appStep]);
 
-    // Check for existing session on app initialization
-    // This handles stale sessions after hot reload by attempting to get the current session
-    // If the session is invalid/expired, it will be cleared and user redirected to auth
+    // Clear any stale Supabase auth storage on app initialization
+    // This runs once and ensures we start with clean localStorage if there's no valid session
+    // The actual session handling is done by onAuthStateChange below
     useEffect(() => {
-        const checkInitialSession = async () => {
+        const initializeAuth = async () => {
+            const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+
             try {
-                const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
-
-                // Add timeout to prevent hanging on stale sessions
-                const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) =>
-                    setTimeout(() => reject(new Error('Session check timeout')), 5000)
-                );
-
-                const sessionPromise = supabase.auth.getSession();
-                const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+                // Quick check - if getSession returns within reasonable time, use it
+                const { data: { session }, error } = await supabase.auth.getSession();
 
                 if (error) {
-                    console.warn('[App] Session check error, clearing stale session:', error.message);
-                    // Clear all Supabase auth storage to prevent stale data
+                    console.warn('[App] Session error, clearing stale data:', error.message);
                     clearSupabaseAuthStorage();
-                    resetSupabaseClient(true);
-                    dispatch({ type: 'SET_USER', payload: null });
-                    dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
-                } else if (session?.user) {
-                    // Valid session found - set user but don't navigate (let onAuthStateChange handle that)
-                    dispatch({ type: 'SET_USER', payload: session.user });
-                    setGlobalUsageContext({ userId: session.user.id });
-                    if (state.appStep === AppStep.AUTH) {
-                        dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION });
-                    }
-                } else {
-                    // No session found - ensure clean state
-                    // This handles the case where localStorage has stale data but no valid session
-                    console.log('[App] No session found, ensuring clean auth state');
-                    clearSupabaseAuthStorage();
-                    resetSupabaseClient(true);
                 }
+                // If no session and no error, onAuthStateChange will handle showing auth screen
+                // If valid session, onAuthStateChange will handle setting user
+
             } catch (e) {
-                console.error('[App] Session initialization failed:', e);
-                // Reset everything on critical error (including timeout)
+                // Network error or other issue - clear storage to allow fresh login
+                console.warn('[App] Session check failed, clearing storage:', e);
                 clearSupabaseAuthStorage();
-                resetSupabaseClient(true);
-                dispatch({ type: 'SET_USER', payload: null });
-                dispatch({ type: 'SET_STEP', payload: AppStep.AUTH });
             }
         };
 
-        checkInitialSession();
+        initializeAuth();
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
     useEffect(() => {
