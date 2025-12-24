@@ -60,24 +60,24 @@ export const SemanticValidationPanel: React.FC<SemanticValidationPanelProps> = (
   const status = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'valid';
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${className}`}>
+    <div className={`bg-gray-800 border border-gray-700 rounded-lg overflow-hidden ${className}`}>
       {/* Header with Summary */}
       <div className={`px-3 py-2 border-b ${
-        status === 'error' ? 'bg-red-50 border-red-200' :
-        status === 'warning' ? 'bg-yellow-50 border-yellow-200' :
-        'bg-green-50 border-green-200'
+        status === 'error' ? 'bg-red-900/30 border-red-800' :
+        status === 'warning' ? 'bg-yellow-900/30 border-yellow-800' :
+        'bg-green-900/30 border-green-800'
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <StatusIcon status={status} isValidating={isValidating} />
             <div>
-              <h3 className="text-sm font-medium text-gray-900">
+              <h3 className="text-sm font-medium text-white">
                 Semantic Validation
               </h3>
               <p className={`text-xs ${
-                status === 'error' ? 'text-red-600' :
-                status === 'warning' ? 'text-yellow-600' :
-                'text-green-600'
+                status === 'error' ? 'text-red-400' :
+                status === 'warning' ? 'text-yellow-400' :
+                'text-green-400'
               }`}>
                 {isValidating ? 'Validating...' :
                  status === 'valid' ? 'All checks passed' :
@@ -88,9 +88,9 @@ export const SemanticValidationPanel: React.FC<SemanticValidationPanelProps> = (
 
           {/* Score Badge */}
           <div className={`px-2 py-1 rounded text-xs font-medium ${
-            status === 'error' ? 'bg-red-100 text-red-700' :
-            status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-green-100 text-green-700'
+            status === 'error' ? 'bg-red-900/50 text-red-300' :
+            status === 'warning' ? 'bg-yellow-900/50 text-yellow-300' :
+            'bg-green-900/50 text-green-300'
           }`}>
             {totalRules > 0 ? Math.round((passedCount / totalRules) * 100) : 100}%
           </div>
@@ -131,7 +131,7 @@ export const SemanticValidationPanel: React.FC<SemanticValidationPanelProps> = (
         })}
 
         {totalRules === 0 && !isValidating && (
-          <div className="p-4 text-center text-gray-500 text-sm">
+          <div className="p-4 text-center text-gray-400 text-sm">
             No validation rules applicable
           </div>
         )}
@@ -208,11 +208,11 @@ const CategorySection: React.FC<CategorySectionProps> = ({
   const categoryStatus = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'valid';
 
   return (
-    <div className="border-b border-gray-100 last:border-0">
+    <div className="border-b border-gray-700 last:border-0">
       {/* Category Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${
@@ -220,10 +220,10 @@ const CategorySection: React.FC<CategorySectionProps> = ({
             categoryStatus === 'warning' ? 'bg-yellow-500' :
             'bg-green-500'
           }`} />
-          <span className="text-sm font-medium text-gray-900">{category.name}</span>
+          <span className="text-sm font-medium text-white">{category.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-400">
             {passedCount}/{results.length}
           </span>
           <svg
@@ -266,40 +266,40 @@ const RuleResult: React.FC<RuleResultProps> = ({ result, onApplyFix }) => {
   return (
     <div className={`p-2 rounded text-xs ${
       result.passed
-        ? 'bg-green-50 border border-green-100'
+        ? 'bg-green-900/30 border border-green-800'
         : result.severity === 'error'
-        ? 'bg-red-50 border border-red-100'
-        : 'bg-yellow-50 border border-yellow-100'
+        ? 'bg-red-900/30 border border-red-800'
+        : 'bg-yellow-900/30 border border-yellow-800'
     }`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2">
           {/* Status Icon */}
           {result.passed ? (
-            <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           ) : result.severity === 'error' ? (
-            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
             </svg>
           )}
 
           <div>
             <p className={`font-medium ${
-              result.passed ? 'text-green-700' :
-              result.severity === 'error' ? 'text-red-700' :
-              'text-yellow-700'
+              result.passed ? 'text-green-300' :
+              result.severity === 'error' ? 'text-red-300' :
+              'text-yellow-300'
             }`}>
               {result.ruleName}
             </p>
             <p className={`mt-0.5 ${
-              result.passed ? 'text-green-600' :
-              result.severity === 'error' ? 'text-red-600' :
-              'text-yellow-600'
+              result.passed ? 'text-green-400' :
+              result.severity === 'error' ? 'text-red-400' :
+              'text-yellow-400'
             }`}>
               {result.message}
             </p>
@@ -312,8 +312,8 @@ const RuleResult: React.FC<RuleResultProps> = ({ result, onApplyFix }) => {
             onClick={onApplyFix}
             className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ${
               result.severity === 'error'
-                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                ? 'bg-red-800 text-red-200 hover:bg-red-700'
+                : 'bg-yellow-800 text-yellow-200 hover:bg-yellow-700'
             }`}
           >
             Fix

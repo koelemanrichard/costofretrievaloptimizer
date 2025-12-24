@@ -7,7 +7,8 @@ import {
     ContextualCoverageMetrics, InternalLinkAuditResult, TopicalAuthorityScore,
     PublicationPlan, ContentIntegrityResult, SchemaGenerationResult,
     TopicViabilityResult, TopicBlueprint, FlowAuditResult, ContextualFlowIssue,
-    KnowledgeGraph, MapMergeAnalysis, TopicSimilarityResult, TopicMergeDecision, TopicalMap
+    KnowledgeGraph, MapMergeAnalysis, TopicSimilarityResult, TopicMergeDecision, TopicalMap,
+    StreamingProgressCallback
 } from '../types';
 import * as prompts from '../config/prompts';
 import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
@@ -78,13 +79,15 @@ export function setUsageContext(context: AIUsageContext, operation?: string): vo
 /**
  * Call Anthropic API via streaming to avoid timeouts on long-running requests
  * Streaming keeps the connection alive while the AI generates its response
+ * @param onProgress - Optional callback to report streaming progress (for activity-based timeouts)
  */
 const callApiWithStreaming = async <T>(
     prompt: string,
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<AppAction>,
     sanitizerFn: (text: string) => T,
-    operationName?: string
+    operationName?: string,
+    onProgress?: StreamingProgressCallback
 ): Promise<T> => {
     const startTime = Date.now();
     const operation = operationName || currentOperation;
@@ -249,9 +252,16 @@ const callApiWithStreaming = async <T>(
                             if (deltaText) {
                                 fullText += deltaText;
                                 eventCount++;
-                                // Log progress every 50 events
+                                // Log progress and report to caller every 50 events
                                 if (eventCount % 50 === 0) {
                                     console.log(`[Anthropic STREAMING] Progress: ${fullText.length} chars, ${eventCount} events`);
+                                    // Report progress to caller for activity-based timeout resets
+                                    onProgress?.({
+                                        charsReceived: fullText.length,
+                                        eventsProcessed: eventCount,
+                                        elapsedMs: Date.now() - startTime,
+                                        lastActivity: Date.now()
+                                    });
                                 }
                             }
                         } else if (event.type === 'message_start') {
@@ -358,6 +368,10 @@ const callApiWithStreaming = async <T>(
 
         const message = error instanceof Error ? error.message : "Unknown Anthropic error";
         dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Streaming error: ${message}`, status: 'failure', timestamp: Date.now() } });
+        // Avoid double-wrapping if error already has our prefix
+        if (message.startsWith('Anthropic API Call Failed:')) {
+            throw new Error(message);
+        }
         throw new Error(`Anthropic API Call Failed: ${message}`);
     }
 };
@@ -607,6 +621,10 @@ const callApi = async <T>(
         }
 
         dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Error: ${message}`, status: 'failure', timestamp: Date.now(), data: error } });
+        // Avoid double-wrapping if error already has our prefix (e.g., from 504 timeout handler)
+        if (message.startsWith('Anthropic API Call Failed:')) {
+            throw new Error(message);
+        }
         throw new Error(`Anthropic API Call Failed: ${message}`);
     }
 };
@@ -808,13 +826,48 @@ export const generateContentBrief = async (info: BusinessInfo, topic: EnrichedTo
 // Use streaming for article draft generation to avoid timeouts
 export const generateArticleDraft = async (brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>) => callApiWithStreaming(prompts.GENERATE_ARTICLE_DRAFT_PROMPT(brief, info), info, dispatch, t => t, 'generateArticleDraft');
 
-export const polishDraft = async (draft: string, brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>) => callApi(prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, info), info, dispatch, extractMarkdownFromResponse, 'polishDraft');
+// Use streaming for polish to avoid timeouts with large drafts
+export const polishDraft = async (
+    draft: string,
+    brief: ContentBrief,
+    info: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    onProgress?: StreamingProgressCallback
+) => callApiWithStreaming(
+    prompts.POLISH_ARTICLE_DRAFT_PROMPT(draft, brief, info),
+    info,
+    dispatch,
+    extractMarkdownFromResponse,
+    'polishDraft',
+    onProgress
+);
 
-export const auditContentIntegrity = async (brief: ContentBrief, draft: string, info: BusinessInfo, dispatch: React.Dispatch<any>) => {
+// Use streaming for audit to avoid timeouts with large drafts
+export const auditContentIntegrity = async (
+    brief: ContentBrief,
+    draft: string,
+    info: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    onProgress?: StreamingProgressCallback
+) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const fallback: ContentIntegrityResult = { overallSummary: '', draftText: draft, eavCheck: { isPassing: false, details: '' }, linkCheck: { isPassing: false, details: '' }, linguisticModality: { score: 0, summary: '' }, frameworkRules: [] };
+    const fallback: ContentIntegrityResult = {
+        overallSummary: '',
+        draftText: draft,
+        eavCheck: { isPassing: false, details: '' },
+        linkCheck: { isPassing: false, details: '' },
+        linguisticModality: { score: 0, summary: '' },
+        frameworkRules: []
+    };
     const schema = { overallSummary: String, eavCheck: Object, linkCheck: Object, linguisticModality: Object, frameworkRules: Array };
-    return callApi(prompts.AUDIT_CONTENT_INTEGRITY_PROMPT(brief, draft, info), info, dispatch, t => sanitizer.sanitize(t, schema, fallback), 'auditContentIntegrity');
+    return callApiWithStreaming(
+        prompts.AUDIT_CONTENT_INTEGRITY_PROMPT(brief, draft, info),
+        info,
+        dispatch,
+        t => sanitizer.sanitize(t, schema, fallback),
+        'auditContentIntegrity',
+        onProgress
+    );
 };
 
 export const refineDraftSection = async (text: string, violation: string, instr: string, info: BusinessInfo, dispatch: React.Dispatch<any>) => {
@@ -941,10 +994,45 @@ export const generateTopicBlueprints = async (topics: any[], info: BusinessInfo,
     return flatResults.map((item: any) => ({ id: item.id, blueprint: { ...item } }));
 };
 
-export const analyzeContextualFlow = async (text: string, entity: string, info: BusinessInfo, dispatch: React.Dispatch<any>) => {
+// Use streaming for flow analysis to avoid timeouts with large drafts
+export const analyzeContextualFlow = async (
+    text: string,
+    entity: string,
+    info: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    onProgress?: StreamingProgressCallback
+) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const vProm = callApi(prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, entity), info, dispatch, t => sanitizer.sanitize(t, { headingVector: Array, vectorIssues: Array, attributeOrderIssues: Array }, { headingVector: [], vectorIssues: [], attributeOrderIssues: [] }), 'auditIntraPageFlow');
-    const dProm = callApi(prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text), info, dispatch, t => sanitizer.sanitize(t, { discourseGaps: Array, gapDetails: Array }, { discourseGaps: [], gapDetails: [] }), 'auditDiscourseIntegration');
+
+    // Track progress from both parallel calls and combine them
+    let vectorChars = 0;
+    let discourseChars = 0;
+    const combineProgress = () => {
+        onProgress?.({
+            charsReceived: vectorChars + discourseChars,
+            eventsProcessed: 0, // Not tracked for combined
+            elapsedMs: 0,
+            lastActivity: Date.now()
+        });
+    };
+
+    // Run both analyses in parallel with streaming
+    const vProm = callApiWithStreaming(
+        prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, entity),
+        info,
+        dispatch,
+        t => sanitizer.sanitize(t, { headingVector: Array, vectorIssues: Array, attributeOrderIssues: Array }, { headingVector: [], vectorIssues: [], attributeOrderIssues: [] }),
+        'auditIntraPageFlow',
+        (p) => { vectorChars = p.charsReceived; combineProgress(); }
+    );
+    const dProm = callApiWithStreaming(
+        prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text),
+        info,
+        dispatch,
+        t => sanitizer.sanitize(t, { discourseGaps: Array, gapDetails: Array }, { discourseGaps: [], gapDetails: [] }),
+        'auditDiscourseIntegration',
+        (p) => { discourseChars = p.charsReceived; combineProgress(); }
+    );
     const [vRes, dRes] = await Promise.all([vProm, dProm]);
 
     const issues: ContextualFlowIssue[] = [];

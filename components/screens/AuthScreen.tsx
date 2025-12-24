@@ -26,30 +26,33 @@ const AuthScreen: React.FC = () => {
         setMessage(null);
 
         try {
+            console.log('[AuthScreen] Starting auth process...');
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
 
-            // Clear any stale auth storage before login attempt to prevent hanging
-            // This ensures a clean slate for the authentication request
-            clearSupabaseAuthStorage();
-
             if (isSignUp) {
+                console.log('[AuthScreen] Attempting signup for:', email);
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;
                 setMessage('Check your email for the confirmation link!');
             } else {
+                console.log('[AuthScreen] Attempting login for:', email);
+
                 // Add timeout to prevent infinite spinner if signIn hangs
+                // Using 15 seconds to allow for slow network connections
                 const signInPromise = supabase.auth.signInWithPassword({ email, password });
                 const timeoutPromise = new Promise<never>((_, reject) =>
-                    setTimeout(() => reject(new Error('Login timed out. Please try again.')), 10000)
+                    setTimeout(() => reject(new Error('Login timed out. Please check your connection and try again.')), 15000)
                 );
 
                 const { data, error } = await Promise.race([signInPromise, timeoutPromise]);
+                console.log('[AuthScreen] Login response received:', { hasData: !!data, hasError: !!error });
                 if (error) throw error;
 
                 // Directly dispatch user and navigation state after successful login
                 // This ensures navigation works even if the onAuthStateChange subscription
                 // was orphaned after a logout that reset the Supabase client
                 if (data.user) {
+                    console.log('[AuthScreen] Login successful, dispatching user');
                     dispatch({ type: 'SET_USER', payload: data.user });
                     dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION });
                 }

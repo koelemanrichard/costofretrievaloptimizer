@@ -21,10 +21,10 @@ export const centralObjectRules: HeroValidationRule[] = [
   {
     id: 'central-object-centered',
     category: 'centerpiece',
-    severity: 'error',
+    severity: 'warning', // Changed from 'error' - positioning is a design choice, not a blocker
     name: 'Central Object Centering',
-    description: 'The central object entity must be positioned at the center of the image',
-    checkMessage: 'Central object is not centered',
+    description: 'The central object entity is typically positioned at the center, but can be adjusted for composition',
+    checkMessage: 'Central object is not centered (may be intentional)',
     passMessage: 'Central object is properly centered',
     autoFixAvailable: true,
     autoFixDescription: 'Move central object to center position',
@@ -170,10 +170,10 @@ export const textOverlayRules: HeroValidationRule[] = [
   {
     id: 'text-position-valid',
     category: 'text',
-    severity: 'error',
+    severity: 'warning', // Changed from 'error' - text positioning is a design choice
     name: 'Text Position Constraint',
-    description: 'Text overlays must be positioned at the top or bottom of the image, not in the middle',
-    checkMessage: 'Text is positioned in the middle zone (reserved for central object)',
+    description: 'Text overlays are best positioned at the top or bottom of the image, away from the central object',
+    checkMessage: 'Text is positioned in the middle zone (may overlap central object)',
     passMessage: 'Text is correctly positioned at top or bottom',
     autoFixAvailable: true,
     autoFixDescription: 'Move text to nearest valid position (top or bottom)',
@@ -232,10 +232,10 @@ export const textOverlayRules: HeroValidationRule[] = [
   {
     id: 'text-no-overlap',
     category: 'text',
-    severity: 'error',
+    severity: 'warning', // Changed from 'error' - overlap may be intentional for design purposes
     name: 'Text-Object Overlap Prevention',
-    description: 'Text overlays must not overlap with the central object entity',
-    checkMessage: 'Text overlaps with central object',
+    description: 'Text overlays typically should not overlap with the central object, but may be intentional',
+    checkMessage: 'Text overlaps with central object (may be intentional)',
     passMessage: 'Text does not overlap central object',
     autoFixAvailable: true,
     autoFixDescription: 'Adjust text position to eliminate overlap',

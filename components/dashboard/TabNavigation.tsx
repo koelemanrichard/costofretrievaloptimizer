@@ -239,6 +239,7 @@ export interface DashboardNavConfig {
   onCorpusAudit?: () => void;
   onEnhancedMetrics?: () => void;
   onComprehensiveAudit?: () => void;
+  onMapAuditDashboard?: () => void;
   onRegenerateMap?: () => void;
   onRepairBriefs?: () => void;
   onExport: () => void;
@@ -429,6 +430,13 @@ export function createDashboardTabs(config: DashboardNavConfig): NavTab[] {
           label: 'Full Research Dashboard',
           onClick: config.onComprehensiveAudit,
           helpText: 'Combined view of all research: Query Network, E-A-T, Corpus, and historical data',
+          variant: 'primary' as const,
+        }] : []),
+        ...(config.onMapAuditDashboard ? [{
+          id: 'map-audit-dashboard',
+          label: 'Map Audit Dashboard',
+          onClick: config.onMapAuditDashboard,
+          helpText: 'Gap analysis, semantic distance matrix, and competitor coverage visualization',
           variant: 'primary' as const,
         }] : []),
         ...(config.onEntityAuthority ? [{

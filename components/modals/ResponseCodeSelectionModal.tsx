@@ -104,8 +104,8 @@ const ResponseCodeSelectionModal: React.FC<ResponseCodeSelectionModalProps> = ({
                 </div>
                 <div className="flex gap-2">
                     <Button onClick={onClose} variant="secondary" disabled={isProcessing}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={isProcessing}>
-                        {isProcessing ? <Loader className="w-5 h-5" /> : 'Generate Brief'}
+                    <Button onClick={handleSubmit} disabled={isProcessing || isLoading}>
+                        {isProcessing ? <Loader className="w-5 h-5" /> : isLoading ? 'Loading...' : 'Generate Brief'}
                     </Button>
                 </div>
             </div>

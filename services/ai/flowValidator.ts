@@ -1,5 +1,5 @@
 
-import { BusinessInfo, FlowAuditResult, ContextualFlowIssue } from '../../types';
+import { BusinessInfo, FlowAuditResult, ContextualFlowIssue, StreamingProgressCallback } from '../../types';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
@@ -9,12 +9,16 @@ import { dispatchToProvider } from './providerDispatcher';
 import React from 'react';
 
 export const analyzeContextualFlow = (
-    text: string, centralEntity: string, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
+    text: string,
+    centralEntity: string,
+    businessInfo: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    onProgress?: StreamingProgressCallback
 ): Promise<FlowAuditResult> => {
     return dispatchToProvider(businessInfo, {
         gemini: () => geminiService.analyzeContextualFlow(text, centralEntity, businessInfo, dispatch),
         openai: () => openAiService.analyzeContextualFlow(text, centralEntity, businessInfo, dispatch),
-        anthropic: () => anthropicService.analyzeContextualFlow(text, centralEntity, businessInfo, dispatch),
+        anthropic: () => anthropicService.analyzeContextualFlow(text, centralEntity, businessInfo, dispatch, onProgress),
         perplexity: () => perplexityService.analyzeContextualFlow(text, centralEntity, businessInfo, dispatch),
         openrouter: () => openRouterService.analyzeContextualFlow(text, centralEntity, businessInfo, dispatch),
     });

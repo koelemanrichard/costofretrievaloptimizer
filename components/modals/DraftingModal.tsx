@@ -1,7 +1,7 @@
 
 // components/DraftingModal.tsx
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ContentBrief, BusinessInfo, EnrichedTopic, FreshnessProfile, ImagePlaceholder } from '../../types';
+import { ContentBrief, BusinessInfo, EnrichedTopic, FreshnessProfile, ImagePlaceholder, StreamingProgress } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAppState } from '../../state/appState';
@@ -77,6 +77,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   // Image Generation State
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState<ImagePlaceholder | null>(null);
+  const [openInVisualEditor, setOpenInVisualEditor] = useState(false);
 
   // Re-run Passes State
   const [showPassesModal, setShowPassesModal] = useState(false);
@@ -119,10 +120,11 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const reportHook = useArticleDraftReport(minimalJob, brief);
 
   // Parse image placeholders from draft content
+  // Pass brief title to pre-fill HERO image text overlay
   const imagePlaceholders = useMemo(() => {
     if (!draftContent) return [];
-    return extractPlaceholdersFromDraft(draftContent);
-  }, [draftContent]);
+    return extractPlaceholdersFromDraft(draftContent, { heroTitle: brief?.title });
+  }, [draftContent, brief?.title]);
 
   // Track which brief/draft we've loaded to avoid re-fetching
   const loadedBriefIdRef = useRef<string | null>(null);
@@ -798,15 +800,118 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           ? { ...businessInfo, aiProvider: overrideSettings.provider as any, aiModel: overrideSettings.model }
           : businessInfo;
 
+      // Strip base64 images to reduce token count - they can exceed context limits
+      // Base64 data is replaced with placeholder URLs - image positions are preserved
+      // The AI may move images during polish, which is fine - positions will reflect the new structure
+      let strippedImageCount = 0;
+      const contentForPolish = draftContent
+          // Handle markdown images: ![alt](data:image/png;base64,...)
+          .replace(/!\[([^\]]*)\]\(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+\)/g, (_, altText) => {
+              strippedImageCount++;
+              return `![${altText || 'image'}](placeholder://base64-image-${strippedImageCount})`;
+          })
+          // Handle HTML img tags: <img src="data:image/png;base64,..." />
+          .replace(/<img([^>]*)src="data:image\/[^;]+;base64,[A-Za-z0-9+/=]+"([^>]*)>/g, (_, before, after) => {
+              strippedImageCount++;
+              // Preserve other attributes like alt, class, style
+              return `<img${before}src="placeholder://base64-image-${strippedImageCount}"${after}>`;
+          });
+
+      if (strippedImageCount > 0) {
+          console.log(`[DraftingModal] Stripped ${strippedImageCount} base64 images before polish. Content reduced from ${draftContent.length} to ${contentForPolish.length} chars`);
+          dispatch({
+              type: 'SET_NOTIFICATION',
+              payload: `Note: ${strippedImageCount} embedded image(s) were replaced with placeholders for processing. You may need to re-insert images after polishing.`
+          });
+      }
+
+      // Create a slimmed-down brief for polish to stay within token limits
+      // The polish prompt includes JSON.stringify(brief) which can be massive (600K+ chars)
+      // Strip large fields that aren't essential for polish operations
+      const briefForPolish: Partial<ContentBrief> = {
+          id: brief.id,
+          topic_id: brief.topic_id,
+          title: brief.title,
+          slug: brief.slug,
+          metaDescription: brief.metaDescription,
+          keyTakeaways: brief.keyTakeaways?.slice(0, 5),
+          targetKeyword: brief.targetKeyword,
+          searchIntent: brief.searchIntent,
+          // Essential for polish: visual semantics for image placement
+          visual_semantics: brief.visual_semantics?.slice(0, 5),
+          // Slim down serpAnalysis - minimal for polish
+          serpAnalysis: {
+              peopleAlsoAsk: brief.serpAnalysis?.peopleAlsoAsk?.slice(0, 3) || [],
+              competitorHeadings: [], // Exclude - not needed for polish
+              query_type: brief.serpAnalysis?.query_type
+          },
+          // Exclude: articleDraft (we're passing it separately, already stripped)
+          // Exclude: structured_outline, contextualVectors, contextualBridge, enhanced_visual_semantics
+          cta: brief.cta,
+          query_type_format: brief.query_type_format,
+          featured_snippet_target: brief.featured_snippet_target
+      };
+
+      const briefJson = JSON.stringify(briefForPolish);
+      console.log(`[DraftingModal] Slimmed brief for polish: ${briefJson.length} chars (original would be ~${JSON.stringify(brief).length} chars)`);
+
+      // Check if content is still too large (rough estimate: 4 chars per token, 150k token limit for safety)
+      const estimatedTokens = Math.ceil((contentForPolish.length + briefJson.length) / 4);
+      if (estimatedTokens > 150000) {
+          setIsPolishing(false);
+          dispatch({
+              type: 'SET_ERROR',
+              payload: `Article is too large to polish (estimated ${estimatedTokens.toLocaleString()} tokens). Maximum is ~150,000 tokens. Try polishing a shorter section.`
+          });
+          return;
+      }
+
+      // Activity-based timeout: resets on each streaming progress event
+      // This ensures long operations succeed as long as data is flowing,
+      // but times out after 90 seconds of inactivity (true hang or network issue)
+      const INACTIVITY_TIMEOUT_MS = 90000; // 90 seconds of no activity = timeout
+      let activityTimeoutId: ReturnType<typeof setTimeout> | null = null;
+      let lastActivityTime = Date.now();
+
+      const resetActivityTimeout = () => {
+          if (activityTimeoutId) clearTimeout(activityTimeoutId);
+          lastActivityTime = Date.now();
+          activityTimeoutId = setTimeout(() => {
+              const inactivityDuration = Date.now() - lastActivityTime;
+              console.warn(`[DraftingModal] Polish operation inactive for ${inactivityDuration}ms - timing out`);
+              setIsPolishing(false);
+              dispatch({
+                  type: 'SET_ERROR',
+                  payload: `Polish operation timed out after ${Math.round(inactivityDuration/1000)}s of inactivity. Try a smaller article or switch to a faster AI provider.`
+              });
+          }, INACTIVITY_TIMEOUT_MS);
+      };
+
+      // Start initial timeout (for non-streaming providers)
+      resetActivityTimeout();
+
+      // Progress callback resets the timeout on each streaming activity
+      const handleProgress = (progress: StreamingProgress) => {
+          console.log(`[DraftingModal] Polish progress: ${progress.charsReceived} chars, ${progress.eventsProcessed} events`);
+          resetActivityTimeout();
+      };
+
       try {
-          const polishedText = await aiService.polishDraft(draftContent, brief, configToUse, dispatch);
+          const polishedText = await aiService.polishDraft(contentForPolish, briefForPolish as ContentBrief, configToUse, dispatch, handleProgress);
+          if (activityTimeoutId) clearTimeout(activityTimeoutId);
+
+          // Note: We don't restore base64 images - they remain as placeholder URLs
+          // User can re-insert images at the placeholder positions if needed
           setDraftContent(polishedText);
           setHasUnsavedChanges(true);
           setActiveTab('preview'); // Switch to preview to show the formatted result
           dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! Introduction rewritten and formatting improved.' });
       } catch (e) {
+          if (activityTimeoutId) clearTimeout(activityTimeoutId);
+          console.error('[DraftingModal] Polish error:', e);
           dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : "Failed to polish draft." });
       } finally {
+          if (activityTimeoutId) clearTimeout(activityTimeoutId);
           setIsPolishing(false);
       }
   };
@@ -1214,10 +1319,10 @@ Image ${i + 1}: ${img.type}
       .replace(/^---$/gm, '<hr />')
       // Blockquotes
       .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-      // Unordered lists
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      // Ordered lists
-      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+      // Unordered lists - use temporary marker to distinguish from ordered
+      .replace(/^- (.+)$/gm, '<uli>$1</uli>')
+      // Ordered lists - use temporary marker to distinguish from unordered
+      .replace(/^\d+\. (.+)$/gm, '<oli>$1</oli>')
       // Paragraphs (lines with content that aren't already tags)
       .split('\n')
       .map(line => {
@@ -1228,8 +1333,16 @@ Image ${i + 1}: ${img.type}
       })
       .join('\n');
 
-    // Wrap consecutive <li> in <ul>
-    html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, '<ul>$&</ul>');
+    // Wrap consecutive unordered list items in <ul> (Rule: use <ul> for features, types, benefits)
+    html = html.replace(/(<uli>[\s\S]*?<\/uli>\n?)+/g, (match) => {
+      const items = match.replace(/<\/?uli>/g, (tag) => tag === '<uli>' ? '<li>' : '</li>');
+      return `<ul>\n${items}</ul>`;
+    });
+    // Wrap consecutive ordered list items in <ol> (Rule: use <ol> for sequential/instructional content)
+    html = html.replace(/(<oli>[\s\S]*?<\/oli>\n?)+/g, (match) => {
+      const items = match.replace(/<\/?oli>/g, (tag) => tag === '<oli>' ? '<li>' : '</li>');
+      return `<ol>\n${items}</ol>`;
+    });
     // Merge consecutive blockquotes
     html = html.replace(/(<blockquote>[^<]+<\/blockquote>\n?)+/g, (match) => {
       const content = match.replace(/<\/?blockquote>/g, '').trim().split('\n').join('<br/>');
@@ -1253,6 +1366,11 @@ Image ${i + 1}: ${img.type}
     const passingRules = frameworkRules.filter(r => r.isPassing).length;
     const auditScore = databaseJobInfo?.auditScore || (frameworkRules.length > 0 ? Math.round((passingRules / frameworkRules.length) * 100) : null);
     const publishDate = new Date().toISOString();
+
+    // Build canonical URL from slug (Rule: Canonical tag prevents ranking signal dilution)
+    const canonicalUrl = businessInfo.domain
+      ? `https://${businessInfo.domain.replace(/^https?:\/\//, '').replace(/\/$/, '')}/${slug}/`
+      : '';
 
     // Get schema data from database job info
     const schemaData = databaseJobInfo?.schemaData;
@@ -1373,9 +1491,10 @@ Image ${i + 1}: ${img.type}
     // LCP Preload hint for hero image (Rule: preload LCP element, do NOT lazy load)
     const lcpPreload = ogImage ? `<link rel="preload" as="image" href="${ogImage}">` : '';
 
-    // Build Open Graph meta tags
+    // Build Open Graph meta tags (Rule: OG URL must match canonical)
     const ogTags = `<!-- Open Graph / Facebook -->
   <meta property="og:type" content="article">
+  ${canonicalUrl ? `<meta property="og:url" content="${canonicalUrl}">` : ''}
   <meta property="og:title" content="${brief.title.replace(/"/g, '&quot;')}">
   <meta property="og:description" content="${(brief.metaDescription || '').replace(/"/g, '&quot;')}">
   ${ogImage ? `<meta property="og:image" content="${ogImage}">` : ''}
@@ -1406,12 +1525,76 @@ Image ${i + 1}: ${img.type}
       let html = '';
       let inSection = false;
       let currentSectionLevel = 0;
+      let inTable = false;
+      let tableHeaders: string[] = [];
+      let tableBody: string[][] = [];
+      // List state tracking: 'none' | 'ul' | 'ol'
+      let currentListType: 'none' | 'ul' | 'ol' = 'none';
+
+      // Helper to close current list if open
+      const closeList = () => {
+        if (currentListType !== 'none') {
+          html += currentListType === 'ol' ? '</ol>\n' : '</ul>\n';
+          currentListType = 'none';
+        }
+      };
+
+      // Helper to flush table HTML (semantic structure per framework rules)
+      const flushTable = () => {
+        if (tableHeaders.length > 0 || tableBody.length > 0) {
+          html += '<table>\n';
+          if (tableHeaders.length > 0) {
+            // Use scope="col" for machine readability (Rule D: Machine Readability)
+            html += '<thead><tr>' + tableHeaders.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>\n';
+          }
+          if (tableBody.length > 0) {
+            html += '<tbody>' + tableBody.map(row => '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>').join('\n') + '</tbody>\n';
+          }
+          html += '</table>\n';
+        }
+        tableHeaders = [];
+        tableBody = [];
+        inTable = false;
+      };
+
+      // Helper to parse a markdown table row
+      const parseTableRow = (line: string): string[] => {
+        // Remove leading/trailing pipes and split by |
+        return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
+      };
+
+      // Helper to check if line is a table separator (|---|---|)
+      const isTableSeparator = (line: string): boolean => {
+        return /^\|?[\s:-]+\|[\s|:-]+\|?$/.test(line.trim());
+      };
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const h2Match = line.match(/^## (.+)$/);
         const h3Match = line.match(/^### (.+)$/);
         const h4Match = line.match(/^#### (.+)$/);
+
+        // Check if this is a table line (starts with | or contains | separator pattern)
+        const isTableLine = line.trim().startsWith('|') && line.includes('|');
+
+        // Handle table parsing
+        if (isTableLine) {
+          if (!inTable) {
+            // Starting a new table - this is the header row
+            inTable = true;
+            tableHeaders = parseTableRow(line);
+          } else if (isTableSeparator(line)) {
+            // Skip separator row (|---|---|)
+            continue;
+          } else {
+            // Body row
+            tableBody.push(parseTableRow(line));
+          }
+          continue;
+        } else if (inTable) {
+          // We hit a non-table line, flush the table
+          flushTable();
+        }
 
         // Close previous section if starting new H2
         if (h2Match) {
@@ -1471,19 +1654,37 @@ Image ${i + 1}: ${img.type}
 
         // Blockquotes
         if (processedLine.startsWith('> ')) {
+          closeList(); // Close any open list before blockquote
           html += `<blockquote>${processedLine.substring(2)}</blockquote>\n`;
           continue;
         }
 
-        // Lists
-        if (processedLine.match(/^- (.+)$/)) {
-          html += processedLine.replace(/^- (.+)$/, '<li>$1</li>\n');
+        // Unordered Lists (- item) - Rule: use <ul> for features, types, benefits without sequence
+        const ulMatch = processedLine.match(/^- (.+)$/);
+        if (ulMatch) {
+          if (currentListType !== 'ul') {
+            closeList(); // Close previous list if different type
+            html += '<ul>\n';
+            currentListType = 'ul';
+          }
+          html += `<li>${ulMatch[1]}</li>\n`;
           continue;
         }
-        if (processedLine.match(/^\d+\. (.+)$/)) {
-          html += processedLine.replace(/^\d+\. (.+)$/, '<li>$1</li>\n');
+
+        // Ordered Lists (1. item) - Rule: use <ol> for sequential/instructional content, superlatives
+        const olMatch = processedLine.match(/^\d+\. (.+)$/);
+        if (olMatch) {
+          if (currentListType !== 'ol') {
+            closeList(); // Close previous list if different type
+            html += '<ol>\n';
+            currentListType = 'ol';
+          }
+          html += `<li>${olMatch[1]}</li>\n`;
           continue;
         }
+
+        // If we reach here and were in a list, close it (non-list content)
+        closeList();
 
         // Paragraphs
         const trimmed = processedLine.trim();
@@ -1494,13 +1695,18 @@ Image ${i + 1}: ${img.type}
         }
       }
 
+      // Flush any remaining table
+      if (inTable) {
+        flushTable();
+      }
+
+      // Close any remaining open list
+      closeList();
+
       // Close final section
       if (inSection) {
         html += '</section>\n';
       }
-
-      // Wrap consecutive <li> in <ul>
-      html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, '<ul>$&</ul>');
 
       return html;
     };
@@ -1517,6 +1723,7 @@ Image ${i + 1}: ${img.type}
 <meta name="robots" content="index, follow">
 ${businessInfo.authorName ? `<meta name="author" content="${businessInfo.authorName.replace(/"/g, '&quot;')}">` : ''}
 <title>${brief.title}</title>
+${canonicalUrl ? `<link rel="canonical" href="${canonicalUrl}">` : '<!-- Add canonical URL when publishing -->'}
 ${lcpPreload}
 ${ogTags}
 ${schemaScript}
@@ -1567,21 +1774,78 @@ ${convertToSemanticHtml(draftContent)}
       const lines = md.split('\n');
       let html = '';
       let inSection = false;
+      let inTable = false;
+      let tableHeaders: string[] = [];
+      let tableBody: string[][] = [];
+      // List state tracking: 'none' | 'ul' | 'ol'
+      let currentListType: 'none' | 'ul' | 'ol' = 'none';
+
+      // Helper to close current list if open
+      const closeList = () => {
+        if (currentListType !== 'none') {
+          html += currentListType === 'ol' ? '</ol>\n' : '</ul>\n';
+          currentListType = 'none';
+        }
+      };
+
+      // Helper to flush table HTML (semantic structure per framework rules)
+      const flushTable = () => {
+        if (tableHeaders.length > 0 || tableBody.length > 0) {
+          html += '<table>\n';
+          if (tableHeaders.length > 0) {
+            // Use scope="col" for machine readability (Rule D: Machine Readability)
+            html += '<thead><tr>' + tableHeaders.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>\n';
+          }
+          if (tableBody.length > 0) {
+            html += '<tbody>' + tableBody.map(row => '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>').join('\n') + '</tbody>\n';
+          }
+          html += '</table>\n';
+        }
+        tableHeaders = [];
+        tableBody = [];
+        inTable = false;
+      };
+
+      const parseTableRow = (line: string): string[] => {
+        return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
+      };
+
+      const isTableSeparator = (line: string): boolean => {
+        return /^\|?[\s:-]+\|[\s|:-]+\|?$/.test(line.trim());
+      };
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const h2Match = line.match(/^## (.+)$/);
         const h3Match = line.match(/^### (.+)$/);
         const h4Match = line.match(/^#### (.+)$/);
+        const isTableLine = line.trim().startsWith('|') && line.includes('|');
+
+        // Handle table parsing
+        if (isTableLine) {
+          closeList(); // Close any open list before table
+          if (!inTable) {
+            inTable = true;
+            tableHeaders = parseTableRow(line);
+          } else if (isTableSeparator(line)) {
+            continue;
+          } else {
+            tableBody.push(parseTableRow(line));
+          }
+          continue;
+        } else if (inTable) {
+          flushTable();
+        }
 
         if (h2Match) {
+          closeList(); // Close any open list before heading
           if (inSection) html += '</section>\n';
           html += `<section>\n<h2>${h2Match[1]}</h2>\n`;
           inSection = true;
           continue;
         }
-        if (h3Match) { html += `<h3>${h3Match[1]}</h3>\n`; continue; }
-        if (h4Match) { html += `<h4>${h4Match[1]}</h4>\n`; continue; }
+        if (h3Match) { closeList(); html += `<h3>${h3Match[1]}</h3>\n`; continue; }
+        if (h4Match) { closeList(); html += `<h4>${h4Match[1]}</h4>\n`; continue; }
 
         let processedLine = line
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -1600,10 +1864,35 @@ ${convertToSemanticHtml(draftContent)}
         // Links - pure HTML (Rule: use pure HTML over JS)
         processedLine = processedLine.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 
-        if (processedLine.trim() === '---') { html += '<hr>\n'; continue; }
-        if (processedLine.startsWith('> ')) { html += `<blockquote>${processedLine.substring(2)}</blockquote>\n`; continue; }
-        if (processedLine.match(/^- (.+)$/)) { html += processedLine.replace(/^- (.+)$/, '<li>$1</li>\n'); continue; }
-        if (processedLine.match(/^\d+\. (.+)$/)) { html += processedLine.replace(/^\d+\. (.+)$/, '<li>$1</li>\n'); continue; }
+        if (processedLine.trim() === '---') { closeList(); html += '<hr>\n'; continue; }
+        if (processedLine.startsWith('> ')) { closeList(); html += `<blockquote>${processedLine.substring(2)}</blockquote>\n`; continue; }
+
+        // Unordered Lists (- item) - Rule: use <ul> for features, types, benefits without sequence
+        const ulMatch = processedLine.match(/^- (.+)$/);
+        if (ulMatch) {
+          if (currentListType !== 'ul') {
+            closeList();
+            html += '<ul>\n';
+            currentListType = 'ul';
+          }
+          html += `<li>${ulMatch[1]}</li>\n`;
+          continue;
+        }
+
+        // Ordered Lists (1. item) - Rule: use <ol> for sequential/instructional content, superlatives
+        const olMatch = processedLine.match(/^\d+\. (.+)$/);
+        if (olMatch) {
+          if (currentListType !== 'ol') {
+            closeList();
+            html += '<ol>\n';
+            currentListType = 'ol';
+          }
+          html += `<li>${olMatch[1]}</li>\n`;
+          continue;
+        }
+
+        // If we reach here and were in a list, close it
+        closeList();
 
         const trimmed = processedLine.trim();
         if (trimmed && !trimmed.startsWith('<')) {
@@ -1613,8 +1902,9 @@ ${convertToSemanticHtml(draftContent)}
         }
       }
 
+      if (inTable) flushTable();
+      closeList(); // Close any remaining open list
       if (inSection) html += '</section>\n';
-      html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, '<ul>$&</ul>');
       return html;
     };
 
@@ -1701,15 +1991,39 @@ ${schemaScript}`;
     // Replace the placeholder in the draft with the generated image markdown
     if (imageUrl) {
       const imageMarkdown = `![${altText}](${imageUrl})`;
+
       // Find the placeholder pattern in the draft and replace it
+      const escapedDesc = selectedPlaceholder.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const placeholderPattern = new RegExp(
-        `\\[IMAGE:\\s*${selectedPlaceholder.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\]]*\\]`,
+        `\\[IMAGE:\\s*${escapedDesc}[^\\]]*\\]`,
         'i'
       );
-      const newDraft = draftContent.replace(placeholderPattern, imageMarkdown);
-      setDraftContent(newDraft);
-      setHasUnsavedChanges(true);
-      dispatch({ type: 'SET_NOTIFICATION', payload: `Image generated and inserted successfully!` });
+
+      let newDraft = draftContent.replace(placeholderPattern, imageMarkdown);
+
+      // If exact match didn't work, try a more flexible approach
+      if (newDraft === draftContent) {
+        // Try matching just the first few words of description
+        const descWords = selectedPlaceholder.description.split(/\s+/).slice(0, 3).join('\\s+');
+        const loosePattern = new RegExp(
+          `\\[IMAGE:\\s*${descWords}[^\\]]*\\]`,
+          'i'
+        );
+        newDraft = draftContent.replace(loosePattern, imageMarkdown);
+      }
+
+      if (newDraft !== draftContent) {
+        setDraftContent(newDraft);
+        setHasUnsavedChanges(true);
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Image generated and inserted successfully!` });
+        console.log('[DraftingModal] Image inserted, URL length:', imageUrl.length);
+      } else {
+        // Log for debugging
+        console.warn('[DraftingModal] Placeholder pattern did not match');
+        console.warn('[DraftingModal] Looking for:', selectedPlaceholder.description);
+        console.warn('[DraftingModal] Image URL length:', imageUrl.length);
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Image generated! Note: Could not auto-insert into draft. The placeholder may have been modified.` });
+      }
     }
   };
 
@@ -1897,6 +2211,20 @@ ${schemaScript}`;
                     )}
                  </button>
              </div>
+
+             {isPolishing && (
+                 <Button
+                    onClick={() => {
+                        console.log('[DraftingModal] User cancelled polish operation');
+                        setIsPolishing(false);
+                        dispatch({ type: 'SET_NOTIFICATION', payload: 'Polish cancelled. You can now save your draft.' });
+                    }}
+                    className="!py-1 !px-3 text-sm bg-amber-700 hover:bg-amber-600"
+                    variant="secondary"
+                 >
+                    Cancel Polish
+                 </Button>
+             )}
 
              {isTransient ? (
                  <Button
@@ -2208,9 +2536,31 @@ ${schemaScript}`;
                       placeholders={imagePlaceholders}
                       businessInfo={businessInfo}
                       draftContent={draftContent}
-                      onUpdateDraft={(newDraft) => {
+                      onUpdateDraft={(newDraft, shouldAutoSave) => {
                         setDraftContent(newDraft);
                         setHasUnsavedChanges(true);
+                        // Auto-save after image insertion to prevent data loss
+                        if (shouldAutoSave && brief?.id && !brief.id.startsWith('transient-')) {
+                          // Use a small delay to batch multiple quick updates
+                          setTimeout(async () => {
+                            try {
+                              const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+                              await supabase
+                                .from('content_briefs')
+                                .update({ article_draft: newDraft, updated_at: new Date().toISOString() })
+                                .eq('id', brief.id);
+                              setHasUnsavedChanges(false);
+                              console.log('[DraftingModal] Auto-saved draft after image insertion');
+                            } catch (err) {
+                              console.error('[DraftingModal] Auto-save failed:', err);
+                            }
+                          }, 500);
+                        }
+                      }}
+                      onOpenVisualEditor={(placeholder) => {
+                        setSelectedPlaceholder(placeholder);
+                        setOpenInVisualEditor(true);
+                        setShowImageModal(true);
                       }}
                     />
                 ) : null}
@@ -2350,11 +2700,13 @@ ${schemaScript}`;
           onClose={() => {
             setShowImageModal(false);
             setSelectedPlaceholder(null);
+            setOpenInVisualEditor(false);
           }}
           placeholder={selectedPlaceholder}
           brandKit={businessInfo.brandKit}
           businessInfo={businessInfo}
           onInsert={handleImageInsert}
+          openInVisualEditor={openInVisualEditor}
         />
       )}
 

@@ -38,53 +38,83 @@ const App: React.FC = () => {
         appStepRef.current = state.appStep;
     }, [state.appStep]);
 
-    // Session initialization with timeout protection
-    // This ensures the app doesn't hang if getSession() is stuck
+    // Session initialization - runs once on mount
+    // Uses a ref to prevent re-running on every render and conflicting with active logins
+    const hasInitializedAuth = useRef(false);
+
     useEffect(() => {
-        let timeoutId: NodeJS.Timeout;
-        let didTimeout = false;
+        // Only run session check once to avoid conflicts with login attempts
+        if (hasInitializedAuth.current) {
+            return;
+        }
+        hasInitializedAuth.current = true;
 
         const initializeAuth = async () => {
+            console.log('[App] Starting session check...');
+
+            // Check if we're recovering from a previous hang - if so, ensure storage is clear
+            const reloadKey = 'auth_recovery_reload';
+            const wasRecovering = localStorage.getItem(reloadKey);
+            if (wasRecovering) {
+                console.log('[App] Post-recovery session check - ensuring clean state');
+                clearSupabaseAuthStorage();
+                localStorage.removeItem(reloadKey);
+            }
+
             const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
 
-            // Set a timeout to clear storage if session check hangs
-            timeoutId = setTimeout(() => {
-                didTimeout = true;
-                console.warn('[App] Session check taking too long, clearing storage for fresh start');
-                clearSupabaseAuthStorage();
-            }, 3000);
+            // If session check hangs for more than 5s, the Supabase client is in a bad state
+            // Clear storage and reload the page to get a completely fresh state
+            // Use a flag to prevent infinite reload loops
+            let didComplete = false;
+            const lastReload = wasRecovering; // Reuse the value we already fetched
+            const now = Date.now();
+
+            const timeoutId = setTimeout(() => {
+                if (!didComplete) {
+                    // Only reload if we haven't reloaded in the last 10 seconds
+                    if (!lastReload || (now - parseInt(lastReload, 10)) > 10000) {
+                        console.warn('[App] Session check hanging - clearing storage and reloading');
+                        clearSupabaseAuthStorage();
+                        resetSupabaseClient(false);
+                        localStorage.setItem(reloadKey, now.toString());
+                        window.location.reload();
+                    } else {
+                        console.warn('[App] Session check hanging but skipping reload (recently reloaded)');
+                        clearSupabaseAuthStorage();
+                        resetSupabaseClient(false);
+                        localStorage.removeItem(reloadKey);
+                    }
+                }
+            }, 5000);
 
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
-
-                // Clear timeout if we got a response
+                didComplete = true;
                 clearTimeout(timeoutId);
-
-                if (didTimeout) {
-                    // Timeout already fired, don't process stale result
-                    return;
-                }
 
                 if (error) {
                     console.warn('[App] Session error, clearing stale data:', error.message);
                     clearSupabaseAuthStorage();
                 } else if (session?.user) {
                     console.log('[App] Valid session found for:', session.user.email);
+                    // Dispatch user and navigate to project selection immediately
+                    // This ensures the user sees the correct screen after page reload
+                    // without waiting for onAuthStateChange which may have race conditions
+                    dispatch({ type: 'SET_USER', payload: session.user });
+                    dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION });
                 } else {
                     console.log('[App] No existing session');
                 }
             } catch (e) {
+                didComplete = true;
                 clearTimeout(timeoutId);
-                if (!didTimeout) {
-                    console.warn('[App] Session check failed, clearing storage:', e);
-                    clearSupabaseAuthStorage();
-                }
+                console.warn('[App] Session check failed, clearing storage:', e);
+                clearSupabaseAuthStorage();
             }
         };
 
         initializeAuth();
-
-        return () => clearTimeout(timeoutId);
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
     useEffect(() => {

@@ -1,5 +1,5 @@
 // components/imageGeneration/ImageGenerationModal.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ImagePlaceholder, BrandKit, BusinessInfo, ImageGenerationProgress, HeroImageMetadata } from '../../types';
 import { DEFAULT_HERO_TEMPLATES, DEFAULT_MARKUPGO_TEMPLATE_ID } from '../../config/imageTemplates';
 import { generateImage, ImageGenerationOptions } from '../../services/ai/imageGeneration/orchestrator';
@@ -21,6 +21,8 @@ interface ImageGenerationModalProps {
   brandKit?: BrandKit;
   businessInfo: BusinessInfo;
   onInsert: (generatedPlaceholder: ImagePlaceholder) => void;
+  /** When true, opens directly in Visual Editor mode (for HERO images) */
+  openInVisualEditor?: boolean;
 }
 
 export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
@@ -30,6 +32,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
   brandKit,
   businessInfo,
   onInsert,
+  openInVisualEditor = false,
 }) => {
   // Form state
   const [textOverlay, setTextOverlay] = useState(placeholder.specs.textOverlay?.text || '');
@@ -44,8 +47,15 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
   const [progress, setProgress] = useState<ImageGenerationProgress | null>(null);
   const [generatedPlaceholder, setGeneratedPlaceholder] = useState<ImagePlaceholder | null>(null);
 
-  // Visual editor state
-  const [showVisualEditor, setShowVisualEditor] = useState(false);
+  // Visual editor state - start in visual editor if requested and it's a HERO image
+  const [showVisualEditor, setShowVisualEditor] = useState(openInVisualEditor && placeholder.type === 'HERO');
+
+  // Sync visual editor state with prop changes (in case modal doesn't remount)
+  useEffect(() => {
+    if (openInVisualEditor && placeholder.type === 'HERO') {
+      setShowVisualEditor(true);
+    }
+  }, [openInVisualEditor, placeholder.type]);
 
   const templates = brandKit?.heroTemplates || DEFAULT_HERO_TEMPLATES;
 
@@ -148,12 +158,12 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
         }
       };
 
-      setGeneratedPlaceholder(newPlaceholder);
-      setShowVisualEditor(false);
-      setProgress({ phase: 'complete', progress: 100, message: 'Image created with Visual Editor' });
+      // Auto-insert into draft and close the modal
+      onInsert(newPlaceholder);
+      onClose();
     };
     reader.readAsDataURL(blob);
-  }, [placeholder, altText]);
+  }, [placeholder, altText, onInsert, onClose]);
 
   // Warn user if they try to close with an un-inserted generated image
   const handleClose = useCallback(() => {
@@ -448,8 +458,12 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
           businessInfo={businessInfo}
           h1Text={textOverlay || placeholder.specs.textOverlay?.text || 'Your Title Here'}
           entityName={placeholder.description.split(' ')[0] || 'Entity'}
+          initialBackgroundImage={generatedPlaceholder?.generatedUrl || generatedPlaceholder?.userUploadUrl || placeholder.generatedUrl || placeholder.userUploadUrl}
+          initialAltText={altText}
           onExport={handleVisualEditorExport}
           onClose={() => setShowVisualEditor(false)}
+          onGenerateBackground={handleGenerate}
+          isGeneratingBackground={isGenerating}
         />
       )}
     </div>

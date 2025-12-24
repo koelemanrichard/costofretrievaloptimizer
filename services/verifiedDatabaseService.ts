@@ -264,13 +264,31 @@ export async function verifiedUpsert<T extends Record<string, unknown>>(
       updated_at: record.updated_at || new Date().toISOString()
     };
 
-    // Step 1: Perform the upsert
+    // Step 1: Perform the upsert with timeout protection
+    console.log(`[VerifiedDB] Starting UPSERT for ${opDesc}...`, {
+      table,
+      conflictColumns,
+      recordId: (recordWithTimestamp as any).id,
+      hasTopicId: 'topic_id' in recordWithTimestamp
+    });
     const upsertOptions = conflictColumns ? { onConflict: conflictColumns.join(',') } : undefined;
-    const { data: upsertedData, error: upsertError } = await supabase
+
+    // Add timeout to prevent infinite hangs
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Database operation timed out after 30s')), 30000)
+    );
+
+    const upsertPromise = supabase
       .from(table)
       .upsert(recordWithTimestamp, upsertOptions)
       .select(selectColumns)
       .single();
+
+    const { data: upsertedData, error: upsertError } = await Promise.race([
+      upsertPromise,
+      timeoutPromise
+    ]) as Awaited<typeof upsertPromise>;
+    console.log(`[VerifiedDB] UPSERT call completed for ${opDesc}`, { hasData: !!upsertedData, hasError: !!upsertError });
 
     if (upsertError) {
       console.error(`[VerifiedDB] UPSERT failed for ${opDesc}:`, upsertError);

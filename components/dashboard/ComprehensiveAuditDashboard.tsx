@@ -22,7 +22,10 @@ import {
   StoredEnhancedMetricsSnapshot,
 } from '../../services/auditPersistenceService';
 import { getSupabaseClient } from '../../services/supabaseClient';
-import type { SemanticTriple, UnifiedAuditIssue } from '../../types';
+import type { SemanticTriple, UnifiedAuditIssue, CompetitorEAV, ContentGap } from '../../types';
+import { CompetitorGapGraph } from '../visualization/CompetitorGapGraph';
+import { SemanticDistanceMatrix, MatrixItem, MatrixCell } from '../visualization/SemanticDistanceMatrix';
+import { useCompetitorGapNetwork, CompetitorGapNetworkInput } from '../../hooks/useCompetitorGapNetwork';
 
 interface ComprehensiveAuditDashboardProps {
   eavs: SemanticTriple[];
@@ -37,7 +40,7 @@ interface ComprehensiveAuditDashboardProps {
   onOpenCorpusAudit?: () => void;
 }
 
-type TabId = 'overview' | 'your-map' | 'competitor-research' | 'eat-authority' | 'corpus' | 'history';
+type TabId = 'overview' | 'your-map' | 'competitor-research' | 'gap-analysis' | 'semantic-map' | 'eat-authority' | 'corpus' | 'history';
 
 export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardProps> = ({
   eavs,
@@ -119,6 +122,59 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
   const latestQueryNetwork = queryNetworkHistory[0];
   const latestEatScanner = eatScannerHistory[0];
   const latestCorpus = corpusHistory[0];
+
+  // Get active map pillars for central entity
+  const activeMap = state.topicalMaps.find(m => m.id === effectiveMapId);
+  const centralEntity = activeMap?.pillars?.centralEntity || '';
+
+  // Prepare gap network input from latest query network audit
+  const gapNetworkInput = useMemo<CompetitorGapNetworkInput | null>(() => {
+    if (!latestQueryNetwork) return null;
+
+    const competitorEAVs = latestQueryNetwork.competitor_eavs as CompetitorEAV[] | undefined;
+    const contentGaps = latestQueryNetwork.content_gaps as ContentGap[] | undefined;
+
+    if (!competitorEAVs || !contentGaps || competitorEAVs.length === 0) return null;
+
+    return {
+      ownEAVs: eavs,
+      competitorEAVs,
+      contentGaps,
+      centralEntity: centralEntity || latestQueryNetwork.seed_keyword || 'Unknown',
+    };
+  }, [latestQueryNetwork, eavs, centralEntity]);
+
+  // Use gap network hook
+  const { network: gapNetwork } = useCompetitorGapNetwork(gapNetworkInput);
+
+  // Selected gap node for details panel
+  const [selectedGapNode, setSelectedGapNode] = useState<string | null>(null);
+
+  // Selected matrix cell for semantic map
+  const [selectedMatrixCell, setSelectedMatrixCell] = useState<{
+    cell: MatrixCell;
+    rowItem: MatrixItem;
+    colItem: MatrixItem;
+  } | null>(null);
+
+  // Prepare matrix items from topics/EAVs
+  const matrixItems = useMemo<MatrixItem[]>(() => {
+    // Use EAV subjects as matrix items
+    const uniqueSubjects = new Map<string, MatrixItem>();
+
+    for (const eav of eavs) {
+      const id = eav.subject.id || eav.subject.label;
+      if (!uniqueSubjects.has(id)) {
+        uniqueSubjects.set(id, {
+          id,
+          label: eav.subject.label,
+          type: 'eav',
+        });
+      }
+    }
+
+    return Array.from(uniqueSubjects.values()).slice(0, 25); // Limit to 25 for performance
+  }, [eavs]);
 
   // Score color helper
   const getScoreColor = (score: number) => {
@@ -623,6 +679,332 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
     );
   };
 
+  // Render Gap Analysis Tab
+  const renderGapAnalysis = () => {
+    if (!gapNetworkInput || gapNetwork.nodes.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">No Gap Analysis Available</h3>
+          <p className="text-gray-400 mb-6">Run Competitor Research first to identify content gaps in your coverage.</p>
+          {onOpenQueryNetworkAudit && (
+            <Button onClick={onOpenQueryNetworkAudit}>Run Competitor Research</Button>
+          )}
+        </div>
+      );
+    }
+
+    const selectedNode = selectedGapNode
+      ? gapNetwork.nodes.find(n => n.id === selectedGapNode)
+      : null;
+
+    return (
+      <div className="space-y-6">
+        {/* Gap Network Summary */}
+        <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 border border-red-700/50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-white">Content Gap Network</h3>
+              <p className="text-sm text-gray-400">
+                Visual representation of content gaps vs your coverage
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div>
+                <span className="text-gray-400">Your Coverage:</span>{' '}
+                <span className="text-green-400 font-medium">{gapNetwork.metrics.yourCoverage}%</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Total Gaps:</span>{' '}
+                <span className="text-red-400 font-medium">{gapNetwork.metrics.totalGaps}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">High Priority:</span>{' '}
+                <span className="text-orange-400 font-medium">{gapNetwork.metrics.highPriorityGaps}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Gap Network Graph */}
+          <div className="lg:col-span-2">
+            <Card className="p-0 overflow-hidden h-[500px]">
+              <CompetitorGapGraph
+                network={gapNetwork}
+                onNodeClick={(node) => setSelectedGapNode(node.id)}
+                selectedNodeId={selectedGapNode}
+              />
+            </Card>
+          </div>
+
+          {/* Details Panel */}
+          <div className="space-y-4">
+            {/* Selected Node Details */}
+            {selectedNode ? (
+              <Card className="p-4">
+                <h4 className="font-semibold text-white mb-3">
+                  {selectedNode.type === 'gap' ? 'Content Gap' : 'Your Coverage'}
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-400">Label:</span>{' '}
+                    <span className="text-white">{selectedNode.label}</span>
+                  </div>
+                  {selectedNode.entity && (
+                    <div>
+                      <span className="text-gray-400">Entity:</span>{' '}
+                      <span className="text-white">{selectedNode.entity}</span>
+                    </div>
+                  )}
+                  {selectedNode.attribute && (
+                    <div>
+                      <span className="text-gray-400">Attribute:</span>{' '}
+                      <span className="text-white">{selectedNode.attribute}</span>
+                    </div>
+                  )}
+                  {selectedNode.type === 'gap' && (
+                    <>
+                      <div>
+                        <span className="text-gray-400">Priority:</span>{' '}
+                        <span className={`font-medium ${
+                          selectedNode.priority === 'high' ? 'text-red-400' :
+                          selectedNode.priority === 'medium' ? 'text-orange-400' : 'text-yellow-400'
+                        }`}>
+                          {selectedNode.priority.toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Competitors:</span>{' '}
+                        <span className="text-purple-400">{selectedNode.competitorCount}</span>
+                      </div>
+                      {selectedNode.suggestedContent && (
+                        <div className="mt-2">
+                          <span className="text-gray-400 block mb-1">Suggested Content:</span>
+                          <p className="text-gray-300 text-xs bg-gray-800 p-2 rounded">
+                            {selectedNode.suggestedContent}
+                          </p>
+                        </div>
+                      )}
+                      {selectedNode.competitorUrls.length > 0 && (
+                        <div className="mt-2">
+                          <span className="text-gray-400 block mb-1">Found In:</span>
+                          <div className="text-xs space-y-1 max-h-24 overflow-y-auto">
+                            {selectedNode.competitorUrls.slice(0, 5).map((url, i) => (
+                              <div key={i} className="text-blue-400 truncate">{url}</div>
+                            ))}
+                            {selectedNode.competitorUrls.length > 5 && (
+                              <div className="text-gray-500">+{selectedNode.competitorUrls.length - 5} more</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-4 text-center text-gray-400">
+                <p>Click a node to see details</p>
+              </Card>
+            )}
+
+            {/* High Priority Gaps List */}
+            <Card className="p-4">
+              <h4 className="font-semibold text-white mb-3">High Priority Gaps</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {gapNetwork.nodes
+                  .filter(n => n.type === 'gap' && n.priority === 'high')
+                  .slice(0, 10)
+                  .map(gap => (
+                    <button
+                      key={gap.id}
+                      onClick={() => setSelectedGapNode(gap.id)}
+                      className={`w-full text-left p-2 rounded text-sm transition-colors ${
+                        selectedGapNode === gap.id
+                          ? 'bg-red-900/50 border border-red-700'
+                          : 'bg-gray-800 hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="text-white truncate">{gap.label}</div>
+                      <div className="text-xs text-gray-400">
+                        {gap.competitorCount} competitor{gap.competitorCount !== 1 ? 's' : ''}
+                      </div>
+                    </button>
+                  ))}
+                {gapNetwork.nodes.filter(n => n.type === 'gap' && n.priority === 'high').length === 0 && (
+                  <p className="text-gray-400 text-sm">No high priority gaps found</p>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Semantic Map Tab
+  const renderSemanticMap = () => {
+    if (matrixItems.length < 2) {
+      return (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Not Enough Data</h3>
+          <p className="text-gray-400 mb-6">Add more EAVs to your topical map to see semantic distance analysis.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Semantic Map Summary */}
+        <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-700/50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-white">Semantic Distance Matrix</h3>
+              <p className="text-sm text-gray-400">
+                Validate content architecture - see which topics are too similar or too different
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div>
+                <span className="text-gray-400">Entities:</span>{' '}
+                <span className="text-purple-400 font-medium">{matrixItems.length}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Comparisons:</span>{' '}
+                <span className="text-indigo-400 font-medium">
+                  {(matrixItems.length * (matrixItems.length - 1)) / 2}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Matrix */}
+          <div className="lg:col-span-2">
+            <Card className="p-4">
+              <SemanticDistanceMatrix
+                items={matrixItems}
+                onCellClick={(cell, rowItem, colItem) => {
+                  setSelectedMatrixCell({ cell, rowItem, colItem });
+                }}
+                title="Entity Semantic Relationships"
+                maxItems={25}
+                cellSize={36}
+              />
+            </Card>
+          </div>
+
+          {/* Details Panel */}
+          <div className="space-y-4">
+            {/* Selected Cell Details */}
+            {selectedMatrixCell ? (
+              <Card className="p-4">
+                <h4 className="font-semibold text-white mb-3">Relationship Details</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="bg-gray-800 rounded p-2">
+                    <div className="text-gray-400 text-xs">Entity A</div>
+                    <div className="text-white font-medium">{selectedMatrixCell.rowItem.label}</div>
+                  </div>
+                  <div className="text-center text-gray-500">
+                    <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </div>
+                  <div className="bg-gray-800 rounded p-2">
+                    <div className="text-gray-400 text-xs">Entity B</div>
+                    <div className="text-white font-medium">{selectedMatrixCell.colItem.label}</div>
+                  </div>
+
+                  <div className="border-t border-gray-700 pt-3 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Distance:</span>
+                      <span className={`font-medium ${
+                        selectedMatrixCell.cell.distance < 0.3 ? 'text-green-400' :
+                        selectedMatrixCell.cell.distance < 0.7 ? 'text-blue-400' : 'text-red-400'
+                      }`}>
+                        {selectedMatrixCell.cell.distance.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Should Link:</span>
+                      <span className={selectedMatrixCell.cell.shouldLink ? 'text-green-400' : 'text-gray-500'}>
+                        {selectedMatrixCell.cell.shouldLink ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-800/50 rounded p-2 mt-2">
+                    <div className="text-gray-400 text-xs mb-1">Recommendation</div>
+                    <div className="text-gray-300 text-xs">
+                      {selectedMatrixCell.cell.recommendation}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-4 text-center text-gray-400">
+                <p>Click a cell to see relationship details</p>
+              </Card>
+            )}
+
+            {/* Interpretation Guide */}
+            <Card className="p-4">
+              <h4 className="font-semibold text-white mb-3">Interpretation Guide</h4>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded bg-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-white font-medium">0.0 - 0.2 (Green)</span>
+                    <p className="text-gray-400">Cannibalization risk - topics too similar, consider merging</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded bg-blue-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-white font-medium">0.3 - 0.5 (Blue)</span>
+                    <p className="text-gray-400">Ideal for contextual linking - strongly related</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded bg-yellow-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-white font-medium">0.5 - 0.7 (Yellow)</span>
+                    <p className="text-gray-400">Good for supporting links - moderately related</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded bg-orange-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-white font-medium">0.7 - 0.85 (Orange)</span>
+                    <p className="text-gray-400">Link sparingly - loosely related</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded bg-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-white font-medium">0.85 - 1.0 (Red)</span>
+                    <p className="text-gray-400">Avoid linking - topics too different</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render E-A-T Tab
   const renderEATAuthority = () => {
     if (!latestEatScanner) {
@@ -799,6 +1181,8 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
     { id: 'overview', label: 'Overview' },
     { id: 'your-map', label: 'Your Map', badge: eavs.length },
     { id: 'competitor-research', label: 'Competitors', badge: latestQueryNetwork?.total_competitor_eavs },
+    { id: 'gap-analysis', label: 'Gap Analysis', badge: gapNetwork.metrics.highPriorityGaps || undefined },
+    { id: 'semantic-map', label: 'Semantic Map', badge: matrixItems.length > 1 ? matrixItems.length : undefined },
     { id: 'eat-authority', label: 'E-A-T' },
     { id: 'history', label: 'History' },
   ];
@@ -851,6 +1235,8 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
       {activeTab === 'overview' && renderOverview()}
       {activeTab === 'your-map' && renderYourMap()}
       {activeTab === 'competitor-research' && renderCompetitorResearch()}
+      {activeTab === 'gap-analysis' && renderGapAnalysis()}
+      {activeTab === 'semantic-map' && renderSemanticMap()}
       {activeTab === 'eat-authority' && renderEATAuthority()}
       {activeTab === 'history' && renderHistory()}
     </div>

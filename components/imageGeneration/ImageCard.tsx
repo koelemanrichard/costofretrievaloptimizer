@@ -18,6 +18,7 @@ interface ImageCardProps {
   onRegenerate: () => void;
   onInsert: () => void;
   onDownload?: () => void;
+  onOpenVisualEditor?: () => void; // For HERO images with Visual Editor
 }
 
 const typeColors: Record<string, { border: string; bg: string; badge: string }> = {
@@ -53,6 +54,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
   onRegenerate,
   onInsert,
   onDownload,
+  onOpenVisualEditor,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const colors = typeColors[placeholder.type] || { border: 'border-gray-500', bg: 'bg-gray-900/20', badge: 'bg-gray-600 text-gray-200' };
@@ -143,9 +145,26 @@ export const ImageCard: React.FC<ImageCardProps> = ({
         <div className="flex flex-wrap gap-1.5">
           {isPending && (
             <>
-              <Button size="sm" onClick={onGenerate} className="text-xs px-2 py-1">
-                Generate
-              </Button>
+              {/* For HERO images, Visual Editor is the primary action */}
+              {placeholder.type === 'HERO' && onOpenVisualEditor ? (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={onOpenVisualEditor}
+                    className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    title="Create semantically optimized hero image with layers, text, logo, and IPTC/EXIF metadata"
+                  >
+                    Visual Editor
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={onGenerate} className="text-xs px-2 py-1">
+                    Quick Generate
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" onClick={onGenerate} className="text-xs px-2 py-1">
+                  Generate
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="secondary"
@@ -170,6 +189,17 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                   ⬇ Download
                 </Button>
               )}
+              {placeholder.type === 'HERO' && onOpenVisualEditor && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={onOpenVisualEditor}
+                  className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  title="Open Visual Editor for advanced hero image editing"
+                >
+                  Visual Editor
+                </Button>
+              )}
               <Button size="sm" variant="secondary" onClick={onRegenerate} className="text-xs px-2 py-1">
                 Regenerate
               </Button>
@@ -186,6 +216,17 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                   ⬇ Download
                 </Button>
               )}
+              {placeholder.type === 'HERO' && onOpenVisualEditor && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={onOpenVisualEditor}
+                  className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  title="Open Visual Editor to edit hero image"
+                >
+                  Edit
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={onRegenerate} className="text-xs px-2 py-1 text-gray-400">
                 Replace
               </Button>
@@ -197,6 +238,17 @@ export const ImageCard: React.FC<ImageCardProps> = ({
               <Button size="sm" onClick={onGenerate} className="text-xs px-2 py-1">
                 Retry
               </Button>
+              {placeholder.type === 'HERO' && onOpenVisualEditor && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={onOpenVisualEditor}
+                  className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  title="Try Visual Editor instead"
+                >
+                  Visual Editor
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={onSkip} className="text-xs px-2 py-1">
                 Skip
               </Button>

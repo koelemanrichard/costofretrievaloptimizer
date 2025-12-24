@@ -27,7 +27,25 @@ const BriefReviewModal: React.FC<BriefReviewModalProps> = ({ isOpen }) => {
     };
 
     const handleSave = async () => {
-        if (!brief || !activeMapId) return;
+        console.log('[BriefReviewModal] handleSave called', { hasBrief: !!brief, activeMapId, userId: state.user?.id });
+
+        if (!brief) {
+            console.error('[BriefReviewModal] Cannot save: brief is null');
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot save brief: no brief data available' });
+            return;
+        }
+
+        if (!activeMapId) {
+            console.error('[BriefReviewModal] Cannot save: no active map selected');
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot save brief: no topical map selected. Please select a map first.' });
+            return;
+        }
+
+        if (!state.user?.id) {
+            console.error('[BriefReviewModal] Cannot save: user not logged in');
+            dispatch({ type: 'SET_ERROR', payload: 'Cannot save brief: you must be logged in.' });
+            return;
+        }
 
         setIsSaving(true);
         try {
@@ -38,37 +56,77 @@ const BriefReviewModal: React.FC<BriefReviewModalProps> = ({ isOpen }) => {
                 ? brief.keyTakeaways.map(k => typeof k === 'string' ? k : JSON.stringify(k))
                 : [];
 
-            // Upsert the brief to the database with verification
-            const result = await verifiedUpsert(
-                supabase,
-                { table: 'content_briefs', operationDescription: `save brief for "${brief.title}"`, conflictColumns: ['topic_id'] },
-                {
-                    id: brief.id,
-                    topic_id: brief.topic_id,
-                    user_id: state.user?.id,
-                    title: brief.title,
-                    meta_description: brief.metaDescription,
-                    key_takeaways: sanitizedTakeaways as any,
-                    outline: brief.outline,
-                    serp_analysis: brief.serpAnalysis as any,
-                    visuals: brief.visuals as any,
-                    contextual_vectors: brief.contextualVectors as any,
-                    contextual_bridge: brief.contextualBridge as any,
-                    // Holistic SEO Fields
-                    perspectives: brief.perspectives as any,
-                    methodology_note: brief.methodology_note,
-                    structured_outline: brief.structured_outline as any,
-                    structural_template_hash: brief.structural_template_hash,
-                    predicted_user_journey: brief.predicted_user_journey,
-                    // New Fields
-                    query_type_format: brief.query_type_format,
-                    featured_snippet_target: brief.featured_snippet_target as any,
-                    visual_semantics: brief.visual_semantics as any,
-                    discourse_anchors: brief.discourse_anchors as any,
-                    created_at: new Date().toISOString()
-                },
-                'id, title'
-            );
+            // Log what we're about to save
+            console.log('[BriefReviewModal] Saving brief:', {
+                briefId: brief.id,
+                topicId: brief.topic_id,
+                title: brief.title,
+                hasStructuredOutline: !!brief.structured_outline?.length
+            });
+
+            console.log('[BriefReviewModal] Starting save operation...');
+
+            // Build the record to save
+            const briefRecord = {
+                id: brief.id,
+                topic_id: brief.topic_id,
+                user_id: state.user!.id,
+                title: brief.title,
+                meta_description: brief.metaDescription,
+                key_takeaways: sanitizedTakeaways as any,
+                outline: brief.outline,
+                serp_analysis: brief.serpAnalysis as any,
+                visuals: brief.visuals as any,
+                contextual_vectors: brief.contextualVectors as any,
+                contextual_bridge: brief.contextualBridge as any,
+                perspectives: brief.perspectives as any,
+                methodology_note: brief.methodology_note,
+                structured_outline: brief.structured_outline as any,
+                structural_template_hash: brief.structural_template_hash,
+                predicted_user_journey: brief.predicted_user_journey,
+                query_type_format: brief.query_type_format,
+                featured_snippet_target: brief.featured_snippet_target as any,
+                visual_semantics: brief.visual_semantics as any,
+                discourse_anchors: brief.discourse_anchors as any,
+                updated_at: new Date().toISOString()
+            };
+
+            // Check if brief already exists for this topic
+            console.log('[BriefReviewModal] Checking if brief exists for topic:', brief.topic_id);
+            const { data: existingBrief, error: checkError } = await supabase
+                .from('content_briefs')
+                .select('id')
+                .eq('topic_id', brief.topic_id)
+                .maybeSingle();
+
+            console.log('[BriefReviewModal] Existing brief check result:', { exists: !!existingBrief, error: checkError?.message });
+
+            let result: { success: boolean; data: any; error: string | null };
+
+            if (existingBrief) {
+                // UPDATE existing brief
+                console.log('[BriefReviewModal] Updating existing brief:', existingBrief.id);
+                const { data, error } = await supabase
+                    .from('content_briefs')
+                    .update(briefRecord)
+                    .eq('id', existingBrief.id)
+                    .select('id, title')
+                    .single();
+
+                result = { success: !error, data, error: error?.message || null };
+            } else {
+                // INSERT new brief
+                console.log('[BriefReviewModal] Inserting new brief');
+                const { data, error } = await supabase
+                    .from('content_briefs')
+                    .insert({ ...briefRecord, created_at: new Date().toISOString() })
+                    .select('id, title')
+                    .single();
+
+                result = { success: !error, data, error: error?.message || null };
+            }
+
+            console.log('[BriefReviewModal] Save result:', { success: result.success, error: result.error, dataId: result.data?.id });
 
             if (!result.success) {
                 throw new Error(result.error || 'Brief save verification failed');
@@ -89,8 +147,9 @@ const BriefReviewModal: React.FC<BriefReviewModalProps> = ({ isOpen }) => {
             dispatch({ type: 'SET_BRIEF_GENERATION_RESULT', payload: null });
 
         } catch (error) {
-            console.error("Failed to save brief:", error);
-            dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : "Failed to save brief to database." });
+            console.error("[BriefReviewModal] Failed to save brief:", error);
+            const errorMessage = error instanceof Error ? error.message : "Failed to save brief to database.";
+            dispatch({ type: 'SET_ERROR', payload: `Brief save failed: ${errorMessage}` });
         } finally {
             setIsSaving(false);
         }

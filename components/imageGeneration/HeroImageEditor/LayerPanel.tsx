@@ -80,10 +80,10 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   }, [layers.length, onReorderLayers]);
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${className}`}>
+    <div className={`bg-gray-800 border border-gray-700 rounded-lg overflow-hidden ${className}`}>
       {/* Header */}
-      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900">Layers</h3>
+      <div className="px-3 py-2 bg-gray-900 border-b border-gray-700 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-white">Layers</h3>
         <div className="flex items-center gap-1">
           <AddLayerDropdown onAddLayer={onAddLayer} />
         </div>
@@ -92,11 +92,11 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
       {/* Layer List */}
       <div className="max-h-64 overflow-y-auto">
         {sortedLayers.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">
+          <div className="p-4 text-center text-gray-400 text-sm">
             No layers yet. Add a layer to get started.
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-gray-700">
             {sortedLayers.map((layer, index) => (
               <LayerItem
                 key={layer.id}
@@ -162,12 +162,12 @@ const LayerItem: React.FC<LayerItemProps> = ({
       onClick={onSelect}
       className={`
         px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors
-        ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}
+        ${isSelected ? 'bg-blue-900/50' : 'hover:bg-gray-700'}
         ${!layer.visible ? 'opacity-50' : ''}
       `}
     >
       {/* Drag Handle */}
-      <div className="text-gray-400 cursor-grab active:cursor-grabbing">
+      <div className="text-gray-500 cursor-grab active:cursor-grabbing">
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
           <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
         </svg>
@@ -191,10 +191,10 @@ const LayerItem: React.FC<LayerItemProps> = ({
 
       {/* Layer Name */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
+        <p className="text-sm font-medium text-white truncate">
           {layer.name || config.label}
         </p>
-        <p className="text-xs text-gray-500 truncate">
+        <p className="text-xs text-gray-400 truncate">
           {config.label}
         </p>
       </div>
@@ -204,7 +204,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
         {/* Visibility Toggle */}
         <button
           onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
-          className="p-1 text-gray-400 hover:text-gray-600 rounded"
+          className="p-1 text-gray-400 hover:text-white rounded"
           title={layer.visible ? 'Hide layer' : 'Show layer'}
         >
           {layer.visible ? (
@@ -222,7 +222,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
         {/* Lock Toggle */}
         <button
           onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
-          className="p-1 text-gray-400 hover:text-gray-600 rounded"
+          className="p-1 text-gray-400 hover:text-white rounded"
           title={layer.locked ? 'Unlock layer' : 'Lock layer'}
         >
           {layer.locked ? (
@@ -240,22 +240,22 @@ const LayerItem: React.FC<LayerItemProps> = ({
         <div className="relative group">
           <button
             onClick={(e) => e.stopPropagation()}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+            className="p-1 text-gray-400 hover:text-white rounded"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
             </svg>
           </button>
-          <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+          <div className="absolute right-0 mt-1 w-32 bg-gray-800 border border-gray-600 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
             <button
               onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
-              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+              className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700"
             >
               Duplicate
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+              className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-900/30"
             >
               Delete
             </button>
@@ -281,7 +281,7 @@ const AddLayerDropdown: React.FC<AddLayerDropdownProps> = ({ onAddLayer }) => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded"
+        className="p-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded"
         title="Add layer"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,13 +295,13 @@ const AddLayerDropdown: React.FC<AddLayerDropdownProps> = ({ onAddLayer }) => {
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+          <div className="absolute right-0 mt-1 w-44 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-20">
             <div className="py-1">
               {(Object.entries(layerTypeConfig) as [HeroLayerType, typeof layerTypeConfig[HeroLayerType]][]).map(([type, config]) => (
                 <button
                   key={type}
                   onClick={() => { onAddLayer(type); setIsOpen(false); }}
-                  className="w-full px-3 py-2 flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="w-full px-3 py-2 flex items-center gap-2 text-sm text-gray-200 hover:bg-gray-700"
                 >
                   <div
                     className="w-5 h-5 rounded flex items-center justify-center"

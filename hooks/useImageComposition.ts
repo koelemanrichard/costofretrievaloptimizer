@@ -286,8 +286,10 @@ export function useImageComposition(
     }
 
     // Setup text style
-    const fontSize = layer.fontSize || 48;
-    const scaledFontSize = (fontSize / 100) * canvasWidth; // Scale font relative to canvas
+    // fontSize is the actual pixel size at 1200px canvas width, scaled proportionally
+    const baseFontSize = layer.fontSize || 48;
+    const referenceWidth = 1200; // Base canvas width for font scaling
+    const scaledFontSize = baseFontSize * (canvasWidth / referenceWidth);
     ctx.font = `${layer.fontWeight || 700} ${scaledFontSize}px ${layer.fontFamily || 'sans-serif'}`;
     ctx.fillStyle = layer.textColor || '#ffffff';
     ctx.textBaseline = 'middle';

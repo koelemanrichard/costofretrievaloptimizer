@@ -1,5 +1,5 @@
 
-import { BusinessInfo, ResponseCode, ContentBrief, EnrichedTopic, SEOPillars, KnowledgeGraph, ContentIntegrityResult, SchemaGenerationResult, AuditRuleResult, BriefVisualSemantics } from '../../types';
+import { BusinessInfo, ResponseCode, ContentBrief, EnrichedTopic, SEOPillars, KnowledgeGraph, ContentIntegrityResult, SchemaGenerationResult, AuditRuleResult, BriefVisualSemantics, StreamingProgressCallback } from '../../types';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
@@ -338,12 +338,16 @@ export const generateArticleDraft = (
 };
 
 export const polishDraft = async (
-    draft: string, brief: ContentBrief, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
+    draft: string,
+    brief: ContentBrief,
+    businessInfo: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    onProgress?: StreamingProgressCallback
 ): Promise<string> => {
     return dispatchToProvider(businessInfo, {
         gemini: () => geminiService.polishDraft(draft, brief, businessInfo, dispatch),
         openai: () => openAiService.polishDraft(draft, brief, businessInfo, dispatch),
-        anthropic: () => anthropicService.polishDraft(draft, brief, businessInfo, dispatch),
+        anthropic: () => anthropicService.polishDraft(draft, brief, businessInfo, dispatch, onProgress),
         perplexity: () => perplexityService.polishDraft(draft, brief, businessInfo, dispatch),
         openrouter: () => openRouterService.polishDraft(draft, brief, businessInfo, dispatch),
     });
@@ -353,13 +357,17 @@ export const polishDraft = async (
 export const finalizeDraft = polishDraft;
 
 export const auditContentIntegrity = async (
-    brief: ContentBrief, draft: string, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>
+    brief: ContentBrief,
+    draft: string,
+    businessInfo: BusinessInfo,
+    dispatch: React.Dispatch<any>,
+    onProgress?: StreamingProgressCallback
 ): Promise<ContentIntegrityResult> => {
     // 1. Run AI Audit (Semantic & Contextual Checks)
     const aiResult = await dispatchToProvider(businessInfo, {
         gemini: () => geminiService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
         openai: () => openAiService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
-        anthropic: () => anthropicService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
+        anthropic: () => anthropicService.auditContentIntegrity(brief, draft, businessInfo, dispatch, onProgress),
         perplexity: () => perplexityService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
         openrouter: () => openRouterService.auditContentIntegrity(brief, draft, businessInfo, dispatch),
     });

@@ -9,7 +9,11 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   HeroImageComposition,
   HeroLayerConfig,
-  LayerPosition
+  LayerPosition,
+  BackgroundLayerConfig,
+  CentralObjectLayerConfig,
+  TextOverlayLayerConfig,
+  LogoLayerConfig
 } from '../../../types';
 
 // ============================================
@@ -226,6 +230,79 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
     ctx.setLineDash([]);
   };
 
+  // Cache for loaded images
+  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  // Helper to load and draw an image with caching
+  const drawImageLayer = (
+    ctx: CanvasRenderingContext2D,
+    imageUrl: string,
+    x: number, y: number, w: number, h: number,
+    placeholderText: string,
+    placeholderColor: string,
+    preserveAspect: boolean = true
+  ) => {
+    const cachedImage = imageCache.current.get(imageUrl);
+
+    if (cachedImage && cachedImage.complete && cachedImage.naturalWidth > 0) {
+      if (preserveAspect) {
+        // Calculate aspect-preserved dimensions
+        const imgAspect = cachedImage.naturalWidth / cachedImage.naturalHeight;
+        const boxAspect = w / h;
+        let drawW = w, drawH = h, drawX = x, drawY = y;
+
+        if (imgAspect > boxAspect) {
+          drawW = w;
+          drawH = w / imgAspect;
+          drawY = y + (h - drawH) / 2;
+        } else {
+          drawH = h;
+          drawW = h * imgAspect;
+          drawX = x + (w - drawW) / 2;
+        }
+        ctx.drawImage(cachedImage, drawX, drawY, drawW, drawH);
+      } else {
+        ctx.drawImage(cachedImage, x, y, w, h);
+      }
+    } else if (!cachedImage) {
+      // Load the image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        if (img.naturalWidth > 0) {
+          imageCache.current.set(imageUrl, img);
+          // Force re-render
+          setCanvasSize(prev => ({ ...prev }));
+        }
+      };
+      img.onerror = () => {
+        console.warn('[EditorCanvas] Failed to load:', imageUrl?.substring(0, 50));
+      };
+      img.src = imageUrl;
+      imageCache.current.set(imageUrl, img);
+      // Draw placeholder
+      ctx.fillStyle = placeholderColor + '40';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = placeholderColor;
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Loading...', x + w/2, y + h/2);
+    } else {
+      // Image loading or failed
+      ctx.fillStyle = placeholderColor + '40';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = placeholderColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = placeholderColor;
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(placeholderText, x + w/2, y + h/2);
+    }
+  };
+
   const drawLayerPreview = (
     ctx: CanvasRenderingContext2D,
     layer: HeroLayerConfig,
@@ -240,51 +317,163 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
     ctx.globalAlpha = layer.opacity / 100;
 
     switch (layer.type) {
-      case 'background':
-        ctx.fillStyle = '#e5e7eb';
-        ctx.fillRect(x, y, w, h);
-        break;
+      case 'background': {
+        const bgLayer = layer as BackgroundLayerConfig;
 
-      case 'centralObject':
-        ctx.fillStyle = 'rgba(99, 102, 241, 0.3)';
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = '#6366f1';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, w, h);
-        // Draw center indicator
-        ctx.beginPath();
-        ctx.arc(x + w/2, y + h/2, 10, 0, Math.PI * 2);
-        ctx.fillStyle = '#6366f1';
-        ctx.fill();
+        if (bgLayer.source === 'color' || (!bgLayer.imageUrl && bgLayer.source !== 'ai-generated')) {
+          // Solid color background
+          ctx.fillStyle = bgLayer.backgroundColor || '#374151';
+          ctx.fillRect(x, y, w, h);
+        } else if (bgLayer.imageUrl) {
+          // Image background (user-upload or ai-generated with URL)
+          drawImageLayer(ctx, bgLayer.imageUrl, x, y, w, h, 'Background', '#6b7280', false);
+        } else {
+          // No image yet - show placeholder
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(x, y, w, h);
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('No background set', x + w/2, y + h/2);
+        }
         break;
+      }
 
-      case 'textOverlay':
-        ctx.fillStyle = 'rgba(236, 72, 153, 0.3)';
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = '#ec4899';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, w, h);
-        // Draw text placeholder
-        ctx.fillStyle = '#ec4899';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Text', x + w/2, y + h/2);
-        break;
+      case 'centralObject': {
+        const objLayer = layer as CentralObjectLayerConfig;
 
-      case 'logo':
-        ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = '#22c55e';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, w, h);
-        // Draw logo placeholder
-        ctx.fillStyle = '#22c55e';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Logo', x + w/2, y + h/2);
+        if (objLayer.imageUrl) {
+          // Draw the actual central object image
+          drawImageLayer(ctx, objLayer.imageUrl, x, y, w, h, objLayer.entityName || 'Central Object', '#6366f1', true);
+        } else {
+          // No image - show placeholder with entity name
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.3)';
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = '#6366f1';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.strokeRect(x, y, w, h);
+          ctx.setLineDash([]);
+          // Center indicator
+          ctx.beginPath();
+          ctx.arc(x + w/2, y + h/2, 8, 0, Math.PI * 2);
+          ctx.fillStyle = '#6366f1';
+          ctx.fill();
+          // Entity name
+          ctx.fillStyle = '#a5b4fc';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(objLayer.entityName || 'Central Object', x + w/2, y + h/2 + 25);
+        }
         break;
+      }
+
+      case 'textOverlay': {
+        const textLayer = layer as TextOverlayLayerConfig;
+
+        // Draw background if set
+        if (textLayer.backgroundColor && textLayer.backgroundColor !== 'transparent') {
+          ctx.fillStyle = textLayer.backgroundColor;
+          ctx.fillRect(x, y, w, h);
+        }
+
+        // Draw the actual text
+        if (textLayer.text) {
+          // Scale font size relative to canvas
+          const baseFontSize = textLayer.fontSize || 48;
+          const referenceWidth = 1200;
+          const scaledFontSize = baseFontSize * (width / referenceWidth);
+
+          ctx.font = `${textLayer.fontWeight || 700} ${scaledFontSize}px ${textLayer.fontFamily || 'sans-serif'}`;
+          ctx.fillStyle = textLayer.textColor || '#ffffff';
+          ctx.textBaseline = 'middle';
+
+          // Text alignment
+          let textX: number;
+          switch (textLayer.textAlign || 'center') {
+            case 'left':
+              ctx.textAlign = 'left';
+              textX = x + 16;
+              break;
+            case 'right':
+              ctx.textAlign = 'right';
+              textX = x + w - 16;
+              break;
+            default:
+              ctx.textAlign = 'center';
+              textX = x + w / 2;
+          }
+
+          // Word wrap
+          const maxWidth = w - 32;
+          const lineHeight = scaledFontSize * 1.2;
+          const words = textLayer.text.split(' ');
+          const lines: string[] = [];
+          let currentLine = '';
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) lines.push(currentLine);
+
+          // Draw lines centered vertically
+          const totalHeight = lines.length * lineHeight;
+          let currentY = y + h/2 - totalHeight/2 + lineHeight/2;
+
+          for (const line of lines) {
+            ctx.fillText(line, textX, currentY);
+            currentY += lineHeight;
+          }
+        } else {
+          // No text - show placeholder
+          ctx.fillStyle = 'rgba(236, 72, 153, 0.3)';
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = '#ec4899';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.strokeRect(x, y, w, h);
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#ec4899';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('Add text content', x + w/2, y + h/2);
+        }
+        break;
+      }
+
+      case 'logo': {
+        const logoLayer = layer as LogoLayerConfig;
+
+        if (logoLayer.imageUrl) {
+          // Draw the actual logo
+          drawImageLayer(ctx, logoLayer.imageUrl, x, y, w, h, 'Logo', '#22c55e', true);
+        } else {
+          // No logo - show placeholder
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.strokeRect(x, y, w, h);
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#22c55e';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('Logo', x + w/2, y + h/2);
+        }
+        break;
+      }
     }
 
     ctx.globalAlpha = 1;
@@ -429,7 +618,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-center justify-center bg-gray-100 overflow-hidden ${className}`}
+      className={`relative flex items-center justify-center bg-gray-900 overflow-hidden ${className}`}
       style={{ minHeight: '400px' }}
     >
       {/* Main Canvas */}

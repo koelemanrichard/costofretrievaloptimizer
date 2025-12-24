@@ -1,6 +1,7 @@
 
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 
 interface SimpleMarkdownProps {
@@ -97,29 +98,14 @@ export const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ content }) => {
       );
     },
     ul: ({ children }) => (
-      <ul className="ml-2 mb-4 space-y-1">{children}</ul>
+      <ul className="ml-6 mb-4 space-y-1 list-disc">{children}</ul>
     ),
     ol: ({ children }) => (
-      <ol className="ml-2 mb-4 space-y-1">{children}</ol>
+      <ol className="ml-6 mb-4 space-y-1 list-decimal">{children}</ol>
     ),
-    li: ({ children, ordered, index }) => {
-      if (ordered) {
-        return (
-          <li className="flex items-start gap-2">
-            <span className="text-gray-500 font-mono text-xs mt-1">
-              {(index ?? 0) + 1}.
-            </span>
-            <span className="text-gray-300">{children}</span>
-          </li>
-        );
-      }
-      return (
-        <li className="flex items-start gap-2">
-          <span className="text-blue-500 mt-1.5">•</span>
-          <span className="text-gray-300">{children}</span>
-        </li>
-      );
-    },
+    li: ({ children }) => (
+      <li className="text-gray-300">{children}</li>
+    ),
     table: ({ children }) => (
       <div className="overflow-x-auto my-6 border border-gray-700 rounded-lg shadow-sm">
         <table className="min-w-full text-left text-sm">{children}</table>
@@ -165,7 +151,7 @@ export const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ content }) => {
 
   return (
     <div className="simple-markdown-container">
-      <ReactMarkdown components={components}>
+      <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
         {processedContent}
       </ReactMarkdown>
     </div>

@@ -18,7 +18,8 @@ interface ImageManagementPanelProps {
   placeholders: ImagePlaceholder[];
   businessInfo: BusinessInfo;
   draftContent: string;
-  onUpdateDraft: (newDraft: string) => void;
+  onUpdateDraft: (newDraft: string, shouldAutoSave?: boolean) => void;
+  onOpenVisualEditor?: (placeholder: ImagePlaceholder) => void;
 }
 
 /**
@@ -45,6 +46,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
   businessInfo,
   draftContent,
   onUpdateDraft,
+  onOpenVisualEditor,
 }) => {
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -189,7 +191,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
         newDraft = removePlaceholder(newDraft, p);
       }
     }
-    onUpdateDraft(newDraft);
+    onUpdateDraft(newDraft, true); // Auto-save after skip
     setSelectedIds(new Set());
   }, [selectedIds, placeholders, onUpdateDraft]);
 
@@ -236,7 +238,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
 
   const handleSkipSingle = useCallback((placeholder: ImagePlaceholder) => {
     const newDraft = removePlaceholder(draftRef.current, placeholder);
-    onUpdateDraft(newDraft);
+    onUpdateDraft(newDraft, true); // Auto-save after skip
   }, [onUpdateDraft]);
 
   const handleRegenerateSingle = useCallback((id: string) => {
@@ -266,7 +268,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
 
     if (imageUrl) {
       const newDraft = replacePlaceholder(draftRef.current, placeholder, imageUrl, altText);
-      onUpdateDraft(newDraft);
+      onUpdateDraft(newDraft, true); // Auto-save after insert to persist
       // Mark as inserted (keep in generatedImages for display)
       setInsertedIds(prev => new Set(prev).add(placeholder.id));
     }
@@ -350,7 +352,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
       }
     }
 
-    onUpdateDraft(newDraft);
+    onUpdateDraft(newDraft, true); // Auto-save after bulk insert
     setInsertedIds(newInsertedIds);
   }, [placeholders, generatedImages, onUpdateDraft, insertedIds]);
 
@@ -554,6 +556,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
                 onRegenerate={() => handleRegenerateSingle(placeholder.id)}
                 onInsert={() => handleInsertSingle(placeholder)}
                 onDownload={() => handleDownloadSingle(placeholder)}
+                onOpenVisualEditor={onOpenVisualEditor ? () => onOpenVisualEditor(placeholder) : undefined}
               />
             ))}
           </div>

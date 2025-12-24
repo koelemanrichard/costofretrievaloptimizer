@@ -2,7 +2,7 @@
 // components/ProjectDashboardContainer.tsx
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { useAppState } from '../state/appState';
-import { AppStep, SEOPillars, EnrichedTopic, ContentBrief, BusinessInfo, TopicalMap, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, FreshnessProfile, MapImprovementSuggestion, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure, EnhancedSchemaResult } from '../types';
+import { AppStep, SEOPillars, EnrichedTopic, ContentBrief, BusinessInfo, TopicalMap, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, FreshnessProfile, MapImprovementSuggestion, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure, EnhancedSchemaResult, StreamingProgress } from '../types';
 import { ContentGenerationOrchestrator } from '../services/ai/contentGeneration/orchestrator';
 import { executePass9 } from '../services/ai/contentGeneration/passes/pass9SchemaGeneration';
 import * as aiService from '../services/aiService';
@@ -1641,8 +1641,72 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     const onAuditDraft = useCallback(async (brief: ContentBrief, draft: string) => {
         if (!activeMapId) return;
         dispatch({ type: 'SET_LOADING', payload: { key: 'audit', value: true } });
+
+        // Strip base64 images to reduce token count - they can exceed context limits
+        const draftForAudit = draft
+            .replace(/!\[([^\]]*)\]\(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+\)/g, '![image](base64-image-removed)')
+            .replace(/<img[^>]*src="data:image\/[^;]+;base64,[A-Za-z0-9+/=]+"[^>]*>/g, '<img src="base64-image-removed" />');
+
+        if (draftForAudit.length !== draft.length) {
+            console.log(`[onAuditDraft] Stripped base64 images from draft. Content reduced from ${draft.length} to ${draftForAudit.length} chars`);
+        }
+
+        // Create a slimmed-down brief for the audit to stay within token limits
+        // The audit prompt includes JSON.stringify(brief) which can be massive
+        // Remove large fields that aren't needed for the audit
+        const briefForAudit: Partial<ContentBrief> = {
+            id: brief.id,
+            topic_id: brief.topic_id,
+            title: brief.title,
+            slug: brief.slug,
+            metaDescription: brief.metaDescription,
+            keyTakeaways: brief.keyTakeaways?.slice(0, 5), // Limit to 5 takeaways
+            targetKeyword: brief.targetKeyword,
+            searchIntent: brief.searchIntent,
+            // Slim down serpAnalysis - just PAA and basic info
+            serpAnalysis: {
+                peopleAlsoAsk: brief.serpAnalysis?.peopleAlsoAsk?.slice(0, 5) || [],
+                competitorHeadings: [], // Exclude - can be huge
+                avgWordCount: brief.serpAnalysis?.avgWordCount,
+                query_type: brief.serpAnalysis?.query_type
+            },
+            // Only include essential vectors (max 20)
+            contextualVectors: brief.contextualVectors?.slice(0, 20),
+            // Exclude large fields:
+            // - articleDraft (we're passing it separately, already stripped)
+            // - structured_outline (can be huge)
+            // - visual_semantics / enhanced_visual_semantics (image data)
+            // - contextualBridge (can be large)
+            cta: brief.cta,
+            query_type_format: brief.query_type_format,
+            featured_snippet_target: brief.featured_snippet_target
+        };
+
+        const briefJson = JSON.stringify(briefForAudit);
+        console.log(`[onAuditDraft] Slimmed brief for audit: ${briefJson.length} chars (original would be ~${JSON.stringify(brief).length} chars)`)
+
+        // Activity-based timeout: resets on each streaming progress event
+        const INACTIVITY_TIMEOUT_MS = 90000; // 90 seconds of no activity = timeout
+        let activityTimeoutId: ReturnType<typeof setTimeout> | null = null;
+        let lastActivityTime = Date.now();
+
+        const resetActivityTimeout = () => {
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
+            lastActivityTime = Date.now();
+            activityTimeoutId = setTimeout(() => {
+                const inactivityDuration = Date.now() - lastActivityTime;
+                console.warn(`[onAuditDraft] Audit operation inactive for ${inactivityDuration}ms - timing out`);
+                dispatch({ type: 'SET_LOADING', payload: { key: 'audit', value: false } });
+                dispatch({ type: 'SET_ERROR', payload: `Audit operation timed out after ${Math.round(inactivityDuration/1000)}s of inactivity.` });
+            }, INACTIVITY_TIMEOUT_MS);
+        };
+
+        resetActivityTimeout();
+        const handleProgress = (_progress: StreamingProgress) => resetActivityTimeout();
+
         try {
-            const result = await aiService.auditContentIntegrity(brief, draft, effectiveBusinessInfo, dispatch);
+            const result = await aiService.auditContentIntegrity(briefForAudit as ContentBrief, draftForAudit, effectiveBusinessInfo, dispatch, handleProgress);
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
             dispatch({ type: 'SET_CONTENT_INTEGRITY_RESULT', payload: result });
 
             // Persist the audit result to the database with verification
@@ -1666,8 +1730,10 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'integrity', visible: true } });
         } catch (e) {
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Audit failed.' });
         } finally {
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
             dispatch({ type: 'SET_LOADING', payload: { key: 'audit', value: false } });
         }
     }, [activeMapId, businessInfo, effectiveBusinessInfo, dispatch]);
@@ -2113,14 +2179,52 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
              return;
         }
         dispatch({ type: 'SET_LOADING', payload: { key: 'flowAudit', value: true } });
+
+        // Strip base64 images to reduce token count - they can exceed context limits
+        const draftForFlow = draft
+            .replace(/!\[([^\]]*)\]\(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+\)/g, '![image](base64-image-removed)')
+            .replace(/<img[^>]*src="data:image\/[^;]+;base64,[A-Za-z0-9+/=]+"[^>]*>/g, '<img src="base64-image-removed" />');
+
+        if (draftForFlow.length !== draft.length) {
+            console.log(`[handleAnalyzeFlow] Stripped base64 images. Content reduced from ${draft.length} to ${draftForFlow.length} chars`);
+        }
+
+        // Activity-based timeout: resets on each streaming progress event
+        const INACTIVITY_TIMEOUT_MS = 90000; // 90 seconds of no activity = timeout
+        let activityTimeoutId: ReturnType<typeof setTimeout> | null = null;
+        let lastActivityTime = Date.now();
+
+        const resetActivityTimeout = () => {
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
+            lastActivityTime = Date.now();
+            activityTimeoutId = setTimeout(() => {
+                const inactivityDuration = Date.now() - lastActivityTime;
+                console.warn(`[handleAnalyzeFlow] Flow analysis inactive for ${inactivityDuration}ms - timing out`);
+                dispatch({ type: 'SET_LOADING', payload: { key: 'flowAudit', value: false } });
+                dispatch({ type: 'SET_ERROR', payload: `Flow analysis timed out after ${Math.round(inactivityDuration/1000)}s of inactivity.` });
+            }, INACTIVITY_TIMEOUT_MS);
+        };
+
+        resetActivityTimeout();
+        const handleProgress = (_progress: StreamingProgress) => resetActivityTimeout();
+
         try {
-            const result = await aiService.analyzeContextualFlow(draft, activeMap.pillars.centralEntity, effectiveBusinessInfo, dispatch);
+            const result = await aiService.analyzeContextualFlow(
+                draftForFlow,
+                activeMap.pillars.centralEntity,
+                effectiveBusinessInfo,
+                dispatch,
+                handleProgress
+            );
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
             dispatch({ type: 'SET_FLOW_AUDIT_RESULT', payload: result });
             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'flowAudit', visible: true } });
         } catch(e) {
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Flow audit failed.' });
         } finally {
-             dispatch({ type: 'SET_LOADING', payload: { key: 'flowAudit', value: false } });
+            if (activityTimeoutId) clearTimeout(activityTimeoutId);
+            dispatch({ type: 'SET_LOADING', payload: { key: 'flowAudit', value: false } });
         }
     }, [activeMap, effectiveBusinessInfo, dispatch]);
 

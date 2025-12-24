@@ -71,7 +71,8 @@ export function determineImageType(description: string, position: number, isFirs
 export function createImagePlaceholder(
   parsed: ParsedPlaceholder,
   index: number,
-  totalCount: number
+  totalCount: number,
+  options?: { heroTitle?: string }
 ): ImagePlaceholder {
   const isFirst = index === 0;
   const type = determineImageType(parsed.description, parsed.position, isFirst);
@@ -91,7 +92,7 @@ export function createImagePlaceholder(
     specs: {
       ...specs,
       textOverlay: type === 'HERO' ? {
-        text: '',  // Will be filled from H1
+        text: options?.heroTitle || '',  // Pre-filled from brief title if available
         position: 'center',
         style: 'bold-center',
       } : undefined,
@@ -99,7 +100,16 @@ export function createImagePlaceholder(
   };
 }
 
-export function extractPlaceholdersFromDraft(draft: string): ImagePlaceholder[] {
+/**
+ * Extract image placeholders from draft content
+ * @param draft - The draft content containing image placeholders
+ * @param options - Optional settings
+ * @param options.heroTitle - Title to use for HERO image text overlay (from content brief)
+ */
+export function extractPlaceholdersFromDraft(
+  draft: string,
+  options?: { heroTitle?: string }
+): ImagePlaceholder[] {
   const parsed = parsePlaceholders(draft);
-  return parsed.map((p, i) => createImagePlaceholder(p, i, parsed.length));
+  return parsed.map((p, i) => createImagePlaceholder(p, i, parsed.length, options));
 }

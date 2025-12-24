@@ -3271,6 +3271,27 @@ export type SectionProgressCallback = (
 ) => void;
 
 /**
+ * Progress information from streaming AI operations.
+ * Used for activity-based timeout handling in long-running operations.
+ */
+export interface StreamingProgress {
+  /** Number of characters received so far */
+  charsReceived: number;
+  /** Number of streaming events processed */
+  eventsProcessed: number;
+  /** Elapsed time in milliseconds since operation started */
+  elapsedMs: number;
+  /** Timestamp of last activity (for inactivity detection) */
+  lastActivity: number;
+}
+
+/**
+ * Callback for streaming progress reporting.
+ * Used to reset inactivity timeouts during long AI operations.
+ */
+export type StreamingProgressCallback = (progress: StreamingProgress) => void;
+
+/**
  * Section type classification for content format budgeting.
  * Based on the "Baker Principle" from research - different section types
  * have different optimal prose/structured content ratios.
@@ -3515,6 +3536,101 @@ export interface ContentGap {
   frequency: number; // How many competitors cover this
   priority: 'high' | 'medium' | 'low';
   suggestedContent?: string;
+}
+
+// ============================================
+// Gap Network Visualization Types
+// ============================================
+
+/**
+ * Node types for competitor gap network visualization
+ */
+export type GapNodeType = 'your_eav' | 'gap' | 'competitor_eav';
+
+/**
+ * Node in the competitor gap network graph
+ * Represents either your EAVs (coverage) or gaps (missing content)
+ */
+export interface GapNode {
+  id: string;
+  type: GapNodeType;
+
+  // For your_eav and competitor_eav
+  entity?: string;
+  attribute?: string;
+  value?: string;
+
+  // For gap nodes
+  missingAttribute?: string;
+  suggestedContent?: string;
+
+  // Competitor coverage info
+  competitorCount: number;        // How many competitors cover this
+  competitorUrls: string[];       // Which competitor URLs have this
+
+  // Visual properties
+  label: string;                  // Display label
+  priority: 'high' | 'medium' | 'low';
+
+  // Physics simulation (populated during render)
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+
+  // Metrics
+  semanticDistance?: number;      // Distance from central entity (0-1)
+  relatedTopicIds?: string[];     // Topics that could address this gap
+}
+
+/**
+ * Edge types for competitor gap network visualization
+ */
+export type GapEdgeType = 'semantic' | 'hierarchical' | 'suggested_bridge';
+
+/**
+ * Edge connecting nodes in the competitor gap network
+ */
+export interface GapEdge {
+  id: string;
+  source: string;                 // Source node ID
+  target: string;                 // Target node ID
+  type: GapEdgeType;
+
+  // Semantic relationship strength (0-1, lower = more related)
+  semanticDistance: number;
+
+  // For suggested_bridge edges
+  bridgeReason?: string;          // Why this connection is suggested
+
+  // Visual weight for rendering
+  weight: number;                 // 1-10, affects line thickness
+}
+
+/**
+ * Complete competitor gap network data for visualization
+ */
+export interface CompetitorGapNetwork {
+  nodes: GapNode[];
+  edges: GapEdge[];
+
+  // Aggregated metrics
+  metrics: {
+    totalGaps: number;
+    highPriorityGaps: number;
+    yourCoverage: number;         // Percentage of topics you cover (0-100)
+    avgCompetitorCoverage: number; // Average competitor coverage count
+    centralEntity: string;        // The focus entity
+    competitors: string[];        // List of competitor domains analyzed
+  };
+
+  // Cluster information
+  clusters?: {
+    id: string;
+    label: string;
+    nodeIds: string[];
+    centroidNodeId?: string;      // Most central node in cluster
+  }[];
 }
 
 /**
