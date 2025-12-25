@@ -800,6 +800,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                                 isRepairingBrief={repairingTopicId === topic.id}
                                                 isDetailPanelOpen={openDetailPanelTopicId === topic.id}
                                                 onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                businessInfo={businessInfo}
                                             />
                                         </div>
                                     </div>
@@ -897,6 +898,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                                 isRepairingBrief={repairingTopicId === topic.id}
                                                 isDetailPanelOpen={openDetailPanelTopicId === topic.id}
                                                 onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                businessInfo={businessInfo}
                                             />
                                         ))}
                                     </div>
@@ -967,6 +969,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                         isRepairingBrief={repairingTopicId === core.id}
                                         isDetailPanelOpen={openDetailPanelTopicId === core.id}
                                         onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                        businessInfo={businessInfo}
                                     />
                                 </div>
                             </div>
@@ -1002,6 +1005,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                                 isRepairingBrief={repairingTopicId === outer.id}
                                                 isDetailPanelOpen={openDetailPanelTopicId === outer.id}
                                                 onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                businessInfo={businessInfo}
                                             />
                                             {/* Level 3: Child topics under outer topics */}
                                             {hasChildren && (
@@ -1033,6 +1037,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                                             isRepairingBrief={repairingTopicId === child.id}
                                                             isDetailPanelOpen={openDetailPanelTopicId === child.id}
                                                             onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                            businessInfo={businessInfo}
                                                         />
                                                     ))}
                                                 </div>
@@ -1087,6 +1092,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                             isRepairingBrief={repairingTopicId === outer.id}
                                             isDetailPanelOpen={openDetailPanelTopicId === outer.id}
                                             onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                            businessInfo={businessInfo}
                                         />
                                         {/* Show child topics under this orphaned outer topic */}
                                         {children.length > 0 && (
@@ -1118,6 +1124,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                                         isRepairingBrief={repairingTopicId === child.id}
                                                         isDetailPanelOpen={openDetailPanelTopicId === child.id}
                                                         onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                                        businessInfo={businessInfo}
                                                     />
                                                 ))}
                                             </div>
@@ -1167,6 +1174,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                     isRepairingBrief={repairingTopicId === child.id}
                                     isDetailPanelOpen={openDetailPanelTopicId === child.id}
                                     onOpenDetailPanel={setOpenDetailPanelTopicId}
+                                    businessInfo={businessInfo}
                                 />
                             ))}
                         </div>
@@ -1213,6 +1221,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 onReparent={handleReparent}
                 canExpandTopics={canExpandTopics}
                 onUpdateTopic={onUpdateTopic}
+                businessInfo={businessInfo}
             />
         )}
       <MergeConfirmationModal

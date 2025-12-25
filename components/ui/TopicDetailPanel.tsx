@@ -1,14 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
 // FIX: Changed import to be a relative path.
-import { EnrichedTopic, ExpansionMode } from '../../types';
+import { EnrichedTopic, ExpansionMode, BusinessInfo } from '../../types';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Loader } from './Loader';
 import { Select } from './Select';
 import { Label } from './Label';
 import { safeString } from '../../utils/parsers';
+import CompetitiveIntelligenceWrapper from '../analysis/CompetitiveIntelligenceWrapper';
 
 interface TopicDetailPanelProps {
   topic: EnrichedTopic;
@@ -24,6 +25,8 @@ interface TopicDetailPanelProps {
   onReparent: (topicId: string, newParentId: string) => void;
   canExpand: boolean;
   onUpdateTopic?: (topicId: string, updates: Partial<EnrichedTopic>) => void;
+  /** Business info for competitive intelligence analysis */
+  businessInfo?: BusinessInfo;
 }
 
 const TopicDetailPanel: React.FC<TopicDetailPanelProps> = ({
@@ -39,8 +42,12 @@ const TopicDetailPanel: React.FC<TopicDetailPanelProps> = ({
   onDelete,
   onReparent,
   canExpand,
-  onUpdateTopic
+  onUpdateTopic,
+  businessInfo
 }) => {
+  // State for competitive intelligence panel
+  const [showCompetitiveAnalysis, setShowCompetitiveAnalysis] = useState(false);
+
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete the topic "${topic.title}"?`)) {
       onDelete(topic.id);
@@ -278,6 +285,18 @@ const TopicDetailPanel: React.FC<TopicDetailPanelProps> = ({
              {hasBrief ? 'View Content Brief' : 'Generate Content Brief'}
            </Button>
 
+           {/* Competitive Intelligence Button */}
+           {businessInfo && (
+             <Button
+               onClick={() => setShowCompetitiveAnalysis(true)}
+               variant="secondary"
+               className="w-full !py-2 text-sm bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/60 border border-indigo-800/50"
+             >
+               <span className="mr-2">🔍</span>
+               Analyze Competitors
+             </Button>
+           )}
+
            {/* CORE TOPICS: Full expansion options (creates Outer topics) */}
            {topic.type === 'core' && (
              <div className="space-y-2">
@@ -386,6 +405,31 @@ const TopicDetailPanel: React.FC<TopicDetailPanelProps> = ({
         }
         .animate-fade-in-right { animation: fade-in-right 0.3s ease-out forwards; }
       `}</style>
+
+      {/* Competitive Intelligence Panel */}
+      {showCompetitiveAnalysis && businessInfo && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-lg shadow-2xl border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h2 className="text-lg font-bold text-white">
+                Competitive Analysis: {safeString(topic.title)}
+              </h2>
+              <button
+                onClick={() => setShowCompetitiveAnalysis(false)}
+                className="text-gray-400 hover:text-white text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(90vh-60px)] p-4">
+              <CompetitiveIntelligenceWrapper
+                topic={topic}
+                businessInfo={businessInfo}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

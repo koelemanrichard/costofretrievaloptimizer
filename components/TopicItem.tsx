@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { EnrichedTopic, ExpansionMode, ContentBrief } from '../types';
+import { EnrichedTopic, ExpansionMode, ContentBrief, BusinessInfo } from '../types';
 import { Loader } from './ui/Loader';
 import { slugify } from '../utils/helpers';
 import { Input } from './ui/Input';
@@ -37,6 +37,8 @@ interface TopicItemProps {
   // Controlled detail panel props - when provided, parent manages panel state
   isDetailPanelOpen?: boolean;
   onOpenDetailPanel?: (topicId: string | null) => void;
+  /** Business info for competitive intelligence analysis */
+  businessInfo?: BusinessInfo;
 }
 
 const ActionButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode }> = ({ icon, ...props }) => (
@@ -80,6 +82,7 @@ const TopicItem: React.FC<TopicItemProps> = ({
     isRepairingBrief = false,
     isDetailPanelOpen: controlledIsOpen,
     onOpenDetailPanel,
+    businessInfo,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
 
@@ -319,6 +322,7 @@ const TopicItem: React.FC<TopicItemProps> = ({
                     onReparent={onReparent}
                     canExpand={canExpand}
                     onUpdateTopic={onUpdateTopic}
+                    businessInfo={businessInfo}
                  />
             )}
         </>

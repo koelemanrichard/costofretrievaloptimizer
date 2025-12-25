@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
 // FIX: Changed import to be a relative path.
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
-import { EnrichedTopic, ContentBrief, ExpansionMode } from '../types';
+import { EnrichedTopic, ContentBrief, ExpansionMode, BusinessInfo } from '../types';
 import { GraphVisualization, GraphNode, GraphEdge } from './ui/GraphVisualization';
 import TopicDetailPanel from './ui/TopicDetailPanel';
 
@@ -20,6 +20,8 @@ interface TopicalMapGraphViewProps {
   onReparent: (topicId: string, newParentId: string) => void;
   canExpandTopics: boolean;
   onUpdateTopic: (topicId: string, updates: Partial<EnrichedTopic>) => void;
+  /** Business info for competitive intelligence analysis */
+  businessInfo?: BusinessInfo;
 }
 
 const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
@@ -34,7 +36,8 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
   allTopics = [],
   onReparent,
   canExpandTopics,
-  onUpdateTopic
+  onUpdateTopic,
+  businessInfo
 }) => {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
 
@@ -115,6 +118,7 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
           onReparent={onReparent}
           canExpand={canExpandTopics}
           onUpdateTopic={onUpdateTopic}
+          businessInfo={businessInfo}
         />
       )}
     </div>

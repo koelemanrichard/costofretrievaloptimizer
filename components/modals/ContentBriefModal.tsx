@@ -24,6 +24,7 @@ import { BriefHealthOverview } from '../brief/BriefHealthOverview';
 import { MoneyPagePillarsIndicator } from '../brief/MoneyPagePillarsIndicator';
 import { VisualSemanticsPanel } from '../brief/VisualSemanticsPanel';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import CompetitiveIntelligenceWrapper from '../analysis/CompetitiveIntelligenceWrapper';
 
 interface ContentBriefModalProps {
   allTopics: EnrichedTopic[];
@@ -95,6 +96,9 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     const [isRepairingBrief, setIsRepairingBrief] = useState(false);
     const [isRegeneratingBrief, setIsRegeneratingBrief] = useState(false);
     const [isAutoFixingVisuals, setIsAutoFixingVisuals] = useState(false);
+
+    // Competitive intelligence state
+    const [showCompetitiveAnalysis, setShowCompetitiveAnalysis] = useState(false);
 
     // Handle full brief regeneration (from scratch)
     const handleFullRegenerate = useCallback(async () => {
@@ -705,6 +709,33 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                             isRepairing={isRepairingBrief}
                             isRegenerating={isRegeneratingBrief}
                         />
+
+                        {/* Competitive Intelligence Section */}
+                        {effectiveBusinessInfo && activeBriefTopic && (
+                            <Card className="p-4 bg-indigo-950/30 border border-indigo-800/50">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h3 className="font-semibold text-lg text-indigo-300">Competitive Intelligence</h3>
+                                        <p className="text-xs text-gray-400 mt-1">Analyze SERP competitors for strategic insights</p>
+                                    </div>
+                                    <Button
+                                        onClick={() => setShowCompetitiveAnalysis(!showCompetitiveAnalysis)}
+                                        variant="secondary"
+                                        className="text-sm bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/60 border border-indigo-700/50"
+                                    >
+                                        {showCompetitiveAnalysis ? 'Hide Analysis' : 'Analyze Competitors'}
+                                    </Button>
+                                </div>
+                                {showCompetitiveAnalysis && (
+                                    <div className="mt-4 border-t border-indigo-800/30 pt-4">
+                                        <CompetitiveIntelligenceWrapper
+                                            topic={activeBriefTopic}
+                                            businessInfo={effectiveBusinessInfo}
+                                        />
+                                    </div>
+                                )}
+                            </Card>
+                        )}
 
                         {/* Money Page 4 Pillars - for monetization topics */}
                         <MoneyPagePillarsIndicator
