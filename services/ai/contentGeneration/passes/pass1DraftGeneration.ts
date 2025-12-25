@@ -12,6 +12,9 @@ import * as anthropicService from '../../../anthropicService';
 import * as perplexityService from '../../../perplexityService';
 import * as openRouterService from '../../../openRouterService';
 import { dispatchToProvider } from '../../providerDispatcher';
+import { createLogger } from '../../../../utils/debugLogger';
+
+const log = createLogger('Pass1');
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -225,16 +228,16 @@ async function generateSectionWithRetry(
       // Validate generated content
       const validationResult = RulesValidator.validate(content, context);
 
-      // Log warnings (non-blocking)
+      // Log warnings (non-blocking) - only when verbose logging enabled
       const warnings = validationResult.violations.filter(v => v.severity === 'warning');
       if (warnings.length > 0) {
-        console.warn(`[Pass1] Section "${section.heading}" has ${warnings.length} validation warnings:`, warnings);
+        log.warn(`Section "${section.heading}" has ${warnings.length} validation warnings:`, warnings);
       }
 
       // If validation failed with errors, retry with fix instructions
       if (!validationResult.passed) {
         const errors = validationResult.violations.filter(v => v.severity === 'error');
-        console.warn(`[Pass1] Section "${section.heading}" validation failed (attempt ${attempt}/${maxRetries}):`, errors);
+        log.warn(`Section "${section.heading}" validation failed (attempt ${attempt}/${maxRetries}):`, errors);
 
         if (attempt < maxRetries) {
           fixInstructions = validationResult.fixInstructions;
@@ -243,7 +246,7 @@ async function generateSectionWithRetry(
           continue; // Retry with fix instructions
         } else {
           // Max retries reached, return content with errors logged
-          console.error(`[Pass1] Section "${section.heading}" failed validation after ${maxRetries} attempts. Proceeding with last attempt.`);
+          log.error(`Section "${section.heading}" failed validation after ${maxRetries} attempts. Proceeding with last attempt.`);
           return content;
         }
       }

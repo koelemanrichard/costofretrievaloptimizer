@@ -4,6 +4,9 @@ import { ContentGenerationOrchestrator } from '../orchestrator';
 import { runAlgorithmicAudit } from './auditChecks';
 import { buildHolisticSummary } from '../holisticAnalyzer';
 import { calculateBriefCompliance, COMPLIANCE_THRESHOLD } from '../../compliance/complianceScoring';
+import { createLogger } from '../../../../utils/debugLogger';
+
+const log = createLogger('Pass8Audit');
 
 /**
  * Pass 8: Final Audit
@@ -34,14 +37,14 @@ export async function executePass8(
   const draft = assembledDraft.length >= legacyDraft.length ? assembledDraft : legacyDraft;
 
   if (assembledDraft.length < legacyDraft.length) {
-    console.warn(`[Pass8Audit] Unexpected: assembled sections (${assembledDraft.length} chars) < draft_content (${legacyDraft.length} chars)`);
+    log.warn(` Unexpected: assembled sections (${assembledDraft.length} chars) < draft_content (${legacyDraft.length} chars)`);
   }
 
-  console.log(`[Pass8Audit] Auditing ${draft.length} chars from ${sections.length} sections`);
+  log.log(` Auditing ${draft.length} chars from ${sections.length} sections`);
 
   // Build holistic context for enhanced audit metrics
   const holisticContext = buildHolisticSummary(sections, brief, businessInfo);
-  console.log(`[Pass8Audit] Holistic context: TTR=${(holisticContext.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%, ${holisticContext.articleStructure.totalWordCount} words`);
+  log.log(` Holistic context: TTR=${(holisticContext.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%, ${holisticContext.articleStructure.totalWordCount} words`);
 
   // Run all algorithmic checks
   const algorithmicResults = runAlgorithmicAudit(draft, brief, businessInfo);
@@ -76,9 +79,9 @@ export async function executePass8(
     businessInfo.websiteType
   );
 
-  console.log(`[Pass8Audit] Compliance Score: ${complianceResult.overall}% (${complianceResult.grade}) - ${complianceResult.passed ? 'PASSED' : 'NEEDS IMPROVEMENT'}`);
+  log.log(` Compliance Score: ${complianceResult.overall}% (${complianceResult.grade}) - ${complianceResult.passed ? 'PASSED' : 'NEEDS IMPROVEMENT'}`);
   if (complianceResult.issues.length > 0) {
-    console.log(`[Pass8Audit] Compliance Issues: ${complianceResult.issues.length} (${complianceResult.issues.filter(i => i.severity === 'critical').length} critical)`);
+    log.log(` Compliance Issues: ${complianceResult.issues.length} (${complianceResult.issues.filter(i => i.severity === 'critical').length} critical)`);
   }
 
   // Combined final score: 60% algorithmic + 40% compliance
@@ -116,7 +119,7 @@ export async function executePass8(
   // Sync the final draft to the content_briefs table
   if (brief.id && draft) {
     await orchestrator.syncDraftToBrief(brief.id, draft);
-    console.log(`[Pass8Audit] Synced to brief: ${draft.length} chars, score: ${finalScore}%`);
+    log.log(` Synced to brief: ${draft.length} chars, score: ${finalScore}%`);
   }
 
   return { draft, score: finalScore, details: auditDetails, holisticContext };

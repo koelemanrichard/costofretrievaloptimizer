@@ -34,6 +34,7 @@ export * from './types/navigation';
 export * from './types/migration';
 export * from './types/siteAnalysis';
 export * from './types/contentGeneration';
+export * from './types/competitiveIntelligence';
 
 export enum AppStep {
   AUTH,
@@ -257,6 +258,9 @@ export interface BusinessInfo {
 
   // Knowledge Panel Strategy
   entityIdentity?: EntityIdentity;
+
+  // Developer/Admin Settings
+  verboseLogging?: boolean; // When true, shows detailed console logs during content generation
 }
 
 export interface SEOPillars {

@@ -278,6 +278,27 @@ const ConfigurationPanel: React.FC = () => {
             <Card className="p-6">
                 <ServiceSettings settings={localSettings} handleChange={handleChange} />
             </Card>
+
+            {/* Developer Settings */}
+            <Card className="p-6">
+                <h4 className="text-md font-semibold text-white mb-4">Developer Settings</h4>
+                <div className="space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={localSettings.verboseLogging || false}
+                            onChange={(e) => setLocalSettings(prev => ({ ...prev, verboseLogging: e.target.checked }))}
+                            className="w-5 h-5 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900"
+                        />
+                        <div>
+                            <span className="text-white font-medium">Verbose Logging</span>
+                            <p className="text-gray-400 text-sm">
+                                Show detailed console logs during content generation passes (useful for debugging)
+                            </p>
+                        </div>
+                    </label>
+                </div>
+            </Card>
         </div>
     );
 };

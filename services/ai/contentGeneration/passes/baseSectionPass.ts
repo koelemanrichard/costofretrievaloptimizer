@@ -14,6 +14,10 @@ import { ContentGenerationOrchestrator } from '../orchestrator';
 import { buildHolisticSummary, buildAdjacentContext } from '../holisticAnalyzer';
 import { analyzeContentFormatBudget, formatBudgetSummary } from '../formatBudgetAnalyzer';
 import { callProviderWithFallback } from '../providerUtils';
+import { createLogger } from '../../../../utils/debugLogger';
+
+// Create namespaced logger - will respect verbose logging setting
+const createPassLogger = (passNumber: number) => createLogger(`Pass${passNumber}`);
 
 /**
  * Execute a content optimization pass with selective + batch processing.
@@ -46,8 +50,11 @@ export async function executeSectionPass(
   const sections = await orchestrator.getSections(job.id);
   const sortedSections = [...sections].sort((a, b) => a.section_order - b.section_order);
 
+  // Create logger for this pass
+  const log = createPassLogger(config.passNumber);
+
   if (sortedSections.length === 0) {
-    console.warn(`[Pass${config.passNumber}] No sections found for job ${job.id}`);
+    log.warn(`No sections found for job ${job.id}`);
     await orchestrator.updateJob(job.id, {
       passes_status: { ...job.passes_status, [config.passKey]: 'completed' },
       current_pass: config.nextPassNumber
@@ -56,12 +63,12 @@ export async function executeSectionPass(
   }
 
   // Phase A: Build holistic summary + format budget (once per pass)
-  console.log(`[Pass${config.passNumber}] Phase A: Building holistic summary + format budget from ${sortedSections.length} sections...`);
+  log.log(`Phase A: Building holistic summary + format budget from ${sortedSections.length} sections...`);
   const holisticContext = buildHolisticSummary(sortedSections, brief, businessInfo);
   const formatBudget = analyzeContentFormatBudget(sortedSections, brief, businessInfo);
 
-  console.log(`[Pass${config.passNumber}] Holistic context: ${holisticContext.articleStructure.totalWordCount} words, TTR: ${(holisticContext.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%`);
-  console.log(`[Pass${config.passNumber}] ${formatBudgetSummary(formatBudget)}`);
+  log.log(`Holistic context: ${holisticContext.articleStructure.totalWordCount} words, TTR: ${(holisticContext.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%`);
+  log.log(formatBudgetSummary(formatBudget));
 
   // Phase B: Determine which sections to process (selective)
   let sectionsToProcess: ContentGenerationSection[];
@@ -75,7 +82,7 @@ export async function executeSectionPass(
   } else if (config.filterSections) {
     // NEW: Use format budget filtering for selective processing
     sectionsToProcess = config.filterSections(sortedSections, formatBudget);
-    console.log(`[Pass${config.passNumber}] Selective processing: ${sectionsToProcess.length}/${sortedSections.length} sections need optimization`);
+    log.log(`Selective processing: ${sectionsToProcess.length}/${sortedSections.length} sections need optimization`);
   } else if (config.sectionFilter) {
     // Legacy holistic-based filtering
     sectionsToProcess = sortedSections.filter(s => config.sectionFilter!(s, holisticContext));
@@ -86,7 +93,7 @@ export async function executeSectionPass(
   const totalSections = sectionsToProcess.length;
 
   if (totalSections === 0) {
-    console.log(`[Pass${config.passNumber}] No sections need optimization, skipping pass`);
+    log.log(`No sections need optimization, skipping pass`);
     await orchestrator.updateJob(job.id, {
       passes_status: { ...job.passes_status, [config.passKey]: 'completed' },
       current_pass: config.nextPassNumber
@@ -94,7 +101,7 @@ export async function executeSectionPass(
     return await orchestrator.assembleDraft(job.id);
   }
 
-  console.log(`[Pass${config.passNumber}] Phase C: Processing ${totalSections} sections...`);
+  log.log(`Phase C: Processing ${totalSections} sections...`);
 
   // Phase C: Process sections (batched or individual)
   const batchSize = config.batchSize || 1;
@@ -131,7 +138,7 @@ export async function executeSectionPass(
 
   // Assemble final draft from all sections
   const assembledDraft = await orchestrator.assembleDraft(job.id);
-  console.log(`[Pass${config.passNumber}] Pass complete. Assembled draft: ${assembledDraft.length} chars`);
+  log.log(`Pass complete. Assembled draft: ${assembledDraft.length} chars`);
 
   // Update job with assembled draft and mark pass complete
   await orchestrator.updateJob(job.id, {
@@ -158,21 +165,22 @@ async function processSectionsBatched(
   onSectionProgress?: SectionProgressCallback,
   shouldAbort?: () => boolean
 ): Promise<void> {
+  const log = createPassLogger(config.passNumber);
   const batchSize = config.batchSize || 3;
   const batches = createBatches(sectionsToProcess, batchSize);
 
-  console.log(`[Pass${config.passNumber}] Processing ${sectionsToProcess.length} sections in ${batches.length} batches (batch size: ${batchSize})`);
+  log.log(`Processing ${sectionsToProcess.length} sections in ${batches.length} batches (batch size: ${batchSize})`);
 
   let processedCount = 0;
 
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     if (shouldAbort && shouldAbort()) {
-      console.log(`[Pass${config.passNumber}] Aborted at batch ${batchIndex + 1}/${batches.length}`);
+      log.log(`Aborted at batch ${batchIndex + 1}/${batches.length}`);
       throw new Error('Pass aborted by user');
     }
 
     const batch = batches[batchIndex];
-    console.log(`[Pass${config.passNumber}] Processing batch ${batchIndex + 1}/${batches.length}: ${batch.map(s => s.section_key).join(', ')}`);
+    log.log(`Processing batch ${batchIndex + 1}/${batches.length}: ${batch.map(s => s.section_key).join(', ')}`);
 
     // Report progress
     if (onSectionProgress) {
@@ -202,14 +210,14 @@ async function processSectionsBatched(
             updated_at: new Date().toISOString()
           });
 
-          console.log(`[Pass${config.passNumber}] Section ${section.section_key}: ${originalContent.length} → ${cleanedContent.length} chars`);
+          log.log(`Section ${section.section_key}: ${originalContent.length} → ${cleanedContent.length} chars`);
         }
       }
 
       processedCount += batch.length;
 
     } catch (error) {
-      console.error(`[Pass${config.passNumber}] Error processing batch ${batchIndex + 1}:`, error);
+      log.error(`Error processing batch ${batchIndex + 1}:`, error);
       // Continue with next batch
     }
   }
@@ -229,11 +237,12 @@ async function processSectionsIndividually(
   onSectionProgress?: SectionProgressCallback,
   shouldAbort?: () => boolean
 ): Promise<void> {
+  const log = createPassLogger(config.passNumber);
   const totalSections = sectionsToProcess.length;
 
   for (let i = 0; i < sectionsToProcess.length; i++) {
     if (shouldAbort && shouldAbort()) {
-      console.log(`[Pass${config.passNumber}] Aborted at section ${i + 1}/${totalSections}`);
+      log.log(`Aborted at section ${i + 1}/${totalSections}`);
       throw new Error('Pass aborted by user');
     }
 
@@ -241,7 +250,7 @@ async function processSectionsIndividually(
     const sectionContent = section.current_content || '';
 
     if (!sectionContent.trim()) {
-      console.log(`[Pass${config.passNumber}] Skipping empty section: ${section.section_key}`);
+      log.log(`Skipping empty section: ${section.section_key}`);
       continue;
     }
 
@@ -249,7 +258,7 @@ async function processSectionsIndividually(
       onSectionProgress(section.section_key, i + 1, totalSections);
     }
 
-    console.log(`[Pass${config.passNumber}] Processing section ${i + 1}/${totalSections}: ${section.section_heading} (${sectionContent.length} chars)`);
+    log.log(`Processing section ${i + 1}/${totalSections}: ${section.section_heading} (${sectionContent.length} chars)`);
 
     const adjacentContext = buildAdjacentContext(allSections, section);
     const ctx: SectionOptimizationContext = {
@@ -266,12 +275,12 @@ async function processSectionsIndividually(
       const optimizedContent = await callProviderWithFallback(businessInfo, prompt, 2);
 
       if (typeof optimizedContent !== 'string' || !optimizedContent.trim()) {
-        console.warn(`[Pass${config.passNumber}] Empty response for section ${section.section_key}, keeping original`);
+        log.warn(`Empty response for section ${section.section_key}, keeping original`);
         continue;
       }
 
       if (optimizedContent.length < sectionContent.length * 0.5) {
-        console.warn(`[Pass${config.passNumber}] Warning: Section ${section.section_key} optimized content is ${Math.round((optimizedContent.length / sectionContent.length) * 100)}% of original`);
+        log.warn(`Warning: Section ${section.section_key} optimized content is ${Math.round((optimizedContent.length / sectionContent.length) * 100)}% of original`);
       }
 
       const cleanedContent = cleanOptimizedContent(optimizedContent, sectionContent);
@@ -283,10 +292,10 @@ async function processSectionsIndividually(
         updated_at: new Date().toISOString()
       });
 
-      console.log(`[Pass${config.passNumber}] Section ${section.section_key} optimized: ${sectionContent.length} → ${cleanedContent.length} chars`);
+      log.log(`Section ${section.section_key} optimized: ${sectionContent.length} → ${cleanedContent.length} chars`);
 
     } catch (error) {
-      console.error(`[Pass${config.passNumber}] Error optimizing section ${section.section_key}:`, error);
+      log.error(`Error optimizing section ${section.section_key}:`, error);
     }
   }
 }

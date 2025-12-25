@@ -17,6 +17,9 @@ import { generateSchema, SchemaGenerationContext } from '../../schemaGeneration/
 import { validateSchema } from '../../schemaGeneration/schemaValidator';
 import { applyAutoFixes, mergeEntitySameAs } from '../../schemaGeneration/schemaAutoFix';
 import { validateCompleteness } from '../progressiveSchemaCollector';
+import { createLogger } from '../../../../utils/debugLogger';
+
+const log = createLogger('Pass9');
 
 interface Pass9Result {
   success: boolean;
@@ -63,7 +66,7 @@ export async function executePass9(
       : { isComplete: false, missingFields: ['all'], completedPasses: [] };
 
     if (!dataValidation.isComplete) {
-      console.log(`[Pass9] Progressive data incomplete. Missing: ${dataValidation.missingFields.join(', ')}`);
+      log.log(` Progressive data incomplete. Missing: ${dataValidation.missingFields.join(', ')}`);
       // Continue anyway - we can generate schema without complete progressive data
     }
 

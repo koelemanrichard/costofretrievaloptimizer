@@ -4,6 +4,9 @@ import { ContentGenerationOrchestrator } from '../orchestrator';
 import { buildPass7Prompt, buildPass7ConclusionPrompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
 import { buildHolisticSummary, buildAdjacentContext } from '../holisticAnalyzer';
 import { callProviderWithFallback } from '../providerUtils';
+import { createLogger } from '../../../../utils/debugLogger';
+
+const log = createLogger('Pass7');
 
 /**
  * Pass 7: Introduction & Conclusion Synthesis
@@ -33,7 +36,7 @@ export async function executePass7(
   const sortedSections = [...sections].sort((a, b) => a.section_order - b.section_order);
 
   if (sortedSections.length === 0) {
-    console.warn('[Pass7] No sections found for job', job.id);
+    log.warn(' No sections found for job', job.id);
     await orchestrator.updateJob(job.id, {
       passes_status: { ...job.passes_status, pass_7_intro: 'completed' },
       current_pass: 8
@@ -42,7 +45,7 @@ export async function executePass7(
   }
 
   // Build holistic summary (once for both intro and conclusion)
-  console.log('[Pass7] Building holistic summary from', sortedSections.length, 'sections...');
+  log.log(' Building holistic summary from', sortedSections.length, 'sections...');
   const holisticContext = buildHolisticSummary(sortedSections, brief, businessInfo);
 
   // Find intro and conclusion sections
@@ -73,7 +76,7 @@ export async function executePass7(
       onSectionProgress(introSection.section_key, ++processedCount, totalToProcess);
     }
 
-    console.log('[Pass7] Processing introduction section...');
+    log.log(' Processing introduction section...');
     await processIntroOrConclusion(
       orchestrator,
       introSection,
@@ -95,7 +98,7 @@ export async function executePass7(
       onSectionProgress(conclusionSection.section_key, ++processedCount, totalToProcess);
     }
 
-    console.log('[Pass7] Processing conclusion section...');
+    log.log(' Processing conclusion section...');
     await processIntroOrConclusion(
       orchestrator,
       conclusionSection,
@@ -109,7 +112,7 @@ export async function executePass7(
 
   // Assemble final draft
   const assembledDraft = await orchestrator.assembleDraft(job.id);
-  console.log('[Pass7] Pass complete. Assembled draft:', assembledDraft.length, 'chars');
+  log.log(' Pass complete. Assembled draft:', assembledDraft.length, 'chars');
 
   // Update job with assembled draft and mark pass complete
   await orchestrator.updateJob(job.id, {

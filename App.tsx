@@ -7,6 +7,7 @@ import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from
 import { verifiedDelete, verifiedBulkDelete } from './services/verifiedDatabaseService';
 import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
 import { setGlobalUsageContext, clearGlobalUsageContext } from './services/telemetryService';
+import { setVerboseLogging } from './utils/debugLogger';
 
 // Import Screens
 import { AuthScreen, ProjectSelectionScreen, AnalysisStatusScreen } from './components/screens';
@@ -272,6 +273,9 @@ const App: React.FC = () => {
                         });
 
                         dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...filteredSettings } });
+
+                        // Initialize verbose logging state from settings
+                        setVerboseLogging(filteredSettings.verboseLogging === true);
                     }
                 } catch (e) {
                     dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to load initial data.' });
@@ -506,6 +510,12 @@ const App: React.FC = () => {
 
             // Update local state with what we sent
             dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...globalSettings } });
+
+            // Update verbose logging state if it was changed
+            if ('verboseLogging' in globalSettings) {
+                setVerboseLogging(globalSettings.verboseLogging === true);
+            }
+
             dispatch({ type: 'SET_NOTIFICATION', payload: 'Settings saved successfully.' });
             // Keep modal open so user can see the save confirmation
         } catch(e) {
