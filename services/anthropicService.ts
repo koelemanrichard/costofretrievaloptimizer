@@ -1254,15 +1254,17 @@ export const generateJson = async <T extends object>(
 };
 
 /**
- * Generic text generation method for migration workflows
+ * Generic text generation method using STREAMING to avoid timeouts
  * This function does NOT request JSON output - returns human-readable text
+ * Uses streaming to keep connection alive during long generation (critical for Anthropic via Supabase proxy)
  */
 export const generateText = async (
     prompt: string,
     businessInfo: BusinessInfo,
     dispatch: React.Dispatch<any>
 ): Promise<string> => {
-    dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Generating text response...`, status: 'info', timestamp: Date.now() } });
+    const startTime = Date.now();
+    dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Generating text response (streaming)...`, status: 'info', timestamp: Date.now() } });
 
     if (!businessInfo.anthropicApiKey) {
         throw new Error("Anthropic API key is not configured.");
@@ -1283,51 +1285,164 @@ export const generateText = async (
     const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.includes(businessInfo.aiModel);
     const modelToUse = isValidClaudeModel ? businessInfo.aiModel : defaultModel;
 
+    // Start API call logging
+    const apiCallLog = anthropicLogger.start('generateText', 'POST');
+
     try {
-        const response = await fetch(proxyUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-anthropic-api-key': businessInfo.anthropicApiKey,
-                'apikey': businessInfo.supabaseAnonKey || '',
-                'Authorization': `Bearer ${businessInfo.supabaseAnonKey || ''}`,
-            },
-            body: JSON.stringify({
-                model: modelToUse,
-                max_tokens: 4096,
-                messages: [
-                    { role: "user", content: prompt }
-                ],
-                // System prompt for TEXT (not JSON) generation
-                system: "You are a helpful, expert SEO strategist specializing in semantic optimization. Provide clear, actionable recommendations in human-readable format. Use markdown formatting for headings, lists, and code examples. Be specific and reference the actual page content when making suggestions."
-            }),
-        });
+        // Use streaming to avoid timeouts on long content generation
+        const requestBody = {
+            model: modelToUse,
+            max_tokens: 16384, // Higher limit for content generation
+            stream: true, // Enable streaming to avoid timeouts
+            messages: [
+                { role: "user", content: prompt }
+            ],
+            system: "You are a helpful, expert SEO strategist specializing in semantic optimization and content creation. Write high-quality, comprehensive content that follows SEO best practices. Use markdown formatting for structure."
+        };
+
+        // Create abort controller for timeout (5 minutes for streaming)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            console.error('[Anthropic generateText] Streaming request timed out after 5 minutes');
+            controller.abort();
+        }, 300000); // 5 minute timeout
+
+        let response: Response;
+        try {
+            response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-anthropic-api-key': businessInfo.anthropicApiKey,
+                    'apikey': businessInfo.supabaseAnonKey || '',
+                    'Authorization': `Bearer ${businessInfo.supabaseAnonKey || ''}`,
+                },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal,
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: response.statusText }));
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = { error: errorText || response.statusText };
+            }
+
+            // Handle 504 timeout with helpful message
+            if (response.status === 504) {
+                throw new Error(
+                    'Request timed out. The Anthropic API is taking longer than expected. ' +
+                    'This can happen with complex content. Please try again.'
+                );
+            }
+
             throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        // Check if response is streaming (SSE) or JSON
+        const contentType = response.headers.get('content-type');
 
-        if (data.error) {
-            throw new Error(data.error);
+        if (contentType?.includes('application/json')) {
+            // Proxy returned JSON instead of stream - parse directly
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            const textBlock = data.content?.find((b: any) => b.type === 'text');
+            const fullText = textBlock?.text || '';
+
+            anthropicLogger.success(apiCallLog.id, {
+                model: modelToUse,
+                requestSize: JSON.stringify(requestBody).length,
+                responseSize: fullText.length,
+            });
+
+            return fullText;
         }
 
-        // Extract text from response
-        const content = data.content;
-        if (!content || !Array.isArray(content) || content.length === 0) {
-            throw new Error("Empty response from Anthropic API");
+        // Process streaming response
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Failed to get response reader');
         }
 
-        const textBlock = content.find((block: any) => block.type === 'text');
-        if (!textBlock?.text) {
-            throw new Error("No text content in response");
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let eventCount = 0;
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (!trimmedLine || trimmedLine.startsWith('event:')) continue;
+
+                if (trimmedLine.startsWith('data: ')) {
+                    const data = trimmedLine.slice(6);
+                    if (data === '[DONE]') continue;
+
+                    try {
+                        const event = JSON.parse(data);
+                        if (event.type === 'content_block_delta') {
+                            const deltaText = event.delta?.text;
+                            if (deltaText) {
+                                fullText += deltaText;
+                                eventCount++;
+                            }
+                        } else if (event.type === 'error') {
+                            throw new Error(event.error?.message || 'Stream error');
+                        }
+                    } catch (parseError) {
+                        // Ignore parse errors for partial data
+                    }
+                }
+            }
         }
 
-        return textBlock.text;
+        if (!fullText || fullText.trim().length === 0) {
+            throw new Error('Streaming completed but no content was received.');
+        }
+
+        const durationMs = Date.now() - startTime;
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Anthropic',
+            message: `Streaming complete: ${fullText.length} chars in ${(durationMs / 1000).toFixed(1)}s`,
+            status: 'success',
+            timestamp: Date.now()
+        }});
+
+        // Log successful API call
+        anthropicLogger.success(apiCallLog.id, {
+            model: modelToUse,
+            requestSize: JSON.stringify(requestBody).length,
+            responseSize: fullText.length,
+            tokenCount: estimateTokens(prompt.length) + estimateTokens(fullText.length),
+        });
+
+        return fullText;
+
     } catch (error) {
+        // Log failed API call
+        anthropicLogger.error(apiCallLog.id, error, {
+            model: modelToUse,
+            requestSize: prompt.length,
+        });
+
         console.error('[Anthropic generateText] Error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Streaming error: ${message}`, status: 'failure', timestamp: Date.now() } });
         throw error;
     }
 };
