@@ -15,6 +15,8 @@ interface FlowAuditModalProps {
   result: FlowAuditResult | null;
   onAutoFix: (issue: ContextualFlowIssue) => Promise<void>;
   onBatchAutoFix: (issues: ContextualFlowIssue[]) => Promise<void>;
+  onRefreshAnalysis?: () => Promise<void>;
+  isRefreshing?: boolean;
 }
 
 const getSeverityStyles = (issue: ContextualFlowIssue) => {
@@ -30,7 +32,7 @@ const getIssueKey = (issue: ContextualFlowIssue): string => {
   return `${issue.rule}-${issue.category}-${(issue.offendingSnippet || '').slice(0, 50)}`;
 };
 
-const FlowAuditModal: React.FC<FlowAuditModalProps> = ({ isOpen, onClose, result, onAutoFix, onBatchAutoFix }) => {
+const FlowAuditModal: React.FC<FlowAuditModalProps> = ({ isOpen, onClose, result, onAutoFix, onBatchAutoFix, onRefreshAnalysis, isRefreshing }) => {
   const [issueStatus, setIssueStatus] = useState<Record<string, 'IDLE' | 'FIXING' | 'FIXED' | 'DISMISSED'>>({});
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [isBatchFixing, setIsBatchFixing] = useState(false);
@@ -122,6 +124,7 @@ const FlowAuditModal: React.FC<FlowAuditModalProps> = ({ isOpen, onClose, result
   };
 
   const fixableIssuesCount = result?.issues.filter(i => i.offendingSnippet && i.remediation).length || 0;
+  const hasFixedIssues = Object.values(issueStatus).some(s => s === 'FIXED');
 
   return (
     <Modal
@@ -131,7 +134,25 @@ const FlowAuditModal: React.FC<FlowAuditModalProps> = ({ isOpen, onClose, result
       description="Deep analysis of intra-page contextual progression and vector breaks"
       maxWidth="max-w-6xl"
       zIndex="z-[70]"
-      footer={<Button onClick={onClose} variant="secondary">Close</Button>}
+      footer={
+        <div className="flex items-center gap-3">
+          {onRefreshAnalysis && hasFixedIssues && (
+            <Button
+              onClick={onRefreshAnalysis}
+              disabled={isRefreshing}
+              variant="primary"
+              className="flex items-center gap-2"
+            >
+              {isRefreshing ? (
+                <><Loader className="w-4 h-4" /> Analyzing...</>
+              ) : (
+                <>Refresh Analysis</>
+              )}
+            </Button>
+          )}
+          <Button onClick={onClose} variant="secondary">Close</Button>
+        </div>
+      }
     >
         <div className="flex flex-col md:flex-row -mx-6 -mt-6">
             {!result ? (

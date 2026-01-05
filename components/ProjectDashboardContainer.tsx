@@ -2263,11 +2263,10 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             // Update State
             const updatedBrief = { ...brief, articleDraft: newDraft };
             dispatch({ type: 'ADD_BRIEF', payload: { mapId: activeMapId, topicId: brief.topic_id, brief: updatedBrief } });
-            
-            // Re-run flow analysis to update the result in the modal
-            await handleAnalyzeFlow(newDraft);
-            
-            dispatch({ type: 'SET_NOTIFICATION', payload: 'Applied flow remediation successfully.' });
+
+            // NOTE: Don't re-run analysis here - let the UI show "Fixed" first
+            // User can re-run flow analysis manually to see updated results
+            dispatch({ type: 'SET_NOTIFICATION', payload: 'Applied flow remediation successfully. Re-run flow analysis to see updated results.' });
 
         } catch(e) {
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Flow auto-fix failed.' });
@@ -2306,10 +2305,9 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             const updatedBrief = { ...brief, articleDraft: newDraft };
             dispatch({ type: 'ADD_BRIEF', payload: { mapId: activeMapId, topicId: brief.topic_id, brief: updatedBrief } });
 
-            // Re-run flow analysis to update the result in the modal
-            await handleAnalyzeFlow(newDraft);
-
-            dispatch({ type: 'SET_NOTIFICATION', payload: `Batch fixed ${issues.length} flow issues successfully.` });
+            // NOTE: Don't re-run analysis here - let the UI show "Fixed" first
+            // User can re-run flow analysis manually to see updated results
+            dispatch({ type: 'SET_NOTIFICATION', payload: `Batch fixed ${issues.length} flow issues. Re-run flow analysis to see updated results.` });
 
         } catch (e) {
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Batch flow auto-fix failed.' });
@@ -2949,6 +2947,8 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 result={state.flowAuditResult}
                 onAutoFix={handleFlowAutoFix}
                 onBatchAutoFix={handleBatchFlowAutoFix}
+                onRefreshAnalysis={() => handleAnalyzeFlow()}
+                isRefreshing={state.loading.flowAudit}
             />
 
             {/* Unified Audit Dashboard (Phase 6) */}
