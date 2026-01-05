@@ -451,21 +451,25 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         // For determining if we should suggest sync:
         // - If database is LONGER: only suggest if significantly longer (>500 chars)
         //   This avoids false positives when user inserts images (which can make content shorter)
-        // - If database is shorter: almost never suggest (user likely added content)
-        // - Exception: incomplete jobs should always show status (but not force sync)
+        // - If database is shorter: NEVER suggest (user likely polished/improved content)
+        // - Exception: incomplete jobs should show status but ONLY if db content is not shorter
         const dbIsSignificantlyLonger = dbLength > currentLength + 500;
+        const dbIsShorter = dbLength < currentLength - 100; // DB is notably shorter than local
         const isSubstantiallyDifferent = dbIsSignificantlyLonger || (isJobNewer && lengthDiff > 500);
         const isDifferent = isSubstantiallyDifferent || assembledDraft !== draftContent;
 
         // Only set databaseDraft if there's actually better/newer content to sync
         // AND the database content is meaningfully longer (not just format differences from image insertion)
-        if ((isDifferent && dbIsSignificantlyLonger) || isIncomplete) {
+        // CRITICAL: Never suggest syncing to SHORTER content - this would revert polished/improved drafts
+        if ((isDifferent && dbIsSignificantlyLonger) || (isIncomplete && !dbIsShorter)) {
           setDatabaseDraft(assembledDraft);
           console.log('[DraftingModal] Found newer/different database content:', {
             currentLength,
             dbLength,
             diff: lengthDiff,
             dbIsSignificantlyLonger,
+            dbIsShorter,
+            isIncomplete,
             auditScore: jobData.final_audit_score,
             sectionCount,
             jobStatus,
