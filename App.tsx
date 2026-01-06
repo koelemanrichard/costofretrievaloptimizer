@@ -94,20 +94,24 @@ const App: React.FC = () => {
 
             const timeoutId = setTimeout(() => {
                 if (!didComplete) {
-                    // Only reload if we haven't reloaded in the last 10 seconds
-                    if (!lastReload || (now - parseInt(lastReload, 10)) > 10000) {
+                    // Always reload on session check hang - trying to recover in-place
+                    // causes "Multiple GoTrueClient instances" issues with any in-progress login
+                    // Use 30-second threshold to prevent infinite reload loops
+                    if (!lastReload || (now - parseInt(lastReload, 10)) > 30000) {
                         console.warn('[App] Session check hanging - clearing storage and reloading');
                         clearSupabaseAuthStorage();
                         resetSupabaseClient(false);
                         localStorage.setItem(reloadKey, now.toString());
                         window.location.reload();
                     } else {
-                        console.warn('[App] Session check hanging but skipping reload (recently reloaded)');
+                        // If we've reloaded within 30 seconds, something is seriously wrong
+                        // Just clear storage and let user try again manually
+                        console.error('[App] Session check still hanging after reload - clearing all auth state');
                         clearSupabaseAuthStorage();
-                        resetSupabaseClient(false);
+                        resetSupabaseClient(true); // Clear storage too
                         localStorage.removeItem(reloadKey);
-                        // Increment version to force onAuthStateChange to re-subscribe on the new client
-                        setAuthClientVersion(v => v + 1);
+                        // Show user a message
+                        dispatch({ type: 'SET_ERROR', payload: 'Authentication service unavailable. Please refresh the page or try again later.' });
                     }
                 }
             }, 5000);
