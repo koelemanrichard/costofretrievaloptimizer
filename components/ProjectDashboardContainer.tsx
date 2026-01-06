@@ -1911,23 +1911,23 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
 
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
 
-            // First, verify what we're about to save
-            const dataToSave = { eavs: newEavs as unknown as any };
-            console.log('[handleUpdateEavs] Data payload size:', JSON.stringify(dataToSave).length, 'bytes');
+            // Use verifiedUpdate for timeout protection and read-back verification
+            // (same pattern as handleUpdateCompetitors)
+            const result = await verifiedUpdate(
+                supabase,
+                { table: 'topical_maps', operationDescription: 'update EAVs (semantic triples)' },
+                activeMapId,
+                { eavs: newEavs as unknown as any },
+                'id, eavs'
+            );
 
-            const { error, data } = await supabase
-                .from('topical_maps')
-                .update(dataToSave)
-                .eq('id', activeMapId)
-                .select('eavs');
-
-            if (error) {
-                console.error('[handleUpdateEavs] Supabase error:', error);
-                throw error;
+            if (!result.success) {
+                console.error('[handleUpdateEavs] Verification failed:', result.error);
+                throw new Error(result.error || 'EAV update verification failed');
             }
 
-            // Verify what was actually saved
-            const savedEavs = data?.[0]?.eavs as unknown as SemanticTriple[] | undefined;
+            // Verify count matches what we sent
+            const savedEavs = result.data?.eavs as unknown as SemanticTriple[] | undefined;
             const savedCount = Array.isArray(savedEavs) ? savedEavs.length : 0;
             console.log('[handleUpdateEavs] Verified saved count:', savedCount);
 
@@ -1940,7 +1940,7 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 }
             } else {
                 dispatch({ type: 'SET_EAVS', payload: { mapId: activeMapId, eavs: newEavs } });
-                dispatch({ type: 'SET_NOTIFICATION', payload: `${newEavs.length} Semantic Triples saved successfully.` });
+                dispatch({ type: 'SET_NOTIFICATION', payload: `${newEavs.length} Semantic Triples saved successfully (verified).` });
             }
 
             // Clear KG to force rebuild on next render/hook trigger
