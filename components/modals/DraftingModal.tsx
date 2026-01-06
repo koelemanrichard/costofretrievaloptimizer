@@ -200,12 +200,32 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
       }
 
       // If we have a draft in state/prop already, use it
+      // BUT still fetch history from DB (history is not in state)
       if (existingDraft) {
         console.log('[DraftingModal] Using existing draft from state:', existingDraft.length, 'chars');
         setDraftContent(existingDraft);
         loadedBriefIdRef.current = brief.id;
         loadedDraftLengthRef.current = existingDraft.length;
         loadedAtRef.current = new Date().toISOString();
+
+        // CRITICAL: Still fetch version history from DB even when using state draft
+        // History is stored in DB only, not in React state
+        try {
+          const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+          const { data: historyData } = await supabase
+            .from('content_briefs')
+            .select('draft_history')
+            .eq('id', brief.id)
+            .single();
+
+          if (historyData?.draft_history && Array.isArray(historyData.draft_history)) {
+            setDraftHistory(historyData.draft_history as typeof draftHistory);
+            console.log('[DraftingModal] Loaded version history:', historyData.draft_history.length, 'versions');
+          }
+        } catch (err) {
+          console.warn('[DraftingModal] Failed to load version history:', err);
+        }
+
         return;
       }
 
@@ -739,6 +759,9 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
       setHasUnsavedChanges(true);
       setShowVersionHistory(false);
 
+      // CRITICAL: Update loadedDraftLengthRef to prevent state sync from reverting restored content
+      loadedDraftLengthRef.current = version.content.length;
+
       dispatch({
         type: 'SET_NOTIFICATION',
         payload: `✓ Restored draft from ${new Date(version.saved_at).toLocaleString()}. Click "Save Draft" to persist this version.`
@@ -980,6 +1003,13 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           setDraftContent(polishedText);
           setHasUnsavedChanges(true);
           setActiveTab('preview'); // Switch to preview to show the formatted result
+
+          // CRITICAL: Update loadedDraftLengthRef to prevent state sync from reverting polished content
+          // Without this, if state.briefs gets updated with old content (e.g., from useContentGeneration),
+          // the guard in the state sync useEffect would fail because it compares against the old length
+          loadedDraftLengthRef.current = polishedText.length;
+          console.log('[DraftingModal] Updated loadedDraftLengthRef to polished length:', polishedText.length);
+
           dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! Introduction rewritten and formatting improved.' });
       } catch (e) {
           if (activityTimeoutId) clearTimeout(activityTimeoutId);
