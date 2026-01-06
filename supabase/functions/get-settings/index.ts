@@ -42,7 +42,7 @@ const keysToDecrypt = [
     'infranodusApiKey', 'jinaApiKey', 'firecrawlApiKey',
     'apitemplateApiKey', 'geminiApiKey', 'openAiApiKey', 'anthropicApiKey',
     'perplexityApiKey', 'openRouterApiKey', 'neo4jUri',
-    'neo4jUser', 'neo4jPassword'
+    'neo4jUser', 'neo4jPassword', 'cloudinaryApiKey', 'markupGoApiKey'
 ];
 
 Deno.serve(async (req: Request) => {
