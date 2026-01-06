@@ -12,6 +12,7 @@ import {
   resolveEntity as wikidataResolveEntity,
   batchResolveEntities as wikidataBatchResolve
 } from './wikidataService';
+import { verifiedUpsert } from './verifiedDatabaseService';
 
 // Cache expiration (30 days)
 const CACHE_EXPIRATION_DAYS = 30;
@@ -182,6 +183,8 @@ export async function cacheEntity(
 ): Promise<void> {
   const supabase = getSupabaseClient(supabaseUrl, supabaseKey);
 
+  console.log('[EntityCache] Caching entity:', entity.name);
+
   const row = {
     user_id: userId,
     entity_name: entity.name,
@@ -195,15 +198,22 @@ export async function cacheEntity(
     last_verified_at: entity.lastVerifiedAt || new Date().toISOString()
   };
 
-  // Upsert to handle duplicates
-  const { error } = await supabase
-    .from('entity_resolution_cache')
-    .upsert(row, {
-      onConflict: 'user_id,entity_name,entity_type'
-    });
+  // Use verified upsert with timeout and verification
+  const result = await verifiedUpsert(
+    supabase,
+    {
+      table: 'entity_resolution_cache',
+      operationDescription: `cache entity "${entity.name}"`,
+      conflictColumns: ['user_id', 'entity_name', 'entity_type']
+    },
+    row,
+    'id'
+  );
 
-  if (error) {
-    console.error('[EntityCache] Failed to cache entity:', error);
+  if (!result.success) {
+    console.error('[EntityCache] Failed to cache entity:', result.error);
+  } else {
+    console.log('[EntityCache] Successfully cached entity:', entity.name);
   }
 }
 
@@ -216,7 +226,11 @@ export async function cacheEntities(
   userId: string,
   entities: ResolvedEntity[]
 ): Promise<void> {
+  if (entities.length === 0) return;
+
   const supabase = getSupabaseClient(supabaseUrl, supabaseKey);
+
+  console.log('[EntityCache] Caching', entities.length, 'entities');
 
   const rows = entities.map(entity => ({
     user_id: userId,
@@ -231,14 +245,33 @@ export async function cacheEntities(
     last_verified_at: entity.lastVerifiedAt || new Date().toISOString()
   }));
 
-  const { error } = await supabase
+  // Bulk upsert with timeout protection
+  const TIMEOUT_MS = 30000;
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Bulk cache operation timed out after 30s')), TIMEOUT_MS)
+  );
+
+  const upsertPromise = supabase
     .from('entity_resolution_cache')
     .upsert(rows, {
       onConflict: 'user_id,entity_name,entity_type'
-    });
+    })
+    .select('id');
 
-  if (error) {
-    console.error('[EntityCache] Failed to cache entities:', error);
+  try {
+    const { data, error } = await Promise.race([upsertPromise, timeoutPromise]) as Awaited<typeof upsertPromise>;
+
+    if (error) {
+      console.error('[EntityCache] Failed to cache entities:', error);
+    } else {
+      const cachedCount = data?.length || 0;
+      console.log('[EntityCache] Successfully cached', cachedCount, 'of', entities.length, 'entities');
+      if (cachedCount !== entities.length) {
+        console.warn('[EntityCache] Warning: Expected', entities.length, 'but cached', cachedCount);
+      }
+    }
+  } catch (e) {
+    console.error('[EntityCache] Exception caching entities:', e);
   }
 }
 

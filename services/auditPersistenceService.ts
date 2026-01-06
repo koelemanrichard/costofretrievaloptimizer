@@ -7,6 +7,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { QueryNetworkAnalysisResult, MentionScannerResult, CorpusAuditResult } from '../types';
 import { EnhancedAuditMetrics } from './reportGenerationService';
+import { verifiedInsert } from './verifiedDatabaseService';
 
 // Types for stored audits
 export interface StoredQueryNetworkAudit {
@@ -111,39 +112,39 @@ export async function saveQueryNetworkAudit(
   result: QueryNetworkAnalysisResult,
   config: { seedKeyword: string; targetDomain?: string; language?: string }
 ): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('query_network_audits')
-      .insert({
-        map_id: mapId,
-        user_id: userId,
-        seed_keyword: config.seedKeyword,
-        target_domain: config.targetDomain || null,
-        language: config.language || 'en',
-        total_queries: result.queryNetwork?.length || 0,
-        total_competitor_eavs: result.competitorEAVs?.length || 0,
-        total_content_gaps: result.contentGaps?.length || 0,
-        total_recommendations: result.recommendations?.length || 0,
-        query_network: result.queryNetwork || [],
-        competitor_eavs: result.competitorEAVs || [],
-        content_gaps: result.contentGaps || [],
-        recommendations: result.recommendations || [],
-        intent_distribution: {},
-        questions: [],
-      })
-      .select('id')
-      .single();
+  console.log('[saveQueryNetworkAudit] Saving audit for map:', mapId);
 
-    if (error) {
-      console.error('[saveQueryNetworkAudit] Error:', error);
-      return null;
-    }
+  const insertResult = await verifiedInsert(
+    supabase,
+    { table: 'query_network_audits', operationDescription: 'save Query Network audit' },
+    {
+      map_id: mapId,
+      user_id: userId,
+      seed_keyword: config.seedKeyword,
+      target_domain: config.targetDomain || null,
+      language: config.language || 'en',
+      total_queries: result.queryNetwork?.length || 0,
+      total_competitor_eavs: result.competitorEAVs?.length || 0,
+      total_content_gaps: result.contentGaps?.length || 0,
+      total_recommendations: result.recommendations?.length || 0,
+      query_network: result.queryNetwork || [],
+      competitor_eavs: result.competitorEAVs || [],
+      content_gaps: result.contentGaps || [],
+      recommendations: result.recommendations || [],
+      intent_distribution: {},
+      questions: [],
+    },
+    'id'
+  );
 
-    return data?.id || null;
-  } catch (e) {
-    console.error('[saveQueryNetworkAudit] Exception:', e);
+  if (!insertResult.success) {
+    console.error('[saveQueryNetworkAudit] Failed:', insertResult.error);
     return null;
   }
+
+  const savedId = (insertResult.data as { id?: string })?.id;
+  console.log('[saveQueryNetworkAudit] Successfully saved audit:', savedId);
+  return savedId || null;
 }
 
 /**
@@ -156,40 +157,40 @@ export async function saveEATScannerAudit(
   result: MentionScannerResult,
   config: { entityName: string; domain?: string; industry?: string; language?: string }
 ): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('eat_scanner_audits')
-      .insert({
-        map_id: mapId,
-        user_id: userId,
-        entity_name: config.entityName,
-        domain: config.domain || null,
-        industry: config.industry || null,
-        language: config.language || 'en',
-        overall_eat_score: result.eatScore || null,
-        expertise_score: result.eatBreakdown?.expertise?.score || null,
-        authority_score: result.eatBreakdown?.authority?.score || null,
-        trust_score: result.eatBreakdown?.trust?.score || null,
-        overall_sentiment: result.overallSentiment || null,
-        entity_authority: result.entityAuthority || {},
-        reputation_signals: result.reputationSignals || [],
-        co_occurrences: result.coOccurrences || [],
-        eat_breakdown: result.eatBreakdown || {},
-        recommendations: result.recommendations || [],
-      })
-      .select('id')
-      .single();
+  console.log('[saveEATScannerAudit] Saving audit for map:', mapId);
 
-    if (error) {
-      console.error('[saveEATScannerAudit] Error:', error);
-      return null;
-    }
+  const insertResult = await verifiedInsert(
+    supabase,
+    { table: 'eat_scanner_audits', operationDescription: 'save E-A-T Scanner audit' },
+    {
+      map_id: mapId,
+      user_id: userId,
+      entity_name: config.entityName,
+      domain: config.domain || null,
+      industry: config.industry || null,
+      language: config.language || 'en',
+      overall_eat_score: result.eatScore || null,
+      expertise_score: result.eatBreakdown?.expertise?.score || null,
+      authority_score: result.eatBreakdown?.authority?.score || null,
+      trust_score: result.eatBreakdown?.trust?.score || null,
+      overall_sentiment: result.overallSentiment || null,
+      entity_authority: result.entityAuthority || {},
+      reputation_signals: result.reputationSignals || [],
+      co_occurrences: result.coOccurrences || [],
+      eat_breakdown: result.eatBreakdown || {},
+      recommendations: result.recommendations || [],
+    },
+    'id'
+  );
 
-    return data?.id || null;
-  } catch (e) {
-    console.error('[saveEATScannerAudit] Exception:', e);
+  if (!insertResult.success) {
+    console.error('[saveEATScannerAudit] Failed:', insertResult.error);
     return null;
   }
+
+  const savedId = (insertResult.data as { id?: string })?.id;
+  console.log('[saveEATScannerAudit] Successfully saved audit:', savedId);
+  return savedId || null;
 }
 
 /**
@@ -202,38 +203,38 @@ export async function saveCorpusAudit(
   result: CorpusAuditResult,
   config: { domain: string; sitemapUrl?: string; pageLimit?: number }
 ): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('corpus_audits')
-      .insert({
-        map_id: mapId,
-        user_id: userId,
-        domain: config.domain,
-        sitemap_url: config.sitemapUrl || null,
-        page_limit: config.pageLimit || null,
-        total_pages: result.pages?.length || 0,
-        total_overlaps: result.contentOverlaps?.length || 0,
-        semantic_coverage_percentage: result.semanticCoverage?.coveragePercentage || null,
-        pages: result.pages || [],
-        content_overlaps: result.contentOverlaps || [],
-        anchor_patterns: result.anchorPatterns || [],
-        semantic_coverage: result.semanticCoverage || {},
-        metrics: result.metrics || {},
-        issues: result.issues || [],
-      })
-      .select('id')
-      .single();
+  console.log('[saveCorpusAudit] Saving audit for map:', mapId);
 
-    if (error) {
-      console.error('[saveCorpusAudit] Error:', error);
-      return null;
-    }
+  const insertResult = await verifiedInsert(
+    supabase,
+    { table: 'corpus_audits', operationDescription: 'save Corpus audit' },
+    {
+      map_id: mapId,
+      user_id: userId,
+      domain: config.domain,
+      sitemap_url: config.sitemapUrl || null,
+      page_limit: config.pageLimit || null,
+      total_pages: result.pages?.length || 0,
+      total_overlaps: result.contentOverlaps?.length || 0,
+      semantic_coverage_percentage: result.semanticCoverage?.coveragePercentage || null,
+      pages: result.pages || [],
+      content_overlaps: result.contentOverlaps || [],
+      anchor_patterns: result.anchorPatterns || [],
+      semantic_coverage: result.semanticCoverage || {},
+      metrics: result.metrics || {},
+      issues: result.issues || [],
+    },
+    'id'
+  );
 
-    return data?.id || null;
-  } catch (e) {
-    console.error('[saveCorpusAudit] Exception:', e);
+  if (!insertResult.success) {
+    console.error('[saveCorpusAudit] Failed:', insertResult.error);
     return null;
   }
+
+  const savedId = (insertResult.data as { id?: string })?.id;
+  console.log('[saveCorpusAudit] Successfully saved audit:', savedId);
+  return savedId || null;
 }
 
 /**
@@ -248,46 +249,46 @@ export async function saveEnhancedMetricsSnapshot(
   eavCount: number,
   options?: { snapshotType?: 'manual' | 'auto'; snapshotName?: string; notes?: string }
 ): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('enhanced_metrics_snapshots')
-      .insert({
-        map_id: mapId,
-        user_id: userId,
-        snapshot_type: options?.snapshotType || 'manual',
-        snapshot_name: options?.snapshotName || null,
-        semantic_compliance_score: metrics.semanticCompliance?.score || null,
-        eav_authority_score: metrics.authorityIndicators?.eavAuthorityScore || null,
-        information_density_score: metrics.informationDensity?.avgFactsPerSection
-          ? (metrics.informationDensity.avgFactsPerSection / metrics.informationDensity.targetFactsPerSection) * 100
-          : null,
-        topic_count: topicCount,
-        eav_count: eavCount,
-        unique_eav_count: metrics.authorityIndicators?.uniqueEavCount || 0,
-        root_eav_count: metrics.authorityIndicators?.rootEavCount || 0,
-        rare_eav_count: metrics.authorityIndicators?.rareEavCount || 0,
-        common_eav_count: metrics.authorityIndicators?.commonEavCount || 0,
-        semantic_compliance: metrics.semanticCompliance || {},
-        authority_indicators: metrics.authorityIndicators || {},
-        information_density: metrics.informationDensity || {},
-        action_roadmap: metrics.actionRoadmap || [],
-        category_distribution: metrics.semanticCompliance?.categoryDistribution || {},
-        classification_distribution: metrics.semanticCompliance?.classificationDistribution || {},
-        notes: options?.notes || null,
-      })
-      .select('id')
-      .single();
+  console.log('[saveEnhancedMetricsSnapshot] Saving snapshot for map:', mapId);
 
-    if (error) {
-      console.error('[saveEnhancedMetricsSnapshot] Error:', error);
-      return null;
-    }
+  const insertResult = await verifiedInsert(
+    supabase,
+    { table: 'enhanced_metrics_snapshots', operationDescription: 'save Enhanced Metrics snapshot' },
+    {
+      map_id: mapId,
+      user_id: userId,
+      snapshot_type: options?.snapshotType || 'manual',
+      snapshot_name: options?.snapshotName || null,
+      semantic_compliance_score: metrics.semanticCompliance?.score || null,
+      eav_authority_score: metrics.authorityIndicators?.eavAuthorityScore || null,
+      information_density_score: metrics.informationDensity?.avgFactsPerSection
+        ? (metrics.informationDensity.avgFactsPerSection / metrics.informationDensity.targetFactsPerSection) * 100
+        : null,
+      topic_count: topicCount,
+      eav_count: eavCount,
+      unique_eav_count: metrics.authorityIndicators?.uniqueEavCount || 0,
+      root_eav_count: metrics.authorityIndicators?.rootEavCount || 0,
+      rare_eav_count: metrics.authorityIndicators?.rareEavCount || 0,
+      common_eav_count: metrics.authorityIndicators?.commonEavCount || 0,
+      semantic_compliance: metrics.semanticCompliance || {},
+      authority_indicators: metrics.authorityIndicators || {},
+      information_density: metrics.informationDensity || {},
+      action_roadmap: metrics.actionRoadmap || [],
+      category_distribution: metrics.semanticCompliance?.categoryDistribution || {},
+      classification_distribution: metrics.semanticCompliance?.classificationDistribution || {},
+      notes: options?.notes || null,
+    },
+    'id'
+  );
 
-    return data?.id || null;
-  } catch (e) {
-    console.error('[saveEnhancedMetricsSnapshot] Exception:', e);
+  if (!insertResult.success) {
+    console.error('[saveEnhancedMetricsSnapshot] Failed:', insertResult.error);
     return null;
   }
+
+  const savedId = (insertResult.data as { id?: string })?.id;
+  console.log('[saveEnhancedMetricsSnapshot] Successfully saved snapshot:', savedId);
+  return savedId || null;
 }
 
 /**
