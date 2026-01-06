@@ -53,6 +53,23 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const [showRail, setShowRail] = useState(true); // Toggle for Requirements Rail
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
 
+  // Version history state
+  const [draftHistory, setDraftHistory] = useState<Array<{
+    version: number;
+    content: string;
+    saved_at: string;
+    char_count: number;
+  }>>([]);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [isRestoringVersion, setIsRestoringVersion] = useState(false);
+
+  // CRITICAL: Ref to always have the latest draftContent for save operations
+  // This fixes the stale closure bug where save after polish used old content
+  const draftContentRef = useRef(draftContent);
+  useEffect(() => {
+    draftContentRef.current = draftContent;
+  }, [draftContent]);
+
   // Database sync detection state
   const [databaseDraft, setDatabaseDraft] = useState<string | null>(null);
   const [databaseJobInfo, setDatabaseJobInfo] = useState<{
@@ -199,10 +216,10 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
       try {
         const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
 
-        // First try content_briefs table (primary storage)
+        // First try content_briefs table (primary storage) - also fetch version history
         const { data: briefData, error: briefError } = await supabase
           .from('content_briefs')
-          .select('article_draft')
+          .select('article_draft, draft_history')
           .eq('id', brief.id)
           .single();
 
@@ -212,6 +229,12 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           loadedBriefIdRef.current = brief.id;
           loadedDraftLengthRef.current = briefData.article_draft.length;
           loadedAtRef.current = new Date().toISOString();
+
+          // Load version history if available
+          if (briefData.draft_history && Array.isArray(briefData.draft_history)) {
+            setDraftHistory(briefData.draft_history as typeof draftHistory);
+            console.log('[DraftingModal] Loaded version history:', briefData.draft_history.length, 'versions');
+          }
 
           // Also update React state so it stays in sync
           if (activeMapId && brief.topic_id) {
@@ -575,11 +598,15 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     if (!brief) return;
     if (!state.activeMapId) return;
 
+    // CRITICAL: Use ref to get the LATEST draftContent value
+    // This fixes the stale closure bug where save after polish used old content
+    const contentToSave = draftContentRef.current;
+
     const isTransient = brief.id.startsWith('transient-');
 
     if (isTransient) {
         // Update in memory only for transient
-        const updatedBrief = { ...brief, articleDraft: draftContent };
+        const updatedBrief = { ...brief, articleDraft: contentToSave };
         dispatch({ type: 'ADD_BRIEF', payload: { mapId: state.activeMapId, topicId: brief.topic_id, brief: updatedBrief } });
         setHasUnsavedChanges(false);
         dispatch({ type: 'SET_NOTIFICATION', payload: 'Transient draft updated in memory. Click "Save to Map" to persist.' });
@@ -589,14 +616,14 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     setIsSaving(true);
     try {
         const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
-        const expectedLength = draftContent.length;
+        const expectedLength = contentToSave.length;
 
-        console.log('[DraftingModal] Starting save - brief.id:', brief.id, 'content length:', expectedLength);
+        console.log('[DraftingModal] Starting save - brief.id:', brief.id, 'content length:', expectedLength, '(using ref for latest content)');
 
         // Step 1: Perform the update
         const { error: updateError, count: updateCount } = await supabase
             .from('content_briefs')
-            .update({ article_draft: draftContent, updated_at: new Date().toISOString() })
+            .update({ article_draft: contentToSave, updated_at: new Date().toISOString() })
             .eq('id', brief.id);
 
         if (updateError) {
@@ -648,7 +675,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         if (databaseJobInfo?.jobId) {
           const { error: jobError } = await supabase
             .from('content_generation_jobs')
-            .update({ draft_content: draftContent, updated_at: new Date().toISOString() })
+            .update({ draft_content: contentToSave, updated_at: new Date().toISOString() })
             .eq('id', databaseJobInfo.jobId);
 
           if (jobError) {
@@ -659,8 +686,20 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         }
 
         // Step 4: Update local state only AFTER database verification succeeded
-        const updatedBrief = { ...brief, articleDraft: draftContent };
+        const updatedBrief = { ...brief, articleDraft: contentToSave };
         dispatch({ type: 'ADD_BRIEF', payload: { mapId: state.activeMapId, topicId: brief.topic_id, brief: updatedBrief } });
+
+        // Step 5: Fetch updated version history from database (trigger should have created it)
+        const { data: historyData } = await supabase
+          .from('content_briefs')
+          .select('draft_history')
+          .eq('id', brief.id)
+          .single();
+
+        if (historyData?.draft_history) {
+          setDraftHistory(historyData.draft_history as typeof draftHistory);
+          console.log('[DraftingModal] Updated version history:', (historyData.draft_history as any[]).length, 'versions');
+        }
 
         // Show clear success message with actual saved count
         dispatch({ type: 'SET_NOTIFICATION', payload: `✓ Draft saved and verified! ${savedLength.toLocaleString()} characters persisted to database.` });
@@ -678,6 +717,37 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         dispatch({ type: 'SET_ERROR', payload: `❌ SAVE FAILED: ${errorMessage}` });
     } finally {
         setIsSaving(false);
+    }
+  };
+
+  // Restore a previous version from history
+  const handleRestoreVersion = async (version: typeof draftHistory[0]) => {
+    if (!brief || !version.content) return;
+
+    const confirmRestore = window.confirm(
+      `Restore draft from ${new Date(version.saved_at).toLocaleString()}?\n\n` +
+      `This version has ${version.char_count.toLocaleString()} characters.\n\n` +
+      `Your current draft will be saved to version history before restoring.`
+    );
+
+    if (!confirmRestore) return;
+
+    setIsRestoringVersion(true);
+    try {
+      // First, save current draft to history (handled by trigger when we update)
+      setDraftContent(version.content);
+      setHasUnsavedChanges(true);
+      setShowVersionHistory(false);
+
+      dispatch({
+        type: 'SET_NOTIFICATION',
+        payload: `✓ Restored draft from ${new Date(version.saved_at).toLocaleString()}. Click "Save Draft" to persist this version.`
+      });
+    } catch (e) {
+      console.error('[DraftingModal] Restore version error:', e);
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to restore version. Please try again.' });
+    } finally {
+      setIsRestoringVersion(false);
     }
   };
 
@@ -2240,13 +2310,24 @@ ${schemaScript}`;
                     {isSaving ? <Loader className="w-4 h-4"/> : 'Save to Map'}
                  </Button>
              ) : (
-                 <Button
-                    onClick={handleSaveDraft}
-                    className="!py-1 !px-4 text-sm"
-                    disabled={isSaving || isPolishing}
-                 >
-                    {isSaving ? <Loader className="w-4 h-4"/> : 'Save Draft'}
-                 </Button>
+                 <>
+                     <Button
+                        onClick={handleSaveDraft}
+                        className="!py-1 !px-4 text-sm"
+                        disabled={isSaving || isPolishing}
+                     >
+                        {isSaving ? <Loader className="w-4 h-4"/> : 'Save Draft'}
+                     </Button>
+                     {draftHistory.length > 0 && (
+                         <button
+                            onClick={() => setShowVersionHistory(true)}
+                            className="ml-2 px-2 py-1 text-xs text-gray-400 hover:text-white border border-gray-600 rounded hover:border-gray-500"
+                            title={`${draftHistory.length} previous version(s) available`}
+                         >
+                            📋 History ({draftHistory.length})
+                         </button>
+                     )}
+                 </>
              )}
 
              <button onClick={handleCloseModal} className="text-gray-400 text-2xl leading-none hover:text-white ml-2">&times;</button>
@@ -2811,6 +2892,79 @@ ${schemaScript}`;
           data={reportHook.data}
           projectName={activeMap?.name || businessInfo?.projectName}
         />
+      )}
+
+      {/* Version History Modal */}
+      {showVersionHistory && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]" onClick={() => setShowVersionHistory(false)}>
+          <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">📋 Draft Version History</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  {draftHistory.length} previous version{draftHistory.length !== 1 ? 's' : ''} saved. Click to restore.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowVersionHistory(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-grow space-y-3">
+              {draftHistory.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No previous versions yet. Version history is created automatically when you save changes.
+                </p>
+              ) : (
+                draftHistory.map((version, index) => (
+                  <div
+                    key={`${version.version}-${version.saved_at}`}
+                    className="bg-gray-700/50 rounded-lg p-4 border border-gray-600 hover:border-teal-500 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-white">
+                          v{version.version}
+                        </span>
+                        <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-600 rounded">
+                          {version.char_count.toLocaleString()} chars
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        {new Date(version.saved_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-300 bg-gray-800 rounded p-2 mb-3 max-h-24 overflow-hidden relative">
+                      <div className="line-clamp-3">
+                        {version.content.substring(0, 500)}...
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-800 to-transparent" />
+                    </div>
+                    <Button
+                      onClick={() => handleRestoreVersion(version)}
+                      disabled={isRestoringVersion}
+                      className="w-full !py-2 text-sm bg-teal-600 hover:bg-teal-700"
+                    >
+                      {isRestoringVersion ? <Loader className="w-4 h-4" /> : '⏪ Restore This Version'}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
+              <p className="text-xs text-gray-500">
+                Tip: Up to 6 versions are automatically saved when you modify the draft.
+              </p>
+              <Button variant="secondary" onClick={() => setShowVersionHistory(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
