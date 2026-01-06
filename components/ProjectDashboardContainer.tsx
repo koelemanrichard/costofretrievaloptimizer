@@ -2003,14 +2003,9 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         try {
             const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
 
-            // Verify we have an active session for RLS
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log('[handleUpdateTopic] Auth session:', session ? `User ${session.user.id}` : 'NO SESSION');
-
-            if (!session) {
-                console.error('[handleUpdateTopic] No active session - RLS will block updates');
-                throw new Error('No active session. Please log in again to make changes.');
-            }
+            // Note: Skip getSession() verification - it can hang indefinitely.
+            // RLS policies will reject if not authenticated anyway.
+            console.log('[handleUpdateTopic] Updating topic via RLS...');
 
             // List of fields that live in the `metadata` JSONB column, NOT as root columns
             const metaFields = [
