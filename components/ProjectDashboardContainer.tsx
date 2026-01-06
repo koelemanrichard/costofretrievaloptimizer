@@ -71,6 +71,10 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         stateRef.current = state;
     }, [state]);
 
+    // Save operation locks to prevent concurrent saves that can hang
+    // Using refs because we don't want to trigger re-renders on lock state changes
+    const saveLocks = useRef<{ [key: string]: boolean }>({});
+
     // Export settings modal state
     const [showExportSettings, setShowExportSettings] = useState(false);
 
@@ -1899,6 +1903,38 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     const handleUpdateEavs = useCallback(async (newEavs: SemanticTriple[]) => {
         if (!activeMapId) return;
 
+        // CRITICAL: Prevent concurrent saves that can cause hangs
+        // The EAV expansion can trigger rapid successive saves which overwhelm Supabase
+        const lockKey = `eavs_${activeMapId}`;
+        if (saveLocks.current[lockKey]) {
+            console.warn('[handleUpdateEavs] Save already in progress, queueing request...');
+            // Queue the save to happen after current one completes
+            // Use a simple retry mechanism with exponential backoff
+            let retries = 0;
+            const maxRetries = 5;
+            const waitAndRetry = async (): Promise<void> => {
+                while (saveLocks.current[lockKey] && retries < maxRetries) {
+                    retries++;
+                    const waitTime = Math.min(1000 * Math.pow(2, retries - 1), 10000); // 1s, 2s, 4s, 8s, 10s
+                    console.log(`[handleUpdateEavs] Waiting ${waitTime}ms for lock to release (attempt ${retries}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+                if (!saveLocks.current[lockKey]) {
+                    // Lock released, proceed with save
+                    return handleUpdateEavs(newEavs);
+                } else {
+                    // Still locked after max retries, show error
+                    console.error('[handleUpdateEavs] Save lock timeout after', retries, 'retries');
+                    dispatch({ type: 'SET_ERROR', payload: 'Save operation is taking too long. Please try again.' });
+                }
+            };
+            return waitAndRetry();
+        }
+
+        // Acquire lock
+        saveLocks.current[lockKey] = true;
+        console.log('[handleUpdateEavs] Lock acquired for', lockKey);
+
         dispatch({ type: 'SET_LOADING', payload: { key: 'map', value: true } });
         try {
             // Log the EAVs being saved for debugging
@@ -1950,6 +1986,9 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
             console.error('[handleUpdateEavs] Error:', e);
             dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to update EAVs.' });
         } finally {
+            // Release lock
+            saveLocks.current[lockKey] = false;
+            console.log('[handleUpdateEavs] Lock released for', lockKey);
             dispatch({ type: 'SET_LOADING', payload: { key: 'map', value: false } });
         }
     }, [activeMapId, businessInfo, dispatch]);

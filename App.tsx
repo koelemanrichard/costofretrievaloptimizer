@@ -87,9 +87,10 @@ const App: React.FC = () => {
 
             const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
 
-            // If session check hangs for more than 5s, the Supabase client is in a bad state
+            // If session check hangs for more than 15s, the Supabase client is in a bad state
             // Clear storage and reload the page to get a completely fresh state
             // Use a flag to prevent infinite reload loops
+            // INCREASED from 5s to 15s to avoid interrupting users during slow network
             let didComplete = false;
             const lastReload = wasRecovering; // Reuse the value we already fetched
             const now = Date.now();
@@ -100,7 +101,7 @@ const App: React.FC = () => {
                     // causes "Multiple GoTrueClient instances" issues with any in-progress login
                     // Use 30-second threshold to prevent infinite reload loops
                     if (!lastReload || (now - parseInt(lastReload, 10)) > 30000) {
-                        console.warn('[App] Session check hanging - clearing storage and reloading');
+                        console.warn('[App] Session check hanging after 15s - clearing storage and reloading');
                         clearSupabaseAuthStorage();
                         resetSupabaseClient(false);
                         localStorage.setItem(reloadKey, now.toString());
@@ -116,7 +117,7 @@ const App: React.FC = () => {
                         dispatch({ type: 'SET_ERROR', payload: 'Authentication service unavailable. Please refresh the page or try again later.' });
                     }
                 }
-            }, 5000);
+            }, 15000); // Increased from 5000 to 15000 to avoid interrupting users
 
             try {
                 // Fast-path: if no auth token in localStorage, skip getSession() entirely
@@ -158,38 +159,21 @@ const App: React.FC = () => {
         initializeAuth();
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
+    // Track which user we've claimed migrated data for (to avoid duplicate calls)
+    const claimedMigratedDataForUser = useRef<string | null>(null);
+
     useEffect(() => {
         console.log('[App] Setting up onAuthStateChange subscription (version:', authClientVersion, ')');
         const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // CRITICAL: Do NOT make async Supabase calls inside this callback!
+        // Known bug: async Supabase calls in onAuthStateChange cause deadlocks
+        // where the NEXT Supabase call anywhere in the app will hang indefinitely.
+        // See: https://github.com/supabase/supabase-js/issues/1594
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             dispatch({ type: 'SET_USER', payload: session?.user ?? null });
             if (session?.user) {
                 // Set global usage context for AI telemetry tracking
                 setGlobalUsageContext({ userId: session.user.id });
-
-                // Claim migrated data - updates user_id references after database migration
-                // This is a one-time operation that ensures data is linked to the correct user
-                if (event === 'SIGNED_IN') {
-                    try {
-                        // Use type assertion since this function may not be in generated types
-                        const { data, error } = await (supabase.rpc as any)('claim_migrated_data');
-                        if (error) {
-                            // Function may not exist on older databases - this is expected
-                            if (!error.message.includes('does not exist')) {
-                                console.warn('[App] claim_migrated_data warning:', error.message);
-                            }
-                        } else if (data && typeof data === 'object' && 'success' in data) {
-                            const result = data as { success: boolean; projects_updated?: number; maps_updated?: number; topics_updated?: number; briefs_updated?: number };
-                            const totalUpdated = (result.projects_updated || 0) + (result.maps_updated || 0) +
-                                                (result.topics_updated || 0) + (result.briefs_updated || 0);
-                            if (totalUpdated > 0) {
-                                console.log('[App] Migrated data claimed:', result);
-                            }
-                        }
-                    } catch (e) {
-                        // Silently ignore - function may not exist
-                    }
-                }
 
                 // Only redirect to selection if we are currently on the Auth screen (login/signup)
                 // This prevents resetting the view when switching tabs (which triggers session refresh)
@@ -208,6 +192,47 @@ const App: React.FC = () => {
             subscription.unsubscribe();
         };
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, authClientVersion]);
+
+    // Claim migrated data OUTSIDE of onAuthStateChange to avoid Supabase deadlock bug
+    // This is a one-time operation that ensures data is linked to the correct user
+    useEffect(() => {
+        if (!state.user?.id) {
+            // Reset claim tracking on logout
+            claimedMigratedDataForUser.current = null;
+            return;
+        }
+
+        // Only claim once per user session
+        if (claimedMigratedDataForUser.current === state.user.id) {
+            return;
+        }
+
+        const claimMigratedData = async () => {
+            claimedMigratedDataForUser.current = state.user!.id;
+            try {
+                const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+                // Use type assertion since this function may not be in generated types
+                const { data, error } = await (supabase.rpc as any)('claim_migrated_data');
+                if (error) {
+                    // Function may not exist on older databases - this is expected
+                    if (!error.message.includes('does not exist')) {
+                        console.warn('[App] claim_migrated_data warning:', error.message);
+                    }
+                } else if (data && typeof data === 'object' && 'success' in data) {
+                    const result = data as { success: boolean; projects_updated?: number; maps_updated?: number; topics_updated?: number; briefs_updated?: number };
+                    const totalUpdated = (result.projects_updated || 0) + (result.maps_updated || 0) +
+                                        (result.topics_updated || 0) + (result.briefs_updated || 0);
+                    if (totalUpdated > 0) {
+                        console.log('[App] Migrated data claimed:', result);
+                    }
+                }
+            } catch (e) {
+                // Silently ignore - function may not exist
+            }
+        };
+
+        claimMigratedData();
+    }, [state.user?.id, state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
     // Update global usage context when project/map changes for AI telemetry
     useEffect(() => {

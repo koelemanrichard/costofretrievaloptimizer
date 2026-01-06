@@ -65,12 +65,21 @@ export async function verifiedInsert<T extends Record<string, unknown>>(
   const opDesc = operationDescription || `insert into ${table}`;
 
   try {
-    // Step 1: Perform the insert with returning
-    const { data: insertedData, error: insertError } = await supabase
+    // Step 1: Perform the insert with returning - WITH TIMEOUT PROTECTION
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Database operation timed out after 30s')), 30000)
+    );
+
+    const insertPromise = supabase
       .from(table)
       .insert(record)
       .select(selectColumns)
       .single();
+
+    const { data: insertedData, error: insertError } = await Promise.race([
+      insertPromise,
+      timeoutPromise
+    ]) as Awaited<typeof insertPromise>;
 
     if (insertError) {
       console.error(`[VerifiedDB] INSERT failed for ${opDesc}:`, insertError);
@@ -92,13 +101,22 @@ export async function verifiedInsert<T extends Record<string, unknown>>(
       };
     }
 
-    // Step 2: Verify by reading back (unless skipped)
+    // Step 2: Verify by reading back (unless skipped) - also with timeout
     if (!skipVerification && 'id' in insertedData) {
-      const { data: verifyData, error: verifyError } = await supabase
+      const verifyTimeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Verification read timed out after 30s')), 30000)
+      );
+
+      const verifyPromise = supabase
         .from(table)
         .select(selectColumns)
         .eq('id', insertedData.id)
         .single();
+
+      const { data: verifyData, error: verifyError } = await Promise.race([
+        verifyPromise,
+        verifyTimeoutPromise
+      ]) as Awaited<typeof verifyPromise>;
 
       if (verifyError || !verifyData) {
         console.error(`[VerifiedDB] INSERT verification failed for ${opDesc}:`, verifyError);
@@ -156,7 +174,7 @@ export async function verifiedUpdate<T extends Record<string, unknown>>(
       updated_at: (updates as any).updated_at || new Date().toISOString()
     };
 
-    // Step 1: Perform the update with flexible filter
+    // Step 1: Perform the update with flexible filter and TIMEOUT PROTECTION
     let query = supabase.from(table).update(updatesWithTimestamp);
 
     // Apply filter based on operator
@@ -166,7 +184,17 @@ export async function verifiedUpdate<T extends Record<string, unknown>>(
       query = query.eq(filterSpec.column, filterSpec.value as string);
     }
 
-    const { data: updatedData, error: updateError } = await query.select(selectColumns).single();
+    // Add timeout to prevent infinite hangs (critical fix for consecutive saves)
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Database operation timed out after 30s')), 30000)
+    );
+
+    const updatePromise = query.select(selectColumns).single();
+
+    const { data: updatedData, error: updateError } = await Promise.race([
+      updatePromise,
+      timeoutPromise
+    ]) as Awaited<typeof updatePromise>;
 
     if (updateError) {
       console.error(`[VerifiedDB] UPDATE failed for ${opDesc}:`, updateError);
@@ -188,7 +216,7 @@ export async function verifiedUpdate<T extends Record<string, unknown>>(
       };
     }
 
-    // Step 2: Verify by reading back (unless skipped)
+    // Step 2: Verify by reading back (unless skipped) - also with timeout
     if (!skipVerification) {
       let verifyQuery = supabase.from(table).select(selectColumns);
       if (filterSpec.operator === 'in' && Array.isArray(filterSpec.value)) {
@@ -196,7 +224,16 @@ export async function verifiedUpdate<T extends Record<string, unknown>>(
       } else {
         verifyQuery = verifyQuery.eq(filterSpec.column, filterSpec.value as string);
       }
-      const { data: verifyData, error: verifyError } = await verifyQuery.single();
+
+      const verifyTimeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Verification read timed out after 30s')), 30000)
+      );
+
+      const verifyPromise = verifyQuery.single();
+      const { data: verifyData, error: verifyError } = await Promise.race([
+        verifyPromise,
+        verifyTimeoutPromise
+      ]) as Awaited<typeof verifyPromise>;
 
       if (verifyError) {
         console.error(`[VerifiedDB] UPDATE verification read failed for ${opDesc}:`, verifyError);
