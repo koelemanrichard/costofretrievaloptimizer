@@ -176,45 +176,68 @@ export function useContentGeneration({
           const existingSections = await orchestratorRef.current.getSections(latestJob.id);
           setSections(existingSections);
 
-          // If job is completed and has a draft, sync it to the brief
-          // For completed jobs, use job.draft_content which contains the optimized result
-          // DO NOT automatically prefer assembled sections even if longer - they contain raw Pass 1 content
-          // Passes 2-8 intentionally consolidate/optimize content, and polish further reduces length
-          // The job.draft_content is the authoritative source for completed jobs
+          // For COMPLETED jobs on page load: Check DATABASE for existing article_draft
+          // The user's saved content (via Polish/Flow/Audit) is in content_briefs.article_draft
+          // That is the source of truth - not the job's draft_content or React state
+          //
+          // Only sync job content to brief if:
+          // 1. content_briefs.article_draft is empty in the DATABASE
+          // 2. This means no user has saved any work yet
+          //
+          // If database already has content, the user may have:
+          // - Polished the draft (shorter, optimized)
+          // - Run Flow optimization
+          // - Run Audit fixes
+          // We must NOT overwrite their work!
           if (latestJob.status === 'completed' && onComplete) {
             const jobDraftContent = latestJob.draft_content || '';
 
-            // Log comparison for debugging but don't auto-replace
-            let assembledDraft = '';
-            if (existingSections.length > 0) {
-              assembledDraft = await orchestratorRef.current.assembleDraft(latestJob.id);
-              console.log('[useContentGeneration] Content comparison - job.draft_content:', jobDraftContent.length, 'chars, assembled sections:', assembledDraft.length, 'chars');
-            }
+            // Check DATABASE for existing article_draft (not React state which may be stale)
+            const { data: briefData } = await supabase
+              .from('content_briefs')
+              .select('article_draft')
+              .eq('id', briefId)
+              .single();
 
-            // Use job.draft_content as authoritative source for completed jobs
-            // Only fall back to assembled sections if job.draft_content is EMPTY
-            // (shorter is OK - it means content was optimized or polished)
-            let draftToSync = jobDraftContent;
-            let source = 'job.draft_content (optimized)';
+            const dbArticleDraft = briefData?.article_draft || '';
 
-            if (!jobDraftContent && assembledDraft) {
-              // Only use sections if job.draft_content is completely empty
-              draftToSync = assembledDraft;
-              source = 'assembled_sections (fallback - no optimized content)';
-              console.log('[useContentGeneration] No job.draft_content, falling back to assembled sections');
-            } else if (assembledDraft.length > jobDraftContent.length) {
-              // Sections are longer - this is EXPECTED after polish/optimization
-              // Do NOT overwrite - the shorter content is intentionally consolidated
-              console.log('[useContentGeneration] Sections are longer than optimized content - this is normal after polish/optimization. Using optimized content.');
-            }
-
-            if (draftToSync) {
-              console.log('[useContentGeneration] Syncing draft to brief from', source + ':', draftToSync.length, 'chars');
-              // Pass schema data if available (for jobs completed with Pass 9)
-              const schemaResult = latestJob.schema_data as EnhancedSchemaResult | undefined;
-              onComplete(draftToSync, latestJob.final_audit_score || 0, schemaResult);
+            if (dbArticleDraft.trim().length > 0) {
+              // Database already has user-saved content - DO NOT overwrite
+              console.log('[useContentGeneration] Completed job found, but database already has article_draft:', dbArticleDraft.length, 'chars');
+              console.log('[useContentGeneration] NOT syncing job content to preserve user\'s saved work (Polish/Flow/Audit)');
+              // Still log comparison for debugging
+              if (existingSections.length > 0) {
+                const assembledDraft = await orchestratorRef.current.assembleDraft(latestJob.id);
+                console.log('[useContentGeneration] FYI - job.draft_content:', jobDraftContent.length, 'chars, assembled sections:', assembledDraft.length, 'chars, DB article_draft:', dbArticleDraft.length, 'chars');
+              }
             } else {
-              console.warn('[useContentGeneration] No draft content found in completed job');
+              // Database has NO article_draft - this is initial sync after generation completed
+              // Use job.draft_content (optimized through passes 1-9)
+              console.log('[useContentGeneration] Database has no article_draft, syncing from completed job');
+
+              let assembledDraft = '';
+              if (existingSections.length > 0) {
+                assembledDraft = await orchestratorRef.current.assembleDraft(latestJob.id);
+                console.log('[useContentGeneration] Content comparison - job.draft_content:', jobDraftContent.length, 'chars, assembled sections:', assembledDraft.length, 'chars');
+              }
+
+              // Use job.draft_content as primary source, fall back to sections only if empty
+              let draftToSync = jobDraftContent;
+              let source = 'job.draft_content (optimized)';
+
+              if (!jobDraftContent && assembledDraft) {
+                draftToSync = assembledDraft;
+                source = 'assembled_sections (fallback - no optimized content)';
+                console.log('[useContentGeneration] No job.draft_content, falling back to assembled sections');
+              }
+
+              if (draftToSync) {
+                console.log('[useContentGeneration] Syncing draft to brief from', source + ':', draftToSync.length, 'chars');
+                const schemaResult = latestJob.schema_data as EnhancedSchemaResult | undefined;
+                onComplete(draftToSync, latestJob.final_audit_score || 0, schemaResult);
+              } else {
+                console.warn('[useContentGeneration] No draft content found in completed job');
+              }
             }
           }
           // Auto-resume in_progress or pending jobs after page refresh
