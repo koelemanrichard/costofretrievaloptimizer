@@ -84,8 +84,8 @@ async function callProvider(
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Default timeout for AI calls (90 seconds - allows for long content generation)
-const AI_CALL_TIMEOUT_MS = 90000;
+// Default timeout for AI calls (140 seconds - matches Anthropic proxy timeout of 145s)
+const AI_CALL_TIMEOUT_MS = 140000;
 
 /**
  * Wrap a promise with a timeout

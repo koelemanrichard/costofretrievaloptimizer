@@ -236,7 +236,7 @@ export function canExecutePass9(job: ContentGenerationJob): {
   reason?: string;
 } {
   // Check if Pass 8 is completed
-  if (job.passes_status.pass_8_audit !== 'completed') {
+  if (job.passes_status?.pass_8_audit !== 'completed') {
     return {
       canExecute: false,
       reason: 'Pass 8 (Audit) must be completed before schema generation'
@@ -252,7 +252,7 @@ export function canExecutePass9(job: ContentGenerationJob): {
   }
 
   // Check if Pass 9 already completed
-  if (job.passes_status.pass_9_schema === 'completed') {
+  if (job.passes_status?.pass_9_schema === 'completed') {
     return {
       canExecute: true,
       reason: 'Pass 9 can be re-run to regenerate schema'
@@ -272,7 +272,7 @@ export function getPass9Status(job: ContentGenerationJob): {
   entityCount: number;
   pageType: string | null;
 } {
-  const status = job.passes_status.pass_9_schema || 'pending';
+  const status = job.passes_status?.pass_9_schema || 'pending';
   const schemaData = job.schema_data as EnhancedSchemaResult | null;
 
   return {

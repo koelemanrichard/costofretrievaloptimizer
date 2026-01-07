@@ -102,6 +102,8 @@ const getPassStatus = (job: ContentGenerationJob, passNum: number): 'completed' 
     'pass_5_microsemantics', 'pass_6_discourse', 'pass_7_intro', 'pass_8_audit'
   ];
   const key = passKeys[passNum - 1];
+  // Defensive null check - prevents crash when passes_status is null/undefined
+  if (!job.passes_status) return 'pending';
   return job.passes_status[key] || 'pending';
 };
 

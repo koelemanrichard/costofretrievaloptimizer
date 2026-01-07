@@ -128,6 +128,7 @@ const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash';
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 10000;
+const RATE_LIMIT_DEFAULT_DELAY_MS = 30000; // 30s default for rate limits
 
 /**
  * Delay helper with exponential backoff
@@ -136,6 +137,28 @@ const delay = (attempt: number): Promise<void> => {
     const backoff = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
     const jitter = Math.random() * 500; // Add jitter to avoid thundering herd
     return new Promise(resolve => setTimeout(resolve, backoff + jitter));
+};
+
+/**
+ * Extract retry delay from Gemini 429 error response
+ * Gemini returns retryDelay in format like "25s" or "25.725280351s"
+ */
+const extractRetryDelay = (error: any): number | null => {
+    try {
+        const message = error?.message || '';
+        // Match pattern like "retryDelay":"25s" or "retryDelay":"25.5s"
+        const match = message.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s?"/);
+        if (match && match[1]) {
+            const delaySeconds = parseFloat(match[1]);
+            if (!isNaN(delaySeconds) && delaySeconds > 0) {
+                // Add 2 second buffer to be safe
+                return (delaySeconds + 2) * 1000;
+            }
+        }
+    } catch {
+        // Ignore parsing errors
+    }
+    return null;
 };
 
 /**
@@ -366,13 +389,23 @@ const callApi = async <T>(
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
             if (attempt > 0) {
+                // For rate limit errors, use the delay specified by Gemini if available
+                const rateLimitDelay = extractRetryDelay(lastError);
+                const waitMs = rateLimitDelay || (INITIAL_BACKOFF_MS * Math.pow(2, attempt));
+
                 dispatch({ type: 'LOG_EVENT', payload: {
                     service: 'Gemini',
-                    message: `Retry attempt ${attempt + 1}/${MAX_RETRIES} for model ${modelToUse}...`,
+                    message: `Retry attempt ${attempt + 1}/${MAX_RETRIES} for model ${modelToUse}... waiting ${Math.round(waitMs/1000)}s`,
                     status: 'info',
                     timestamp: Date.now()
                 }});
-                await delay(attempt);
+
+                if (rateLimitDelay) {
+                    // Use rate limit delay with some jitter
+                    await new Promise(resolve => setTimeout(resolve, waitMs + Math.random() * 1000));
+                } else {
+                    await delay(attempt);
+                }
             }
 
             const { result, error } = await makeSingleAttempt(modelToUse);

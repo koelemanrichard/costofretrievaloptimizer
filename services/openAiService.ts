@@ -1,5 +1,4 @@
-
-import OpenAI from 'openai';
+// OpenAI service using Supabase Edge Function proxy to avoid CORS issues
 import {
     BusinessInfo, CandidateEntity, SourceContextOption, SEOPillars,
     SemanticTriple, EnrichedTopic, ContentBrief, BriefSection, ResponseCode,
@@ -88,10 +87,9 @@ const callApi = async <T>(
         throw new Error("OpenAI API key is not configured.");
     }
 
-    const openai = new OpenAI({
-        apiKey: businessInfo.openAiApiKey,
-        dangerouslyAllowBrowser: true // Client-side usage
-    });
+    if (!businessInfo.supabaseUrl) {
+        throw new Error("Supabase URL is not configured. Required for OpenAI proxy.");
+    }
 
     // Valid OpenAI model IDs: https://platform.openai.com/docs/models
     const validOpenAIModels = [
@@ -121,34 +119,77 @@ const callApi = async <T>(
     // Start API call logging
     const apiCallLog = openAiLogger.start(operation, 'POST');
 
+    // Build proxy URL
+    const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/openai-proxy`;
+
     try {
-        // Determine which token parameter to use based on model
-        // O-series (o3, o4-mini) and GPT-5+ use max_completion_tokens
-        // Legacy models (gpt-4o, gpt-4.1) use max_tokens
-        const usesNewTokenParam = modelToUse.startsWith('o') ||
-            modelToUse.startsWith('gpt-5') ||
-            modelToUse.startsWith('gpt-4.1');
-
-        const tokenParams = usesNewTokenParam
-            ? { max_completion_tokens: 8192 }
-            : { max_tokens: 8192 };
-
-        const completion = await openai.chat.completions.create({
+        // Build request body for the proxy
+        const requestBody: any = {
             model: modelToUse,
             messages: [
                 { role: "system", content: "You are a helpful, expert SEO strategist and content architect. You output strict JSON when requested." },
                 { role: "user", content: prompt }
             ],
-            ...tokenParams, // Use appropriate token parameter for model
-            response_format: isJson ? { type: "json_object" } : undefined,
+            max_tokens: 8192,
+        };
+
+        // Add response format for JSON responses
+        if (isJson) {
+            requestBody.response_format = { type: "json_object" };
+        }
+
+        // Call the proxy instead of OpenAI directly
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-openai-api-key': businessInfo.openAiApiKey,
+                'apikey': businessInfo.supabaseAnonKey || '',
+            },
+            body: JSON.stringify(requestBody),
         });
 
-        const responseText = completion.choices[0].message.content || '';
         const durationMs = Date.now() - startTime;
 
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+            const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+            const suggestion = errorData.suggestion || '';
+
+            // Log failed usage
+            logAiUsage({
+                provider: 'openai',
+                model: modelToUse,
+                operation,
+                tokensIn: estimateTokens(prompt.length),
+                tokensOut: 0,
+                durationMs,
+                success: false,
+                errorMessage,
+                context: currentUsageContext
+            }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+
+            // Log failed API call
+            openAiLogger.error(apiCallLog.id, new Error(errorMessage), {
+                model: modelToUse,
+                requestSize: prompt.length,
+            });
+
+            dispatch({ type: 'LOG_EVENT', payload: {
+                service: 'OpenAI',
+                message: `Error: ${errorMessage}${suggestion ? ` - ${suggestion}` : ''}`,
+                status: 'failure',
+                timestamp: Date.now()
+            }});
+            throw new Error(`OpenAI API Call Failed: ${errorMessage}`);
+        }
+
+        const data = await response.json();
+        const responseText = data.choices?.[0]?.message?.content || '';
+
         // Log successful usage
-        const tokensIn = completion.usage?.prompt_tokens || estimateTokens(prompt.length);
-        const tokensOut = completion.usage?.completion_tokens || estimateTokens(responseText.length);
+        const tokensIn = data.usage?.prompt_tokens || estimateTokens(prompt.length);
+        const tokensOut = data.usage?.completion_tokens || estimateTokens(responseText.length);
 
         logAiUsage({
             provider: 'openai',
@@ -171,7 +212,7 @@ const callApi = async <T>(
             tokenCount: tokensIn + tokensOut,
         });
 
-        dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Received response.`, status: 'info', timestamp: Date.now() } });
+        dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Received response via proxy.`, status: 'info', timestamp: Date.now() } });
 
         return sanitizerFn(responseText);
 
@@ -179,27 +220,33 @@ const callApi = async <T>(
         const durationMs = Date.now() - startTime;
         const message = error instanceof Error ? error.message : "Unknown OpenAI error";
 
-        // Log failed usage
-        logAiUsage({
-            provider: 'openai',
-            model: modelToUse,
-            operation,
-            tokensIn: estimateTokens(prompt.length),
-            tokensOut: 0,
-            durationMs,
-            success: false,
-            errorMessage: message,
-            context: currentUsageContext
-        }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
+        // Only log if not already logged above
+        if (!message.includes('OpenAI API Call Failed')) {
+            // Log failed usage
+            logAiUsage({
+                provider: 'openai',
+                model: modelToUse,
+                operation,
+                tokensIn: estimateTokens(prompt.length),
+                tokensOut: 0,
+                durationMs,
+                success: false,
+                errorMessage: message,
+                context: currentUsageContext
+            }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
-        // Log failed API call
-        openAiLogger.error(apiCallLog.id, error, {
-            model: modelToUse,
-            requestSize: prompt.length,
-        });
+            // Log failed API call
+            openAiLogger.error(apiCallLog.id, error, {
+                model: modelToUse,
+                requestSize: prompt.length,
+            });
 
-        dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Error: ${message}`, status: 'failure', timestamp: Date.now(), data: error } });
-        throw new Error(`OpenAI API Call Failed: ${message}`);
+            dispatch({ type: 'LOG_EVENT', payload: { service: 'OpenAI', message: `Error: ${message}`, status: 'failure', timestamp: Date.now(), data: error } });
+        }
+
+        throw error instanceof Error && error.message.includes('OpenAI API Call Failed')
+            ? error
+            : new Error(`OpenAI API Call Failed: ${message}`);
     }
 };
 

@@ -2932,7 +2932,7 @@ ${schemaScript}`;
               <div>
                 <h2 className="text-xl font-bold text-white">📋 Draft Version History</h2>
                 <p className="text-sm text-gray-400 mt-1">
-                  {draftHistory.length} previous version{draftHistory.length !== 1 ? 's' : ''} saved. Click to restore.
+                  Current draft and {draftHistory.length} previous version{draftHistory.length !== 1 ? 's' : ''}.
                 </p>
               </div>
               <button
@@ -2944,50 +2944,108 @@ ${schemaScript}`;
             </div>
 
             <div className="overflow-y-auto flex-grow space-y-3">
+              {/* Current Draft Section - Always show what's in the editor */}
+              <div className="bg-teal-900/30 rounded-lg p-4 border-2 border-teal-500">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-teal-400">
+                      Current Draft
+                    </span>
+                    <span className="text-xs text-teal-300 px-2 py-0.5 bg-teal-800 rounded">
+                      {(draftContent?.length || 0).toLocaleString()} chars
+                    </span>
+                    <span className="text-xs text-teal-400 px-2 py-0.5 bg-teal-900 rounded">
+                      Active in Editor
+                    </span>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-300 bg-gray-800 rounded p-2 max-h-24 overflow-hidden relative">
+                  <div className="line-clamp-3">
+                    {(draftContent || '').substring(0, 500)}...
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-800 to-transparent" />
+                </div>
+              </div>
+
+              {/* Divider */}
+              {draftHistory.length > 0 && (
+                <div className="flex items-center gap-2 py-2">
+                  <div className="flex-grow h-px bg-gray-600" />
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">Previous Versions</span>
+                  <div className="flex-grow h-px bg-gray-600" />
+                </div>
+              )}
+
               {draftHistory.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
+                <p className="text-gray-500 text-center py-4">
                   No previous versions yet. Version history is created automatically when you save changes.
                 </p>
               ) : (
-                draftHistory.map((version, index) => (
-                  <div
-                    key={`${version.version}-${version.saved_at}`}
-                    className="bg-gray-700/50 rounded-lg p-4 border border-gray-600 hover:border-teal-500 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-white">
-                          v{version.version}
-                        </span>
-                        <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-600 rounded">
-                          {version.char_count.toLocaleString()} chars
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {new Date(version.saved_at).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-300 bg-gray-800 rounded p-2 mb-3 max-h-24 overflow-hidden relative">
-                      <div className="line-clamp-3">
-                        {version.content.substring(0, 500)}...
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-800 to-transparent" />
-                    </div>
-                    <Button
-                      onClick={() => handleRestoreVersion(version)}
-                      disabled={isRestoringVersion}
-                      className="w-full !py-2 text-sm bg-teal-600 hover:bg-teal-700"
+                draftHistory.map((version, index) => {
+                  // Calculate relative time
+                  const savedDate = new Date(version.saved_at);
+                  const now = new Date();
+                  const diffMs = now.getTime() - savedDate.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMins / 60);
+                  const diffDays = Math.floor(diffHours / 24);
+                  let relativeTime = '';
+                  if (diffDays > 0) relativeTime = `${diffDays}d ago`;
+                  else if (diffHours > 0) relativeTime = `${diffHours}h ago`;
+                  else if (diffMins > 0) relativeTime = `${diffMins}m ago`;
+                  else relativeTime = 'just now';
+
+                  // Calculate size difference from current
+                  const currentLength = draftContent?.length || 0;
+                  const sizeDiff = version.char_count - currentLength;
+                  const sizeDiffText = sizeDiff > 0 ? `+${sizeDiff.toLocaleString()}` : sizeDiff.toLocaleString();
+
+                  return (
+                    <div
+                      key={`${version.version}-${version.saved_at}`}
+                      className="bg-gray-700/50 rounded-lg p-4 border border-gray-600 hover:border-teal-500 transition-colors"
                     >
-                      {isRestoringVersion ? <Loader className="w-4 h-4" /> : '⏪ Restore This Version'}
-                    </Button>
-                  </div>
-                ))
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg font-bold text-white">
+                            v{version.version}
+                          </span>
+                          <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-600 rounded">
+                            {version.char_count.toLocaleString()} chars
+                          </span>
+                          {sizeDiff !== 0 && (
+                            <span className={`text-xs px-2 py-0.5 rounded ${sizeDiff > 0 ? 'text-green-400 bg-green-900/30' : 'text-red-400 bg-red-900/30'}`}>
+                              {sizeDiffText} vs current
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-gray-400 block">{relativeTime}</span>
+                          <span className="text-xs text-gray-500">{savedDate.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-300 bg-gray-800 rounded p-2 mb-3 max-h-24 overflow-hidden relative">
+                        <div className="line-clamp-3">
+                          {version.content.substring(0, 500)}...
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-800 to-transparent" />
+                      </div>
+                      <Button
+                        onClick={() => handleRestoreVersion(version)}
+                        disabled={isRestoringVersion}
+                        className="w-full !py-2 text-sm bg-teal-600 hover:bg-teal-700"
+                      >
+                        {isRestoringVersion ? <Loader className="w-4 h-4" /> : '⏪ Restore This Version'}
+                      </Button>
+                    </div>
+                  );
+                })
               )}
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
               <p className="text-xs text-gray-500">
-                Tip: Up to 6 versions are automatically saved when you modify the draft.
+                Tip: Previous versions show content BEFORE each save. Current draft is what's active now.
               </p>
               <Button variant="secondary" onClick={() => setShowVersionHistory(false)}>
                 Close

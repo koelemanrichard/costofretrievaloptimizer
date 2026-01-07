@@ -289,6 +289,13 @@ export class ContentGenerationOrchestrator {
 
     // Count completed passes
     const passesStatus = job.passes_status;
+
+    // Defensive null check - prevents crash when passes_status is null/undefined
+    if (!passesStatus || typeof passesStatus !== 'object') {
+      console.warn('[Orchestrator] calculateProgress: passes_status is null/undefined for job', job.id);
+      return 0;
+    }
+
     const passKeys = Object.keys(passesStatus) as (keyof PassesStatus)[];
 
     for (let i = 0; i < passKeys.length; i++) {
