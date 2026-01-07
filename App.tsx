@@ -27,6 +27,7 @@ import LoggingPanel from './components/LoggingPanel';
 import EdgeToolbar, { ToolbarIcons } from './components/ui/EdgeToolbar';
 import MainLayout from './components/layout/MainLayout';
 import { useVersionCheck, UpdateBanner } from './hooks/useVersionCheck';
+import { CelebrationOverlay } from './components/gamification';
 
 const App: React.FC = () => {
     const [state, dispatch] = useReducer(appReducer, initialState);
@@ -654,6 +655,7 @@ const App: React.FC = () => {
             <MainLayout>
                 <div className="bg-gray-900 text-gray-200 min-h-screen font-sans">
                     <GlobalLoadingBar />
+                    <CelebrationOverlay />
                     <UpdateBanner
                         updateAvailable={updateAvailable}
                         onReload={handleReload}

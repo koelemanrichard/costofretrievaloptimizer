@@ -53,6 +53,9 @@ import { EnhancedMetricsDashboard } from './dashboard/EnhancedMetricsDashboard';
 import { ComprehensiveAuditDashboard } from './dashboard/ComprehensiveAuditDashboard';
 import { InsightsHub } from './insights';
 
+// Gamification Components
+import { ConfidenceDashboard, PriorityTieringSystem } from './gamification';
+
 import { Button } from './ui/Button';
 import { FeatureErrorBoundary } from './ui/FeatureErrorBoundary';
 import TabNavigation, { createDashboardTabs, NavIcons } from './dashboard/TabNavigation';
@@ -459,6 +462,42 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     onEditEavs={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eavManager', visible: true } })}
                     onEditCompetitors={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'competitorManager', visible: true } })}
                 />
+            </CollapsiblePanel>
+
+            {/* Semantic Authority Score (Gamification) */}
+            <CollapsiblePanel
+                id="semantic-authority"
+                title="Semantic Authority Score"
+                icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                defaultExpanded={false}
+                persistKey="dashboard-semantic-score"
+            >
+                <FeatureErrorBoundary featureName="Semantic Authority Score">
+                    <ConfidenceDashboard
+                        map={topicalMap}
+                        briefs={Object.values(briefs)}
+                    />
+                </FeatureErrorBoundary>
+            </CollapsiblePanel>
+
+            {/* Content Priority Tiers (Gamification) */}
+            <CollapsiblePanel
+                id="priority-tiers"
+                title="Content Priority Tiers"
+                icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>}
+                defaultExpanded={false}
+                persistKey="dashboard-priority-tiers"
+            >
+                <FeatureErrorBoundary featureName="Priority Tiers">
+                    <PriorityTieringSystem
+                        map={topicalMap}
+                        briefs={Object.values(briefs)}
+                        onTopicClick={(topicId) => {
+                            const topic = allTopics.find(t => t.id === topicId);
+                            if (topic) handleSelectTopicForBrief(topic);
+                        }}
+                    />
+                </FeatureErrorBoundary>
             </CollapsiblePanel>
 
             {/* Priority Recommendations (Compact) */}
