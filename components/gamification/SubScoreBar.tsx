@@ -106,7 +106,7 @@ export const SubScoreBar: React.FC<SubScoreBarProps> = ({
                 {subScore.improvements.map((improvement, i) => (
                   <li key={i} className="text-xs text-amber-400 flex items-start gap-1.5">
                     <span className="mt-0.5">→</span>
-                    <span>{improvement}</span>
+                    <span>{typeof improvement === 'string' ? improvement : improvement.text}</span>
                   </li>
                 ))}
               </ul>

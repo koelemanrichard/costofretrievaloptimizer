@@ -2,7 +2,7 @@
 // components/ProjectDashboard.tsx
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useAppState } from '../state/appState';
-import { TopicalMap, EnrichedTopic, ContentBrief, BusinessInfo, SEOPillars, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure, ExpandedTemplateResult } from '../types';
+import { TopicalMap, EnrichedTopic, ContentBrief, BusinessInfo, SEOPillars, TopicRecommendation, GscRow, ValidationIssue, MergeSuggestion, ResponseCode, SemanticTriple, ExpansionMode, AuditRuleResult, ContextualFlowIssue, FoundationPage, FoundationPageType, NAPData, NavigationStructure, ExpandedTemplateResult, FreshnessProfile } from '../types';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { KnowledgeGraph as KnowledgeGraphClass } from '../lib/knowledgeGraph';
 import { calculateDashboardMetrics } from '../utils/helpers';
@@ -282,6 +282,36 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         }
     }, [dispatch, briefs, canGenerateBriefs]);
 
+    // Handler for bulk updating topics (used by Auto-Fix for search intents)
+    const handleBulkUpdateTopics = useCallback(async (updatedTopics: EnrichedTopic[]) => {
+        for (const topic of updatedTopics) {
+            onUpdateTopic(topic.id, {
+                search_intent: topic.search_intent,
+                metadata: topic.metadata
+            });
+        }
+    }, [onUpdateTopic]);
+
+    // Handler for adding topics from Auto-Fix (adapts simplified interface to onAddTopic)
+    const handleAutoFixAddTopic = useCallback(async (topic: { title: string; type: 'core' | 'outer'; search_intent?: string; parentId?: string }) => {
+        const topicData: Omit<EnrichedTopic, 'id' | 'map_id' | 'slug'> = {
+            title: topic.title,
+            type: topic.type,
+            search_intent: topic.search_intent as EnrichedTopic['search_intent'],
+            parent_topic_id: topic.parentId || null,
+            cluster_role: topic.type === 'core' ? 'pillar' : 'cluster_content',
+            description: '',
+            freshness: FreshnessProfile.EVERGREEN,
+            metadata: {
+                auto_fix_generated: true,
+                created_at: new Date().toISOString()
+            }
+        };
+        // Use 'ai' placement to let the system determine best position, or use parentId if provided
+        const placement = topic.parentId || 'ai';
+        onAddTopic(topicData, placement);
+    }, [onAddTopic]);
+
     const handleGenerateBriefFromModal = (topic: EnrichedTopic, responseCode: ResponseCode, overrideSettings?: { provider: string, model: string }) => {
         onGenerateBrief(topic, responseCode, overrideSettings);
     };
@@ -476,6 +506,10 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     <ConfidenceDashboard
                         map={topicalMap}
                         briefs={Object.values(briefs)}
+                        dispatch={dispatch}
+                        onSaveEavs={onUpdateEavs}
+                        onSaveTopics={handleBulkUpdateTopics}
+                        onAddTopic={handleAutoFixAddTopic}
                     />
                 </FeatureErrorBoundary>
             </CollapsiblePanel>

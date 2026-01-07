@@ -5,31 +5,54 @@
  * - Overall Semantic Authority Score
  * - Sub-score breakdown
  * - What's working vs what needs improvement
- * - Actionable next steps
+ * - Actionable next steps with AI-powered Auto-Fix
  * - Progress over time
  */
 
-import React, { useState, useMemo } from 'react';
-import { TopicalMap, ContentBrief } from '../../types';
+import React, { useState, useMemo, useCallback } from 'react';
+import { TopicalMap, ContentBrief, BusinessInfo, SEOPillars, SemanticTriple, EnrichedTopic } from '../../types';
 import { useSemanticScore } from '../../hooks/gamification/useSemanticScore';
 import { SemanticScoreDisplay } from './SemanticScoreDisplay';
 import { TierBadge, TierProgress } from './TierBadge';
 import { SubScoreGrid } from './SubScoreBar';
 import { ScoreHistory } from './ScoreChangeIndicator';
 import { Card } from '../ui/Card';
+import AutoFixButton from './AutoFixButton';
+import AutoFixPreviewModal from './AutoFixPreviewModal';
+import { AutoFixType, ImprovementSuggestion } from '../../utils/gamification/scoreCalculations';
+import {
+  generateFixPreview,
+  AutoFixPreview,
+  AutoFixContext,
+  applyEavFix,
+  applyIntentFix,
+  applyTopicsFix,
+  TopicIntentUpdate,
+  TopicSuggestion
+} from '../../services/ai/autoFixService';
+import { AppAction } from '../../state/appState';
 
 interface ConfidenceDashboardProps {
   map: TopicalMap | null;
   briefs?: ContentBrief[];
   compact?: boolean;
   className?: string;
+  // Props needed for Auto-Fix functionality
+  dispatch?: React.Dispatch<AppAction>;
+  onSaveEavs?: (eavs: SemanticTriple[]) => Promise<void>;
+  onSaveTopics?: (topics: EnrichedTopic[]) => Promise<void>;
+  onAddTopic?: (topic: { title: string; type: 'core' | 'outer'; search_intent?: string; parentId?: string }) => Promise<void>;
 }
 
 export const ConfidenceDashboard: React.FC<ConfidenceDashboardProps> = ({
   map,
   briefs = [],
   compact = false,
-  className = ''
+  className = '',
+  dispatch,
+  onSaveEavs,
+  onSaveTopics,
+  onAddTopic
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'actions'>('overview');
   const {
@@ -39,31 +62,47 @@ export const ConfidenceDashboard: React.FC<ConfidenceDashboardProps> = ({
     isCalculating
   } = useSemanticScore(map, briefs);
 
+  // Auto-Fix state
+  const [autoFixModalOpen, setAutoFixModalOpen] = useState(false);
+  const [autoFixPreview, setAutoFixPreview] = useState<AutoFixPreview | null>(null);
+  const [isLoadingFix, setIsLoadingFix] = useState(false);
+  const [isApplyingFix, setIsApplyingFix] = useState(false);
+  const [currentFixType, setCurrentFixType] = useState<AutoFixType>(null);
+
+  // Check if auto-fix is available (needs dispatch and save handlers)
+  const canAutoFix = Boolean(dispatch && (onSaveEavs || onSaveTopics || onAddTopic));
+
   // Aggregate all improvements and details
   const { improvements, workingItems, prioritizedActions } = useMemo(() => {
     if (!score?.breakdown) {
       return { improvements: [], workingItems: [], prioritizedActions: [] };
     }
 
-    const allImprovements: { category: string; text: string; priority: number }[] = [];
+    const allImprovements: { category: string; text: string; priority: number; autoFixType: AutoFixType }[] = [];
     const allWorking: { category: string; text: string }[] = [];
 
     const categories = [
-      { key: 'entityClarity', name: 'Entity Clarity', priority: 1 },
-      { key: 'topicalCoverage', name: 'Topical Coverage', priority: 2 },
-      { key: 'intentAlignment', name: 'Intent Alignment', priority: 3 },
-      { key: 'competitiveParity', name: 'Competitive Parity', priority: 4 },
-      { key: 'contentReadiness', name: 'Content Readiness', priority: 5 }
+      { key: 'entityClarity', name: 'Entity Clarity', basePriority: 1 },
+      { key: 'topicalCoverage', name: 'Topical Coverage', basePriority: 2 },
+      { key: 'intentAlignment', name: 'Intent Alignment', basePriority: 3 },
+      { key: 'competitiveParity', name: 'Competitive Parity', basePriority: 4 },
+      { key: 'contentReadiness', name: 'Content Readiness', basePriority: 5 }
     ] as const;
 
-    categories.forEach(({ key, name, priority }) => {
+    categories.forEach(({ key, name, basePriority }) => {
       const subScore = score.breakdown[key];
 
-      subScore.improvements.forEach(text => {
-        allImprovements.push({ category: name, text, priority });
+      // Improvements are now ImprovementSuggestion objects
+      subScore.improvements.forEach((improvement: ImprovementSuggestion) => {
+        allImprovements.push({
+          category: name,
+          text: improvement.text,
+          priority: improvement.priority ?? basePriority,
+          autoFixType: improvement.autoFixType
+        });
       });
 
-      subScore.details.forEach(text => {
+      subScore.details.forEach((text: string) => {
         allWorking.push({ category: name, text });
       });
     });
@@ -71,7 +110,7 @@ export const ConfidenceDashboard: React.FC<ConfidenceDashboardProps> = ({
     // Sort improvements by priority and limit
     const sorted = allImprovements
       .sort((a, b) => a.priority - b.priority)
-      .slice(0, 5);
+      .slice(0, 8);
 
     return {
       improvements: allImprovements,
@@ -79,6 +118,128 @@ export const ConfidenceDashboard: React.FC<ConfidenceDashboardProps> = ({
       prioritizedActions: sorted
     };
   }, [score]);
+
+  // Handle auto-fix button click
+  const handleAutoFix = useCallback(async (fixType: AutoFixType) => {
+    if (!fixType || !map || !dispatch) return;
+
+    setCurrentFixType(fixType);
+    setAutoFixModalOpen(true);
+    setIsLoadingFix(true);
+    setAutoFixPreview(null);
+
+    try {
+      const context: AutoFixContext = {
+        map,
+        businessInfo: (map.business_info || {}) as BusinessInfo,
+        pillars: (map.pillars || {}) as SEOPillars,
+        dispatch
+      };
+
+      const preview = await generateFixPreview(fixType, context);
+      setAutoFixPreview(preview);
+    } catch (error) {
+      console.error('[ConfidenceDashboard] Auto-fix preview generation failed:', error);
+      dispatch({
+        type: 'LOG_EVENT',
+        payload: {
+          service: 'AutoFix',
+          message: `Failed to generate fix: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          status: 'failure',
+          timestamp: Date.now()
+        }
+      });
+    } finally {
+      setIsLoadingFix(false);
+    }
+  }, [map, dispatch]);
+
+  // Handle applying the fix
+  const handleApplyFix = useCallback(async (selectedItems: unknown[]) => {
+    if (!autoFixPreview || !map || !dispatch) return;
+
+    setIsApplyingFix(true);
+
+    try {
+      const context: AutoFixContext = {
+        map,
+        businessInfo: (map.business_info || {}) as BusinessInfo,
+        pillars: (map.pillars || {}) as SEOPillars,
+        dispatch
+      };
+
+      if (currentFixType === 'add_unique_eavs' || currentFixType === 'expand_eavs' || currentFixType === 'add_root_eavs' || currentFixType === 'add_common_eavs') {
+        if (onSaveEavs) {
+          const preview = { ...autoFixPreview, items: selectedItems as SemanticTriple[] };
+          const result = await applyEavFix(preview as AutoFixPreview<SemanticTriple>, context, onSaveEavs);
+          if (result.success) {
+            dispatch({
+              type: 'LOG_EVENT',
+              payload: {
+                service: 'AutoFix',
+                message: result.message,
+                status: 'success',
+                timestamp: Date.now()
+              }
+            });
+          }
+        }
+      } else if (currentFixType === 'analyze_intents') {
+        if (onSaveTopics) {
+          const preview = { ...autoFixPreview, items: selectedItems as TopicIntentUpdate[] };
+          const result = await applyIntentFix(preview as AutoFixPreview<TopicIntentUpdate>, context, onSaveTopics);
+          if (result.success) {
+            dispatch({
+              type: 'LOG_EVENT',
+              payload: {
+                service: 'AutoFix',
+                message: result.message,
+                status: 'success',
+                timestamp: Date.now()
+              }
+            });
+          }
+        }
+      } else if (currentFixType === 'add_buyer_topics' || currentFixType === 'add_supporting_topics') {
+        if (onAddTopic) {
+          const preview = { ...autoFixPreview, items: selectedItems as TopicSuggestion[] };
+          // Helper to find parent topic ID by title
+          const getParentIdByTitle = (parentTitle: string): string | undefined => {
+            const topics = (map.topics || []) as EnrichedTopic[];
+            const parent = topics.find(t => t.title.toLowerCase() === parentTitle.toLowerCase());
+            return parent?.id;
+          };
+          const result = await applyTopicsFix(preview as AutoFixPreview<TopicSuggestion>, context, onAddTopic, getParentIdByTitle);
+          if (result.success) {
+            dispatch({
+              type: 'LOG_EVENT',
+              payload: {
+                service: 'AutoFix',
+                message: result.message,
+                status: 'success',
+                timestamp: Date.now()
+              }
+            });
+          }
+        }
+      }
+
+      setAutoFixModalOpen(false);
+    } catch (error) {
+      console.error('[ConfidenceDashboard] Auto-fix apply failed:', error);
+      dispatch({
+        type: 'LOG_EVENT',
+        payload: {
+          service: 'AutoFix',
+          message: `Failed to apply fix: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          status: 'failure',
+          timestamp: Date.now()
+        }
+      });
+    } finally {
+      setIsApplyingFix(false);
+    }
+  }, [autoFixPreview, currentFixType, map, dispatch, onSaveEavs, onSaveTopics]);
 
   if (!map) {
     return (
@@ -225,8 +386,15 @@ export const ConfidenceDashboard: React.FC<ConfidenceDashboardProps> = ({
               <ul className="space-y-2">
                 {improvements.slice(0, 6).map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <span className="text-amber-500 mt-0.5">•</span>
-                    <span className="text-gray-300">{item.text}</span>
+                    <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
+                    <span className="text-gray-300 flex-1">{item.text}</span>
+                    {canAutoFix && item.autoFixType && (
+                      <AutoFixButton
+                        fixType={item.autoFixType}
+                        onFix={() => handleAutoFix(item.autoFixType)}
+                        size="sm"
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
@@ -245,21 +413,41 @@ export const ConfidenceDashboard: React.FC<ConfidenceDashboardProps> = ({
 
       {activeTab === 'actions' && (
         <Card className="p-4">
-          <ImprovementChecklist actions={prioritizedActions} />
+          <ImprovementChecklist
+            actions={prioritizedActions}
+            canAutoFix={canAutoFix}
+            onAutoFix={handleAutoFix}
+          />
         </Card>
       )}
+
+      {/* Auto-Fix Preview Modal */}
+      <AutoFixPreviewModal
+        isOpen={autoFixModalOpen}
+        onClose={() => setAutoFixModalOpen(false)}
+        preview={autoFixPreview}
+        isLoading={isLoadingFix}
+        isApplying={isApplyingFix}
+        onApply={handleApplyFix}
+      />
     </div>
   );
 };
 
 /**
- * ImprovementChecklist - Actionable improvements with checkboxes
+ * ImprovementChecklist - Actionable improvements with checkboxes and auto-fix
  */
 interface ImprovementChecklistProps {
-  actions: { category: string; text: string; priority: number }[];
+  actions: { category: string; text: string; priority: number; autoFixType: AutoFixType }[];
+  canAutoFix?: boolean;
+  onAutoFix?: (fixType: AutoFixType) => void;
 }
 
-const ImprovementChecklist: React.FC<ImprovementChecklistProps> = ({ actions }) => {
+const ImprovementChecklist: React.FC<ImprovementChecklistProps> = ({
+  actions,
+  canAutoFix = false,
+  onAutoFix
+}) => {
   const [completed, setCompleted] = useState<Set<number>>(new Set());
 
   const toggleComplete = (index: number) => {
@@ -322,6 +510,15 @@ const ImprovementChecklist: React.FC<ImprovementChecklistProps> = ({ actions }) 
             </p>
             <span className="text-xs text-gray-500">{action.category}</span>
           </div>
+
+          {/* Auto-Fix button */}
+          {canAutoFix && action.autoFixType && onAutoFix && !completed.has(i) && (
+            <AutoFixButton
+              fixType={action.autoFixType}
+              onFix={() => onAutoFix(action.autoFixType)}
+              size="sm"
+            />
+          )}
 
           {/* Priority indicator */}
           <div className={`px-2 py-0.5 rounded text-[10px] font-medium ${

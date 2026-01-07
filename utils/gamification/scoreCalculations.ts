@@ -15,12 +15,33 @@ import type { TopicalMap, SemanticTriple, EnrichedTopic, ContentBrief, SEOPillar
 // TYPES
 // ============================================================================
 
+// Auto-Fix Types for AI-powered improvement suggestions
+export type AutoFixType =
+  | 'add_unique_eavs'
+  | 'add_root_eavs'
+  | 'add_common_eavs'
+  | 'expand_eavs'
+  | 'add_value_props'
+  | 'analyze_intents'
+  | 'add_buyer_topics'
+  | 'add_supporting_topics'
+  | 'generate_briefs'
+  | 'complete_briefs'
+  | 'add_competitors'
+  | null; // null = no auto-fix available
+
+export interface ImprovementSuggestion {
+  text: string;
+  autoFixType: AutoFixType;
+  priority?: number; // Lower = higher priority
+}
+
 export interface SubScore {
   score: number; // 0-100
   weight: number; // 0-1
   label: string; // Fun label like "Crystal clear"
   details: string[];
-  improvements: string[];
+  improvements: ImprovementSuggestion[]; // Changed from string[] to ImprovementSuggestion[]
 }
 
 export interface SemanticAuthorityScore {
@@ -165,7 +186,7 @@ export function getContentReadinessLabel(score: number): string {
 export function calculateEntityClarity(map: TopicalMap): SubScore {
   let score = 0;
   const details: string[] = [];
-  const improvements: string[] = [];
+  const improvements: ImprovementSuggestion[] = [];
 
   // Central entity defined (0-20 points)
   const businessInfo = map.business_info || {};
@@ -176,7 +197,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
     score += 10;
     details.push('Central entity defined');
   } else {
-    improvements.push('Define your central entity');
+    improvements.push({ text: 'Define your central entity', autoFixType: null, priority: 1 });
   }
 
   // Industry serves as a proxy for entity type
@@ -184,7 +205,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
     score += 10;
     details.push('Industry specified');
   } else {
-    improvements.push('Specify industry for better entity clarity');
+    improvements.push({ text: 'Specify industry for better entity clarity', autoFixType: null, priority: 2 });
   }
 
   // E-A-V completeness (0-40 points)
@@ -197,17 +218,17 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
   } else if (eavCount >= 30) {
     score += 30;
     details.push(`${eavCount} E-A-V triples (good coverage)`);
-    improvements.push('Add more E-A-Vs to reach 50+ for comprehensive coverage');
+    improvements.push({ text: 'Add more E-A-Vs to reach 50+ for comprehensive coverage', autoFixType: 'expand_eavs', priority: 3 });
   } else if (eavCount >= 15) {
     score += 20;
     details.push(`${eavCount} E-A-V triples`);
-    improvements.push('Expand E-A-V triples to strengthen entity definition');
+    improvements.push({ text: 'Expand E-A-V triples to strengthen entity definition', autoFixType: 'expand_eavs', priority: 3 });
   } else if (eavCount >= 5) {
     score += 10;
     details.push(`${eavCount} E-A-V triples (basic)`);
-    improvements.push('Your entity needs more facts - aim for 30+ E-A-Vs');
+    improvements.push({ text: 'Your entity needs more facts - aim for 30+ E-A-Vs', autoFixType: 'expand_eavs', priority: 3 });
   } else {
-    improvements.push('Add E-A-V triples to define your entity');
+    improvements.push({ text: 'Add E-A-V triples to define your entity', autoFixType: 'expand_eavs', priority: 3 });
   }
 
   // E-A-V category distribution (0-20 points)
@@ -219,7 +240,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
     score += 8;
     details.push('Has UNIQUE differentiating facts');
   } else if (eavCount > 0) {
-    improvements.push('Add UNIQUE category E-A-Vs to differentiate');
+    improvements.push({ text: 'Add UNIQUE category E-A-Vs to differentiate', autoFixType: 'add_unique_eavs', priority: 2 });
   }
 
   if (hasRootEavs) {
@@ -237,7 +258,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
     score += 5;
     details.push('Domain specified');
   } else {
-    improvements.push('Add your domain');
+    improvements.push({ text: 'Add your domain', autoFixType: null, priority: 4 });
   }
 
   if (businessInfo.projectName) {
@@ -250,7 +271,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
     score += 5;
     details.push('Target audience defined');
   } else {
-    improvements.push('Define your target audience');
+    improvements.push({ text: 'Define your target audience', autoFixType: null, priority: 4 });
   }
 
   // uniqueDataAssets serves as USP indicator
@@ -258,7 +279,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
     score += 5;
     details.push('Unique data assets defined');
   } else {
-    improvements.push('Add unique data assets or selling points');
+    improvements.push({ text: 'Add unique data assets or selling points', autoFixType: 'add_value_props', priority: 3 });
   }
 
   const finalScore = Math.min(100, score);
@@ -279,7 +300,7 @@ export function calculateEntityClarity(map: TopicalMap): SubScore {
 export function calculateTopicalCoverage(map: TopicalMap): SubScore {
   let score = 0;
   const details: string[] = [];
-  const improvements: string[] = [];
+  const improvements: ImprovementSuggestion[] = [];
 
   const topics = (map.topics || []) as EnrichedTopic[];
   const topicCount = topics.length;
@@ -301,10 +322,18 @@ export function calculateTopicalCoverage(map: TopicalMap): SubScore {
     details.push(`${topicCount} topics (meets or exceeds expected ${expectedTopics})`);
   } else if (coverageRatio >= 0.7) {
     details.push(`${topicCount} topics (${Math.round(coverageRatio * 100)}% of expected)`);
-    improvements.push(`Add ${expectedTopics - topicCount} more topics for full coverage`);
+    improvements.push({
+      text: `Add ${expectedTopics - topicCount} more topics for full coverage`,
+      autoFixType: 'add_supporting_topics',
+      priority: 2
+    });
   } else {
     details.push(`${topicCount} topics`);
-    improvements.push('Expand topic coverage - your semantic space has gaps');
+    improvements.push({
+      text: 'Expand topic coverage - your semantic space has gaps',
+      autoFixType: 'add_supporting_topics',
+      priority: 1
+    });
   }
 
   // Pillar definition check (0-25 points)
@@ -316,17 +345,29 @@ export function calculateTopicalCoverage(map: TopicalMap): SubScore {
       score += 5;
       details.push('Source context defined');
     } else {
-      improvements.push('Define source context for better semantic framing');
+      improvements.push({
+        text: 'Define source context for better semantic framing',
+        autoFixType: null,
+        priority: 3
+      });
     }
 
     if (pillars?.centralSearchIntent) {
       score += 5;
       details.push('Central search intent defined');
     } else {
-      improvements.push('Define central search intent');
+      improvements.push({
+        text: 'Define central search intent',
+        autoFixType: null,
+        priority: 3
+      });
     }
   } else {
-    improvements.push('Define SEO pillars (central entity, source context) to structure your content');
+    improvements.push({
+      text: 'Define SEO pillars (central entity, source context) to structure your content',
+      autoFixType: null,
+      priority: 1
+    });
   }
 
   // Topic depth - has both core and outer topics (0-25 points)
@@ -342,15 +383,27 @@ export function calculateTopicalCoverage(map: TopicalMap): SubScore {
       score += 10;
       details.push('Good core-to-supporting ratio');
     } else {
-      improvements.push('Add more supporting topics around your core topics');
+      improvements.push({
+        text: 'Add more supporting topics around your core topics',
+        autoFixType: 'add_supporting_topics',
+        priority: 2
+      });
     }
   } else if (coreTopics > 0) {
     score += 5;
     details.push(`${coreTopics} core topics`);
-    improvements.push('Add supporting/outer topics to build semantic depth');
+    improvements.push({
+      text: 'Add supporting/outer topics to build semantic depth',
+      autoFixType: 'add_supporting_topics',
+      priority: 2
+    });
   } else if (outerTopics > 0) {
     score += 5;
-    improvements.push('Define core topics for your pillars');
+    improvements.push({
+      text: 'Define core topics for your pillars',
+      autoFixType: null,
+      priority: 1
+    });
   }
 
   const finalScore = Math.min(100, score);
@@ -371,7 +424,7 @@ export function calculateTopicalCoverage(map: TopicalMap): SubScore {
 export function calculateIntentAlignment(map: TopicalMap): SubScore {
   let score = 0;
   const details: string[] = [];
-  const improvements: string[] = [];
+  const improvements: ImprovementSuggestion[] = [];
 
   const topics = map.topics || [];
 
@@ -381,7 +434,7 @@ export function calculateIntentAlignment(map: TopicalMap): SubScore {
       weight: 0.20,
       label: getIntentAlignmentLabel(0),
       details: ['No topics to analyze'],
-      improvements: ['Generate topics first']
+      improvements: [{ text: 'Generate topics first', autoFixType: null, priority: 1 }]
     };
   }
 
@@ -397,9 +450,17 @@ export function calculateIntentAlignment(map: TopicalMap): SubScore {
     details.push(`${topicsWithIntent.length}/${topics.length} topics have defined intent`);
   } else if (intentCoverage >= 0.5) {
     details.push(`${topicsWithIntent.length}/${topics.length} topics have defined intent`);
-    improvements.push('Define search intent for remaining topics');
+    improvements.push({
+      text: 'Define search intent for remaining topics',
+      autoFixType: 'analyze_intents',
+      priority: 2
+    });
   } else {
-    improvements.push('Most topics lack search intent - analyze and assign intents');
+    improvements.push({
+      text: 'Most topics lack search intent - analyze and assign intents',
+      autoFixType: 'analyze_intents',
+      priority: 1
+    });
   }
 
   // Intent diversity (0-30 points)
@@ -419,7 +480,11 @@ export function calculateIntentAlignment(map: TopicalMap): SubScore {
   }
 
   if (intents.size < 3 && topicsWithIntent.length > 0) {
-    improvements.push('Diversify search intents for broader coverage');
+    improvements.push({
+      text: 'Diversify search intents for broader coverage',
+      autoFixType: 'add_buyer_topics',
+      priority: 3
+    });
   }
 
   // Buyer intent presence (0-30 points)
@@ -436,13 +501,25 @@ export function calculateIntentAlignment(map: TopicalMap): SubScore {
   } else if (buyerRatio >= 0.2) {
     score += 20;
     details.push(`${buyerIntentTopics.length} buyer intent topics`);
-    improvements.push('Add more commercial/transactional topics for conversions');
+    improvements.push({
+      text: 'Add more commercial/transactional topics for conversions',
+      autoFixType: 'add_buyer_topics',
+      priority: 2
+    });
   } else if (buyerRatio >= 0.1) {
     score += 10;
     details.push(`${buyerIntentTopics.length} buyer intent topics (low)`);
-    improvements.push('Your map lacks buyer intent topics - add commercial content');
+    improvements.push({
+      text: 'Your map lacks buyer intent topics - add commercial content',
+      autoFixType: 'add_buyer_topics',
+      priority: 2
+    });
   } else {
-    improvements.push('Add topics targeting buyers ready to convert');
+    improvements.push({
+      text: 'Add topics targeting buyers ready to convert',
+      autoFixType: 'add_buyer_topics',
+      priority: 1
+    });
   }
 
   const finalScore = Math.min(100, score);
@@ -462,7 +539,7 @@ export function calculateIntentAlignment(map: TopicalMap): SubScore {
  */
 export function calculateCompetitiveParity(map: TopicalMap): SubScore {
   const details: string[] = [];
-  const improvements: string[] = [];
+  const improvements: ImprovementSuggestion[] = [];
 
   const competitors = map.competitors || [];
 
@@ -473,7 +550,11 @@ export function calculateCompetitiveParity(map: TopicalMap): SubScore {
       weight: 0.15,
       label: 'Unknown',
       details: ['No competitors defined'],
-      improvements: ['Add competitor URLs for gap analysis']
+      improvements: [{
+        text: 'Add competitor URLs for gap analysis',
+        autoFixType: 'add_competitors',
+        priority: 1
+      }]
     };
   }
 
@@ -485,7 +566,11 @@ export function calculateCompetitiveParity(map: TopicalMap): SubScore {
   details.push(`Tracking ${competitors.length} competitor(s)`);
 
   if (competitors.length < 3) {
-    improvements.push('Add more competitors for comprehensive analysis');
+    improvements.push({
+      text: 'Add more competitors for comprehensive analysis',
+      autoFixType: 'add_competitors',
+      priority: 2
+    });
   }
 
   // For now, give base score since we don't have competitor topic data yet
@@ -518,7 +603,7 @@ export function calculateContentReadiness(
   briefs: ContentBrief[]
 ): SubScore {
   const details: string[] = [];
-  const improvements: string[] = [];
+  const improvements: ImprovementSuggestion[] = [];
 
   const topics = map.topics || [];
 
@@ -528,7 +613,7 @@ export function calculateContentReadiness(
       weight: 0.15,
       label: getContentReadinessLabel(0),
       details: ['No topics to create content for'],
-      improvements: ['Generate topics first']
+      improvements: [{ text: 'Generate topics first', autoFixType: null, priority: 1 }]
     };
   }
 
@@ -544,10 +629,18 @@ export function calculateContentReadiness(
     details.push(`${briefsGenerated}/${topics.length} briefs generated`);
   } else if (briefRatio >= 0.5) {
     details.push(`${briefsGenerated}/${topics.length} briefs generated`);
-    improvements.push(`Generate briefs for ${topics.length - briefsGenerated} remaining topics`);
+    improvements.push({
+      text: `Generate briefs for ${topics.length - briefsGenerated} remaining topics`,
+      autoFixType: 'generate_briefs',
+      priority: 2
+    });
   } else {
     details.push(`${briefsGenerated} briefs generated`);
-    improvements.push('Generate more content briefs');
+    improvements.push({
+      text: 'Generate more content briefs',
+      autoFixType: 'generate_briefs',
+      priority: 1
+    });
   }
 
   // Brief quality - has outline and meta (0-40 points)
@@ -565,9 +658,17 @@ export function calculateContentReadiness(
     details.push(`${completeBriefs.length} briefs are complete`);
   } else if (qualityRatio >= 0.5) {
     details.push(`${completeBriefs.length}/${briefs.length} briefs are complete`);
-    improvements.push('Complete remaining briefs with outlines and meta');
+    improvements.push({
+      text: 'Complete remaining briefs with outlines and meta',
+      autoFixType: 'complete_briefs',
+      priority: 2
+    });
   } else if (briefs.length > 0) {
-    improvements.push('Most briefs are incomplete - add outlines and meta descriptions');
+    improvements.push({
+      text: 'Most briefs are incomplete - add outlines and meta descriptions',
+      autoFixType: 'complete_briefs',
+      priority: 1
+    });
   }
 
   // Drafts created (0-20 points)
@@ -584,7 +685,11 @@ export function calculateContentReadiness(
   }
 
   if (draftRatio < 0.5 && briefs.length > 0) {
-    improvements.push('Create article drafts from your briefs');
+    improvements.push({
+      text: 'Create article drafts from your briefs',
+      autoFixType: null, // Article drafts require the multi-pass generation flow
+      priority: 3
+    });
   }
 
   const finalScore = Math.min(100, score);
