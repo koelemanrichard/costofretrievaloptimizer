@@ -177,27 +177,35 @@ export function useContentGeneration({
           setSections(existingSections);
 
           // If job is completed and has a draft, sync it to the brief
-          // CRITICAL: Always compare with assembled sections and use the LONGER one
-          // This prevents truncated AI output from overwriting full content
+          // For completed jobs, use job.draft_content which contains the optimized result
+          // DO NOT automatically prefer assembled sections even if longer - they contain raw Pass 1 content
+          // Passes 2-8 intentionally consolidate/optimize content, and polish further reduces length
+          // The job.draft_content is the authoritative source for completed jobs
           if (latestJob.status === 'completed' && onComplete) {
             const jobDraftContent = latestJob.draft_content || '';
 
-            // Always assemble sections to compare lengths
+            // Log comparison for debugging but don't auto-replace
             let assembledDraft = '';
             if (existingSections.length > 0) {
               assembledDraft = await orchestratorRef.current.assembleDraft(latestJob.id);
               console.log('[useContentGeneration] Content comparison - job.draft_content:', jobDraftContent.length, 'chars, assembled sections:', assembledDraft.length, 'chars');
             }
 
-            // Use the LONGER content to prevent data loss from AI truncation
+            // Use job.draft_content as authoritative source for completed jobs
+            // Only fall back to assembled sections if job.draft_content is EMPTY
+            // (shorter is OK - it means content was optimized or polished)
             let draftToSync = jobDraftContent;
-            let source = 'job.draft_content';
+            let source = 'job.draft_content (optimized)';
 
-            if (assembledDraft.length > jobDraftContent.length) {
-              // Assembled sections are longer - likely AI truncated the optimization
+            if (!jobDraftContent && assembledDraft) {
+              // Only use sections if job.draft_content is completely empty
               draftToSync = assembledDraft;
-              source = 'assembled_sections (raw but complete)';
-              console.warn('[useContentGeneration] WARNING: AI optimization may have truncated content. Using complete raw sections instead.');
+              source = 'assembled_sections (fallback - no optimized content)';
+              console.log('[useContentGeneration] No job.draft_content, falling back to assembled sections');
+            } else if (assembledDraft.length > jobDraftContent.length) {
+              // Sections are longer - this is EXPECTED after polish/optimization
+              // Do NOT overwrite - the shorter content is intentionally consolidated
+              console.log('[useContentGeneration] Sections are longer than optimized content - this is normal after polish/optimization. Using optimized content.');
             }
 
             if (draftToSync) {
