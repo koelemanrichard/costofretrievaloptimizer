@@ -283,13 +283,26 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     }, [dispatch, briefs, canGenerateBriefs]);
 
     // Handler for bulk updating topics (used by Auto-Fix for search intents)
+    // Only updates topics that have metadata.intent_source === 'auto_fix' (newly assigned)
     const handleBulkUpdateTopics = useCallback(async (updatedTopics: EnrichedTopic[]) => {
-        for (const topic of updatedTopics) {
-            onUpdateTopic(topic.id, {
-                search_intent: topic.search_intent,
-                metadata: topic.metadata
-            });
+        // Filter to only topics that were actually modified by Auto-Fix
+        const modifiedTopics = updatedTopics.filter(t => t.metadata?.intent_source === 'auto_fix');
+
+        console.log(`[handleBulkUpdateTopics] Updating ${modifiedTopics.length} topics with new intents`);
+
+        // Process sequentially with await to ensure all saves complete
+        for (const topic of modifiedTopics) {
+            try {
+                await onUpdateTopic(topic.id, {
+                    search_intent: topic.search_intent,
+                    metadata: topic.metadata
+                });
+            } catch (error) {
+                console.error(`[handleBulkUpdateTopics] Failed to update topic ${topic.title}:`, error);
+            }
         }
+
+        console.log(`[handleBulkUpdateTopics] Completed updating ${modifiedTopics.length} topics`);
     }, [onUpdateTopic]);
 
     // Handler for adding topics from Auto-Fix (adapts simplified interface to onAddTopic)
@@ -309,7 +322,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         };
         // Use 'ai' placement to let the system determine best position, or use parentId if provided
         const placement = topic.parentId || 'ai';
-        onAddTopic(topicData, placement);
+        await onAddTopic(topicData, placement);
     }, [onAddTopic]);
 
     const handleGenerateBriefFromModal = (topic: EnrichedTopic, responseCode: ResponseCode, overrideSettings?: { provider: string, model: string }) => {
