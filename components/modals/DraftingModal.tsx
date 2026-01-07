@@ -495,16 +495,22 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         // - If database is LONGER: only suggest if significantly longer (>500 chars)
         //   This avoids false positives when user inserts images (which can make content shorter)
         // - If database is shorter: NEVER suggest (user likely polished/improved content)
+        // - If LOCAL is shorter: NEVER suggest - user has polished/consolidated the draft
         // - Exception: incomplete jobs should show status but ONLY if db content is not shorter
         const dbIsSignificantlyLonger = dbLength > currentLength + 500;
         const dbIsShorter = dbLength < currentLength - 100; // DB is notably shorter than local
+        // NEW: Check if local content is notably shorter than DB - indicates polishing/consolidation
+        // After polish, local content is typically 50-75% shorter (unified vs raw sections)
+        const localIsSignificantlyShorter = currentLength < dbLength - 100;
         const isSubstantiallyDifferent = dbIsSignificantlyLonger || (isJobNewer && lengthDiff > 500);
         const isDifferent = isSubstantiallyDifferent || assembledDraft !== draftContent;
 
         // Only set databaseDraft if there's actually better/newer content to sync
         // AND the database content is meaningfully longer (not just format differences from image insertion)
         // CRITICAL: Never suggest syncing to SHORTER content - this would revert polished/improved drafts
-        if ((isDifferent && dbIsSignificantlyLonger) || (isIncomplete && !dbIsShorter)) {
+        // CRITICAL: Never suggest syncing when LOCAL is shorter - user has polished/consolidated
+        // When local is shorter than DB, the user likely ran polish which consolidates raw sections
+        if ((isDifferent && dbIsSignificantlyLonger && !localIsSignificantlyShorter) || (isIncomplete && !dbIsShorter && !localIsSignificantlyShorter)) {
           setDatabaseDraft(assembledDraft);
           console.log('[DraftingModal] Found newer/different database content:', {
             currentLength,
@@ -512,6 +518,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
             diff: lengthDiff,
             dbIsSignificantlyLonger,
             dbIsShorter,
+            localIsSignificantlyShorter,
             isIncomplete,
             auditScore: jobData.final_audit_score,
             sectionCount,
@@ -520,7 +527,15 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           });
         } else {
           setDatabaseDraft(null);
-          console.log('[DraftingModal] Content is synced or database is not significantly longer - no sync suggested');
+          console.log('[DraftingModal] No sync suggested:', {
+            reason: localIsSignificantlyShorter
+              ? 'Local content is shorter (likely polished/consolidated)'
+              : 'Content is synced or database is not significantly longer',
+            currentLength,
+            dbLength,
+            localIsSignificantlyShorter,
+            dbIsSignificantlyLonger
+          });
         }
       } catch (err) {
         console.error('[DraftingModal] Error checking database for newer content:', err);
@@ -1001,7 +1016,6 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           // Note: We don't restore base64 images - they remain as placeholder URLs
           // User can re-insert images at the placeholder positions if needed
           setDraftContent(polishedText);
-          setHasUnsavedChanges(true);
           setActiveTab('preview'); // Switch to preview to show the formatted result
 
           // CRITICAL: Update loadedDraftLengthRef to prevent state sync from reverting polished content
@@ -1010,7 +1024,68 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           loadedDraftLengthRef.current = polishedText.length;
           console.log('[DraftingModal] Updated loadedDraftLengthRef to polished length:', polishedText.length);
 
-          dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! Introduction rewritten and formatting improved.' });
+          // AUTO-SAVE: Immediately persist polished content to prevent losing it on navigation/refresh
+          // This is critical because polish consolidates raw sections into a unified, shorter draft
+          // Without auto-save, reloading would show the longer raw sections instead of polished content
+          if (brief && activeMapId && state.user) {
+              try {
+                  const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+                  const { error: saveError } = await supabase
+                      .from('content_briefs')
+                      .update({ article_draft: polishedText, updated_at: new Date().toISOString() })
+                      .eq('id', brief.id);
+
+                  if (saveError) {
+                      console.error('[DraftingModal] Auto-save after polish failed:', saveError);
+                      dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! ⚠️ Auto-save failed - please save manually.' });
+                      setHasUnsavedChanges(true);
+                  } else {
+                      // VERIFICATION: Read back to confirm save worked
+                      const { data: verifyData, error: verifyError } = await supabase
+                          .from('content_briefs')
+                          .select('article_draft')
+                          .eq('id', brief.id)
+                          .single();
+
+                      const savedLength = verifyData?.article_draft?.length || 0;
+                      const expectedLength = polishedText.length;
+
+                      if (verifyError || Math.abs(savedLength - expectedLength) > 100) {
+                          console.error('[DraftingModal] Auto-save verification FAILED:', {
+                              verifyError,
+                              expectedLength,
+                              savedLength,
+                              diff: savedLength - expectedLength
+                          });
+                          dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! ⚠️ Save verification failed - please save manually.' });
+                          setHasUnsavedChanges(true);
+                      } else {
+                          console.log('[DraftingModal] Auto-save VERIFIED:', savedLength, 'chars saved (expected:', expectedLength, ')');
+
+                          // Also update the job's draft_content if exists
+                          if (databaseJobInfo?.jobId) {
+                              await supabase
+                                  .from('content_generation_jobs')
+                                  .update({ draft_content: polishedText, updated_at: new Date().toISOString() })
+                                  .eq('id', databaseJobInfo.jobId);
+                          }
+                          // Update local state
+                          const updatedBrief = { ...brief, articleDraft: polishedText };
+                          dispatch({ type: 'ADD_BRIEF', payload: { mapId: activeMapId, topicId: brief.topic_id, brief: updatedBrief } });
+                          setHasUnsavedChanges(false);
+                          setDatabaseDraft(null); // Clear sync banner
+                          dispatch({ type: 'SET_NOTIFICATION', payload: `✓ Draft polished and saved! (${savedLength.toLocaleString()} chars verified)` });
+                      }
+                  }
+              } catch (autoSaveError) {
+                  console.error('[DraftingModal] Auto-save exception:', autoSaveError);
+                  dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! ⚠️ Auto-save failed - please save manually.' });
+                  setHasUnsavedChanges(true);
+              }
+          } else {
+              dispatch({ type: 'SET_NOTIFICATION', payload: 'Draft polished! Click Save to persist your changes.' });
+              setHasUnsavedChanges(true);
+          }
       } catch (e) {
           if (activityTimeoutId) clearTimeout(activityTimeoutId);
           console.error('[DraftingModal] Polish error:', e);
