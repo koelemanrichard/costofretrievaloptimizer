@@ -35,9 +35,9 @@ export async function executePass6(
     brief,
     businessInfo,
     {
-      passNumber: 6,
-      passKey: 'pass_6_discourse',
-      nextPassNumber: 7,
+      passNumber: 5,  // Now Pass 5 in new 10-pass order (aliased via index.ts)
+      passKey: 'pass_5_discourse',
+      nextPassNumber: 6,  // Proceed to Pass 6 (Micro Semantics)
       promptBuilder: buildPass6Prompt,
 
       // Batch processing: 3 sections per API call

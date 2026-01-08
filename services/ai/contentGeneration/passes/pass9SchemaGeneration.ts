@@ -183,7 +183,7 @@ export async function executePass9(
         last_error: errorMessage,
         passes_status: {
           ...currentPassesStatus,
-          pass_9_schema: 'failed'
+          pass_10_schema: 'failed'  // Now Pass 10 in new 10-pass order
         },
         updated_at: new Date().toISOString()
       })
@@ -216,9 +216,9 @@ async function saveSchemaToJob(
       schema_page_type: schemaResult.pageType,
       passes_status: {
         ...currentPassesStatus,
-        pass_9_schema: 'completed'
+        pass_10_schema: 'completed'  // Now Pass 10 in new 10-pass order
       },
-      current_pass: 9,
+      current_pass: 10,  // Final pass - no next pass
       updated_at: new Date().toISOString()
     })
     .eq('id', jobId);
@@ -235,11 +235,11 @@ export function canExecutePass9(job: ContentGenerationJob): {
   canExecute: boolean;
   reason?: string;
 } {
-  // Check if Pass 8 is completed
-  if (job.passes_status?.pass_8_audit !== 'completed') {
+  // Check if Pass 9 (Audit) is completed - was Pass 8 in old order
+  if (job.passes_status?.pass_9_audit !== 'completed') {
     return {
       canExecute: false,
-      reason: 'Pass 8 (Audit) must be completed before schema generation'
+      reason: 'Pass 9 (Audit) must be completed before schema generation'
     };
   }
 
@@ -251,11 +251,11 @@ export function canExecutePass9(job: ContentGenerationJob): {
     };
   }
 
-  // Check if Pass 9 already completed
-  if (job.passes_status?.pass_9_schema === 'completed') {
+  // Check if Pass 10 (Schema) already completed - was Pass 9 in old order
+  if (job.passes_status?.pass_10_schema === 'completed') {
     return {
       canExecute: true,
-      reason: 'Pass 9 can be re-run to regenerate schema'
+      reason: 'Pass 10 can be re-run to regenerate schema'
     };
   }
 
@@ -272,7 +272,7 @@ export function getPass9Status(job: ContentGenerationJob): {
   entityCount: number;
   pageType: string | null;
 } {
-  const status = job.passes_status?.pass_9_schema || 'pending';
+  const status = job.passes_status?.pass_10_schema || 'pending';  // Now Pass 10
   const schemaData = job.schema_data as EnhancedSchemaResult | null;
 
   return {
@@ -317,7 +317,7 @@ export async function regenerateSchema(
     .update({
       passes_status: {
         ...currentPassesStatus,
-        pass_9_schema: 'in_progress'
+        pass_10_schema: 'in_progress'  // Now Pass 10 in new 10-pass order
       },
       updated_at: new Date().toISOString()
     })

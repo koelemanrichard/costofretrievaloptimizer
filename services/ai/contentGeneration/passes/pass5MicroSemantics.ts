@@ -29,9 +29,9 @@ export async function executePass5(
     brief,
     businessInfo,
     {
-      passNumber: 5,
-      passKey: 'pass_5_microsemantics',
-      nextPassNumber: 6,
+      passNumber: 6,  // Now Pass 6 in new 10-pass order (aliased via index.ts)
+      passKey: 'pass_6_microsemantics',
+      nextPassNumber: 7,  // Proceed to Pass 7 (Visual Semantics)
       promptBuilder: buildPass5Prompt,
       // All sections need micro-semantic optimization (no selective filtering)
       // Linguistic polish benefits every section

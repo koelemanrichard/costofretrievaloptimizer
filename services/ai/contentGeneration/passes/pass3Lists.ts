@@ -35,9 +35,9 @@ export async function executePass3(
     brief,
     businessInfo,
     {
-      passNumber: 3,
-      passKey: 'pass_3_lists',
-      nextPassNumber: 4,
+      passNumber: 4,  // Now Pass 4 in new 10-pass order (aliased via index.ts)
+      passKey: 'pass_4_lists',
+      nextPassNumber: 5,  // Proceed to Pass 5 (Discourse Integration)
       promptBuilder: buildPass3Prompt,
 
       // Batch processing: 3 sections per API call

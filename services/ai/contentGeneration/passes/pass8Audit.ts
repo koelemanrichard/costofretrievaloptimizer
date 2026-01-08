@@ -23,8 +23,9 @@ export async function executePass8(
   brief: ContentBrief,
   businessInfo: BusinessInfo
 ): Promise<{ draft: string; score: number; details: AuditDetails; holisticContext?: HolisticSummaryContext }> {
+  // NOTE: This is now Pass 9 in the new 10-pass order (aliased via index.ts)
   await orchestrator.updateJob(job.id, {
-    passes_status: { ...job.passes_status, pass_8_audit: 'in_progress' }
+    passes_status: { ...job.passes_status, pass_9_audit: 'in_progress' }
   });
 
   // CRITICAL: With section-by-section processing, sections are the source of truth
@@ -112,8 +113,8 @@ export async function executePass8(
     draft_content: draft,
     final_audit_score: finalScore,
     audit_details: auditDetails,
-    passes_status: { ...job.passes_status, pass_8_audit: 'completed' },
-    current_pass: 9 // Transition to Pass 9 (Schema Generation)
+    passes_status: { ...job.passes_status, pass_9_audit: 'completed' },
+    current_pass: 10 // Transition to Pass 10 (Schema Generation)
   });
 
   // Sync the final draft to the content_briefs table
