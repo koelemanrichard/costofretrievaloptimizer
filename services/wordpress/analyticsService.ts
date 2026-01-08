@@ -417,15 +417,20 @@ export async function getTopPerformingPosts(
   }>();
 
   analytics.forEach(row => {
-    const pub = row.wordpress_publications as {
+    const pub = row.wordpress_publications as unknown as {
       id: string;
       wp_post_url: string;
-      topics: { title: string };
+      topics: { title: string }[] | { title: string };
     };
+
+    // Handle topics as either array or single object
+    const topicTitle = Array.isArray(pub.topics)
+      ? pub.topics[0]?.title || 'Unknown'
+      : pub.topics?.title || 'Unknown';
 
     const existing = pubMap.get(row.publication_id) || {
       publication_id: row.publication_id,
-      topic_title: pub.topics.title,
+      topic_title: topicTitle,
       wp_post_url: pub.wp_post_url,
       views: 0,
       clicks: 0,
@@ -502,7 +507,7 @@ export async function getUnderperformingPosts(
     if (daysSincePublish > 7 && totalViews < 100) {
       results.push({
         publication_id: pub.id,
-        topic_title: (pub.topics as { title: string }).title,
+        topic_title: Array.isArray(pub.topics) ? (pub.topics[0]?.title || 'Unknown') : ((pub.topics as unknown as { title: string })?.title || 'Unknown'),
         wp_post_url: pub.wp_post_url || undefined,
         metric: 'views',
         value: totalViews,

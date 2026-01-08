@@ -74,11 +74,8 @@ function formatContentForWordPress(
   // Keep image placeholders for now - they'll be replaced when images are uploaded
   // Format: [IMAGE:hero|alt:Description|caption:Caption text]
 
-  // Add schema markup if available in brief
-  if (brief?.schema_markup) {
-    content += `\n\n<!-- Schema markup will be added by WordPress plugin -->\n`;
-    content += `<script type="application/ld+json">\n${JSON.stringify(brief.schema_markup, null, 2)}\n</script>`;
-  }
+  // Note: Schema markup is generated separately in the content generation process
+  // and would be added by the WordPress plugin during publication
 
   return content;
 }
@@ -167,9 +164,9 @@ export async function publishTopic(
       content,
       status: options.status,
       slug: generateSlug(topic.title),
-      excerpt: brief?.meta_description || generateExcerpt(content),
-      categories: options.categories,
-      tags: options.tags,
+      excerpt: brief?.metaDescription || generateExcerpt(content),
+      categories: options.categories || [],
+      tags: options.tags || [],
       featured_media: options.featured_image_id,
       cutthecrap_topic_id: topic.id,
       cutthecrap_brief_id: brief?.id,

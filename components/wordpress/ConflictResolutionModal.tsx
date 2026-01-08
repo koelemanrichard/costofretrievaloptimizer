@@ -1,8 +1,9 @@
 // components/wordpress/ConflictResolutionModal.tsx
 // Modal for resolving content conflicts between app and WordPress
 
-import React, { useState } from 'react';
-import { useSupabase } from '../../services/supabaseClient';
+import React, { useState, useMemo } from 'react';
+import { getSupabaseClient } from '../../services/supabaseClient';
+import { useAppState } from '../../state/appState';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -32,7 +33,15 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
   appContent,
   onResolved
 }) => {
-  const { supabase, user } = useSupabase();
+  const { state } = useAppState();
+  const user = state.user;
+
+  // Get supabase client - memoized to prevent unnecessary re-renders
+  const supabase = useMemo(() => {
+    if (!state.businessInfo.supabaseUrl || !state.businessInfo.supabaseAnonKey) return null;
+    return getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+  }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
+
   const [selectedResolution, setSelectedResolution] = useState<ConflictResolution>('merge');
   const [isResolving, setIsResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);

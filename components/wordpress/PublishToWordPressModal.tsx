@@ -1,8 +1,9 @@
 // components/wordpress/PublishToWordPressModal.tsx
 // Modal for publishing content to WordPress with full options
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSupabase } from '../../services/supabaseClient';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { getSupabaseClient } from '../../services/supabaseClient';
+import { useAppState } from '../../state/appState';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -59,7 +60,14 @@ export const PublishToWordPressModal: React.FC<PublishToWordPressModalProps> = (
   brief,
   onPublishSuccess
 }) => {
-  const { supabase, user } = useSupabase();
+  const { state } = useAppState();
+  const user = state.user;
+
+  // Get supabase client - memoized to prevent unnecessary re-renders
+  const supabase = useMemo(() => {
+    if (!state.businessInfo.supabaseUrl || !state.businessInfo.supabaseAnonKey) return null;
+    return getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+  }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
   // State
   const [connections, setConnections] = useState<WordPressConnection[]>([]);
@@ -79,8 +87,8 @@ export const PublishToWordPressModal: React.FC<PublishToWordPressModalProps> = (
     categoryId: null,
     tags: [],
     tagInput: '',
-    focusKeyword: brief?.focus_keyword || topic.title.split(' ').slice(0, 3).join(' '),
-    metaDescription: brief?.meta_description || '',
+    focusKeyword: brief?.targetKeyword || topic.title.split(' ').slice(0, 3).join(' '),
+    metaDescription: brief?.metaDescription || '',
     useHeroImage: true
   });
 
@@ -184,8 +192,9 @@ export const PublishToWordPressModal: React.FC<PublishToWordPressModalProps> = (
       // Build options
       const options: PublishOptions = {
         status: form.status,
-        categories: form.categoryId ? [form.categoryId] : undefined,
-        tags: form.tags.length > 0 ? form.tags.map(t => t) as unknown as string[] : undefined // Will be converted by WP
+        categories: form.categoryId ? [form.categoryId] : undefined
+        // TODO: Implement tag name to ID lookup before passing tags
+        // tags: form.tags would need to be converted to IDs first
       };
 
       // Add scheduling if future post

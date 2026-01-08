@@ -88,7 +88,7 @@ export interface PublishOptions {
   status: 'draft' | 'publish' | 'pending' | 'future';
   scheduled_at?: string;
   categories?: number[];
-  tags?: string[];
+  tags?: number[];  // WordPress tag IDs
   featured_image_id?: number;
   yoast_meta?: {
     focus_keyword?: string;

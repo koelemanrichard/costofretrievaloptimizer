@@ -268,7 +268,18 @@ export async function testConnection(
   }
   normalizedUrl = normalizedUrl.replace(/\/$/, '');
 
-  return testWordPressConnection(normalizedUrl, username, password);
+  const result = await testWordPressConnection(normalizedUrl, username, password);
+
+  // Convert to TestResult type
+  return {
+    success: result.success,
+    message: result.message,
+    siteInfo: result.siteInfo ? {
+      name: (result.siteInfo.name as string) || '',
+      url: (result.siteInfo.url as string) || normalizedUrl,
+      description: (result.siteInfo.description as string) || ''
+    } : undefined
+  };
 }
 
 /**

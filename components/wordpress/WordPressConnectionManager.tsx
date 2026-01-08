@@ -1,8 +1,9 @@
 // components/wordpress/WordPressConnectionManager.tsx
 // UI for managing WordPress site connections
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSupabase } from '../../services/supabaseClient';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSupabase, getSupabaseClient } from '../../services/supabaseClient';
+import { useAppState } from '../../state/appState';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -47,7 +48,15 @@ export const WordPressConnectionManager: React.FC<WordPressConnectionManagerProp
   projectId,
   onConnectionChange
 }) => {
-  const { supabase, user } = useSupabase();
+  const { state } = useAppState();
+  const user = state.user;
+
+  // Get supabase client - memoized to prevent unnecessary re-renders
+  const supabase = useMemo(() => {
+    if (!state.businessInfo.supabaseUrl || !state.businessInfo.supabaseAnonKey) return null;
+    return getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+  }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
+
   const [connections, setConnections] = useState<WordPressConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);

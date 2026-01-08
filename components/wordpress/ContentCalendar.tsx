@@ -2,7 +2,8 @@
 // Calendar view for content publication scheduling and tracking
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSupabase } from '../../services/supabaseClient';
+import { getSupabaseClient } from '../../services/supabaseClient';
+import { useAppState } from '../../state/appState';
 import { Loader } from '../ui/Loader';
 import {
   CalendarEntry,
@@ -39,7 +40,14 @@ export const ContentCalendar: React.FC<ContentCalendarProps> = ({
   onTopicClick,
   onPublicationClick
 }) => {
-  const { supabase } = useSupabase();
+  const { state } = useAppState();
+
+  // Get supabase client - memoized to prevent unnecessary re-renders
+  const supabase = useMemo(() => {
+    if (!state.businessInfo.supabaseUrl || !state.businessInfo.supabaseAnonKey) return null;
+    return getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+  }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [publications, setPublications] = useState<WordPressPublication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +68,9 @@ export const ContentCalendar: React.FC<ContentCalendarProps> = ({
           return;
         }
 
-        const { data } = await supabase
+        // Note: wordpress_publications table may not be in the generated types yet
+        // Using type assertion since the table exists in the database
+        const { data } = await (supabase as unknown as { from: (table: string) => { select: (cols: string) => { in: (col: string, values: string[]) => Promise<{ data: WordPressPublication[] | null }> } } })
           .from('wordpress_publications')
           .select('*')
           .in('topic_id', topicIds);
@@ -110,7 +120,7 @@ export const ContentCalendar: React.FC<ContentCalendarProps> = ({
     // Add planned topics (topics with planned_publication_date but no publication)
     topics.forEach(topic => {
       const hasPublication = publications.some(p => p.topic_id === topic.id);
-      const plannedDate = topic.metadata?.planned_publication_date;
+      const plannedDate = (topic.metadata as { planned_publication_date?: string } | undefined)?.planned_publication_date;
 
       if (!hasPublication && plannedDate) {
         result.push({
