@@ -65,11 +65,17 @@ export const WordPressConnectionManager: React.FC<WordPressConnectionManagerProp
 
   // Load connections
   const loadConnections = useCallback(async () => {
-    if (!supabase || !user) return;
+    if (!supabase || !user) {
+      console.log('[WP Manager] Skipping load - supabase:', !!supabase, 'user:', !!user);
+      setIsLoading(false);
+      return;
+    }
 
+    console.log('[WP Manager] Loading connections for user:', user.id);
     setIsLoading(true);
     try {
       const data = await getConnectionsForUser(supabase, user.id);
+      console.log('[WP Manager] Loaded connections:', data.length);
       setConnections(data);
       onConnectionChange?.(data);
     } catch (error) {
@@ -113,8 +119,12 @@ export const WordPressConnectionManager: React.FC<WordPressConnectionManagerProp
 
   // Add new connection
   const handleAddConnection = async () => {
-    if (!supabase || !user) return;
+    if (!supabase || !user) {
+      console.error('[WP Manager] Cannot add - supabase or user not available');
+      return;
+    }
 
+    console.log('[WP Manager] Adding connection for user:', user.id);
     setAddModal(prev => ({ ...prev, isLoading: true, error: undefined }));
 
     try {
@@ -126,7 +136,10 @@ export const WordPressConnectionManager: React.FC<WordPressConnectionManagerProp
         project_id: projectId
       });
 
+      console.log('[WP Manager] Add connection result:', result);
+
       if (!result.success) {
+        console.error('[WP Manager] Add failed:', result.error);
         setAddModal(prev => ({ ...prev, isLoading: false, error: result.error }));
         return;
       }

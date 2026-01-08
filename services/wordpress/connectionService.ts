@@ -167,20 +167,25 @@ export async function addConnection(
   input: WordPressConnectionInput
 ): Promise<ConnectionResult> {
   try {
+    console.log('[WP Connection] Adding connection for user:', userId);
+
     // Normalize site URL
     let siteUrl = input.site_url.trim().toLowerCase();
     if (!siteUrl.startsWith('http://') && !siteUrl.startsWith('https://')) {
       siteUrl = `https://${siteUrl}`;
     }
     siteUrl = siteUrl.replace(/\/$/, ''); // Remove trailing slash
+    console.log('[WP Connection] Normalized URL:', siteUrl);
 
     // Check if connection already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('wordpress_connections')
       .select('id')
       .eq('user_id', userId)
       .eq('site_url', siteUrl)
       .single();
+
+    console.log('[WP Connection] Existing check result:', { existing, error: existingError?.message });
 
     if (existing) {
       return {
@@ -190,9 +195,11 @@ export async function addConnection(
     }
 
     // Encrypt credentials
+    console.log('[WP Connection] Encrypting credentials...');
     const encryptedPassword = await encryptCredential(input.api_password, userId);
     const hmacSecret = generateHmacSecret();
     const encryptedHmacSecret = await encryptCredential(hmacSecret, userId);
+    console.log('[WP Connection] Credentials encrypted');
 
     // Create connection record
     const connectionData = {
@@ -205,6 +212,7 @@ export async function addConnection(
       hmac_secret_encrypted: encryptedHmacSecret,
       status: 'pending' as WordPressConnectionStatus
     };
+    console.log('[WP Connection] Inserting with data:', { ...connectionData, api_password_encrypted: '[REDACTED]', hmac_secret_encrypted: '[REDACTED]' });
 
     const result = await verifiedInsert(
       supabase,
@@ -212,6 +220,8 @@ export async function addConnection(
       connectionData,
       '*'
     );
+
+    console.log('[WP Connection] Insert result:', { success: result.success, error: result.error, hasData: !!result.data });
 
     if (!result.success || !result.data) {
       return {
@@ -359,11 +369,15 @@ export async function getConnectionsForUser(
   supabase: SupabaseClient,
   userId: string
 ): Promise<WordPressConnection[]> {
+  console.log('[WP Connection] Fetching connections for user:', userId);
+
   const { data, error } = await supabase
     .from('wordpress_connections')
     .select('id, user_id, project_id, site_url, site_name, api_username, plugin_version, plugin_verified_at, status, last_sync_at, last_error, created_at, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+
+  console.log('[WP Connection] Fetch result:', { count: data?.length, error: error?.message, code: error?.code });
 
   if (error) {
     console.error('[WP Connection] Fetch failed:', error);
