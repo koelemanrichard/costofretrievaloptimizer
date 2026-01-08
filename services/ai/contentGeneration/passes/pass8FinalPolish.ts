@@ -1,8 +1,30 @@
 // services/ai/contentGeneration/passes/pass8FinalPolish.ts
 import { ContentBrief, ContentGenerationJob, BusinessInfo, SectionProgressCallback } from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
-import { callAnthropicService } from '../../../anthropicService';
 import { getLanguageAndRegionInstruction, getStylometryInstructions, businessContext } from '../../../../config/prompts';
+import * as geminiService from '../../../geminiService';
+import * as openAiService from '../../../openAiService';
+import * as anthropicService from '../../../anthropicService';
+import * as perplexityService from '../../../perplexityService';
+import * as openRouterService from '../../../openRouterService';
+import { dispatchToProvider } from '../../providerDispatcher';
+
+// No-op dispatch for standalone calls
+const noOpDispatch = () => {};
+
+// Helper to call AI based on provider
+async function callProviderWithPrompt(
+  info: BusinessInfo,
+  prompt: string
+): Promise<string> {
+  return dispatchToProvider(info, {
+    gemini: () => geminiService.generateText(prompt, info, noOpDispatch),
+    openai: () => openAiService.generateText(prompt, info, noOpDispatch),
+    anthropic: () => anthropicService.generateText(prompt, info, noOpDispatch),
+    perplexity: () => perplexityService.generateText(prompt, info, noOpDispatch),
+    openrouter: () => openRouterService.generateText(prompt, info, noOpDispatch),
+  });
+}
 
 /**
  * Pass 8: Final Polish
@@ -160,11 +182,8 @@ export async function executePass8(
   // Build the polish prompt
   const prompt = FINAL_POLISH_PROMPT(assembledDraft, brief, businessInfo, imageCountBefore);
 
-  // Call the AI service
-  const polishedContent = await callAnthropicService(prompt, {
-    temperature: 0.3, // Lower temperature for consistency
-    maxTokens: 16000  // Allow for full article
-  });
+  // Call the AI service using the user's configured provider
+  const polishedContent = await callProviderWithPrompt(businessInfo, prompt);
 
   // Validate image preservation
   const validation = validateImagePreservation(assembledDraft, polishedContent);

@@ -6,11 +6,14 @@ import { getWebsiteTypeConfig } from './websiteTypeTemplates';
 import { getMonetizationPromptEnhancement, shouldApplyMonetizationEnhancement } from '../utils/monetizationPromptUtils';
 import { getLanguageName, getLanguageAndRegionInstruction, getRegionalLanguageVariant } from '../utils/languageUtils';
 
+// Re-export for use in content generation passes
+export { getLanguageAndRegionInstruction };
+
 const jsonResponseInstruction = `
 Respond with a valid JSON object. Do not include any explanatory text or markdown formatting before or after the JSON.
 `;
 
-const businessContext = (info: BusinessInfo): string => {
+export const businessContext = (info: BusinessInfo): string => {
     const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
     const regionalVariant = getRegionalLanguageVariant(info.language, info.region);
     return `
@@ -89,7 +92,7 @@ ${config.authorSectionRules.description}
     return instructions;
 }
 
-const getStylometryInstructions = (profile?: AuthorProfile): string => {
+export const getStylometryInstructions = (profile?: AuthorProfile): string => {
     if (!profile) return "Tone: Professional and authoritative.";
 
     let stylePrompt = "";

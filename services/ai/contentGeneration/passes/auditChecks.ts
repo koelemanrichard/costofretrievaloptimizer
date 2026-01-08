@@ -1,7 +1,29 @@
 // services/ai/contentGeneration/passes/auditChecks.ts
 import { ContentBrief, BusinessInfo, AuditRuleResult, AuditIssue, AuditIssueType } from '../../../../types';
-import { callAnthropicService } from '../../../anthropicService';
 import { v4 as uuidv4 } from 'uuid';
+import * as geminiService from '../../../geminiService';
+import * as openAiService from '../../../openAiService';
+import * as anthropicService from '../../../anthropicService';
+import * as perplexityService from '../../../perplexityService';
+import * as openRouterService from '../../../openRouterService';
+import { dispatchToProvider } from '../../providerDispatcher';
+
+// No-op dispatch for standalone calls
+const noOpDispatch = () => {};
+
+// Helper to call AI based on provider
+async function callProviderWithPrompt(
+  info: BusinessInfo,
+  prompt: string
+): Promise<string> {
+  return dispatchToProvider(info, {
+    gemini: () => geminiService.generateText(prompt, info, noOpDispatch),
+    openai: () => openAiService.generateText(prompt, info, noOpDispatch),
+    anthropic: () => anthropicService.generateText(prompt, info, noOpDispatch),
+    perplexity: () => perplexityService.generateText(prompt, info, noOpDispatch),
+    openrouter: () => openRouterService.generateText(prompt, info, noOpDispatch),
+  });
+}
 
 // Extended LLM signature phrases list (from macro context research)
 const LLM_SIGNATURE_PHRASES = [
@@ -1498,11 +1520,7 @@ export async function generateAutoFix(ctx: AutoFixContext): Promise<string> {
   const prompt = buildAutoFixPrompt(ctx);
 
   try {
-    const response = await callAnthropicService(prompt, {
-      temperature: 0.3, // Lower for consistency
-      maxTokens: 2000
-    });
-
+    const response = await callProviderWithPrompt(ctx.businessInfo, prompt);
     return response.trim();
   } catch (error) {
     console.error('[AutoFix] Failed to generate fix:', error);
