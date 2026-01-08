@@ -2,7 +2,7 @@
 // Modal for resolving content conflicts between app and WordPress
 
 import React, { useState } from 'react';
-import { useSupabase } from '../../hooks/useSupabase';
+import { useSupabase } from '../../services/supabaseClient';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';

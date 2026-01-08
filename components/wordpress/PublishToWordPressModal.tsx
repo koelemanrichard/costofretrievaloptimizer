@@ -2,7 +2,7 @@
 // Modal for publishing content to WordPress with full options
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSupabase } from '../../hooks/useSupabase';
+import { useSupabase } from '../../services/supabaseClient';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';

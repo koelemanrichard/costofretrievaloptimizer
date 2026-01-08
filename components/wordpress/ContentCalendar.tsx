@@ -2,7 +2,7 @@
 // Calendar view for content publication scheduling and tracking
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSupabase } from '../../hooks/useSupabase';
+import { useSupabase } from '../../services/supabaseClient';
 import { Loader } from '../ui/Loader';
 import {
   CalendarEntry,
