@@ -157,8 +157,7 @@ export async function executePass8(
   console.log('[Pass 8] Starting Final Polish pass');
 
   // Get the assembled draft from all sections
-  const sections = await orchestrator.getSections(job.id);
-  const assembledDraft = orchestrator.assembleDraft(sections, brief);
+  const assembledDraft = await orchestrator.assembleDraft(job.id);
 
   // Count images before polishing
   const imageCountBefore = countImagePlaceholders(assembledDraft);
