@@ -19,6 +19,7 @@ import { EavPlacementValidator } from './eavPlacementValidator';
 import { PillarAlignmentValidator } from './pillarAlignmentValidator';
 import { ListStructureValidator } from './listStructureValidator';
 import { TableStructureValidator } from './tableStructureValidator';
+import { ReadabilityValidator } from './readabilityValidator';
 
 export class RulesValidator {
   /**
@@ -87,6 +88,9 @@ export class RulesValidator {
     // 17. H9 Cross-Section Repetition Detection
     violations.push(...CrossSectionRepetitionValidator.validate(content));
 
+    // 18. S4 Readability Match (Flesch-Kincaid grade level vs audience)
+    violations.push(...ReadabilityValidator.validate(content, context));
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -138,3 +142,6 @@ export type { PillarAlignmentResult } from './pillarAlignmentValidator';
 export { ListStructureValidator } from './listStructureValidator';
 export { TableStructureValidator } from './tableStructureValidator';
 export type { ExtractedTable } from './tableStructureValidator';
+export { ReadabilityValidator } from './readabilityValidator';
+export type { AudienceLevel, FleschKincaidResult } from './readabilityValidator';
+export { AUDIENCE_GRADE_RANGES } from './readabilityValidator';
