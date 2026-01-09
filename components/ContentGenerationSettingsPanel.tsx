@@ -7,11 +7,22 @@ import {
   AudienceExpertise
 } from '../types/contentGeneration';
 import { PrioritySlider } from './ui/PrioritySlider';
+import {
+  ContentGenerationModeSelector,
+  ContentGenerationSettings as ModeSettings,
+  DEFAULT_GENERATION_SETTINGS,
+} from './settings';
 
 interface Props {
   settings: ContentGenerationSettings;
   onChange: (settings: ContentGenerationSettings) => void;
   presets: Record<string, ContentGenerationPriorities>;
+  /** Quality mode settings (optional - shows mode selector when provided) */
+  modeSettings?: ModeSettings;
+  /** Callback when mode settings change */
+  onModeSettingsChange?: (modeSettings: ModeSettings) => void;
+  /** Whether to show the mode selector */
+  showModeSelector?: boolean;
 }
 
 const formatPresetName = (key: string): string => {
@@ -24,9 +35,16 @@ const formatPresetName = (key: string): string => {
 export const ContentGenerationSettingsPanel: React.FC<Props> = ({
   settings,
   onChange,
-  presets
+  presets,
+  modeSettings,
+  onModeSettingsChange,
+  showModeSelector = false,
 }) => {
   const [activePreset, setActivePreset] = useState<string | null>('balanced');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Use default mode settings if not provided
+  const currentModeSettings = modeSettings || DEFAULT_GENERATION_SETTINGS;
 
   const handlePriorityChange = (key: keyof ContentGenerationPriorities, value: number) => {
     setActivePreset(null);
@@ -141,6 +159,30 @@ export const ContentGenerationSettingsPanel: React.FC<Props> = ({
           Pause after initial draft
         </label>
       </div>
+
+      {/* Quality Mode Selector (optional) */}
+      {showModeSelector && onModeSettingsChange && (
+        <>
+          <div className="my-3 border-t border-gray-700" />
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors w-full"
+          >
+            <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>
+              {'\u25B6'}
+            </span>
+            Quality Enforcement Settings
+          </button>
+          {showAdvanced && (
+            <div className="mt-3">
+              <ContentGenerationModeSelector
+                settings={currentModeSettings}
+                onChange={onModeSettingsChange}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

@@ -49,7 +49,8 @@ export enum AppStep {
   BLUEPRINT_WIZARD, // Website Blueprint (foundation pages & navigation preferences)
   PROJECT_DASHBOARD,
   SITE_ANALYSIS,
-  ADMIN // New Admin Step
+  ADMIN, // Admin Dashboard
+  QUALITY_DEMO // Quality Enforcement Demo Page
 }
 
 export type WebsiteType = 'ECOMMERCE' | 'SAAS' | 'SERVICE_B2B' | 'INFORMATIONAL' | 'AFFILIATE_REVIEW';

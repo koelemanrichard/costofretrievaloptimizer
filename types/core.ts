@@ -29,7 +29,8 @@ export enum AppStep {
   BLUEPRINT_WIZARD, // Website Blueprint (foundation pages & navigation preferences)
   PROJECT_DASHBOARD,
   SITE_ANALYSIS,
-  ADMIN
+  ADMIN, // Admin Dashboard
+  QUALITY_DEMO // Quality Enforcement Demo Page
 }
 
 // ============================================================================

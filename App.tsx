@@ -17,6 +17,7 @@ import { AuthScreen, ProjectSelectionScreen, AnalysisStatusScreen } from './comp
 import ProjectWorkspace from './components/ProjectWorkspace';
 import { SiteAnalysisToolV2 } from './components/site-analysis';
 import AdminDashboard from './components/admin/AdminDashboard';
+import QualityDemoPage from './components/pages/QualityDemoPage';
 
 // Import Global UI
 import { SettingsModal } from './components/modals';
@@ -637,7 +638,8 @@ const App: React.FC = () => {
             case AppStep.PROJECT_SELECTION: return <ProjectSelectionScreen onCreateProject={handleCreateProject} onLoadProject={handleLoadProject} onInitiateDeleteProject={handleInitiateDeleteProject} />;
             case AppStep.ANALYSIS_STATUS: return <AnalysisStatusScreen />;
             case AppStep.SITE_ANALYSIS: return <SiteAnalysisToolV2 onClose={() => dispatch({ type: 'SET_STEP', payload: AppStep.PROJECT_SELECTION })} />;
-            case AppStep.ADMIN: return <AdminDashboard />; // New Admin Route
+            case AppStep.ADMIN: return <AdminDashboard />;
+            case AppStep.QUALITY_DEMO: return <QualityDemoPage />;
             case AppStep.PROJECT_WORKSPACE:
             case AppStep.BUSINESS_INFO:
             case AppStep.PILLAR_WIZARD:
@@ -673,8 +675,8 @@ const App: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Main content container. Full width for admin/site-analysis, constrained for wizards if needed. */}
-                    <div className={(state.appStep === AppStep.ADMIN || state.appStep === AppStep.SITE_ANALYSIS) ? "w-full" : "container mx-auto px-4 py-8"}>
+                    {/* Main content container. Full width for admin/site-analysis/quality-demo, constrained for wizards if needed. */}
+                    <div className={(state.appStep === AppStep.ADMIN || state.appStep === AppStep.SITE_ANALYSIS || state.appStep === AppStep.QUALITY_DEMO) ? "w-full" : "container mx-auto px-4 py-8"}>
                         {renderStep()}
                     </div>
 
@@ -707,6 +709,12 @@ const App: React.FC = () => {
                                     icon: ToolbarIcons.settings,
                                     label: 'Settings',
                                     onClick: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'settings', visible: true } }),
+                                },
+                                {
+                                    id: 'quality-demo',
+                                    icon: '\u2713', // Checkmark icon
+                                    label: 'Quality Demo',
+                                    onClick: () => dispatch({ type: 'SET_STEP', payload: AppStep.QUALITY_DEMO }),
                                 },
                             ]}
                         />
