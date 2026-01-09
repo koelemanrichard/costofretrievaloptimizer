@@ -15,6 +15,7 @@ import { ContextualVectorValidator } from './contextualVectorValidator';
 import { LanguageOutputValidator } from './languageOutputValidator';
 import { WordCountValidator } from './wordCountValidator';
 import { EavPlacementValidator } from './eavPlacementValidator';
+import { PillarAlignmentValidator } from './pillarAlignmentValidator';
 
 export class RulesValidator {
   /**
@@ -71,6 +72,9 @@ export class RulesValidator {
     // 13. EAV Placement (C2-C3: UNIQUE in first 300 words, ROOT in first 500 words)
     violations.push(...EavPlacementValidator.validate(content, context));
 
+    // 14. S3 Pillar Alignment (content must align with SEO pillars)
+    violations.push(...PillarAlignmentValidator.validate(content, context));
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -116,3 +120,5 @@ export type { LanguageDetectionResult } from './languageOutputValidator';
 export { WordCountValidator } from './wordCountValidator';
 export { EavPlacementValidator } from './eavPlacementValidator';
 export type { EavPlacementResult } from './eavPlacementValidator';
+export { PillarAlignmentValidator } from './pillarAlignmentValidator';
+export type { PillarAlignmentResult } from './pillarAlignmentValidator';

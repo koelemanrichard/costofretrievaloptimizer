@@ -522,6 +522,8 @@ export interface SectionGenerationContext {
   language?: string;
   /** Total number of sections in the article (used by contextual vector validation) */
   totalSections?: number;
+  /** SEO pillars for pillar alignment validation (S3 rule) */
+  pillars?: SEOPillars;
 }
 
 export interface VisualSemantics {
