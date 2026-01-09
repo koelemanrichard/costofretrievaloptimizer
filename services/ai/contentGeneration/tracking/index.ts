@@ -11,3 +11,8 @@ export {
   type RuleSnapshot,
   type RuleStatus,
 } from './ruleSnapshotService';
+
+export {
+  ConflictDetector,
+  type PassDelta,
+} from './conflictDetector';
