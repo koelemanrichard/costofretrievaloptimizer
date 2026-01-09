@@ -16,6 +16,7 @@ import { LanguageOutputValidator } from './languageOutputValidator';
 import { WordCountValidator } from './wordCountValidator';
 import { EavPlacementValidator } from './eavPlacementValidator';
 import { PillarAlignmentValidator } from './pillarAlignmentValidator';
+import { ListStructureValidator } from './listStructureValidator';
 
 export class RulesValidator {
   /**
@@ -75,6 +76,9 @@ export class RulesValidator {
     // 14. S3 Pillar Alignment (content must align with SEO pillars)
     violations.push(...PillarAlignmentValidator.validate(content, context));
 
+    // 15. K4-K5 List Structure (item count 3-7, parallel structure)
+    violations.push(...ListStructureValidator.validate(content, context));
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -122,3 +126,4 @@ export { EavPlacementValidator } from './eavPlacementValidator';
 export type { EavPlacementResult } from './eavPlacementValidator';
 export { PillarAlignmentValidator } from './pillarAlignmentValidator';
 export type { PillarAlignmentResult } from './pillarAlignmentValidator';
+export { ListStructureValidator } from './listStructureValidator';
