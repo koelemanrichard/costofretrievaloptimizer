@@ -231,3 +231,72 @@ export interface ResolvedApiKey {
   billable_to: 'platform' | 'organization' | 'project';
   billable_id: string;
 }
+
+// ============================================================================
+// Gamification & Leaderboards
+// ============================================================================
+
+export interface OrganizationScore {
+  id: string;
+  organization_id: string;
+  total_score: number;
+  total_articles_generated: number;
+  total_high_quality_articles: number;
+  avg_audit_score: number | null;
+  global_rank: number | null;
+  score_this_week: number;
+  score_this_month: number;
+  updated_at: string;
+}
+
+export interface OrganizationScoreWithDetails extends OrganizationScore {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    type: OrganizationType;
+    branding?: OrganizationBranding;
+  };
+}
+
+export interface OrganizationAchievement {
+  id: string;
+  organization_id: string;
+  achievement_id: string;
+  achievement_name: string | null;
+  achievement_description: string | null;
+  points_awarded: number;
+  earned_at: string;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  organizationId: string;
+  organizationName: string;
+  score: number;
+  articlesGenerated: number;
+  avgAuditScore: number | null;
+  isCurrentOrg: boolean;
+}
+
+export interface LeaderboardPeriod {
+  type: 'week' | 'month' | 'all';
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface OrganizationQualitySettings {
+  id: string;
+  organization_id: string;
+  min_word_count: number | null;
+  max_word_count: number | null;
+  min_heading_ratio: number | null;
+  min_paragraph_length: number | null;
+  max_consecutive_short_paragraphs: number | null;
+  min_audit_score: number;
+  custom_rules: Record<string, unknown>[];
+  enforce_on_publish: boolean;
+  auto_reject_below_threshold: boolean;
+  created_at: string;
+  updated_at: string;
+}
