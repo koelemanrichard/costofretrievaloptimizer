@@ -20,6 +20,7 @@ import { PillarAlignmentValidator } from './pillarAlignmentValidator';
 import { ListStructureValidator } from './listStructureValidator';
 import { TableStructureValidator } from './tableStructureValidator';
 import { ReadabilityValidator } from './readabilityValidator';
+import { DiscourseChainingValidator } from './discourseChainingValidator';
 
 export class RulesValidator {
   /**
@@ -91,6 +92,9 @@ export class RulesValidator {
     // 18. S4 Readability Match (Flesch-Kincaid grade level vs audience)
     violations.push(...ReadabilityValidator.validate(content, context));
 
+    // 19. D5 Discourse Chaining (sentence-to-sentence cohesion)
+    violations.push(...DiscourseChainingValidator.validate(content, context));
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -145,3 +149,5 @@ export type { ExtractedTable } from './tableStructureValidator';
 export { ReadabilityValidator } from './readabilityValidator';
 export type { AudienceLevel, FleschKincaidResult } from './readabilityValidator';
 export { AUDIENCE_GRADE_RANGES } from './readabilityValidator';
+export { DiscourseChainingValidator } from './discourseChainingValidator';
+export type { DiscourseChainAnalysis } from './discourseChainingValidator';
