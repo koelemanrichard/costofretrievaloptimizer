@@ -44,13 +44,14 @@ export class CentralEntityFocusValidator {
    * - Calculates overall focus score
    */
   static validateSections(
-    sections: { heading: string; content: string }[],
+    sections: { heading: string; content: string }[] | undefined | null,
     centralEntity: string,
     eavs?: SemanticTriple[]
   ): CentralEntityFocusResult {
-    if (!centralEntity || centralEntity.trim() === '') {
+    // Guard against undefined/null sections or centralEntity
+    if (!sections || !Array.isArray(sections) || !centralEntity || centralEntity.trim() === '') {
       return {
-        score: 100, // Can't validate without entity
+        score: 100, // Can't validate without entity or sections
         entityMentions: 0,
         totalSentences: 0,
         sectionsWithEntity: 0,
@@ -105,14 +106,14 @@ export class CentralEntityFocusValidator {
             sectionHeading: section.heading,
             issue: 'no_entity',
             suggestion: `Section "${section.heading}" (${wordCount} words) doesn't mention the central entity "${centralEntity}". Consider relating content back to the main topic.`,
-            severity: 'info'  // LENIENT: info level
+            severity: 'warning'  // Elevated from 'info' - entity focus is critical for CoR
           });
         } else if (sectionMentions < expectedMentions && sectionMentions < 2) {
           warnings.push({
             sectionHeading: section.heading,
             issue: 'low_mention',
             suggestion: `Section "${section.heading}" only mentions the central entity ${sectionMentions} time(s) in ${wordCount} words. Consider reinforcing focus.`,
-            severity: 'info'  // LENIENT: info level
+            severity: 'warning'  // Elevated from 'info' - entity focus is critical for CoR
           });
         }
       }
@@ -124,8 +125,17 @@ export class CentralEntityFocusValidator {
       ? Math.round((sectionsWithEntity / totalSections) * 100)
       : 100;
 
-    // Overall warning if focus is very low
-    if (score < 40 && totalSections >= 3) {
+    // Overall warning/error based on focus score severity
+    if (score < 30 && totalSections >= 3) {
+      // CRITICAL: Very low focus - likely to fail quality standards
+      warnings.unshift({
+        sectionHeading: '[Overall]',
+        issue: 'topic_drift',
+        suggestion: `Only ${score}% of sections mention the central entity "${centralEntity}". Content is severely off-topic and will likely fail quality audit.`,
+        severity: 'error'  // Block content with extremely low entity focus
+      });
+    } else if (score < 50 && totalSections >= 3) {
+      // Warning: Low focus but recoverable
       warnings.unshift({
         sectionHeading: '[Overall]',
         issue: 'topic_drift',

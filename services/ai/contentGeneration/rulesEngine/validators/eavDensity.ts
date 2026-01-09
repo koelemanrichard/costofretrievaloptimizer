@@ -146,10 +146,21 @@ export class EAVDensityValidator {
    * Only warns if entire sections have no EAV terms - not sentence-level
    */
   static validateSections(
-    sections: { heading: string; content: string }[],
-    eavs: SemanticTriple[],
+    sections: { heading: string; content: string }[] | undefined | null,
+    eavs: SemanticTriple[] | undefined | null,
     language?: string
   ): EavDensityResult {
+    // Guard against undefined/null sections
+    if (!sections || !Array.isArray(sections)) {
+      return {
+        score: 100, // No sections = nothing to validate
+        sectionResults: [],
+        warnings: [],
+        totalSections: 0,
+        sectionsWithEav: 0
+      };
+    }
+
     // Extract all EAV terms (subjects and object values)
     const eavTerms = this.extractEavTerms(eavs);
     const warnings: EavDensityWarning[] = [];
@@ -235,8 +246,13 @@ export class EAVDensityValidator {
   /**
    * Extract searchable terms from EAV triples
    */
-  private static extractEavTerms(eavs: SemanticTriple[]): string[] {
+  private static extractEavTerms(eavs: SemanticTriple[] | undefined | null): string[] {
     const terms = new Set<string>();
+
+    // Guard against undefined/null eavs
+    if (!eavs || !Array.isArray(eavs)) {
+      return [];
+    }
 
     eavs.forEach(eav => {
       // Add subject label
