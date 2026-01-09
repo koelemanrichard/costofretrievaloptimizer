@@ -50,3 +50,12 @@ export {
   publicationPlanningReducer,
   publicationPlanningActions,
 } from './publicationPlanningSlice';
+
+// Organization State (multi-tenancy)
+export {
+  type OrganizationState,
+  type OrganizationAction,
+  initialOrganizationState,
+  organizationReducer,
+  organizationActions,
+} from './organizationSlice';
