@@ -428,12 +428,20 @@ ${contextualBridgeLinks.map(link => `
 4. **Contextual Bridges**: Use bridge sentences between sub-topics
 5. **Link Annotation**: Text around links explains WHY the link exists
 
+## CRITICAL: IMAGE PLACEHOLDER PRESERVATION
+If the content contains [IMAGE: description | alt text] placeholders:
+- You MUST preserve ALL image placeholders EXACTLY as they appear
+- Do NOT modify, move, reword, or remove any text matching the pattern [IMAGE: ... | ...]
+- Copy them character-for-character to your output
+- These placeholders are essential for later image generation
+
 ## Instructions:
 1. Add/improve transitional sentences at section start (if not first section)
 2. Add/improve closing sentence that leads to next section (if not last section)
 3. Smooth any abrupt paragraph transitions within the section
 ${hasLinksToBridge ? '4. Insert internal links with proper contextual bridges (see INTERNAL LINKS section)' : ''}
 5. Keep all content in ${regionalLang}
+6. PRESERVE all [IMAGE: ...] placeholders exactly as they appear
 
 **OUTPUT ONLY the optimized section content. No explanations.**`;
 }

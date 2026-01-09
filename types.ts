@@ -2995,7 +2995,8 @@ export const PASS_NAMES: Record<number, string> = {
 export const TOTAL_PASSES = 10;
 
 // Passes that should exclude intro/conclusion sections (they're handled separately)
-export const PASSES_EXCLUDE_INTRO_CONCLUSION = [2, 4, 5, 6];
+// Note: Pass 5 (Discourse) INCLUDES intro so transitions are added between intro and first content section
+export const PASSES_EXCLUDE_INTRO_CONCLUSION = [2, 4, 6];
 
 // =============================================================================
 // SEMANTIC ANALYSIS TYPES (Macro/Micro Framework)

@@ -262,7 +262,7 @@ async function processSectionsBatched(
       for (const [section, optimizedContent] of parsedResults) {
         if (optimizedContent && optimizedContent.trim()) {
           const originalContent = section.current_content || '';
-          const cleanedContent = cleanOptimizedContent(optimizedContent, originalContent);
+          const cleanedContent = cleanOptimizedContent(optimizedContent, originalContent, section.section_key, config.passNumber);
 
           const updatedSection: ContentGenerationSection = {
             ...section,
@@ -363,7 +363,7 @@ async function processSectionsIndividually(
         log.warn(`Warning: Section ${section.section_key} optimized content is ${Math.round((optimizedContent.length / sectionContent.length) * 100)}% of original`);
       }
 
-      const cleanedContent = cleanOptimizedContent(optimizedContent, sectionContent);
+      const cleanedContent = cleanOptimizedContent(optimizedContent, sectionContent, section.section_key, config.passNumber);
 
       // Update section with optimized content
       const updatedSection: ContentGenerationSection = {
@@ -462,13 +462,44 @@ function parseBatchResponse(
 }
 
 /**
+ * Count image placeholders in content.
+ * Matches pattern: [IMAGE: description | alt text]
+ */
+function countImagePlaceholders(content: string): number {
+  const matches = content.match(/\[IMAGE:[^\]]+\]/g);
+  return matches ? matches.length : 0;
+}
+
+/**
+ * Validate that image placeholders are preserved after optimization.
+ * Logs a warning if images were lost but doesn't block the process.
+ */
+function validateImagePreservation(
+  before: string,
+  after: string,
+  sectionKey: string,
+  passNumber: number
+): boolean {
+  const countBefore = countImagePlaceholders(before);
+  const countAfter = countImagePlaceholders(after);
+
+  if (countBefore > 0 && countAfter < countBefore) {
+    console.warn(`[Pass ${passNumber}] Image count DECREASED in section ${sectionKey}: ${countBefore} → ${countAfter}`);
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Clean optimized content from AI response.
  * Handles common issues like:
  * - Markdown code blocks wrapping
  * - Extra whitespace
  * - Section heading duplication
+ * - Image placeholder preservation validation
  */
-function cleanOptimizedContent(optimized: string, original: string): string {
+function cleanOptimizedContent(optimized: string, original: string, sectionKey?: string, passNumber?: number): string {
   let content = optimized.trim();
 
   // Remove markdown code block wrapper if present
@@ -493,6 +524,11 @@ function cleanOptimizedContent(optimized: string, original: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]+$/gm, '')
     .trim();
+
+  // Validate image preservation
+  if (sectionKey && passNumber) {
+    validateImagePreservation(original, content, sectionKey, passNumber);
+  }
 
   return content;
 }
