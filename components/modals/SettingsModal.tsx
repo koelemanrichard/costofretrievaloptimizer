@@ -331,7 +331,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                        <TabButton tab="organization" label="Organization" id="tab-organization" />
                        <TabButton
                          tab="project"
-                         label={activeProject ? `Project: ${activeProject.name.slice(0, 15)}${activeProject.name.length > 15 ? '...' : ''}` : 'Project'}
+                         label={activeProject?.name ? `Project: ${activeProject.name.slice(0, 15)}${activeProject.name.length > 15 ? '...' : ''}` : 'Project'}
                          id="tab-project"
                          disabled={!activeProject}
                        />
