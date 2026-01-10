@@ -392,7 +392,15 @@ Links at END of sentences, not start:
 ### 6. Vocabulary Diversity
 Avoid overused terms. Use synonyms for: ${holistic.vocabularyMetrics.overusedTerms.slice(0, 3).map(t => t.term).join(', ')}
 
-## CRITICAL: IMAGE PLACEHOLDER PRESERVATION
+## CRITICAL: STRUCTURE PRESERVATION
+**Lists and Tables:**
+- You MUST preserve ALL existing lists (ordered <ol> and unordered <ul>) exactly as structured
+- You MUST preserve ALL existing tables with their structure intact
+- Do NOT convert lists back to prose paragraphs
+- Do NOT remove or merge table rows/columns
+- You may ONLY optimize the TEXT within list items or table cells, NOT the structure
+
+**Image Placeholders:**
 If the content contains [IMAGE: description | alt text] placeholders:
 - You MUST preserve ALL image placeholders EXACTLY as they appear
 - Do NOT modify, move, reword, or remove any text matching the pattern [IMAGE: ... | ...]
@@ -401,7 +409,7 @@ If the content contains [IMAGE: description | alt text] placeholders:
 
 ## Instructions:
 Apply ALL rules. Maintain content meaning. Keep language in ${regionalLang}.
-PRESERVE all [IMAGE: ...] placeholders exactly as they appear.
+PRESERVE all lists, tables, and [IMAGE: ...] placeholders exactly as they appear.
 ${buildSelfVerificationChecklist(holistic.centralEntity, section.current_content?.includes('[IMAGE:') || false, 5)}
 
 **OUTPUT ONLY the optimized section content. No explanations.**`;
@@ -473,7 +481,15 @@ ${contextualBridgeLinks.map(link => `
 4. **Contextual Bridges**: Use bridge sentences between sub-topics
 5. **Link Annotation**: Text around links explains WHY the link exists
 
-## CRITICAL: IMAGE PLACEHOLDER PRESERVATION
+## CRITICAL: STRUCTURE PRESERVATION
+**Lists and Tables:**
+- You MUST preserve ALL existing lists (ordered <ol> and unordered <ul>) exactly as structured
+- You MUST preserve ALL existing tables with their structure intact
+- Do NOT convert lists back to prose paragraphs
+- Do NOT remove or merge table rows/columns
+- You may ONLY optimize transitions BETWEEN structured elements, NOT the structures themselves
+
+**Image Placeholders:**
 If the content contains [IMAGE: description | alt text] placeholders:
 - You MUST preserve ALL image placeholders EXACTLY as they appear
 - Do NOT modify, move, reword, or remove any text matching the pattern [IMAGE: ... | ...]
@@ -486,7 +502,7 @@ If the content contains [IMAGE: description | alt text] placeholders:
 3. Smooth any abrupt paragraph transitions within the section
 ${hasLinksToBridge ? '4. Insert internal links with proper contextual bridges (see INTERNAL LINKS section)' : ''}
 5. Keep all content in ${regionalLang}
-6. PRESERVE all [IMAGE: ...] placeholders exactly as they appear
+6. PRESERVE all lists, tables, and [IMAGE: ...] placeholders exactly as they appear
 ${buildSelfVerificationChecklist(holistic.centralEntity, section.current_content?.includes('[IMAGE:') || false, 6)}
 
 **OUTPUT ONLY the optimized section content. No explanations.**`;
