@@ -30,6 +30,9 @@ const COST_TABLE: Record<string, { in: number; out: number }> = {
 const STORAGE_KEY = 'app_telemetry_logs';
 const PENDING_LOGS_KEY = 'app_telemetry_pending';
 
+// Key source types for billing attribution
+export type KeySource = 'platform' | 'org_byok' | 'project_byok' | 'user_byok' | 'unknown';
+
 // Context for AI usage logging
 export interface AIUsageContext {
     userId?: string;
@@ -38,6 +41,12 @@ export interface AIUsageContext {
     topicId?: string;
     briefId?: string;
     jobId?: string;
+    // Billing attribution fields (immutable snapshot at call time)
+    organizationId?: string;
+    keySource?: KeySource;
+    // Billable entity (who pays) - captured at call time, never changes
+    billableTo?: 'platform' | 'organization' | 'user';
+    billableId?: string;
 }
 
 // Global usage context - this is the single source of truth for all providers
@@ -63,6 +72,40 @@ export function setGlobalUsageContext(context: Partial<AIUsageContext>): void {
  */
 export function clearGlobalUsageContext(): void {
     globalUsageContext = {};
+}
+
+/**
+ * Set billing context for AI usage tracking
+ * This should be called when:
+ * 1. User authenticates (to set organizationId)
+ * 2. API keys are resolved (to set keySource)
+ * 3. Project/map is loaded (to set billableTo/billableId)
+ *
+ * These values are captured as a SNAPSHOT at the time of AI call
+ * and will NOT change even if the project is transferred later.
+ */
+export function setBillingContext(context: {
+    organizationId?: string;
+    keySource?: KeySource;
+    billableTo?: 'platform' | 'organization' | 'user';
+    billableId?: string;
+}): void {
+    globalUsageContext = { ...globalUsageContext, ...context };
+    console.log('[Telemetry] Billing context set:', {
+        organizationId: context.organizationId ? `${context.organizationId.substring(0, 8)}...` : 'NOT SET',
+        keySource: context.keySource || 'NOT SET',
+        billableTo: context.billableTo || 'NOT SET',
+    });
+}
+
+/**
+ * Determine key source based on where the API key came from
+ */
+export function determineKeySource(hasDbKey: boolean, hasEnvKey: boolean, hasOrgKey?: boolean): KeySource {
+    if (hasOrgKey) return 'org_byok';
+    if (hasDbKey) return 'user_byok';
+    if (hasEnvKey) return 'platform';
+    return 'unknown';
 }
 
 // Parameters for logging AI usage
@@ -127,6 +170,12 @@ export async function logAiUsage(
         topic_id: mergedContext.topicId,
         brief_id: mergedContext.briefId,
         job_id: mergedContext.jobId,
+        // Billing attribution fields (immutable snapshot - never changes after logging)
+        organization_id: mergedContext.organizationId,
+        key_source: mergedContext.keySource || 'unknown',
+        billable_to: mergedContext.billableTo,
+        billable_id: mergedContext.billableId,
+        // Provider and model
         provider,
         model,
         operation,

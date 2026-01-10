@@ -6,7 +6,7 @@ import { AppStep, BusinessInfo, Project, TopicalMap } from './types';
 import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from './services/supabaseClient';
 import { verifiedDelete, verifiedBulkDelete } from './services/verifiedDatabaseService';
 import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
-import { setGlobalUsageContext, clearGlobalUsageContext } from './services/telemetryService';
+import { setGlobalUsageContext, clearGlobalUsageContext, setBillingContext, determineKeySource } from './services/telemetryService';
 import { setVerboseLogging } from './utils/debugLogger';
 import { consoleLogger, setLogContext } from './services/consoleLogger';
 import { apiCallLogger } from './services/apiCallLogger';
@@ -249,8 +249,23 @@ const App: React.FC = () => {
             setLogContext({
                 userId: state.user.id,
             });
+
+            // Update organization billing context when active project changes
+            // This ensures AI usage is attributed to the correct organization
+            if (state.activeProjectId) {
+                const activeProject = state.projects.find(p => p.id === state.activeProjectId);
+                if (activeProject?.organization_id) {
+                    setBillingContext({
+                        organizationId: activeProject.organization_id,
+                        // If project uses org keys or inherits, billable_to is organization
+                        // If project has BYOK, billable_to is already set to user
+                        billableTo: activeProject.api_key_mode === 'byok' ? 'user' : 'organization',
+                        billableId: activeProject.api_key_mode === 'byok' ? state.user.id : activeProject.organization_id,
+                    });
+                }
+            }
         }
-    }, [state.user, state.activeProjectId, state.activeMapId]);
+    }, [state.user, state.activeProjectId, state.activeMapId, state.projects]);
 
     // Expose utility functions to window for console access
     useEffect(() => {
@@ -349,6 +364,16 @@ const App: React.FC = () => {
                             usingSource: dbKey ? 'DATABASE (overrides env)' : 'ENV FILE',
                             dbKeyLength: dbKey?.length || 0,
                             envKeyLength: envKey?.length || 0
+                        });
+
+                        // Set billing context for AI usage tracking
+                        // This determines whether platform keys or user BYOK keys are being used
+                        const keySource = determineKeySource(!!dbKey, !!envKey);
+                        setBillingContext({
+                            keySource,
+                            // If user has their own key, they are billable; otherwise platform is billable
+                            billableTo: keySource === 'user_byok' ? 'user' : 'platform',
+                            billableId: keySource === 'user_byok' ? state.user?.id : undefined,
                         });
 
                         dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...filteredSettings } });

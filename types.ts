@@ -1426,6 +1426,8 @@ export interface Project {
     project_name: string;
     domain: string;
     created_at: string;
+    organization_id?: string;
+    api_key_mode?: 'inherit' | 'byok';
 }
 
 /** Extended Project interface for admin management (includes user info) */
