@@ -29,6 +29,7 @@ import EdgeToolbar, { ToolbarIcons } from './components/ui/EdgeToolbar';
 import MainLayout from './components/layout/MainLayout';
 import { useVersionCheck, UpdateBanner } from './hooks/useVersionCheck';
 import { CelebrationOverlay } from './components/gamification';
+import { OrganizationProvider } from './components/organization';
 
 const App: React.FC = () => {
     const [state, dispatch] = useReducer(appReducer, initialState);
@@ -654,7 +655,8 @@ const App: React.FC = () => {
 
     return (
         <AppStateContext.Provider value={{ state, dispatch }}>
-            <MainLayout>
+            <OrganizationProvider>
+                <MainLayout>
                 <div className="bg-gray-900 text-gray-200 min-h-screen font-sans">
                     <GlobalLoadingBar />
                     <CelebrationOverlay />
@@ -740,7 +742,8 @@ const App: React.FC = () => {
                         />
                     )}
                 </div>
-            </MainLayout>
+                </MainLayout>
+            </OrganizationProvider>
         </AppStateContext.Provider>
     );
 };
