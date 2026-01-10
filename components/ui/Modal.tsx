@@ -84,8 +84,10 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
-  const titleId = `modal-title-${React.useId()}`;
-  const descriptionId = description ? `modal-desc-${React.useId()}` : undefined;
+  // Always call useId unconditionally to avoid violating Rules of Hooks
+  const uniqueId = React.useId();
+  const titleId = `modal-title-${uniqueId}`;
+  const descriptionId = `modal-desc-${uniqueId}`;
 
   // Ensure onClose is always a function to prevent React deps comparison issues
   const safeOnClose = onClose || noop;
@@ -180,7 +182,7 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-describedby={descriptionId}
+        aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={`w-full ${maxWidth} my-2 sm:my-8`}
