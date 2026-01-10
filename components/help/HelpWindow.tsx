@@ -621,7 +621,7 @@ const WelcomeView: React.FC<WelcomeViewProps> = ({ categories, onNavigate }) => 
                   <p className="text-gray-400 text-sm line-clamp-2">{category.description}</p>
                 )}
                 <p className="text-gray-500 text-xs mt-2">
-                  {category.articles.length} article{category.articles.length !== 1 ? 's' : ''}
+                  {(category.articles || []).length} article{(category.articles || []).length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>

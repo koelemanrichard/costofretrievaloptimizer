@@ -149,13 +149,13 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
         <span className="flex-1 truncate text-sm font-medium">{category.name}</span>
-        <span className="text-xs text-gray-500">{category.articles.length}</span>
+        <span className="text-xs text-gray-500">{(category.articles || []).length}</span>
       </button>
 
       {/* Articles */}
-      {isExpanded && category.articles.length > 0 && (
+      {isExpanded && (category.articles || []).length > 0 && (
         <ul className="ml-6 mt-1 space-y-0.5">
-          {category.articles.map(article => (
+          {(category.articles || []).map(article => (
             <ArticleItem
               key={article.id}
               article={article}

@@ -35,7 +35,7 @@ export const HelpArticleView: React.FC<HelpArticleViewProps> = ({
 
     // Replace screenshot placeholders with actual URLs
     // Format: ![alt text](screenshot:id) or ![alt text](storage:path)
-    article.screenshots.forEach(screenshot => {
+    (article.screenshots || []).forEach(screenshot => {
       const url = getScreenshotUrl(supabase, screenshot.storage_path, screenshot.storage_bucket);
       // Replace various placeholder formats
       content = content.replace(
@@ -91,26 +91,26 @@ export const HelpArticleView: React.FC<HelpArticleViewProps> = ({
       </div>
 
       {/* Screenshots Gallery (if any not inline) */}
-      {article.screenshots.length > 0 && (
+      {(article.screenshots || []).length > 0 && (
         <ScreenshotsSection
-          screenshots={article.screenshots}
+          screenshots={article.screenshots || []}
           supabase={supabase}
         />
       )}
 
       {/* Related Articles */}
-      {article.related_articles && article.related_articles.length > 0 && (
+      {(article.related_articles || []).length > 0 && (
         <RelatedArticlesSection
-          articles={article.related_articles}
+          articles={article.related_articles || []}
           onNavigate={onNavigate}
         />
       )}
 
       {/* Feature Keys (for debugging/admin) */}
-      {article.feature_keys.length > 0 && (
+      {(article.feature_keys || []).length > 0 && (
         <div className="mt-12 pt-6 border-t border-gray-700">
           <p className="text-xs text-gray-500">
-            Feature keys: {article.feature_keys.join(', ')}
+            Feature keys: {(article.feature_keys || []).join(', ')}
           </p>
         </div>
       )}
