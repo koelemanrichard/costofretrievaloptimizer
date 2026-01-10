@@ -53,7 +53,8 @@ export function ExternalCollaboratorLimits({ projectId, onClose }: ExternalColla
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
+      // First, get project members
+      const { data: membersData, error: fetchError } = await supabase
         .from('project_members')
         .select(`
           id,
@@ -61,24 +62,41 @@ export function ExternalCollaboratorLimits({ projectId, onClose }: ExternalColla
           role,
           monthly_usage_limit_usd,
           usage_this_month_usd,
-          usage_reset_at,
-          user_settings:user_id (
-            display_name,
-            user_id
-          )
+          usage_reset_at
         `)
         .eq('project_id', projectId)
         .eq('source', 'direct');
 
       if (fetchError) throw fetchError;
 
-      // Get user emails from auth.users via RPC or join
-      // For now, we'll use the user_id and try to get display names
-      const mappedMembers: ExternalMember[] = (data || []).map((m: any) => ({
+      if (!membersData || membersData.length === 0) {
+        setMembers([]);
+        return;
+      }
+
+      // Then fetch user settings separately for display names
+      const userIds = membersData.map((m: any) => m.user_id);
+      const { data: settingsData } = await supabase
+        .from('user_settings')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+
+      // Create a map of user_id to display_name
+      const displayNameMap = new Map<string, string>();
+      if (settingsData) {
+        settingsData.forEach((s: any) => {
+          if (s.display_name) {
+            displayNameMap.set(s.user_id, s.display_name);
+          }
+        });
+      }
+
+      // Map members with display names
+      const mappedMembers: ExternalMember[] = membersData.map((m: any) => ({
         id: m.id,
         userId: m.user_id,
-        email: m.user_settings?.user_id || m.user_id,  // Fallback to user_id
-        displayName: m.user_settings?.display_name,
+        email: m.user_id,  // user_id is the email/identifier
+        displayName: displayNameMap.get(m.user_id),
         role: m.role,
         monthlyLimitUsd: m.monthly_usage_limit_usd,
         usageThisMonthUsd: m.usage_this_month_usd || 0,
