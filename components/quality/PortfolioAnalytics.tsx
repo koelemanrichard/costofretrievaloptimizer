@@ -28,9 +28,11 @@ import {
 
 export interface PortfolioAnalyticsProps {
   /** User ID for filtering data */
-  userId: string;
-  /** Date range for the analytics period */
-  dateRange: {
+  userId?: string;
+  /** Organization ID for filtering data */
+  organizationId?: string;
+  /** Date range for the analytics period (defaults to last 30 days) */
+  dateRange?: {
     start: Date;
     end: Date;
   };
@@ -303,9 +305,16 @@ const ConflictPatternCard: React.FC<ConflictPatternCardProps> = ({ pattern }) =>
 // Main Component
 // =============================================================================
 
+// Default date range: last 30 days
+const getDefaultDateRange = () => ({
+  start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+  end: new Date()
+});
+
 export const PortfolioAnalytics: React.FC<PortfolioAnalyticsProps> = ({
   userId,
-  dateRange,
+  organizationId,
+  dateRange = getDefaultDateRange(),
   analyticsData = MOCK_ANALYTICS_DATA,
   onDateRangeChange,
   onExport,

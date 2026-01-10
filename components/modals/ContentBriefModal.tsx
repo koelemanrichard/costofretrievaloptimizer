@@ -92,15 +92,62 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     // Settings panel state
     const [showSettings, setShowSettings] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [contentSettings, setContentSettings] = useState<ContentGenerationSettings>({
-        ...DEFAULT_CONTENT_GENERATION_SETTINGS,
-        id: 'temp',
-        userId: user?.id || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+
+    // Load settings from localStorage or use defaults
+    const [contentSettings, setContentSettings] = useState<ContentGenerationSettings>(() => {
+        try {
+            const saved = localStorage.getItem('contentGenerationSettings');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return {
+                    ...DEFAULT_CONTENT_GENERATION_SETTINGS,
+                    ...parsed,
+                    id: 'temp',
+                    userId: user?.id || '',
+                };
+            }
+        } catch (e) {
+            console.warn('Failed to load content settings from localStorage:', e);
+        }
+        return {
+            ...DEFAULT_CONTENT_GENERATION_SETTINGS,
+            id: 'temp',
+            userId: user?.id || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
     });
-    const [qualityModeSettings, setQualityModeSettings] = useState<QualityModeSettings>(DEFAULT_GENERATION_SETTINGS);
+
+    const [qualityModeSettings, setQualityModeSettings] = useState<QualityModeSettings>(() => {
+        try {
+            const saved = localStorage.getItem('qualityModeSettings');
+            if (saved) {
+                return { ...DEFAULT_GENERATION_SETTINGS, ...JSON.parse(saved) };
+            }
+        } catch (e) {
+            console.warn('Failed to load quality mode settings from localStorage:', e);
+        }
+        return DEFAULT_GENERATION_SETTINGS;
+    });
+
     const [showQualityView, setShowQualityView] = useState(false);
+
+    // Persist settings to localStorage when they change
+    useEffect(() => {
+        try {
+            localStorage.setItem('contentGenerationSettings', JSON.stringify(contentSettings));
+        } catch (e) {
+            console.warn('Failed to save content settings to localStorage:', e);
+        }
+    }, [contentSettings]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('qualityModeSettings', JSON.stringify(qualityModeSettings));
+        } catch (e) {
+            console.warn('Failed to save quality mode settings to localStorage:', e);
+        }
+    }, [qualityModeSettings]);
 
     // Report generation hook
     const reportHook = useContentBriefReport(brief, activeBriefTopic || undefined);
@@ -619,9 +666,9 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                             <Button
                                 onClick={handleGenerateDraft}
                                 variant="secondary"
-                                disabled={isDrafting || isStartingGeneration || !canGenerateContent}
+                                disabled={isDrafting || isStartingGeneration || (!canGenerateContent && !featureLoading)}
                                 className="text-xs border-amber-600 text-amber-300 hover:bg-amber-900/30"
-                                title={!canGenerateContent ? (featureReason || 'Content generation requires a subscription upgrade') : 'Regenerate the article draft based on the current brief'}
+                                title={!canGenerateContent && !featureLoading ? (featureReason || 'Content generation requires a subscription upgrade') : 'Regenerate the article draft based on the current brief'}
                             >
                                 {isStartingGeneration ? (
                                     <div className="flex items-center gap-2"><Loader className="w-3 h-3" /> <span>Starting...</span></div>
@@ -633,8 +680,8 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         <Button
                             onClick={brief.articleDraft ? handleViewDraft : handleGenerateDraft}
                             variant="primary"
-                            disabled={isDrafting || isGenerating || (!brief.articleDraft && !canGenerateContent)}
-                            title={!canGenerateContent && !brief.articleDraft ? (featureReason || 'Content generation requires a subscription upgrade') : undefined}
+                            disabled={isDrafting || isGenerating || (!brief.articleDraft && !canGenerateContent && !featureLoading)}
+                            title={!canGenerateContent && !featureLoading && !brief.articleDraft ? (featureReason || 'Content generation requires a subscription upgrade') : undefined}
                         >
                             {isDrafting ? (
                                 <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Generating...</span></div>
