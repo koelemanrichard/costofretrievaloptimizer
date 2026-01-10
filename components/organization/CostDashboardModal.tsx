@@ -30,12 +30,33 @@ interface CostDashboardModalProps {
   onClose: () => void;
 }
 
-type DateRangeOption = 'this_week' | 'this_month' | 'last_month' | 'last_90_days';
+type DateRangeOption = 'this_week' | 'this_month' | 'last_month' | 'last_90_days' | 'custom';
 
 interface DateRange {
   startDate: Date;
   endDate: Date;
   label: string;
+}
+
+/**
+ * Format date for input[type="date"]
+ */
+function formatDateForInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parse date from input[type="date"]
+ */
+function parseDateFromInput(dateStr: string, endOfDay: boolean = false): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (endOfDay) {
+    return new Date(year, month - 1, day, 23, 59, 59);
+  }
+  return new Date(year, month - 1, day, 0, 0, 0);
 }
 
 // ============================================================================
@@ -178,6 +199,7 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
   const {
     getCostReport,
     downloadCsv,
+    exportToExcel,
     canViewCosts,
     canExportCosts,
     isLoading: hookLoading,
@@ -188,6 +210,25 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
   const [report, setReport] = useState<CostReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Custom date range state
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+  const [customStartDate, setCustomStartDate] = useState<string>(formatDateForInput(thirtyDaysAgo));
+  const [customEndDate, setCustomEndDate] = useState<string>(formatDateForInput(now));
+
+  // Get effective date range (either preset or custom)
+  const getEffectiveDateRange = useCallback((): DateRange => {
+    if (dateRange === 'custom') {
+      return {
+        startDate: parseDateFromInput(customStartDate),
+        endDate: parseDateFromInput(customEndDate, true),
+        label: 'Custom Range',
+      };
+    }
+    return getDateRange(dateRange);
+  }, [dateRange, customStartDate, customEndDate]);
 
   // Load cost report when modal opens or date range changes
   const loadReport = useCallback(async () => {
@@ -200,7 +241,7 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
     setError(null);
 
     try {
-      const range = getDateRange(dateRange);
+      const range = getEffectiveDateRange();
       const costReport = await getCostReport(range.startDate, range.endDate);
       setReport(costReport);
     } catch (err) {
@@ -209,7 +250,7 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
     } finally {
       setIsLoading(false);
     }
-  }, [isOpen, canViewCosts, dateRange, getCostReport]);
+  }, [isOpen, canViewCosts, getEffectiveDateRange, getCostReport]);
 
   useEffect(() => {
     loadReport();
@@ -225,10 +266,18 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
   // Handle CSV export
   const handleExportCsv = useCallback(() => {
     if (!report) return;
-    const range = getDateRange(dateRange);
+    const range = getEffectiveDateRange();
     const filename = `cost-report-${range.label.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
     downloadCsv(report, filename);
-  }, [report, dateRange, downloadCsv]);
+  }, [report, getEffectiveDateRange, downloadCsv]);
+
+  // Handle Excel export
+  const handleExportExcel = useCallback(() => {
+    if (!report) return;
+    const range = getEffectiveDateRange();
+    const filename = `cost-report-${range.label.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportToExcel(report, filename);
+  }, [report, getEffectiveDateRange, exportToExcel]);
 
   // Permission check
   if (!canViewCosts) {
@@ -263,9 +312,9 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
   }
 
   // Current date range info
-  const currentRange = getDateRange(dateRange);
+  const currentRange = getEffectiveDateRange();
 
-  // Footer with export button
+  // Footer with export buttons
   const footer = (
     <div className="flex items-center justify-between w-full">
       <p className="text-xs text-gray-500">
@@ -276,19 +325,34 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
           Close
         </Button>
         {canExportCosts && report && (
-          <Button variant="primary" onClick={handleExportCsv}>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-              Export CSV
-            </span>
-          </Button>
+          <>
+            <Button variant="secondary" onClick={handleExportCsv}>
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                CSV
+              </span>
+            </Button>
+            <Button variant="primary" onClick={handleExportExcel}>
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                Excel
+              </span>
+            </Button>
+          </>
         )}
       </div>
     </div>
@@ -305,30 +369,66 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
       footer={footer}
     >
       {/* Date Range Selector */}
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-sm text-gray-400">Period:</span>
-        <div className="flex gap-1 bg-gray-800/50 rounded-lg p-1">
-          {(
-            [
-              { value: 'this_week', label: 'This Week' },
-              { value: 'this_month', label: 'This Month' },
-              { value: 'last_month', label: 'Last Month' },
-              { value: 'last_90_days', label: '90 Days' },
-            ] as const
-          ).map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setDateRange(option.value)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                dateRange === option.value
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-400">Period:</span>
+          <div className="flex gap-1 bg-gray-800/50 rounded-lg p-1">
+            {(
+              [
+                { value: 'this_week', label: 'This Week' },
+                { value: 'this_month', label: 'This Month' },
+                { value: 'last_month', label: 'Last Month' },
+                { value: 'last_90_days', label: '90 Days' },
+                { value: 'custom', label: 'Custom' },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setDateRange(option.value)}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  dateRange === option.value
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Custom Date Range Inputs */}
+        {dateRange === 'custom' && (
+          <div className="flex items-center gap-4 pl-14">
+            <div className="flex items-center gap-2">
+              <label htmlFor="start-date" className="text-sm text-gray-400">From:</label>
+              <input
+                id="start-date"
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="end-date" className="text-sm text-gray-400">To:</label>
+              <input
+                id="end-date"
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <Button
+              variant="secondary"
+              onClick={loadReport}
+              className="!py-1.5 !px-4 text-sm"
+            >
+              Apply
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Loading State */}

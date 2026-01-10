@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { useOrganizationContext } from '../components/organization/OrganizationProvider';
 import { usePermissions } from './usePermissions';
@@ -128,36 +129,56 @@ export function useCosts() {
     setError(null);
 
     try {
-      let query = supabase
-        .from('ai_usage_logs')
-        .select(`
-          id,
-          created_at,
-          provider,
-          model,
-          tokens_in,
-          tokens_out,
-          cost_usd,
-          project_id,
-          operation,
-          key_source,
-          map_id,
-          organization_id,
-          projects:project_id (project_name),
-          topical_maps:map_id (name)
-        `)
-        .eq('organization_id', organization.id)
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-        .order('created_at', { ascending: false });
+      // Supabase has a default 1000 row limit - we need to paginate to get all data
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let hasMore = true;
+      let offset = 0;
 
-      if (projectId) {
-        query = query.eq('project_id', projectId);
+      while (hasMore) {
+        let query = supabase
+          .from('ai_usage_logs')
+          .select(`
+            id,
+            created_at,
+            provider,
+            model,
+            tokens_in,
+            tokens_out,
+            cost_usd,
+            project_id,
+            operation,
+            key_source,
+            map_id,
+            organization_id,
+            projects:project_id (project_name),
+            topical_maps:map_id (name)
+          `)
+          .eq('organization_id', organization.id)
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
+          .order('created_at', { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (projectId) {
+          query = query.eq('project_id', projectId);
+        }
+
+        const { data: pageData, error: queryError } = await query;
+
+        if (queryError) throw queryError;
+
+        if (pageData && pageData.length > 0) {
+          allData = allData.concat(pageData);
+          offset += PAGE_SIZE;
+          // If we got fewer than PAGE_SIZE, we've reached the end
+          hasMore = pageData.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data, error: queryError } = await query;
-
-      if (queryError) throw queryError;
+      const data = allData;
 
       // Process data
       const logs: UsageLogEntry[] = (data || []).map((log: any) => ({
@@ -402,6 +423,133 @@ export function useCosts() {
   }, [exportToCsv]);
 
   /**
+   * Export cost report to formatted Excel (.xlsx)
+   */
+  const exportToExcel = useCallback((report: CostReport, filename?: string) => {
+    if (!can('canExportData')) {
+      throw new Error('No permission to export data');
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const summaryData = [
+      ['Cost Report Summary'],
+      ['Organization', organization?.name || 'Unknown'],
+      ['Period', `${report.summary.periodStart.split('T')[0]} to ${report.summary.periodEnd.split('T')[0]}`],
+      [''],
+      ['Metric', 'Value'],
+      ['Total Cost', `$${report.summary.totalCost.toFixed(4)}`],
+      ['Total Tokens', report.summary.totalTokens.toLocaleString()],
+      ['Total Requests', report.summary.totalRequests.toLocaleString()],
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    // Set column widths
+    summarySheet['!cols'] = [{ wch: 20 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+    // By Provider Sheet
+    const providerData = [
+      ['Provider', 'Cost (USD)', 'Tokens', 'Requests', 'Percentage'],
+      ...report.byProvider.map(p => [
+        p.provider,
+        p.cost,
+        p.tokens,
+        p.requests,
+        `${p.percentage.toFixed(1)}%`,
+      ]),
+    ];
+    const providerSheet = XLSX.utils.aoa_to_sheet(providerData);
+    providerSheet['!cols'] = [{ wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(workbook, providerSheet, 'By Provider');
+
+    // By Project Sheet
+    const projectData = [
+      ['Project', 'Cost (USD)', 'Tokens', 'Requests'],
+      ...report.byProject.map(p => [
+        p.projectName,
+        p.cost,
+        p.tokens,
+        p.requests,
+      ]),
+    ];
+    const projectSheet = XLSX.utils.aoa_to_sheet(projectData);
+    projectSheet['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(workbook, projectSheet, 'By Project');
+
+    // By Model Sheet
+    const modelData = [
+      ['Provider', 'Model', 'Cost (USD)', 'Tokens', 'Requests'],
+      ...report.byModel.map(m => [
+        m.provider,
+        m.model,
+        m.cost,
+        m.tokens,
+        m.requests,
+      ]),
+    ];
+    const modelSheet = XLSX.utils.aoa_to_sheet(modelData);
+    modelSheet['!cols'] = [{ wch: 15 }, { wch: 35 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(workbook, modelSheet, 'By Model');
+
+    // By Topical Map Sheet
+    const mapData = [
+      ['Topical Map', 'Cost (USD)', 'Tokens', 'Requests'],
+      ...report.byMap.map(m => [
+        m.mapName,
+        m.cost,
+        m.tokens,
+        m.requests,
+      ]),
+    ];
+    const mapSheet = XLSX.utils.aoa_to_sheet(mapData);
+    mapSheet['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(workbook, mapSheet, 'By Topical Map');
+
+    // By Key Source Sheet
+    const keySourceData = [
+      ['Key Source', 'Cost (USD)', 'Tokens', 'Requests', 'Percentage'],
+      ...report.byKeySource.map(k => [
+        k.keySource === 'user' ? 'Personal Key' : k.keySource === 'organization' ? 'Organization Key' : k.keySource,
+        k.cost,
+        k.tokens,
+        k.requests,
+        `${k.percentage.toFixed(1)}%`,
+      ]),
+    ];
+    const keySourceSheet = XLSX.utils.aoa_to_sheet(keySourceData);
+    keySourceSheet['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(workbook, keySourceSheet, 'By Key Source');
+
+    // Detailed Logs Sheet
+    const logsData = [
+      ['Date', 'Provider', 'Model', 'Input Tokens', 'Output Tokens', 'Cost (USD)', 'Project', 'Map', 'Operation', 'Key Source'],
+      ...report.logs.map(log => [
+        log.createdAt.split('T')[0] + ' ' + log.createdAt.split('T')[1]?.substring(0, 8),
+        log.provider,
+        log.model,
+        log.inputTokens,
+        log.outputTokens,
+        log.costUsd,
+        log.projectName || '',
+        log.mapName || '',
+        log.operation || '',
+        log.keySource,
+      ]),
+    ];
+    const logsSheet = XLSX.utils.aoa_to_sheet(logsData);
+    logsSheet['!cols'] = [
+      { wch: 20 }, { wch: 12 }, { wch: 35 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 15 },
+    ];
+    XLSX.utils.book_append_sheet(workbook, logsSheet, 'Detailed Logs');
+
+    // Generate and download
+    const excelFilename = filename || `cost-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, excelFilename);
+  }, [can, organization]);
+
+  /**
    * Get current month's costs (quick summary)
    */
   const getCurrentMonthCosts = useCallback(async (): Promise<CostSummary | null> => {
@@ -422,6 +570,7 @@ export function useCosts() {
     getCostReport,
     exportToCsv,
     downloadCsv,
+    exportToExcel,
     getCurrentMonthCosts,
 
     // Permission check
