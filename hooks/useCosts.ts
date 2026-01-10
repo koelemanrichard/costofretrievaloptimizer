@@ -61,14 +61,35 @@ export interface UsageLogEntry {
   projectName?: string;
   operation?: string;
   keySource: string;
+  mapId?: string;
+  mapName?: string;
+  organizationId?: string;
+}
+
+export interface CostByMap {
+  mapId: string;
+  mapName: string;
+  cost: number;
+  tokens: number;
+  requests: number;
+}
+
+export interface CostByKeySource {
+  keySource: string;
+  cost: number;
+  tokens: number;
+  requests: number;
+  percentage: number;
 }
 
 export interface CostReport {
   summary: CostSummary;
-  byProvider: CostByProvider[];  // Always an array
-  byProject: CostByProject[];    // Always an array
-  byModel: CostByModel[];        // Always an array
-  logs: UsageLogEntry[];         // Always an array
+  byProvider: CostByProvider[];    // Always an array
+  byProject: CostByProject[];      // Always an array
+  byModel: CostByModel[];          // Always an array
+  byMap: CostByMap[];              // Always an array
+  byKeySource: CostByKeySource[];  // Always an array
+  logs: UsageLogEntry[];           // Always an array
 }
 
 // ============================================================================
@@ -114,13 +135,16 @@ export function useCosts() {
           created_at,
           provider,
           model,
-          input_tokens,
-          output_tokens,
+          tokens_in,
+          tokens_out,
           cost_usd,
           project_id,
           operation,
           key_source,
-          projects:project_id (project_name)
+          map_id,
+          organization_id,
+          projects:project_id (project_name),
+          topical_maps:map_id (name)
         `)
         .eq('organization_id', organization.id)
         .gte('created_at', startDate.toISOString())
@@ -141,19 +165,24 @@ export function useCosts() {
         createdAt: log.created_at,
         provider: log.provider,
         model: log.model,
-        inputTokens: log.input_tokens || 0,
-        outputTokens: log.output_tokens || 0,
+        inputTokens: log.tokens_in || 0,
+        outputTokens: log.tokens_out || 0,
         costUsd: log.cost_usd || 0,
         projectId: log.project_id,
         projectName: log.projects?.project_name,
         operation: log.operation,
         keySource: log.key_source,
+        mapId: log.map_id,
+        mapName: log.topical_maps?.name,
+        organizationId: log.organization_id,
       }));
 
-      // Aggregate by provider
+      // Aggregate by various dimensions
       const providerMap = new Map<string, { cost: number; tokens: number; requests: number }>();
       const projectMap = new Map<string, { name: string; cost: number; tokens: number; requests: number }>();
       const modelMap = new Map<string, { provider: string; cost: number; tokens: number; requests: number }>();
+      const mapMap = new Map<string, { name: string; cost: number; tokens: number; requests: number }>();
+      const keySourceMap = new Map<string, { cost: number; tokens: number; requests: number }>();
 
       let totalCost = 0;
       let totalTokens = 0;
@@ -188,6 +217,23 @@ export function useCosts() {
         modelStats.tokens += tokens;
         modelStats.requests += 1;
         modelMap.set(modelKey, modelStats);
+
+        // By topical map
+        if (log.mapId) {
+          const mapStats = mapMap.get(log.mapId) || { name: log.mapName || 'Unknown Map', cost: 0, tokens: 0, requests: 0 };
+          mapStats.cost += log.costUsd;
+          mapStats.tokens += tokens;
+          mapStats.requests += 1;
+          mapMap.set(log.mapId, mapStats);
+        }
+
+        // By key source (user vs organization)
+        const keySource = log.keySource || 'unknown';
+        const keyStats = keySourceMap.get(keySource) || { cost: 0, tokens: 0, requests: 0 };
+        keyStats.cost += log.costUsd;
+        keyStats.tokens += tokens;
+        keyStats.requests += 1;
+        keySourceMap.set(keySource, keyStats);
       }
 
       // Build response
@@ -217,6 +263,24 @@ export function useCosts() {
         }))
         .sort((a, b) => b.cost - a.cost);
 
+      const byMap: CostByMap[] = Array.from(mapMap.entries())
+        .map(([mapId, stats]) => ({
+          mapId,
+          mapName: stats.name,
+          cost: stats.cost,
+          tokens: stats.tokens,
+          requests: stats.requests,
+        }))
+        .sort((a, b) => b.cost - a.cost);
+
+      const byKeySource: CostByKeySource[] = Array.from(keySourceMap.entries())
+        .map(([keySource, stats]) => ({
+          keySource,
+          ...stats,
+          percentage: totalCost > 0 ? (stats.cost / totalCost) * 100 : 0,
+        }))
+        .sort((a, b) => b.cost - a.cost);
+
       return {
         summary: {
           totalCost,
@@ -228,6 +292,8 @@ export function useCosts() {
         byProvider,
         byProject,
         byModel,
+        byMap,
+        byKeySource,
         logs,
       };
     } catch (err) {
@@ -274,9 +340,33 @@ export function useCosts() {
     }
     lines.push('');
 
+    // By Model
+    lines.push('--- BY MODEL ---');
+    lines.push('Provider,Model,Cost (USD),Tokens,Requests');
+    for (const m of report.byModel) {
+      lines.push(`${m.provider},${m.model},$${m.cost.toFixed(4)},${m.tokens},${m.requests}`);
+    }
+    lines.push('');
+
+    // By Topical Map
+    lines.push('--- BY TOPICAL MAP ---');
+    lines.push('Map Name,Cost (USD),Tokens,Requests');
+    for (const m of report.byMap) {
+      lines.push(`"${m.mapName}",$${m.cost.toFixed(4)},${m.tokens},${m.requests}`);
+    }
+    lines.push('');
+
+    // By Key Source
+    lines.push('--- BY KEY SOURCE ---');
+    lines.push('Key Source,Cost (USD),Tokens,Requests,Percentage');
+    for (const k of report.byKeySource) {
+      lines.push(`${k.keySource},$${k.cost.toFixed(4)},${k.tokens},${k.requests},${k.percentage.toFixed(1)}%`);
+    }
+    lines.push('');
+
     // Detailed Logs
     lines.push('--- DETAILED LOGS ---');
-    lines.push('Date,Provider,Model,Input Tokens,Output Tokens,Cost (USD),Project,Operation,Key Source');
+    lines.push('Date,Provider,Model,Input Tokens,Output Tokens,Cost (USD),Project,Map,Operation,Key Source');
     for (const log of report.logs) {
       lines.push([
         log.createdAt,
@@ -286,6 +376,7 @@ export function useCosts() {
         log.outputTokens,
         `$${log.costUsd.toFixed(6)}`,
         `"${log.projectName || ''}"`,
+        `"${log.mapName || ''}"`,
         log.operation || '',
         log.keySource,
       ].join(','));

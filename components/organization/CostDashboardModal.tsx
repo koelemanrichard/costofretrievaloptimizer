@@ -513,6 +513,188 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
               </div>
             )}
           </div>
+
+          {/* By Topical Map Table */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+              By Topical Map
+            </h3>
+            {(report.byMap || []).length === 0 ? (
+              <div className="bg-gray-800/30 rounded-lg p-4 text-center text-gray-500 text-sm">
+                No map data for this period
+              </div>
+            ) : (
+              <div className="bg-gray-800/30 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left text-xs text-gray-400 font-medium p-3">Topical Map</th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3">Cost</th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3 hidden sm:table-cell">
+                        Tokens
+                      </th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3 hidden sm:table-cell">
+                        Requests
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(report.byMap || []).slice(0, 10).map((map) => (
+                      <tr key={map.mapId} className="border-b border-gray-700/50 last:border-0">
+                        <td className="p-3">
+                          <span className="text-sm text-gray-200 truncate block max-w-[200px]">
+                            {map.mapName}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-200 font-medium">
+                          {formatCost(map.cost)}
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-400 hidden sm:table-cell">
+                          {formatTokenCount(map.tokens)}
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-400 hidden sm:table-cell">
+                          {map.requests.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(report.byMap || []).length > 10 && (
+                  <div className="p-3 text-center text-xs text-gray-500 border-t border-gray-700/50">
+                    Showing top 10 of {(report.byMap || []).length} maps
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* By Model Table */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+              By Model
+            </h3>
+            {(report.byModel || []).length === 0 ? (
+              <div className="bg-gray-800/30 rounded-lg p-4 text-center text-gray-500 text-sm">
+                No model data for this period
+              </div>
+            ) : (
+              <div className="bg-gray-800/30 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left text-xs text-gray-400 font-medium p-3">Provider</th>
+                      <th className="text-left text-xs text-gray-400 font-medium p-3">Model</th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3">Cost</th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3 hidden sm:table-cell">
+                        Tokens
+                      </th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3 hidden sm:table-cell">
+                        Requests
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(report.byModel || []).slice(0, 10).map((model, idx) => (
+                      <tr key={`${model.provider}-${model.model}-${idx}`} className="border-b border-gray-700/50 last:border-0">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <ProviderIcon provider={model.provider} />
+                            <span className="text-sm text-gray-400 capitalize">
+                              {model.provider}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm text-gray-200 truncate block max-w-[150px]">
+                            {model.model}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-200 font-medium">
+                          {formatCost(model.cost)}
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-400 hidden sm:table-cell">
+                          {formatTokenCount(model.tokens)}
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-400 hidden sm:table-cell">
+                          {model.requests.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(report.byModel || []).length > 10 && (
+                  <div className="p-3 text-center text-xs text-gray-500 border-t border-gray-700/50">
+                    Showing top 10 of {(report.byModel || []).length} models
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* By Key Source Table */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+              By API Key Source
+            </h3>
+            {(report.byKeySource || []).length === 0 ? (
+              <div className="bg-gray-800/30 rounded-lg p-4 text-center text-gray-500 text-sm">
+                No key source data for this period
+              </div>
+            ) : (
+              <div className="bg-gray-800/30 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left text-xs text-gray-400 font-medium p-3">Key Source</th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3">Cost</th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3 hidden sm:table-cell">
+                        Tokens
+                      </th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3 hidden sm:table-cell">
+                        Requests
+                      </th>
+                      <th className="text-right text-xs text-gray-400 font-medium p-3">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(report.byKeySource || []).map((source) => (
+                      <tr key={source.keySource} className="border-b border-gray-700/50 last:border-0">
+                        <td className="p-3">
+                          <span className="text-sm text-gray-200 capitalize">
+                            {source.keySource === 'user' ? 'Personal Key' :
+                             source.keySource === 'organization' ? 'Organization Key' :
+                             source.keySource}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-200 font-medium">
+                          {formatCost(source.cost)}
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-400 hidden sm:table-cell">
+                          {formatTokenCount(source.tokens)}
+                        </td>
+                        <td className="p-3 text-right text-sm text-gray-400 hidden sm:table-cell">
+                          {source.requests.toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-sm text-gray-400">
+                              {source.percentage.toFixed(1)}%
+                            </span>
+                            <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden hidden sm:block">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full"
+                                style={{ width: `${Math.min(source.percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

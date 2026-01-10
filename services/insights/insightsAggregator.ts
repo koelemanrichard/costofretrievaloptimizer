@@ -56,10 +56,10 @@ interface AIUsageLog {
   provider: string;
   model: string;
   operation: string;
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
-  estimated_cost: number;
+  tokens_in: number;
+  tokens_out: number;
+  total_tokens?: number;
+  cost_usd: number;
   created_at: string;
 }
 
@@ -765,9 +765,14 @@ function buildCostUsage(data: RawInsightsData): CostUsageData {
   const byOperation: Record<string, number> = {};
   const costByProvider: Record<string, number> = {};
 
+  // Helper to get total tokens from a log entry
+  const getLogTokens = (log: AIUsageLog) => {
+    return log.total_tokens ?? (safeNumber(log.tokens_in) + safeNumber(log.tokens_out));
+  };
+
   logs.forEach(log => {
-    const tokens = safeNumber(log.total_tokens);
-    const cost = safeNumber(log.estimated_cost);
+    const tokens = getLogTokens(log);
+    const cost = safeNumber(log.cost_usd);
     const provider = log.provider || 'unknown';
     const operation = log.operation || 'unknown';
 
@@ -780,8 +785,8 @@ function buildCostUsage(data: RawInsightsData): CostUsageData {
   const dailyTotals: Record<string, { tokens: number; cost: number }> = {};
   logs.forEach(log => {
     const date = log.created_at?.split('T')[0] || 'unknown';
-    const tokens = safeNumber(log.total_tokens);
-    const cost = safeNumber(log.estimated_cost);
+    const tokens = getLogTokens(log);
+    const cost = safeNumber(log.cost_usd);
 
     if (!dailyTotals[date]) dailyTotals[date] = { tokens: 0, cost: 0 };
     dailyTotals[date].tokens += tokens;
@@ -794,14 +799,14 @@ function buildCostUsage(data: RawInsightsData): CostUsageData {
     .slice(-30)
     .map(([date, data]) => ({ date, ...data }));
 
-  const totalTokens = logs.reduce((sum, log) => sum + safeNumber(log.total_tokens), 0);
-  const totalCost = logs.reduce((sum, log) => sum + safeNumber(log.estimated_cost), 0);
+  const totalTokens = logs.reduce((sum, log) => sum + getLogTokens(log), 0);
+  const totalCost = logs.reduce((sum, log) => sum + safeNumber(log.cost_usd), 0);
 
   // Efficiency metrics
   const operationStats: Record<string, { tokens: number; count: number }> = {};
   logs.forEach(log => {
     if (!operationStats[log.operation]) operationStats[log.operation] = { tokens: 0, count: 0 };
-    operationStats[log.operation].tokens += log.total_tokens;
+    operationStats[log.operation].tokens += getLogTokens(log);
     operationStats[log.operation].count += 1;
   });
 

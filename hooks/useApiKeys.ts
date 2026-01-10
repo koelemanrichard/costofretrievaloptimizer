@@ -288,7 +288,7 @@ export function useApiKeys(businessInfo: BusinessInfo) {
     try {
       let query = supabase
         .from('ai_usage_logs')
-        .select('provider, project_id, input_tokens, output_tokens, cost_usd')
+        .select('provider, project_id, tokens_in, tokens_out, cost_usd')
         .eq('organization_id', organizationId);
 
       if (startDate) {
@@ -309,7 +309,7 @@ export function useApiKeys(businessInfo: BusinessInfo) {
       let totalTokens = 0;
 
       for (const log of data || []) {
-        const tokens = (log.input_tokens || 0) + (log.output_tokens || 0);
+        const tokens = (log.tokens_in || 0) + (log.tokens_out || 0);
         const cost = log.cost_usd || 0;
 
         totalCost += cost;
