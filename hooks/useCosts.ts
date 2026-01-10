@@ -120,7 +120,7 @@ export function useCosts() {
           project_id,
           operation,
           key_source,
-          projects:project_id (name)
+          projects:project_id (project_name)
         `)
         .eq('organization_id', organization.id)
         .gte('created_at', startDate.toISOString())
@@ -145,7 +145,7 @@ export function useCosts() {
         outputTokens: log.output_tokens || 0,
         costUsd: log.cost_usd || 0,
         projectId: log.project_id,
-        projectName: log.projects?.name,
+        projectName: log.projects?.project_name,
         operation: log.operation,
         keySource: log.key_source,
       }));
