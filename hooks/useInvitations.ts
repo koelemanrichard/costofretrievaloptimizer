@@ -105,7 +105,7 @@ export function useInvitations() {
         .from('invitations')
         .select(`
           *,
-          inviter:invited_by (
+          inviter:user_profiles!invitations_invited_by_fkey (
             id,
             email,
             raw_user_meta_data
@@ -147,7 +147,7 @@ export function useInvitations() {
         .from('invitations')
         .select(`
           *,
-          inviter:invited_by (
+          inviter:user_profiles!invitations_invited_by_fkey (
             id,
             email,
             raw_user_meta_data

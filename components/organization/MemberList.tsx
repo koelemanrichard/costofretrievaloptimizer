@@ -277,7 +277,7 @@ export function MemberList({ onInviteClick }: MemberListProps) {
 
     try {
       // Query organization members with user data
-      // Note: Using type assertion as database.types.ts needs regeneration for multi-tenancy tables
+      // Note: Using user_profiles view which exposes auth.users data for PostgREST joins
       const { data, error: queryError } = await (supabase as any)
         .from('organization_members')
         .select(`
@@ -290,7 +290,7 @@ export function MemberList({ onInviteClick }: MemberListProps) {
           invited_at,
           accepted_at,
           created_at,
-          user:users (
+          user:user_profiles!organization_members_user_id_fkey (
             email,
             raw_user_meta_data
           )
