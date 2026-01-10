@@ -28,6 +28,7 @@ import { PublishToWordPressModal } from '../wordpress';
 import { AuditIssuesPanel } from '../drafting/AuditIssuesPanel';
 import { AuditIssue } from '../../types';
 import { runAlgorithmicAudit, convertToAuditIssues } from '../../services/ai/contentGeneration/passes/auditChecks';
+import { useFeatureGate } from '../../hooks/usePermissions';
 
 interface DraftingModalProps {
   isOpen: boolean;
@@ -42,6 +43,9 @@ interface DraftingModalProps {
 
 const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: briefProp, onAudit, onGenerateSchema, isLoading, businessInfo, onAnalyzeFlow }) => {
   const { state, dispatch } = useAppState();
+
+  // Feature gate for content generation (covers polish, audit, schema)
+  const { enabled: canGenerateContent, reason: featureReason } = useFeatureGate('content_generation');
 
   // Read brief from state for UI display
   const { activeBriefTopic, topicalMaps, activeMapId } = state;
@@ -2887,9 +2891,9 @@ ${schemaScript}`;
                 <div className="flex items-center gap-1">
                     <Button
                         onClick={handlePolishDraft}
-                        disabled={isPolishing || !draftContent || activeTab === 'preview'}
+                        disabled={isPolishing || !draftContent || activeTab === 'preview' || !canGenerateContent}
                         className="text-xs py-1 px-3 bg-gray-600 hover:bg-gray-500 opacity-80"
-                        title="Optional: Refines intro as abstractive summary, converts dense paragraphs to lists, applies stylometry for author voice. Note: Pass 7 already handles intro synthesis."
+                        title={!canGenerateContent ? (featureReason || 'Content generation requires a subscription upgrade') : "Optional: Refines intro as abstractive summary, converts dense paragraphs to lists, applies stylometry for author voice. Note: Pass 7 already handles intro synthesis."}
                     >
                         {isPolishing ? <Loader className="w-3 h-3"/> : '⚡ Polish'}
                     </Button>

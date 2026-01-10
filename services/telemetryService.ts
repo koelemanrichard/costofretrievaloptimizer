@@ -432,3 +432,109 @@ export async function fetchUsageSummary(
         errorRate: totalCalls > 0 ? (errorCount / totalCalls) * 100 : 0
     };
 }
+
+// ============================================================================
+// Billing Context Fetching
+// ============================================================================
+
+interface BillingContextResult {
+    ok: boolean;
+    keySource?: KeySource;
+    billableTo?: 'platform' | 'organization' | 'user';
+    billableId?: string;
+    organizationId?: string;
+    error?: string;
+}
+
+/**
+ * Fetch billing context from the get-api-key edge function.
+ * This determines who is billed for AI usage based on API key resolution.
+ *
+ * @param projectId - The project ID to check
+ * @param provider - The AI provider (anthropic, openai, google, perplexity, openrouter)
+ * @param supabaseUrl - The Supabase project URL
+ * @param authToken - The user's auth token
+ * @returns Billing context or error
+ */
+export async function fetchBillingContext(
+    projectId: string,
+    provider: string,
+    supabaseUrl: string,
+    authToken: string
+): Promise<BillingContextResult> {
+    // Normalize provider names (gemini -> google for the edge function)
+    const normalizedProvider = provider === 'gemini' ? 'google' : provider;
+
+    try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/get-api-key`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+                project_id: projectId,
+                provider: normalizedProvider,
+                info_only: true, // Only get billing context, not the actual key
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) {
+            console.warn('[Telemetry] Failed to fetch billing context:', data.error);
+            return {
+                ok: false,
+                error: data.error || 'Failed to fetch billing context',
+            };
+        }
+
+        return {
+            ok: true,
+            keySource: data.key_source as KeySource,
+            billableTo: data.billable_to,
+            billableId: data.billable_id,
+            organizationId: data.organization_id,
+        };
+    } catch (error) {
+        console.warn('[Telemetry] Error fetching billing context:', error);
+        return {
+            ok: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+/**
+ * Set billing context from edge function result.
+ * Call this when project context changes to update billing attribution.
+ *
+ * @param projectId - The project ID
+ * @param provider - The AI provider to check
+ * @param supabaseUrl - The Supabase project URL
+ * @param authToken - The user's auth token
+ */
+export async function updateBillingContextFromEdgeFunction(
+    projectId: string,
+    provider: string,
+    supabaseUrl: string,
+    authToken: string
+): Promise<void> {
+    const result = await fetchBillingContext(projectId, provider, supabaseUrl, authToken);
+
+    if (result.ok) {
+        setBillingContext({
+            organizationId: result.organizationId,
+            keySource: result.keySource,
+            billableTo: result.billableTo,
+            billableId: result.billableId,
+        });
+    } else {
+        // If we can't fetch billing context, default to user-based billing
+        console.warn('[Telemetry] Using fallback billing context due to error:', result.error);
+        setBillingContext({
+            keySource: 'user_byok',
+            billableTo: 'user',
+        });
+    }
+}

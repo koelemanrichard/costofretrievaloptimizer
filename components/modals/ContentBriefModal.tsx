@@ -25,6 +25,7 @@ import { MoneyPagePillarsIndicator } from '../brief/MoneyPagePillarsIndicator';
 import { VisualSemanticsPanel } from '../brief/VisualSemanticsPanel';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import CompetitiveIntelligenceWrapper from '../analysis/CompetitiveIntelligenceWrapper';
+import { useFeatureGate } from '../../hooks/usePermissions';
 
 interface ContentBriefModalProps {
   allTopics: EnrichedTopic[];
@@ -34,6 +35,9 @@ interface ContentBriefModalProps {
 const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGenerateDraft }) => {
     const { state, dispatch } = useAppState();
     const { activeBriefTopic, topicalMaps, activeMapId, isLoading, businessInfo, user, knowledgeGraph } = state;
+
+    // Feature gate for content generation
+    const { enabled: canGenerateContent, loading: featureLoading, reason: featureReason } = useFeatureGate('content_generation');
 
     const activeMap = topicalMaps.find(m => m.id === activeMapId);
     const brief = activeBriefTopic ? activeMap?.briefs?.[activeBriefTopic.id] : null;
@@ -576,9 +580,9 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                             <Button
                                 onClick={handleGenerateDraft}
                                 variant="secondary"
-                                disabled={isDrafting || isStartingGeneration}
+                                disabled={isDrafting || isStartingGeneration || !canGenerateContent}
                                 className="text-xs border-amber-600 text-amber-300 hover:bg-amber-900/30"
-                                title="Regenerate the article draft based on the current brief"
+                                title={!canGenerateContent ? (featureReason || 'Content generation requires a subscription upgrade') : 'Regenerate the article draft based on the current brief'}
                             >
                                 {isStartingGeneration ? (
                                     <div className="flex items-center gap-2"><Loader className="w-3 h-3" /> <span>Starting...</span></div>
@@ -590,10 +594,13 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         <Button
                             onClick={brief.articleDraft ? handleViewDraft : handleGenerateDraft}
                             variant="primary"
-                            disabled={isDrafting || isGenerating}
+                            disabled={isDrafting || isGenerating || (!brief.articleDraft && !canGenerateContent)}
+                            title={!canGenerateContent && !brief.articleDraft ? (featureReason || 'Content generation requires a subscription upgrade') : undefined}
                         >
                             {isDrafting ? (
                                 <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Generating...</span></div>
+                            ) : featureLoading && !brief.articleDraft ? (
+                                <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Checking...</span></div>
                             ) : (
                                 brief.articleDraft ? 'View Draft' : (useMultiPass ? 'Generate (Multi-Pass)' : 'Generate Article Draft')
                             )}

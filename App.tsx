@@ -255,8 +255,16 @@ const App: React.FC = () => {
             if (state.activeProjectId) {
                 const activeProject = state.projects.find(p => p.id === state.activeProjectId);
                 if (activeProject?.organization_id) {
+                    // Determine key source based on project settings
+                    // Full resolution happens via edge function, this is a best-effort local estimate
+                    const keySource = determineKeySource(
+                        !!state.businessInfo.geminiApiKey || !!state.businessInfo.openAiApiKey || !!state.businessInfo.anthropicApiKey, // user has keys
+                        false, // no env keys in client
+                        activeProject.api_key_mode !== 'byok' // org keys if not BYOK
+                    );
                     setBillingContext({
                         organizationId: activeProject.organization_id,
+                        keySource: keySource,
                         // If project uses org keys or inherits, billable_to is organization
                         // If project has BYOK, billable_to is already set to user
                         billableTo: activeProject.api_key_mode === 'byok' ? 'user' : 'organization',

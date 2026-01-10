@@ -9,6 +9,8 @@ export { CostSummaryWidget } from './CostSummaryWidget';
 export { CostDashboardModal } from './CostDashboardModal';
 export { CreateOrganizationModal } from './CreateOrganizationModal';
 export { OrganizationApiKeysModal } from './OrganizationApiKeysModal';
+export { SubscriptionBillingTab } from './SubscriptionBillingTab';
+export { SubscriptionBillingModal } from './SubscriptionBillingModal';
 export {
   FeatureGate,
   PermissionGate,

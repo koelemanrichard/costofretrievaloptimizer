@@ -10,7 +10,8 @@ import { Loader } from '../ui/Loader';
 import { Modal } from '../ui/Modal';
 import * as modelDiscovery from '../../services/modelDiscoveryService';
 import { WordPressConnectionManager } from '../wordpress';
-import { OrganizationSettingsTab, MemberManagementModal, CostDashboardModal, OrganizationApiKeysModal } from '../organization';
+import { OrganizationSettingsTab, MemberManagementModal, CostDashboardModal, OrganizationApiKeysModal, SubscriptionBillingModal } from '../organization';
+import { ProjectSettingsModal } from '../project';
 
 // --- Sub-components for better organization ---
 
@@ -242,10 +243,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
     const { state } = useAppState();
     const [settings, setSettings] = useState<Partial<BusinessInfo>>(initialSettings);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'ai' | 'services' | 'wordpress' | 'organization' | 'health'>('ai');
+    const [activeTab, setActiveTab] = useState<'ai' | 'services' | 'wordpress' | 'organization' | 'project' | 'health'>('ai');
     const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
     const [isCostModalOpen, setIsCostModalOpen] = useState(false);
     const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
+    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+    const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+
+    // Get active project info for project-specific settings
+    const activeProject = state.activeProjectId
+      ? state.projects?.find(p => p.id === state.activeProjectId)
+      : null;
 
     useEffect(() => {
         if (isOpen) {
@@ -271,15 +279,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
         }
     };
 
-    const TabButton: React.FC<{ tab: 'ai' | 'services' | 'wordpress' | 'organization' | 'health', label: string, id: string }> = ({ tab, label, id }) => (
+    const TabButton: React.FC<{ tab: 'ai' | 'services' | 'wordpress' | 'organization' | 'project' | 'health', label: string, id: string, disabled?: boolean }> = ({ tab, label, id, disabled }) => (
       <button
         type="button"
         role="tab"
         id={id}
         aria-selected={activeTab === tab}
         aria-controls={`${tab}-panel`}
-        onClick={() => setActiveTab(tab)}
-        className={`w-full text-left px-4 py-3 text-sm font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+        onClick={() => !disabled && setActiveTab(tab)}
+        disabled={disabled}
+        className={`w-full text-left px-4 py-3 text-sm font-medium rounded-md transition-colors ${
+          disabled
+            ? 'text-gray-500 cursor-not-allowed opacity-50'
+            : activeTab === tab
+            ? 'bg-blue-600 text-white'
+            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+        }`}
       >
         {label}
       </button>
@@ -314,6 +329,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                        <TabButton tab="services" label="SERP & Services" id="tab-services" />
                        <TabButton tab="wordpress" label="WordPress" id="tab-wordpress" />
                        <TabButton tab="organization" label="Organization" id="tab-organization" />
+                       <TabButton
+                         tab="project"
+                         label={activeProject ? `Project: ${activeProject.name.slice(0, 15)}${activeProject.name.length > 15 ? '...' : ''}` : 'Project'}
+                         id="tab-project"
+                         disabled={!activeProject}
+                       />
                     </div>
                 </nav>
                 <main
@@ -336,7 +357,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                          onOpenMemberManagement={() => setIsMemberModalOpen(true)}
                          onOpenCosts={() => setIsCostModalOpen(true)}
                          onOpenApiKeys={() => setIsApiKeysModalOpen(true)}
+                         onOpenSubscription={() => setIsSubscriptionModalOpen(true)}
                        />
+                     )}
+                     {activeTab === 'project' && activeProject && (
+                       <div className="space-y-4">
+                         <div className="flex items-center justify-between">
+                           <div>
+                             <h3 className="text-lg font-semibold text-blue-400">Project Settings</h3>
+                             <p className="text-sm text-gray-400">Configure settings for: {activeProject.name}</p>
+                           </div>
+                           <Button
+                             variant="secondary"
+                             onClick={() => setIsProjectSettingsOpen(true)}
+                           >
+                             <span className="flex items-center gap-2">
+                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                               </svg>
+                               Manage External Collaborators
+                             </span>
+                           </Button>
+                         </div>
+                         <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                           <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+                             Project Information
+                           </h4>
+                           <div className="grid grid-cols-2 gap-4 text-sm">
+                             <div>
+                               <span className="text-gray-500">Name:</span>
+                               <span className="ml-2 text-gray-200">{activeProject.name}</span>
+                             </div>
+                             <div>
+                               <span className="text-gray-500">ID:</span>
+                               <span className="ml-2 text-gray-400 font-mono text-xs">{activeProject.id}</span>
+                             </div>
+                           </div>
+                         </div>
+                         <p className="text-sm text-gray-500">
+                           External collaborators are users added directly to this project (not via organization membership).
+                           You can set monthly cost limits to control AI usage costs.
+                         </p>
+                       </div>
                      )}
                 </main>
             </form>
@@ -353,6 +415,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
           isOpen={isApiKeysModalOpen}
           onClose={() => setIsApiKeysModalOpen(false)}
         />
+        <SubscriptionBillingModal
+          isOpen={isSubscriptionModalOpen}
+          onClose={() => setIsSubscriptionModalOpen(false)}
+        />
+        {activeProject && (
+          <ProjectSettingsModal
+            isOpen={isProjectSettingsOpen}
+            onClose={() => setIsProjectSettingsOpen(false)}
+            projectId={activeProject.id}
+            projectName={activeProject.name}
+          />
+        )}
     </>
     );
 };

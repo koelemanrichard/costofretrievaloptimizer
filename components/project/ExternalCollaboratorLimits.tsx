@@ -10,7 +10,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 
 interface ExternalMember {
   id: string;
