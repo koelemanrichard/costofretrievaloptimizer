@@ -13,6 +13,7 @@ import { Loader } from '../ui/Loader';
 import HelpEditor from './HelpEditor';
 import AIUsageReport from './AIUsageReport';
 import ProjectManagement from './ProjectManagement';
+import OrganizationManagement from './OrganizationManagement';
 
 interface UserData {
     id: string;
@@ -20,6 +21,11 @@ interface UserData {
     role: string;
     last_sign_in_at: string;
     created_at: string;
+    organizations?: {
+        id: string;
+        name: string;
+        role: string;
+    }[];
 }
 
 // --- Internal User Management Component ---
@@ -41,9 +47,40 @@ const UserManagement: React.FC = () => {
         try {
             const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
             const { data, error } = await supabase.functions.invoke('get-users', { method: 'GET' });
-            
+
             if (error) throw error;
-            setUsers(data.users || []);
+
+            // Fetch organization memberships for each user
+            const usersWithOrgs = await Promise.all((data.users || []).map(async (user: UserData) => {
+                try {
+                    const { data: memberships } = await supabase
+                        .from('organization_members')
+                        .select(`
+                            role,
+                            organization:organizations (
+                                id,
+                                name
+                            )
+                        `)
+                        .eq('user_id', user.id)
+                        .not('accepted_at', 'is', null);
+
+                    return {
+                        ...user,
+                        organizations: (memberships || [])
+                            .filter((m: any) => m.organization)
+                            .map((m: any) => ({
+                                id: m.organization.id,
+                                name: m.organization.name,
+                                role: m.role,
+                            })),
+                    };
+                } catch {
+                    return { ...user, organizations: [] };
+                }
+            }));
+
+            setUsers(usersWithOrgs);
         } catch (e) {
             console.error("Failed to fetch users:", e);
             setError(e instanceof Error ? e.message : "Failed to load users.");
@@ -143,6 +180,7 @@ const UserManagement: React.FC = () => {
                         <thead className="bg-gray-800 text-gray-200 text-xs uppercase">
                             <tr>
                                 <th className="px-4 py-3">Email</th>
+                                <th className="px-4 py-3">Organizations</th>
                                 <th className="px-4 py-3">Last Active</th>
                                 <th className="px-4 py-3">Role</th>
                                 <th className="px-4 py-3 text-right">Actions</th>
@@ -151,7 +189,7 @@ const UserManagement: React.FC = () => {
                         <tbody className="divide-y divide-gray-700">
                             {users.length === 0 && !isLoading ? (
                                 <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center italic">No users found.</td>
+                                    <td colSpan={5} className="px-4 py-8 text-center italic">No users found.</td>
                                 </tr>
                             ) : (
                                 users.map(u => (
@@ -159,6 +197,27 @@ const UserManagement: React.FC = () => {
                                         <td className="px-4 py-3 text-white font-medium">
                                             {u.email}
                                             {state.user?.email === u.email && <span className="ml-2 text-[10px] bg-blue-900 text-blue-200 px-1.5 py-0.5 rounded">YOU</span>}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {(u.organizations || []).length === 0 ? (
+                                                <span className="text-gray-500 italic text-xs">None</span>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(u.organizations || []).map(org => (
+                                                        <span
+                                                            key={org.id}
+                                                            className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                                                org.role === 'owner' ? 'bg-yellow-900/50 text-yellow-200' :
+                                                                org.role === 'admin' ? 'bg-purple-900/50 text-purple-200' :
+                                                                'bg-gray-700 text-gray-300'
+                                                            }`}
+                                                            title={`Role: ${org.role}`}
+                                                        >
+                                                            {org.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : 'Never'}
@@ -340,7 +399,7 @@ const AdminDashboard: React.FC = () => {
     const [logs, setLogs] = useState<TelemetryLog[]>([]);
     const [isCheckingDB, setIsCheckingDB] = useState(false);
     const [dbStatus, setDbStatus] = useState<'ok' | 'error' | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'usage' | 'config' | 'users' | 'help' | 'projects'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'usage' | 'config' | 'users' | 'orgs' | 'help' | 'projects'>('overview');
 
     useEffect(() => {
         setLogs(getTelemetryLogs());
@@ -409,6 +468,12 @@ const AdminDashboard: React.FC = () => {
                             className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
                         >
                             👥 User Management
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('orgs')}
+                            className={`w-full text-left px-4 py-2 rounded transition-colors ${activeTab === 'orgs' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                        >
+                            🏢 Organizations
                         </button>
                         <button
                             onClick={() => setActiveTab('help')}
@@ -523,6 +588,10 @@ const AdminDashboard: React.FC = () => {
 
                     {activeTab === 'users' && (
                         <UserManagement />
+                    )}
+
+                    {activeTab === 'orgs' && (
+                        <OrganizationManagement />
                     )}
 
                     {activeTab === 'help' && (
