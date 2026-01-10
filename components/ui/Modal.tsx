@@ -63,6 +63,9 @@ const getFocusableElements = (container: HTMLElement): HTMLElement[] => {
   return Array.from(container.querySelectorAll<HTMLElement>(focusableSelectors));
 };
 
+// No-op function for fallback when onClose is not provided
+const noop = () => {};
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -83,6 +86,9 @@ export const Modal: React.FC<ModalProps> = ({
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const titleId = `modal-title-${React.useId()}`;
   const descriptionId = description ? `modal-desc-${React.useId()}` : undefined;
+
+  // Ensure onClose is always a function to prevent React deps comparison issues
+  const safeOnClose = onClose || noop;
 
   // Store the previously focused element and lock body scroll
   useEffect(() => {
@@ -120,13 +126,13 @@ export const Modal: React.FC<ModalProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        safeOnClose();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, closeOnEscape, onClose]);
+  }, [isOpen, closeOnEscape, safeOnClose]);
 
   // Handle focus trapping
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
@@ -156,9 +162,9 @@ export const Modal: React.FC<ModalProps> = ({
   // Handle backdrop click
   const handleBackdropClick = useCallback((event: React.MouseEvent) => {
     if (closeOnBackdropClick && event.target === event.currentTarget) {
-      onClose();
+      safeOnClose();
     }
-  }, [closeOnBackdropClick, onClose]);
+  }, [closeOnBackdropClick, safeOnClose]);
 
   if (!isOpen) return null;
 
@@ -196,7 +202,7 @@ export const Modal: React.FC<ModalProps> = ({
               </div>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={safeOnClose}
                 className="flex-shrink-0 text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
                 aria-label="Close modal"
               >
