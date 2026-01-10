@@ -6,6 +6,7 @@ import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Loader } from '../ui/Loader';
 import { Project, AppStep } from '../../types';
+import { OrganizationSwitcher } from '../organization';
 import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from '../../services/supabaseClient';
 
 interface ProjectSelectionScreenProps {
@@ -42,9 +43,12 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
   return (
     <div className="max-w-4xl w-full mx-auto relative pb-20">
       <header className="flex justify-between items-center mb-10">
-        <div>
+        <div className="flex items-center gap-6">
+          <div>
             <h1 className="text-4xl font-bold text-white">Holistic SEO Workbench</h1>
             <p className="text-lg text-gray-400 mt-2">Next-Gen SEO Strategy & Migration Platform</p>
+          </div>
+          <OrganizationSwitcher />
         </div>
         <div className="flex items-center gap-3">
             {user && (
