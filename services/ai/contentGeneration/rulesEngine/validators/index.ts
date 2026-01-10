@@ -87,7 +87,7 @@ export class RulesValidator {
     violations.push(...TableStructureValidator.validate(content, context));
 
     // 17. H9 Cross-Section Repetition Detection
-    violations.push(...CrossSectionRepetitionValidator.validate(content));
+    violations.push(...CrossSectionRepetitionValidator.validate(content, context));
 
     // 18. S4 Readability Match (Flesch-Kincaid grade level vs audience)
     violations.push(...ReadabilityValidator.validate(content, context));

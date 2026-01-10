@@ -5,6 +5,127 @@ import {
   BusinessInfo,
   HolisticSummaryContext
 } from '../../../types';
+import { getLanguageName } from '../../../utils/languageUtils';
+
+/**
+ * Multilingual stop words for vocabulary analysis
+ * These common words are excluded from term frequency calculations
+ */
+const MULTILINGUAL_STOP_WORDS: Record<string, Set<string>> = {
+  'English': new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were', 'be',
+    'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+    'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that',
+    'these', 'those', 'it', 'its', 'they', 'their', 'them', 'you', 'your',
+    'we', 'our', 'i', 'my', 'me', 'what', 'which', 'who', 'when', 'where',
+    'how', 'why', 'all', 'each', 'every', 'both', 'few', 'more', 'most',
+    'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same',
+    'so', 'than', 'too', 'very', 'just', 'also', 'now', 'here', 'there',
+  ]),
+
+  'Dutch': new Set([
+    'de', 'het', 'een', 'en', 'van', 'in', 'is', 'op', 'te', 'dat', 'die',
+    'voor', 'zijn', 'met', 'als', 'aan', 'er', 'maar', 'om', 'ook', 'nog',
+    'bij', 'of', 'uit', 'tot', 'naar', 'dan', 'kan', 'wel', 'zou', 'al',
+    'dit', 'was', 'wordt', 'worden', 'heeft', 'hebben', 'deze', 'door',
+    'over', 'veel', 'meer', 'zo', 'andere', 'wat', 'hoe', 'waar', 'wie',
+    'wanneer', 'waarom', 'welke', 'alle', 'geen', 'niet', 'nu', 'hier',
+    'daar', 'dus', 'echter', 'verder', 'onder', 'boven', 'tussen', 'tegen',
+    'na', 'voor', 'achter', 'sinds', 'tijdens', 'binnen', 'buiten',
+    'ik', 'je', 'jij', 'u', 'hij', 'zij', 'ze', 'wij', 'we', 'jullie',
+    'hun', 'haar', 'hem', 'ons', 'onze', 'jouw', 'uw', 'mijn',
+  ]),
+
+  'German': new Set([
+    'der', 'die', 'das', 'den', 'dem', 'ein', 'eine', 'einen', 'einem',
+    'einer', 'und', 'in', 'von', 'zu', 'mit', 'ist', 'auf', 'für', 'nicht',
+    'sich', 'des', 'auch', 'als', 'an', 'er', 'es', 'so', 'dass', 'kann',
+    'aus', 'werden', 'bei', 'oder', 'war', 'sind', 'noch', 'wie', 'haben',
+    'nur', 'nach', 'wird', 'über', 'mehr', 'hat', 'aber', 'man', 'dann',
+    'schon', 'wenn', 'diesem', 'diese', 'dieser', 'dieses', 'im', 'am',
+    'zum', 'zur', 'durch', 'alle', 'alles', 'andere', 'anderen', 'anderen',
+    'was', 'wer', 'wo', 'wann', 'warum', 'welche', 'welcher', 'welches',
+    'ich', 'du', 'er', 'sie', 'wir', 'ihr', 'mein', 'dein', 'sein', 'ihr',
+    'unser', 'euer', 'mir', 'dir', 'ihm', 'uns', 'euch', 'ihnen',
+  ]),
+
+  'French': new Set([
+    'le', 'la', 'les', 'un', 'une', 'des', 'de', 'du', 'et', 'en', 'à',
+    'est', 'que', 'qui', 'dans', 'pour', 'sur', 'avec', 'ce', 'par', 'au',
+    'aux', 'ne', 'pas', 'plus', 'ou', 'mais', 'être', 'avoir', 'son', 'sa',
+    'ses', 'leur', 'leurs', 'cette', 'ces', 'tout', 'tous', 'toute', 'toutes',
+    'fait', 'comme', 'peut', 'même', 'aussi', 'bien', 'encore', 'très',
+    'quand', 'où', 'comment', 'pourquoi', 'quel', 'quelle', 'quels', 'quelles',
+    'il', 'elle', 'ils', 'elles', 'nous', 'vous', 'on', 'je', 'tu', 'me',
+    'te', 'se', 'lui', 'mon', 'ton', 'notre', 'votre', 'ma', 'ta',
+  ]),
+
+  'Spanish': new Set([
+    'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del',
+    'en', 'y', 'a', 'que', 'es', 'por', 'con', 'para', 'se', 'su', 'al',
+    'lo', 'como', 'más', 'pero', 'sus', 'le', 'ya', 'o', 'fue', 'este',
+    'ha', 'cuando', 'muy', 'sin', 'sobre', 'ser', 'tiene', 'también',
+    'me', 'hasta', 'hay', 'donde', 'han', 'quien', 'están', 'estado',
+    'desde', 'todo', 'nos', 'durante', 'todos', 'uno', 'les', 'ni',
+    'qué', 'quién', 'cuál', 'cuándo', 'dónde', 'cómo', 'por qué',
+    'yo', 'tú', 'él', 'ella', 'nosotros', 'vosotros', 'ellos', 'ellas',
+    'mi', 'tu', 'nuestro', 'vuestro', 'mí', 'ti', 'sí', 'esto', 'eso',
+  ]),
+
+  'Italian': new Set([
+    'il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'uno', 'una', 'di', 'del',
+    'della', 'dei', 'delle', 'a', 'in', 'e', 'che', 'è', 'per', 'con',
+    'da', 'su', 'sono', 'non', 'si', 'al', 'alla', 'come', 'più', 'ma',
+    'anche', 'se', 'loro', 'questo', 'questa', 'questi', 'queste', 'quello',
+    'quella', 'quelli', 'quelle', 'essere', 'avere', 'fatto', 'stato',
+    'cosa', 'chi', 'dove', 'quando', 'come', 'perché', 'quale', 'quali',
+    'io', 'tu', 'lui', 'lei', 'noi', 'voi', 'loro', 'mio', 'tuo', 'suo',
+    'nostro', 'vostro', 'mi', 'ti', 'ci', 'vi', 'ne', 'tutto', 'tutti',
+  ]),
+
+  'Portuguese': new Set([
+    'o', 'a', 'os', 'as', 'um', 'uma', 'uns', 'umas', 'de', 'do', 'da',
+    'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'para', 'com',
+    'e', 'que', 'é', 'se', 'não', 'mais', 'como', 'mas', 'foi', 'ao',
+    'ele', 'ela', 'entre', 'depois', 'sem', 'mesmo', 'aos', 'ter', 'seu',
+    'sua', 'seus', 'suas', 'ou', 'ser', 'quando', 'muito', 'há', 'já',
+    'está', 'também', 'só', 'pelo', 'pela', 'até', 'isso', 'este', 'esta',
+    'quem', 'onde', 'qual', 'quais', 'quanto', 'porque', 'como',
+    'eu', 'tu', 'nós', 'vós', 'eles', 'elas', 'meu', 'teu', 'nosso', 'vosso',
+    'me', 'te', 'lhe', 'nos', 'vos', 'lhes', 'minha', 'tua', 'nossa',
+  ]),
+
+  'Polish': new Set([
+    'i', 'w', 'nie', 'na', 'do', 'to', 'że', 'z', 'o', 'co', 'jak',
+    'ale', 'po', 'tak', 'za', 'od', 'się', 'jest', 'przez', 'czy',
+    'który', 'która', 'które', 'tego', 'tej', 'tym', 'tych', 'tylko',
+    'może', 'będzie', 'już', 'lub', 'być', 'bardzo', 'kiedy', 'jeszcze',
+    'też', 'bez', 'więc', 'wszystko', 'jako', 'przed', 'między', 'pod',
+    'nad', 'także', 'oraz', 'gdyż', 'sobie', 'nawet', 'tam', 'tutaj',
+    'kto', 'gdzie', 'dlaczego', 'jaki', 'jaka', 'jakie',
+    'ja', 'ty', 'on', 'ona', 'ono', 'my', 'wy', 'oni', 'one',
+    'mój', 'twój', 'jego', 'jej', 'nasz', 'wasz', 'ich', 'mi', 'ci',
+  ]),
+};
+
+/**
+ * Get stop words for a specific language
+ */
+function getStopWords(language?: string): Set<string> {
+  const langName = getLanguageName(language);
+  return MULTILINGUAL_STOP_WORDS[langName] || MULTILINGUAL_STOP_WORDS['English'];
+}
+
+/**
+ * Extract words from text, supporting international characters
+ */
+function extractWords(text: string): string[] {
+  // Match words with international characters
+  const wordPattern = /[\p{L}\p{N}]+/gu;
+  const matches = text.toLowerCase().match(wordPattern);
+  return matches || [];
+}
 
 /**
  * Builds a compact holistic summary context from the full article sections.
@@ -24,16 +145,19 @@ export function buildHolisticSummary(
     .map(s => s.current_content || '')
     .join('\n\n');
 
+  // Get language for multilingual processing
+  const language = businessInfo.language;
+
   return {
     articleStructure: buildArticleStructure(sortedSections, brief),
-    vocabularyMetrics: calculateVocabularyMetrics(fullText),
+    vocabularyMetrics: calculateVocabularyMetrics(fullText, language),
     coverageDistribution: buildCoverageDistribution(sortedSections),
     anchorTextsUsed: extractAnchorTexts(sortedSections),
-    sectionKeyTerms: extractSectionKeyTerms(sortedSections),
-    introductionSummary: buildIntroductionSummary(sortedSections),
+    sectionKeyTerms: extractSectionKeyTerms(sortedSections, language),
+    introductionSummary: buildIntroductionSummary(sortedSections, language),
     centralEntity: brief.title || businessInfo.seedKeyword,
     discourseAnchors: extractDiscourseAnchors(brief, businessInfo),
-    featuredSnippetTarget: extractFeaturedSnippetTarget(brief)
+    featuredSnippetTarget: extractFeaturedSnippetTarget(brief, language)
   };
 }
 
@@ -69,9 +193,13 @@ function buildArticleStructure(
 
 /**
  * Calculate vocabulary metrics (TTR, overused terms)
+ * Uses language-specific stop words for accurate analysis
  */
-function calculateVocabularyMetrics(text: string): HolisticSummaryContext['vocabularyMetrics'] {
-  const words = text.toLowerCase().match(/\b[a-z]+\b/g) || [];
+function calculateVocabularyMetrics(
+  text: string,
+  language?: string
+): HolisticSummaryContext['vocabularyMetrics'] {
+  const words = extractWords(text);
 
   if (words.length === 0) {
     return {
@@ -92,15 +220,8 @@ function calculateVocabularyMetrics(text: string): HolisticSummaryContext['vocab
   const totalWordCount = words.length;
   const typeTokenRatio = uniqueWordCount / totalWordCount;
 
-  // Find overused terms (appearing more than 3 times, excluding common stop words)
-  const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-    'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were', 'be',
-    'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-    'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that',
-    'these', 'those', 'it', 'its', 'they', 'their', 'them', 'you', 'your',
-    'we', 'our', 'i', 'my', 'me'
-  ]);
+  // Find overused terms (appearing more than 3 times, excluding language-specific stop words)
+  const stopWords = getStopWords(language);
 
   const overusedTerms = Array.from(wordCounts.entries())
     .filter(([word, count]) => count > 3 && !stopWords.has(word) && word.length > 3)
@@ -170,7 +291,8 @@ function extractAnchorTexts(
  * Used for discourse chaining (S-P-O pattern)
  */
 function extractSectionKeyTerms(
-  sections: ContentGenerationSection[]
+  sections: ContentGenerationSection[],
+  language?: string
 ): HolisticSummaryContext['sectionKeyTerms'] {
   return sections.map(s => {
     const content = s.current_content || '';
@@ -180,7 +302,7 @@ function extractSectionKeyTerms(
     const lastSentence = sentences[sentences.length - 1]?.trim() || '';
 
     // Extract top 5 key terms using simple TF-IDF approximation
-    const keyTerms = extractTopTerms(content, 5);
+    const keyTerms = extractTopTerms(content, 5, language);
 
     return {
       sectionKey: s.section_key,
@@ -194,11 +316,27 @@ function extractSectionKeyTerms(
  * Build introduction summary for alignment checks
  */
 function buildIntroductionSummary(
-  sections: ContentGenerationSection[]
+  sections: ContentGenerationSection[],
+  language?: string
 ): HolisticSummaryContext['introductionSummary'] {
+  // Multilingual introduction detection
+  const introPatterns: Record<string, string[]> = {
+    'English': ['introduction', 'intro', 'overview'],
+    'Dutch': ['inleiding', 'introductie', 'overzicht'],
+    'German': ['einleitung', 'einführung', 'überblick'],
+    'French': ['introduction', 'présentation', 'aperçu'],
+    'Spanish': ['introducción', 'presentación', 'resumen'],
+    'Italian': ['introduzione', 'presentazione', 'panoramica'],
+    'Portuguese': ['introdução', 'apresentação', 'resumo'],
+    'Polish': ['wprowadzenie', 'wstęp', 'przegląd'],
+  };
+
+  const langName = getLanguageName(language);
+  const patterns = introPatterns[langName] || introPatterns['English'];
+
   const introSection = sections.find(s =>
     s.section_key === 'intro' ||
-    s.section_heading?.toLowerCase().includes('introduction')
+    patterns.some(p => s.section_heading?.toLowerCase().includes(p))
   );
 
   if (!introSection || !introSection.current_content) {
@@ -232,18 +370,20 @@ function extractDiscourseAnchors(
 
   // Add title terms
   if (brief.title) {
-    brief.title.split(/\s+/)
+    const words = extractWords(brief.title);
+    words
       .filter(w => w.length > 4)
-      .forEach(w => anchors.add(w.toLowerCase()));
+      .forEach(w => anchors.add(w));
   }
 
   // Add from structured outline headings
   if (brief.structured_outline) {
     brief.structured_outline.forEach(section => {
       if (section.heading) {
-        section.heading.split(/\s+/)
+        const words = extractWords(section.heading);
+        words
           .filter(w => w.length > 4)
-          .forEach(w => anchors.add(w.toLowerCase()));
+          .forEach(w => anchors.add(w));
       }
     });
   }
@@ -253,22 +393,62 @@ function extractDiscourseAnchors(
 
 /**
  * Extract featured snippet target from brief
+ * Supports multilingual question patterns
  */
 function extractFeaturedSnippetTarget(
-  brief: ContentBrief
+  brief: ContentBrief,
+  language?: string
 ): HolisticSummaryContext['featuredSnippetTarget'] | undefined {
-  // Check for question-based title
   const title = brief.title?.toLowerCase() || '';
+  const langName = getLanguageName(language);
 
-  if (title.startsWith('what is') || title.startsWith('what are')) {
+  // Multilingual question patterns
+  const whatPatterns: Record<string, string[]> = {
+    'English': ['what is', 'what are'],
+    'Dutch': ['wat is', 'wat zijn'],
+    'German': ['was ist', 'was sind'],
+    'French': ['qu\'est-ce que', 'que sont'],
+    'Spanish': ['qué es', 'qué son'],
+    'Italian': ['che cos\'è', 'cosa sono'],
+    'Portuguese': ['o que é', 'o que são'],
+    'Polish': ['co to jest', 'czym są'],
+  };
+
+  const howPatterns: Record<string, string[]> = {
+    'English': ['how to', 'steps'],
+    'Dutch': ['hoe', 'stappen'],
+    'German': ['wie', 'schritte'],
+    'French': ['comment', 'étapes'],
+    'Spanish': ['cómo', 'pasos'],
+    'Italian': ['come', 'passaggi'],
+    'Portuguese': ['como', 'passos'],
+    'Polish': ['jak', 'kroki'],
+  };
+
+  const comparisonPatterns: Record<string, string[]> = {
+    'English': [' vs ', 'comparison', 'versus'],
+    'Dutch': [' vs ', 'vergelijking', 'versus'],
+    'German': [' vs ', 'vergleich', 'versus'],
+    'French': [' vs ', 'comparaison', 'versus'],
+    'Spanish': [' vs ', 'comparación', 'versus'],
+    'Italian': [' vs ', 'confronto', 'versus'],
+    'Portuguese': [' vs ', 'comparação', 'versus'],
+    'Polish': [' vs ', 'porównanie', 'versus'],
+  };
+
+  const whatPats = whatPatterns[langName] || whatPatterns['English'];
+  const howPats = howPatterns[langName] || howPatterns['English'];
+  const compPats = comparisonPatterns[langName] || comparisonPatterns['English'];
+
+  if (whatPats.some(p => title.includes(p))) {
     return { question: brief.title!, targetType: 'paragraph' };
   }
 
-  if (title.startsWith('how to') || title.includes('steps')) {
+  if (howPats.some(p => title.includes(p))) {
     return { question: brief.title!, targetType: 'list' };
   }
 
-  if (title.includes(' vs ') || title.includes('comparison')) {
+  if (compPats.some(p => title.includes(p))) {
     return { question: brief.title!, targetType: 'table' };
   }
 
@@ -285,17 +465,11 @@ function countWords(text: string): number {
 
 /**
  * Extract top N terms from text using TF approximation
+ * Uses language-specific stop words
  */
-function extractTopTerms(text: string, n: number): string[] {
-  const words = text.toLowerCase().match(/\b[a-z]+\b/g) || [];
-
-  const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-    'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were', 'be',
-    'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-    'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that',
-    'these', 'those', 'it', 'its', 'they', 'their', 'them', 'you', 'your'
-  ]);
+function extractTopTerms(text: string, n: number, language?: string): string[] {
+  const words = extractWords(text);
+  const stopWords = getStopWords(language);
 
   const termCounts = new Map<string, number>();
   words.forEach(word => {
@@ -325,75 +499,74 @@ function extractPreviewedTopics(introContent: string): string[] {
     }
   });
 
-  // Look for patterns like "X, Y, and Z"
-  const commaListMatch = introContent.match(/including ([^.]+)/i);
-  if (commaListMatch) {
-    const items = commaListMatch[1].split(/,\s*and\s*|,\s*/);
-    items.forEach(item => {
-      const trimmed = item.trim();
-      if (trimmed.length > 3 && trimmed.length < 50) {
-        topics.push(trimmed);
-      }
-    });
-  }
+  // Look for numbered items
+  const numberedItems = introContent.match(/\d+\.\s+([^\n]+)/g) || [];
+  numberedItems.forEach(item => {
+    const text = item.replace(/^\d+\.\s+/, '').trim();
+    if (text.length > 5 && text.length < 50) {
+      topics.push(text);
+    }
+  });
 
-  return topics.slice(0, 8);
+  return topics.slice(0, 10);
 }
 
-// ============================================
-// Adjacent Context Builder
-// ============================================
-
-export interface AdjacentSectionContext {
+/**
+ * Adjacent section context for discourse chaining
+ */
+export interface AdjacentContext {
   previousSection?: {
     key: string;
     heading: string;
-    lastParagraph: string;
-    keyTerms: string[];
+    lastSentence: string;
+    lastObject?: string;
   };
   nextSection?: {
     key: string;
     heading: string;
-    firstParagraph: string;
   };
 }
 
 /**
- * Build adjacent section context for discourse continuity
+ * Build adjacent section context for a specific section.
+ * Used for discourse chaining between sections (S-P-O pattern).
  */
 export function buildAdjacentContext(
-  sections: ContentGenerationSection[],
+  allSections: ContentGenerationSection[],
   currentSection: ContentGenerationSection
-): AdjacentSectionContext {
-  const sortedSections = [...sections].sort((a, b) => a.section_order - b.section_order);
+): AdjacentContext {
+  const sortedSections = [...allSections].sort((a, b) => a.section_order - b.section_order);
   const currentIndex = sortedSections.findIndex(s => s.section_key === currentSection.section_key);
 
-  const result: AdjacentSectionContext = {};
+  const result: AdjacentContext = {};
 
-  // Previous section
+  // Get previous section context
   if (currentIndex > 0) {
     const prev = sortedSections[currentIndex - 1];
     const content = prev.current_content || '';
-    const paragraphs = content.split('\n\n').filter(p => p.trim());
+
+    // Extract last sentence
+    const sentences = content.split(/[.!?]+/).filter(sent => sent.trim());
+    const lastSentence = sentences[sentences.length - 1]?.trim() || '';
+
+    // Extract potential object from last sentence (simplified)
+    const words = lastSentence.split(/\s+/);
+    const lastObject = words.slice(-3).join(' '); // Last 3 words as potential object
 
     result.previousSection = {
       key: prev.section_key,
       heading: prev.section_heading || prev.section_key,
-      lastParagraph: paragraphs[paragraphs.length - 1]?.substring(0, 300) || '',
-      keyTerms: extractTopTerms(content, 5)
+      lastSentence: lastSentence.substring(0, 200),
+      lastObject: lastObject.substring(0, 50)
     };
   }
 
-  // Next section
+  // Get next section context
   if (currentIndex < sortedSections.length - 1) {
     const next = sortedSections[currentIndex + 1];
-    const content = next.current_content || '';
-    const paragraphs = content.split('\n\n').filter(p => p.trim());
-
     result.nextSection = {
       key: next.section_key,
-      heading: next.section_heading || next.section_key,
-      firstParagraph: paragraphs[0]?.substring(0, 300) || ''
+      heading: next.section_heading || next.section_key
     };
   }
 
@@ -401,61 +574,54 @@ export function buildAdjacentContext(
 }
 
 /**
- * Serialize holistic context to a compact string for prompts
- * ~2-4KB of essential information
+ * Serialize holistic context for prompt inclusion.
+ * Creates a compact, readable summary for AI prompts.
  */
-export function serializeHolisticContext(ctx: HolisticSummaryContext): string {
+export function serializeHolisticContext(context: HolisticSummaryContext): string {
   const lines: string[] = [];
 
   // Article structure summary
-  lines.push('## Article Structure');
-  lines.push(`Title: ${ctx.articleStructure.title}`);
-  lines.push(`Total: ${ctx.articleStructure.totalWordCount} words across ${ctx.articleStructure.totalSections} sections`);
+  lines.push(`## Article Context`);
+  lines.push(`Title: ${context.articleStructure.title}`);
+  lines.push(`Total Words: ${context.articleStructure.totalWordCount}`);
+  lines.push(`Sections: ${context.articleStructure.totalSections}`);
   lines.push('');
 
-  // Heading outline with word counts
-  lines.push('### Section Outline');
-  ctx.articleStructure.headingOutline.forEach((h, i) => {
-    const indent = h.level === 3 ? '  ' : '';
-    lines.push(`${indent}${i + 1}. ${h.heading} (${h.wordCount} words)`);
+  // Section outline
+  lines.push(`## Section Outline`);
+  context.articleStructure.headingOutline.forEach(s => {
+    const prefix = '#'.repeat(s.level);
+    lines.push(`${prefix} ${s.heading} (${s.wordCount} words)`);
   });
   lines.push('');
 
   // Vocabulary metrics
-  lines.push('### Vocabulary Metrics');
-  lines.push(`TTR: ${(ctx.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}% (unique/total)`);
-  if (ctx.vocabularyMetrics.overusedTerms.length > 0) {
-    lines.push(`Overused: ${ctx.vocabularyMetrics.overusedTerms.slice(0, 5).map(t => `${t.term}(${t.count})`).join(', ')}`);
+  lines.push(`## Vocabulary Metrics`);
+  lines.push(`Type-Token Ratio: ${(context.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%`);
+  lines.push(`Unique Words: ${context.vocabularyMetrics.uniqueWordCount}`);
+  if (context.vocabularyMetrics.overusedTerms.length > 0) {
+    lines.push(`Overused Terms: ${context.vocabularyMetrics.overusedTerms.map(t => `${t.term}(${t.count})`).join(', ')}`);
   }
   lines.push('');
 
-  // Coverage distribution (top heavy/light sections)
-  lines.push('### Coverage Balance');
-  const sortedCoverage = [...ctx.coverageDistribution].sort((a, b) => b.percentage - a.percentage);
-  sortedCoverage.slice(0, 3).forEach(c => {
-    lines.push(`- ${c.heading}: ${c.percentage}%`);
-  });
+  // Central entity
+  lines.push(`## Central Entity`);
+  lines.push(context.centralEntity);
   lines.push('');
-
-  // Anchor texts for variety
-  if (ctx.anchorTextsUsed.length > 0) {
-    lines.push('### Anchor Texts Used');
-    ctx.anchorTextsUsed.slice(0, 8).forEach(a => {
-      lines.push(`- "${a.text}" (${a.count}x)`);
-    });
-    lines.push('');
-  }
 
   // Discourse anchors
-  lines.push('### Central Entity & Discourse Anchors');
-  lines.push(`Central: ${ctx.centralEntity}`);
-  lines.push(`Anchors: ${ctx.discourseAnchors.join(', ')}`);
+  if (context.discourseAnchors.length > 0) {
+    lines.push(`## Discourse Anchors`);
+    lines.push(context.discourseAnchors.join(', '));
+    lines.push('');
+  }
 
   // Featured snippet target
-  if (ctx.featuredSnippetTarget) {
+  if (context.featuredSnippetTarget) {
+    lines.push(`## Featured Snippet Target`);
+    lines.push(`Question: ${context.featuredSnippetTarget.question}`);
+    lines.push(`Target Type: ${context.featuredSnippetTarget.targetType}`);
     lines.push('');
-    lines.push(`### Featured Snippet Target: ${ctx.featuredSnippetTarget.targetType}`);
-    lines.push(`Question: ${ctx.featuredSnippetTarget.question}`);
   }
 
   return lines.join('\n');

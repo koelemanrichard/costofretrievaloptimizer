@@ -352,7 +352,7 @@ const PassHistoryItem: React.FC<PassHistoryItemProps> = ({ delta, passNumber }) 
 export const ArticleQualityReport: React.FC<ArticleQualityReportProps> = ({
   jobId,
   violations,
-  passDeltas,
+  passDeltas: rawPassDeltas,
   overallScore,
   systemicChecks = DEFAULT_SYSTEMIC_CHECKS,
   onApprove,
@@ -361,6 +361,9 @@ export const ArticleQualityReport: React.FC<ArticleQualityReportProps> = ({
   onRegenerate,
   className = '',
 }) => {
+  // Defensive guard: ensure passDeltas is always an array
+  const passDeltas = Array.isArray(rawPassDeltas) ? rawPassDeltas : [];
+
   const [showPassHistory, setShowPassHistory] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(new Set());
 

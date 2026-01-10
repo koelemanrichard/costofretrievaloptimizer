@@ -5,7 +5,7 @@
  * detection during content generation.
  *
  * Features:
- * - Display current pass being executed (1-9)
+ * - Display current pass being executed (1-10)
  * - Show real-time rule status changes
  * - Highlight conflicts/regressions when detected
  * - Show auto-revert actions
@@ -16,6 +16,7 @@
 
 import React, { useMemo } from 'react';
 import type { PassDelta } from '../../services/ai/contentGeneration/tracking';
+import { PASS_NAMES } from '../../types';
 
 // =============================================================================
 // Types
@@ -24,9 +25,9 @@ import type { PassDelta } from '../../services/ai/contentGeneration/tracking';
 export interface LiveGenerationMonitorProps {
   /** Unique identifier for the content generation job */
   jobId: string;
-  /** Current pass number being executed (1-9) */
+  /** Current pass number being executed (1-10) */
   currentPass: number;
-  /** Total number of passes (typically 9) */
+  /** Total number of passes (typically 10) */
   totalPasses: number;
   /** Array of pass deltas from completed passes */
   passDeltas: PassDelta[];
@@ -44,20 +45,8 @@ export interface LiveGenerationMonitorProps {
 // Constants
 // =============================================================================
 
-/**
- * Human-readable names for each pass
- */
-const PASS_NAMES: Record<number, string> = {
-  1: 'Draft Generation',
-  2: 'Header Optimization',
-  3: 'Lists & Tables',
-  4: 'Visual Semantics',
-  5: 'Micro Semantics',
-  6: 'Discourse Integration',
-  7: 'Introduction Synthesis',
-  8: 'Final Audit',
-  9: 'Schema Generation',
-};
+// PASS_NAMES imported from types.ts for consistency with Standard View
+// 10-pass order: Draft, Headers, Intro, Lists, Discourse, Micro, Visuals, Polish, Audit, Schema
 
 /**
  * Icons for different pass states
@@ -311,12 +300,15 @@ export const LiveGenerationMonitor: React.FC<LiveGenerationMonitorProps> = ({
   jobId,
   currentPass,
   totalPasses,
-  passDeltas,
+  passDeltas: rawPassDeltas,
   isGenerating,
   onPauseGeneration,
   onResumeGeneration,
   className = '',
 }) => {
+  // Defensive guard: ensure passDeltas is always an array
+  const passDeltas = Array.isArray(rawPassDeltas) ? rawPassDeltas : [];
+
   // Get the latest delta (most recent completed pass)
   const latestDelta = useMemo(() => {
     if (passDeltas.length === 0) return null;
