@@ -209,6 +209,7 @@ async function generateSectionWithRetry(
         allSections: allBriefSections,
         isYMYL: ymylDetection.isYMYL,
         ymylCategory: ymylDetection.category,
+        language: businessInfo.language, // Pass language for multilingual validation
       };
 
       // Use SectionPromptBuilder instead of legacy prompt
