@@ -314,7 +314,7 @@ const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
                             <p className="text-sm text-gray-300">
                                 Found {Object.values(smartWizard.result.suggestions).filter(v => v && String(v).trim()).length} field suggestions
                             </p>
-                            {smartWizard.result.warnings.length > 0 && (
+                            {(smartWizard.result.warnings || []).length > 0 && (
                                 <p className="text-xs text-yellow-400 mt-1">
                                     {smartWizard.result.warnings[0]}
                                 </p>

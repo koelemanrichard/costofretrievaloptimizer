@@ -55,6 +55,8 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
   onOpenCorpusAudit,
 }) => {
   const { state } = useAppState();
+  // Ensure eavs is always an array
+  const safeEavs = eavs || [];
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [loading, setLoading] = useState(true);
 
@@ -66,8 +68,8 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
 
   // Current metrics
   const metrics = useMemo(() => {
-    return generateEnhancedMetrics(eavs, topicCount, issues);
-  }, [eavs, topicCount, issues]);
+    return generateEnhancedMetrics(safeEavs, topicCount, issues);
+  }, [safeEavs, topicCount, issues]);
 
   const effectiveMapId = mapId || state.activeMapId;
 
@@ -137,12 +139,12 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
     if (!competitorEAVs || !contentGaps || competitorEAVs.length === 0) return null;
 
     return {
-      ownEAVs: eavs,
+      ownEAVs: safeEavs,
       competitorEAVs,
       contentGaps,
       centralEntity: centralEntity || latestQueryNetwork.seed_keyword || 'Unknown',
     };
-  }, [latestQueryNetwork, eavs, centralEntity]);
+  }, [latestQueryNetwork, safeEavs, centralEntity]);
 
   // Use gap network hook
   const { network: gapNetwork } = useCompetitorGapNetwork(gapNetworkInput);
@@ -162,7 +164,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
     // Use EAV subjects as matrix items
     const uniqueSubjects = new Map<string, MatrixItem>();
 
-    for (const eav of eavs) {
+    for (const eav of safeEavs) {
       const id = eav.subject.id || eav.subject.label;
       if (!uniqueSubjects.has(id)) {
         uniqueSubjects.set(id, {
@@ -174,7 +176,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
     }
 
     return Array.from(uniqueSubjects.values()).slice(0, 25); // Limit to 25 for performance
-  }, [eavs]);
+  }, [safeEavs]);
 
   // Score color helper
   const getScoreColor = (score: number) => {
@@ -202,7 +204,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 bg-gradient-to-br from-blue-900/40 to-blue-800/20 border-blue-700">
-          <div className="text-3xl font-bold text-white">{eavs.length}</div>
+          <div className="text-3xl font-bold text-white">{safeEavs.length}</div>
           <div className="text-sm text-blue-300">Your EAVs</div>
         </Card>
         <Card className="p-4 bg-gradient-to-br from-purple-900/40 to-purple-800/20 border-purple-700">
@@ -362,11 +364,11 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
       </div>
 
       {/* Action Roadmap */}
-      {metrics.actionRoadmap.length > 0 && (
+      {(metrics.actionRoadmap || []).length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Priority Actions</h3>
           <div className="space-y-3">
-            {metrics.actionRoadmap.slice(0, 5).map((item, idx) => (
+            {(metrics.actionRoadmap || []).slice(0, 5).map((item, idx) => (
               <div
                 key={idx}
                 className={`p-3 rounded-lg border ${
@@ -415,7 +417,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
             <div>
               <h3 className="font-semibold text-white">Your Topical Map Analysis</h3>
               <p className="text-sm text-blue-300">
-                Analyzing {eavs.length} EAVs across {topicCount} topics in your map
+                Analyzing {safeEavs.length} EAVs across {topicCount} topics in your map
               </p>
             </div>
           </div>
@@ -501,11 +503,11 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
         </div>
 
         {/* Recommendations */}
-        {semanticCompliance.recommendations.length > 0 && (
+        {(semanticCompliance.recommendations || []).length > 0 && (
           <Card className="p-6">
             <h4 className="text-lg font-semibold text-white mb-4">Recommendations</h4>
             <ul className="space-y-2">
-              {semanticCompliance.recommendations.map((rec, idx) => (
+              {(semanticCompliance.recommendations || []).map((rec, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
                   <span className="text-yellow-400 mt-0.5">•</span>
                   <span>{rec}</span>
@@ -681,7 +683,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
 
   // Render Gap Analysis Tab
   const renderGapAnalysis = () => {
-    if (!gapNetworkInput || gapNetwork.nodes.length === 0) {
+    if (!gapNetworkInput || (gapNetwork.nodes || []).length === 0) {
       return (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -790,15 +792,15 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
                           </p>
                         </div>
                       )}
-                      {selectedNode.competitorUrls.length > 0 && (
+                      {(selectedNode.competitorUrls || []).length > 0 && (
                         <div className="mt-2">
                           <span className="text-gray-400 block mb-1">Found In:</span>
                           <div className="text-xs space-y-1 max-h-24 overflow-y-auto">
-                            {selectedNode.competitorUrls.slice(0, 5).map((url, i) => (
+                            {(selectedNode.competitorUrls || []).slice(0, 5).map((url, i) => (
                               <div key={i} className="text-blue-400 truncate">{url}</div>
                             ))}
-                            {selectedNode.competitorUrls.length > 5 && (
-                              <div className="text-gray-500">+{selectedNode.competitorUrls.length - 5} more</div>
+                            {(selectedNode.competitorUrls || []).length > 5 && (
+                              <div className="text-gray-500">+{(selectedNode.competitorUrls || []).length - 5} more</div>
                             )}
                           </div>
                         </div>
@@ -817,7 +819,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
             <Card className="p-4">
               <h4 className="font-semibold text-white mb-3">High Priority Gaps</h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {gapNetwork.nodes
+                {(gapNetwork.nodes || [])
                   .filter(n => n.type === 'gap' && n.priority === 'high')
                   .slice(0, 10)
                   .map(gap => (
@@ -836,7 +838,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
                       </div>
                     </button>
                   ))}
-                {gapNetwork.nodes.filter(n => n.type === 'gap' && n.priority === 'high').length === 0 && (
+                {(gapNetwork.nodes || []).filter(n => n.type === 'gap' && n.priority === 'high').length === 0 && (
                   <p className="text-gray-400 text-sm">No high priority gaps found</p>
                 )}
               </div>
@@ -1054,11 +1056,11 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
           </Card>
         </div>
 
-        {latestEatScanner.recommendations && latestEatScanner.recommendations.length > 0 && (
+        {(latestEatScanner.recommendations || []).length > 0 && (
           <Card className="p-6">
             <h4 className="text-lg font-semibold text-white mb-4">E-A-T Recommendations</h4>
             <div className="space-y-2">
-              {latestEatScanner.recommendations.slice(0, 5).map((rec: any, idx: number) => (
+              {(latestEatScanner.recommendations || []).slice(0, 5).map((rec: any, idx: number) => (
                 <div key={idx} className="p-3 bg-gray-800/50 rounded-lg">
                   <p className="text-sm text-white">{rec.title || rec}</p>
                   {rec.description && <p className="text-xs text-gray-400 mt-1">{rec.description}</p>}
@@ -1179,7 +1181,7 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
   // Tab definitions
   const tabs: { id: TabId; label: string; badge?: number }[] = [
     { id: 'overview', label: 'Overview' },
-    { id: 'your-map', label: 'Your Map', badge: eavs.length },
+    { id: 'your-map', label: 'Your Map', badge: safeEavs.length },
     { id: 'competitor-research', label: 'Competitors', badge: latestQueryNetwork?.total_competitor_eavs },
     { id: 'gap-analysis', label: 'Gap Analysis', badge: gapNetwork.metrics.highPriorityGaps || undefined },
     { id: 'semantic-map', label: 'Semantic Map', badge: matrixItems.length > 1 ? matrixItems.length : undefined },

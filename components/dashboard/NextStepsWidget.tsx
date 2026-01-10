@@ -10,10 +10,12 @@ interface NextStepsWidgetProps {
 }
 
 export const NextStepsWidget: React.FC<NextStepsWidgetProps> = ({ recommendations, onAction }) => {
-    if (recommendations.length === 0) return null;
+    // Ensure recommendations is always an array
+    const safeRecommendations = recommendations || [];
+    if (safeRecommendations.length === 0) return null;
 
-    const primary = recommendations[0];
-    const secondary = recommendations.slice(1, 3);
+    const primary = safeRecommendations[0];
+    const secondary = safeRecommendations.slice(1, 3);
 
     const getIcon = (type: RecommendationType) => {
         switch(type) {

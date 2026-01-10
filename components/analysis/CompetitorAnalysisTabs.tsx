@@ -63,13 +63,14 @@ const StatRow: React.FC<{ label: string; value: string | number; highlight?: boo
 );
 
 const IssueList: React.FC<{ issues: { severity: string; description: string }[] }> = ({ issues }) => {
-  if (issues.length === 0) {
+  const safeIssues = issues || [];
+  if (safeIssues.length === 0) {
     return <p className="text-sm text-gray-500 italic">No issues detected</p>;
   }
 
   return (
     <ul className="space-y-1">
-      {issues.slice(0, 5).map((issue, idx) => (
+      {safeIssues.slice(0, 5).map((issue, idx) => (
         <li key={idx} className="flex items-start gap-2 text-sm">
           <span className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
             issue.severity === 'critical' ? 'bg-red-500' :
@@ -123,16 +124,16 @@ const OverviewTab: React.FC<{ competitors: CompetitorAnalysis[] }> = ({ competit
           </div>
         </div>
 
-        {comp.strengths.length > 0 && (
+        {(comp.strengths || []).length > 0 && (
           <div className="mb-2">
             <span className="text-xs text-green-500 font-medium">Strengths: </span>
-            <span className="text-xs text-gray-400">{comp.strengths.slice(0, 2).join(', ')}</span>
+            <span className="text-xs text-gray-400">{(comp.strengths || []).slice(0, 2).join(', ')}</span>
           </div>
         )}
-        {comp.weaknesses.length > 0 && (
+        {(comp.weaknesses || []).length > 0 && (
           <div>
             <span className="text-xs text-red-500 font-medium">Weaknesses: </span>
-            <span className="text-xs text-gray-400">{comp.weaknesses.slice(0, 2).join(', ')}</span>
+            <span className="text-xs text-gray-400">{(comp.weaknesses || []).slice(0, 2).join(', ')}</span>
           </div>
         )}
       </div>
@@ -185,10 +186,10 @@ const ContentTab: React.FC<{ competitors: CompetitorAnalysis[] }> = ({ competito
           </div>
         </div>
 
-        {comp.content.centralEntityAnalysis.issues.length > 0 && (
+        {(comp.content.centralEntityAnalysis.issues || []).length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-700">
             <h5 className="text-sm font-medium text-gray-400 mb-2">Issues</h5>
-            <IssueList issues={comp.content.centralEntityAnalysis.issues} />
+            <IssueList issues={comp.content.centralEntityAnalysis.issues || []} />
           </div>
         )}
       </div>
@@ -324,13 +325,13 @@ const LinksTab: React.FC<{ competitors: CompetitorAnalysis[] }> = ({ competitors
         </div>
 
         {/* Bridge Topics */}
-        {comp.links.bridgeTopics.length > 0 && (
+        {(comp.links.bridgeTopics || []).length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-700">
             <h5 className="text-sm font-medium text-gray-400 mb-2">
-              Bridge Topics ({comp.links.bridgeTopics.length})
+              Bridge Topics ({(comp.links.bridgeTopics || []).length})
             </h5>
             <div className="flex flex-wrap gap-2">
-              {comp.links.bridgeTopics.slice(0, 5).map((bridge, i) => (
+              {(comp.links.bridgeTopics || []).slice(0, 5).map((bridge, i) => (
                 <span
                   key={i}
                   className={`px-2 py-1 rounded text-xs ${
@@ -403,6 +404,8 @@ const CompetitorAnalysisTabs: React.FC<CompetitorAnalysisTabsProps> = ({
   competitors,
   className = '',
 }) => {
+  // Ensure competitors is always an array
+  const safeCompetitors = competitors || [];
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   const tabs: { id: TabId; label: string }[] = [
@@ -413,7 +416,7 @@ const CompetitorAnalysisTabs: React.FC<CompetitorAnalysisTabsProps> = ({
     { id: 'comparison', label: 'Compare' },
   ];
 
-  if (competitors.length === 0) {
+  if (safeCompetitors.length === 0) {
     return (
       <div className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6 ${className}`}>
         <p className="text-gray-400 text-center">No competitor data available</p>
@@ -442,11 +445,11 @@ const CompetitorAnalysisTabs: React.FC<CompetitorAnalysisTabsProps> = ({
 
       {/* Tab Content */}
       <div className="p-4 max-h-[600px] overflow-y-auto">
-        {activeTab === 'overview' && <OverviewTab competitors={competitors} />}
-        {activeTab === 'content' && <ContentTab competitors={competitors} />}
-        {activeTab === 'technical' && <TechnicalTab competitors={competitors} />}
-        {activeTab === 'links' && <LinksTab competitors={competitors} />}
-        {activeTab === 'comparison' && <ComparisonTab competitors={competitors} />}
+        {activeTab === 'overview' && <OverviewTab competitors={safeCompetitors} />}
+        {activeTab === 'content' && <ContentTab competitors={safeCompetitors} />}
+        {activeTab === 'technical' && <TechnicalTab competitors={safeCompetitors} />}
+        {activeTab === 'links' && <LinksTab competitors={safeCompetitors} />}
+        {activeTab === 'comparison' && <ComparisonTab competitors={safeCompetitors} />}
       </div>
     </div>
   );

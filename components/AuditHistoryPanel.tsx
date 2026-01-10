@@ -49,7 +49,10 @@ const AuditHistoryPanel: React.FC<AuditHistoryPanelProps> = ({
     }
   };
 
-  if (entries.length === 0) {
+  // Ensure entries is always an array
+  const safeEntries = entries || [];
+
+  if (safeEntries.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="text-4xl mb-4">📋</div>
@@ -63,7 +66,7 @@ const AuditHistoryPanel: React.FC<AuditHistoryPanelProps> = ({
 
   // Group entries by date
   const groupedEntries: Record<string, AuditFixHistoryEntry[]> = {};
-  for (const entry of entries) {
+  for (const entry of safeEntries) {
     const dateKey = new Date(entry.applied_at).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',

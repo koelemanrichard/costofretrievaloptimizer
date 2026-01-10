@@ -57,7 +57,7 @@ const AutoFixPreviewModal: React.FC<AutoFixPreviewModalProps> = ({
 
   const handleApply = () => {
     if (!preview) return;
-    const itemsToApply = preview.items.filter((_, i) => selectedItems.has(i));
+    const itemsToApply = (preview.items || []).filter((_, i) => selectedItems.has(i));
     onApply(itemsToApply);
   };
 
@@ -125,17 +125,17 @@ const AutoFixPreviewModal: React.FC<AutoFixPreviewModalProps> = ({
           </div>
 
           {/* Items List */}
-          {preview.items.length > 0 && (
+          {(preview.items || []).length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 id={`${formId}-items-heading`} className="text-lg font-semibold text-white">
-                  {getItemsHeading(preview.type, preview.items.length)}
+                  {getItemsHeading(preview.type, (preview.items || []).length)}
                 </h3>
                 <button
                   onClick={toggleAll}
                   className="text-sm text-blue-400 hover:text-blue-300"
                 >
-                  {selectedItems.size === preview.items.length ? 'Deselect All' : 'Select All'}
+                  {selectedItems.size === (preview.items || []).length ? 'Deselect All' : 'Select All'}
                 </button>
               </div>
 
@@ -157,7 +157,7 @@ const AutoFixPreviewModal: React.FC<AutoFixPreviewModalProps> = ({
           )}
 
           {/* Empty state */}
-          {preview.items.length === 0 && (
+          {(preview.items || []).length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-400">{preview.description}</p>
             </div>

@@ -33,8 +33,10 @@ export const EavCategoryChart: React.FC<EavCategoryChartProps> = ({
   showLegend = true,
   compact = false
 }) => {
-  const distribution = getCategoryDistribution(eavs);
-  const total = eavs.length;
+  // Ensure eavs is always an array
+  const safeEavs = eavs || [];
+  const distribution = getCategoryDistribution(safeEavs);
+  const total = safeEavs.length;
 
   if (total === 0) {
     return (
@@ -109,9 +111,11 @@ export const EavCategoryChart: React.FC<EavCategoryChartProps> = ({
  * Compact inline version for smaller spaces
  */
 export const EavCategoryChartInline: React.FC<{ eavs: SemanticTriple[] }> = ({ eavs }) => {
-  const distribution = getCategoryDistribution(eavs);
+  // Ensure eavs is always an array
+  const safeEavs = eavs || [];
+  const distribution = getCategoryDistribution(safeEavs);
 
-  if (eavs.length === 0) return null;
+  if (safeEavs.length === 0) return null;
 
   return (
     <div className="flex items-center gap-2">
@@ -127,7 +131,7 @@ export const EavCategoryChartInline: React.FC<{ eavs: SemanticTriple[] }> = ({ e
           />
         ))}
       </div>
-      <span className="text-xs text-gray-500">{eavs.length} EAVs</span>
+      <span className="text-xs text-gray-500">{safeEavs.length} EAVs</span>
     </div>
   );
 };
@@ -139,8 +143,10 @@ export const EavCategoryBreakdown: React.FC<{
   eavs: SemanticTriple[];
   onCategoryClick?: (category: AttributeCategory) => void;
 }> = ({ eavs, onCategoryClick }) => {
-  const distribution = getCategoryDistribution(eavs);
-  const total = eavs.length;
+  // Ensure eavs is always an array
+  const safeEavs = eavs || [];
+  const distribution = getCategoryDistribution(safeEavs);
+  const total = safeEavs.length;
 
   // Ensure all main categories are shown, even if 0
   const allCategories: (AttributeCategory | 'UNCATEGORIZED')[] = ['ROOT', 'UNIQUE', 'RARE', 'COMMON'];

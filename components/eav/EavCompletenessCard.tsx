@@ -119,14 +119,17 @@ export const EavCompletenessCard: React.FC<EavCompletenessCardProps> = ({
   showChart = true,
   className = ''
 }) => {
+  // Ensure eavs is always an array
+  const safeEavs = eavs || [];
+
   const completeness = useMemo(
-    () => calculateEavCompleteness(eavs, entityType),
-    [eavs, entityType]
+    () => calculateEavCompleteness(safeEavs, entityType),
+    [safeEavs, entityType]
   );
 
   const grade = getCompletenessGrade(completeness.overall);
 
-  if (eavs.length === 0) {
+  if (safeEavs.length === 0) {
     return (
       <div className={`bg-gray-800 rounded-lg border border-gray-700 p-4 ${className}`}>
         <div className="text-center text-gray-400">
@@ -150,7 +153,7 @@ export const EavCompletenessCard: React.FC<EavCompletenessCardProps> = ({
               EAV Completeness
             </div>
             <div className="text-xs text-gray-400">
-              {eavs.length} triples • {grade.label}
+              {safeEavs.length} triples • {grade.label}
             </div>
             {completeness.missing.length > 0 && (
               <div className="text-xs text-amber-400 mt-1">
@@ -169,7 +172,7 @@ export const EavCompletenessCard: React.FC<EavCompletenessCardProps> = ({
       <div className="px-4 py-3 border-b border-gray-700">
         <h3 className="font-medium text-white">EAV Completeness</h3>
         <p className="text-xs text-gray-400 mt-0.5">
-          Semantic coverage analysis • {eavs.length} triples
+          Semantic coverage analysis • {safeEavs.length} triples
         </p>
       </div>
 
@@ -212,7 +215,7 @@ export const EavCompletenessCard: React.FC<EavCompletenessCardProps> = ({
             <h4 className="text-sm font-medium text-gray-300 mb-2">
               Category Distribution
             </h4>
-            <EavCategoryChart eavs={eavs} showLegend={true} />
+            <EavCategoryChart eavs={safeEavs} showLegend={true} />
           </div>
         )}
 
@@ -263,10 +266,12 @@ export const EavCompletenessBadge: React.FC<{
   eavs: SemanticTriple[];
   showLabel?: boolean;
 }> = ({ eavs, showLabel = false }) => {
-  const completeness = useMemo(() => calculateEavCompleteness(eavs), [eavs]);
+  // Ensure eavs is always an array
+  const safeEavs = eavs || [];
+  const completeness = useMemo(() => calculateEavCompleteness(safeEavs), [safeEavs]);
   const grade = getCompletenessGrade(completeness.overall);
 
-  if (eavs.length === 0) return null;
+  if (safeEavs.length === 0) return null;
 
   return (
     <div
