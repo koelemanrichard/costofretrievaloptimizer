@@ -12,12 +12,13 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getSessionId } from './consoleLogger';
+import { Database } from '../database.types';
 
 // Logging client disabled - creating separate Supabase clients causes
 // "Multiple GoTrueClient instances" warnings and RLS failures since the
 // logging client doesn't share auth with the main app client.
 // This is optional telemetry, so we disable it to avoid console noise.
-function getLoggingClient(): null {
+function getLoggingClient(): SupabaseClient<Database> | null {
   return null;
 }
 
@@ -136,9 +137,10 @@ async function flushLogs(): Promise<void> {
   logBuffer.length = 0;
 
   try {
+    // Note: This code is never reached (client is always null), cast to any for type safety
     const { error } = await client
       .from('performance_metrics')
-      .insert(logsToFlush);
+      .insert(logsToFlush as any);
 
     if (error) {
       console.error('[PerformanceLogger] Failed to flush logs:', error.message);

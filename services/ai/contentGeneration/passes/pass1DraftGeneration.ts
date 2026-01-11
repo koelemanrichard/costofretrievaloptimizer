@@ -226,8 +226,8 @@ async function generateSectionWithRetry(
 
       const content = response.trim();
 
-      // Validate generated content
-      const validationResult = RulesValidator.validate(content, context);
+      // Validate generated content (pass=1: only fundamental validators)
+      const validationResult = RulesValidator.validate(content, context, 1);
 
       // Log warnings (non-blocking) - only when verbose logging enabled
       const warnings = validationResult.violations.filter(v => v.severity === 'warning');

@@ -35,6 +35,13 @@ import { extractPlaceholdersFromDraft } from '../services/ai/imageGeneration/pla
 import type { PassDelta } from '../services/ai/contentGeneration/tracking';
 import { runAlgorithmicAudit } from '../services/ai/contentGeneration/passes/auditChecks';
 import type { AuditDetails, ValidationViolation } from '../types';
+import {
+  captureFromSections,
+  compareSnapshots,
+  summarizeDiff,
+  type StructuralSnapshot,
+  type SnapshotDiff
+} from '../services/ai/contentGeneration/structuralValidator';
 
 // Helper functions for building quality report
 function buildCategoryScores(auditDetails: AuditDetails | null): Record<string, number> {
@@ -195,9 +202,9 @@ function calculatePassDelta(
   const netChange = rulesFixed.length - rulesRegressed.length;
 
   // Determine recommendation based on net change
-  let recommendation: 'accept' | 'reject' | 'review' = 'accept';
+  let recommendation: 'accept' | 'revert' | 'review' = 'accept';
   if (netChange < -2) {
-    recommendation = 'reject';
+    recommendation = 'revert';
   } else if (netChange < 0) {
     recommendation = 'review';
   }
@@ -212,7 +219,76 @@ function calculatePassDelta(
   };
 }
 
+/**
+ * Calculate quality score from audit results
+ * Returns a percentage (0-100) based on passing rules
+ */
+function calculateQualityScore(auditResults: AuditRuleResult[]): number {
+  if (!auditResults || auditResults.length === 0) return 100;
+  const passing = auditResults.filter(r => r.isPassing).length;
+  return Math.round((passing / auditResults.length) * 100);
+}
+
+/**
+ * Quality gating result for tracking score changes between passes
+ */
+interface QualityGateResult {
+  scoreBefore: number;
+  scoreAfter: number;
+  delta: number;
+  hasRegression: boolean;
+  hasSevereRegression: boolean;
+}
+
+/**
+ * Check quality gate between passes
+ * Warns if quality decreases significantly
+ */
+function checkQualityGate(
+  draft: string,
+  brief: ContentBrief,
+  businessInfo: BusinessInfo,
+  passNumber: number,
+  previousScore: number | null,
+  onLog: (message: string, type: 'info' | 'success' | 'warning' | 'failure') => void
+): QualityGateResult {
+  // Run audit on current content
+  const auditResults = draft && draft.length > 100
+    ? runAlgorithmicAudit(draft, brief, businessInfo)
+    : [];
+
+  const scoreAfter = calculateQualityScore(auditResults);
+  const scoreBefore = previousScore ?? scoreAfter; // First pass has no previous
+  const delta = scoreAfter - scoreBefore;
+
+  const hasRegression = delta < -5;
+  const hasSevereRegression = delta < -15;
+
+  // Log quality changes
+  if (hasSevereRegression) {
+    console.warn(`[QualityGate] Pass ${passNumber}: SEVERE quality regression! Score dropped from ${scoreBefore}% to ${scoreAfter}% (${delta})`);
+    onLog(`Pass ${passNumber}: Quality dropped significantly (${scoreBefore}% → ${scoreAfter}%)`, 'warning');
+  } else if (hasRegression) {
+    console.warn(`[QualityGate] Pass ${passNumber}: Quality regression. Score changed from ${scoreBefore}% to ${scoreAfter}% (${delta})`);
+    onLog(`Pass ${passNumber}: Quality slightly decreased (${scoreBefore}% → ${scoreAfter}%)`, 'warning');
+  } else if (delta > 5) {
+    console.log(`[QualityGate] Pass ${passNumber}: Quality improved! Score: ${scoreBefore}% → ${scoreAfter}% (+${delta})`);
+    onLog(`Pass ${passNumber}: Quality improved (${scoreBefore}% → ${scoreAfter}%)`, 'success');
+  } else {
+    console.log(`[QualityGate] Pass ${passNumber}: Quality stable. Score: ${scoreAfter}%`);
+  }
+
+  return {
+    scoreBefore,
+    scoreAfter,
+    delta,
+    hasRegression,
+    hasSevereRegression
+  };
+}
+
 import type { ContentGenerationSettings, ContentGenerationPriorities } from '../types/contentGeneration';
+import type { AuditRuleResult } from '../types';
 
 interface UseContentGenerationProps {
   briefId: string;
@@ -535,6 +611,99 @@ export function useContentGeneration({
       }
     };
 
+    // Structural snapshot tracking for compounding improvements visibility
+    let lastStructuralSnapshot: StructuralSnapshot | null = null;
+    const structuralDiffs: Record<number, SnapshotDiff> = {};
+
+    // Quality score tracking for quality gating between passes
+    let lastQualityScore: number | null = null;
+    const qualityScores: Record<number, QualityGateResult> = {};
+
+    // Helper to capture structural snapshot and compare with previous
+    const captureAndLogStructuralChanges = async (passNumber: number) => {
+      try {
+        const currentSections = await orchestrator.getSections(updatedJob.id);
+        const snapshot = captureFromSections(currentSections, passNumber);
+
+        if (lastStructuralSnapshot) {
+          const diff = compareSnapshots(lastStructuralSnapshot, snapshot);
+          structuralDiffs[passNumber] = diff;
+
+          // Log the diff for visibility
+          const diffSummary = summarizeDiff(diff);
+          console.log(`[Structural] ${diffSummary}`);
+
+          // Log to UI if there are meaningful changes
+          if (diff.hasRegressions) {
+            onLog(`Pass ${passNumber}: ${diff.regressions.join(', ')}`, 'warning');
+          } else if (diff.hasImprovements) {
+            onLog(`Pass ${passNumber}: ${diff.improvements.join(', ')}`, 'success');
+          }
+        } else {
+          // First snapshot - just log the baseline
+          console.log(`[Structural] Baseline: ${snapshot.elements.wordCount} words, ${snapshot.elements.images} images, ${snapshot.elements.lists} lists, ${snapshot.elements.tables} tables`);
+        }
+
+        lastStructuralSnapshot = snapshot;
+
+        // Store snapshots in job metadata for UI access
+        // (Database migration pending - this will work once column exists)
+        try {
+          const existingSnapshots = (updatedJob as any).structural_snapshots || {};
+          await orchestrator.updateJob(updatedJob.id, {
+            structural_snapshots: {
+              ...existingSnapshots,
+              [`pass_${passNumber}`]: snapshot
+            }
+          } as any);
+        } catch (dbErr) {
+          // Column may not exist yet - just log to console
+          console.debug(`[Structural] DB storage pending migration - snapshot logged to console`);
+        }
+      } catch (err) {
+        console.warn(`[Structural] Failed to capture snapshot for pass ${passNumber}:`, err);
+      }
+    };
+
+    // Helper to check quality gate and store results
+    const checkAndStoreQualityGate = async (passNumber: number) => {
+      try {
+        const draftContent = updatedJob.draft_content || '';
+        const result = checkQualityGate(
+          draftContent,
+          brief,
+          safeBusinessInfo,
+          passNumber,
+          lastQualityScore,
+          onLog
+        );
+
+        qualityScores[passNumber] = result;
+        lastQualityScore = result.scoreAfter;
+
+        // Store quality scores in job metadata for UI access
+        // (Database migration pending - this will work once column exists)
+        try {
+          const existingScores = (updatedJob as any).pass_quality_scores || {};
+          await orchestrator.updateJob(updatedJob.id, {
+            pass_quality_scores: {
+              ...existingScores,
+              [`pass_${passNumber}`]: result.scoreAfter
+            },
+            // Add quality warning if severe regression
+            ...(result.hasSevereRegression ? {
+              quality_warning: `Pass ${passNumber} caused significant quality regression (${result.scoreBefore}% → ${result.scoreAfter}%)`
+            } : {})
+          } as any);
+        } catch (dbErr) {
+          // Column may not exist yet - just log to console
+          console.debug(`[QualityGate] DB storage pending migration - score logged to console`);
+        }
+      } catch (err) {
+        console.warn(`[QualityGate] Failed to check quality gate for pass ${passNumber}:`, err);
+      }
+    };
+
     try {
       // Pass 1: Draft Generation
       if (updatedJob.current_pass === 1) {
@@ -554,6 +723,10 @@ export function useContentGeneration({
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 1
         await collectProgressiveData(1, updatedJob.draft_content || '');
+        // Capture baseline structural snapshot
+        await captureAndLogStructuralChanges(1);
+        // Check quality gate (baseline for future comparisons)
+        await checkAndStoreQualityGate(1);
         // Initialize violation tracking after draft generation
         violationsBeforePass = captureViolations();
       }
@@ -579,6 +752,10 @@ export function useContentGeneration({
         );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Capture structural snapshot
+        await captureAndLogStructuralChanges(2);
+        // Check quality gate
+        await checkAndStoreQualityGate(2);
         // Track pass completion
         trackPassCompletion(2);
       }
@@ -596,6 +773,10 @@ export function useContentGeneration({
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 3 (lists/tables)
         await collectProgressiveData(3, updatedJob.draft_content || '');
+        // Capture structural snapshot (critical - lists/tables added here)
+        await captureAndLogStructuralChanges(3);
+        // Check quality gate
+        await checkAndStoreQualityGate(3);
         // Track pass completion
         trackPassCompletion(3);
       }
@@ -611,6 +792,10 @@ export function useContentGeneration({
         );
         if (shouldAbort()) return;
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
+        // Capture structural snapshot
+        await captureAndLogStructuralChanges(4);
+        // Check quality gate
+        await checkAndStoreQualityGate(4);
         // Track pass completion
         trackPassCompletion(4);
       }
@@ -628,6 +813,10 @@ export function useContentGeneration({
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 5 (keywords, entities)
         await collectProgressiveData(5, updatedJob.draft_content || '');
+        // Capture structural snapshot
+        await captureAndLogStructuralChanges(5);
+        // Check quality gate
+        await checkAndStoreQualityGate(5);
         // Track pass completion
         trackPassCompletion(5);
       }
@@ -657,6 +846,10 @@ export function useContentGeneration({
         } catch (err) {
           console.warn('[Pass 6] Failed to extract image placeholders:', err);
         }
+        // Capture structural snapshot (critical - images added here)
+        await captureAndLogStructuralChanges(6);
+        // Check quality gate
+        await checkAndStoreQualityGate(6);
         // Track pass completion
         trackPassCompletion(6);
       }
@@ -674,6 +867,10 @@ export function useContentGeneration({
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 7 (abstract from intro)
         await collectProgressiveData(7, updatedJob.draft_content || '');
+        // Capture structural snapshot
+        await captureAndLogStructuralChanges(7);
+        // Check quality gate
+        await checkAndStoreQualityGate(7);
         // Track pass completion
         trackPassCompletion(7);
       }
@@ -691,6 +888,10 @@ export function useContentGeneration({
         updatedJob = await orchestrator.getJob(updatedJob.id) || updatedJob;
         // Collect progressive schema data from Pass 8
         await collectProgressiveData(8, updatedJob.draft_content || '');
+        // Capture structural snapshot (critical - verify preservation worked)
+        await captureAndLogStructuralChanges(8);
+        // Check quality gate (critical - verify polish didn't degrade quality)
+        await checkAndStoreQualityGate(8);
         // Track pass completion
         trackPassCompletion(8);
       }
@@ -714,6 +915,10 @@ export function useContentGeneration({
         } catch (err) {
           console.warn('[Progressive] Failed to collect data for pass 9:', err);
         }
+        // Capture final structural snapshot
+        await captureAndLogStructuralChanges(9);
+        // Final quality gate check
+        await checkAndStoreQualityGate(9);
       }
 
       // Pass 10: Schema Generation

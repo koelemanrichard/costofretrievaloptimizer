@@ -191,6 +191,7 @@ export async function executeSectionPass(
       sortedSections,
       sectionsToProcess,
       holisticContext,
+      formatBudget,
       brief,
       businessInfo,
       config,
@@ -267,7 +268,8 @@ async function processSectionsBatched(
       for (const [section, optimizedContent] of parsedResults) {
         if (optimizedContent && optimizedContent.trim()) {
           const originalContent = section.current_content || '';
-          const cleanedContent = cleanOptimizedContent(optimizedContent, originalContent, section.section_key, config.passNumber);
+          // Pass format budget for smart preservation decisions
+          const cleanedContent = cleanOptimizedContent(optimizedContent, originalContent, section.section_key, config.passNumber, formatBudget);
 
           const updatedSection: ContentGenerationSection = {
             ...section,
@@ -315,6 +317,7 @@ async function processSectionsIndividually(
   allSections: ContentGenerationSection[],
   sectionsToProcess: ContentGenerationSection[],
   holisticContext: HolisticSummaryContext,
+  formatBudget: ContentFormatBudget,
   brief: ContentBrief,
   businessInfo: BusinessInfo,
   config: SectionPassConfig,
@@ -368,7 +371,8 @@ async function processSectionsIndividually(
         log.warn(`Warning: Section ${section.section_key} optimized content is ${Math.round((optimizedContent.length / sectionContent.length) * 100)}% of original`);
       }
 
-      const cleanedContent = cleanOptimizedContent(optimizedContent, sectionContent, section.section_key, config.passNumber);
+      // Pass format budget for smart preservation decisions
+      const cleanedContent = cleanOptimizedContent(optimizedContent, sectionContent, section.section_key, config.passNumber, formatBudget);
 
       // Update section with optimized content
       const updatedSection: ContentGenerationSection = {
@@ -473,6 +477,188 @@ function parseBatchResponse(
 function countImagePlaceholders(content: string): number {
   const matches = content.match(/\[IMAGE:[^\]]+\]/g);
   return matches ? matches.length : 0;
+}
+
+/**
+ * Count lists in content (both Markdown and HTML).
+ */
+function countLists(content: string): number {
+  // Markdown lists: lines starting with -, *, or 1.
+  const markdownLists = content.match(/(?:^|\n)(?:[-*]|\d+\.)\s+/g) || [];
+  // HTML lists
+  const htmlLists = content.match(/<[ou]l>/gi) || [];
+  // Count list blocks, not individual items
+  const listBlocks = (content.match(/(?:^|\n)[-*]\s+[^\n]+(?:\n[-*]\s+[^\n]+)*/gm) || []).length;
+  return Math.max(listBlocks, htmlLists.length);
+}
+
+/**
+ * Count tables in content (both Markdown and HTML).
+ */
+function countTables(content: string): number {
+  // Markdown tables: | col | col | pattern
+  const markdownTableRows = content.match(/\|[^|]+\|/g) || [];
+  const markdownTables = markdownTableRows.length > 0 ?
+    Math.floor((content.match(/\|[-:]+\|/g) || []).length) : 0;
+  // HTML tables
+  const htmlTables = (content.match(/<table>/gi) || []).length;
+  return Math.max(markdownTables, htmlTables);
+}
+
+/**
+ * Count all structural elements in content.
+ */
+interface StructuralElementCounts {
+  images: number;
+  lists: number;
+  tables: number;
+  headings: number;
+  wordCount: number;
+}
+
+function countStructuralElements(content: string): StructuralElementCounts {
+  return {
+    images: countImagePlaceholders(content),
+    lists: countLists(content),
+    tables: countTables(content),
+    headings: countHeadings(content).total,
+    wordCount: content.split(/\s+/).filter(w => w.length > 0).length
+  };
+}
+
+/**
+ * Smart preservation decision based on format budget.
+ * Returns 'block' if element should be preserved, 'allow' if reduction is OK.
+ */
+type PreservationDecision = 'block' | 'allow';
+
+interface SmartPreservationContext {
+  budget?: ContentFormatBudget;
+  passNumber: number;
+}
+
+function shouldPreserveElement(
+  elementType: 'image' | 'list' | 'table',
+  beforeCount: number,
+  afterCount: number,
+  context: SmartPreservationContext
+): PreservationDecision {
+  const { budget, passNumber } = context;
+
+  // If no budget info, default to blocking reduction (safe default)
+  if (!budget) {
+    return afterCount < beforeCount ? 'block' : 'allow';
+  }
+
+  // Images: always preserve (no over-saturation concept)
+  if (elementType === 'image') {
+    return afterCount < beforeCount ? 'block' : 'allow';
+  }
+
+  // Lists: check against budget constraints
+  if (elementType === 'list') {
+    const maxLists = budget.constraints.maxListSections;
+    const minLists = Math.floor(maxLists * 0.3); // 30% of max = minimum threshold
+    const currentLists = budget.currentStats.sectionsWithLists;
+
+    // If we're ABOVE max budget and reduction keeps us above minimum, allow
+    if (currentLists > maxLists && afterCount >= 0) {
+      return 'allow';
+    }
+    // If we're at or below max budget, preserve
+    if (beforeCount > 0 && afterCount < beforeCount) {
+      return 'block';
+    }
+  }
+
+  // Tables: check against budget constraints
+  if (elementType === 'table') {
+    const maxTables = budget.constraints.maxTableSections;
+    const minTables = Math.floor(maxTables * 0.3);
+    const currentTables = budget.currentStats.sectionsWithTables;
+
+    // If we're ABOVE max budget and reduction keeps us above minimum, allow
+    if (currentTables > maxTables && afterCount >= 0) {
+      return 'allow';
+    }
+    // If we're at or below max budget, preserve
+    if (beforeCount > 0 && afterCount < beforeCount) {
+      return 'block';
+    }
+  }
+
+  return 'allow';
+}
+
+/**
+ * Smart preservation validation result.
+ */
+interface SmartPreservationResult {
+  shouldKeepOriginal: boolean;
+  blockedElements: string[];
+  decisions: Record<string, PreservationDecision>;
+}
+
+/**
+ * Perform smart preservation validation using format budget.
+ * Returns whether to keep original content and which elements were blocked.
+ */
+function validateSmartPreservation(
+  original: string,
+  optimized: string,
+  sectionKey: string,
+  passNumber: number,
+  budget?: ContentFormatBudget
+): SmartPreservationResult {
+  const log = createPassLogger(passNumber);
+
+  const beforeCounts = countStructuralElements(original);
+  const afterCounts = countStructuralElements(optimized);
+
+  const context: SmartPreservationContext = { budget, passNumber };
+
+  const decisions = {
+    images: shouldPreserveElement('image', beforeCounts.images, afterCounts.images, context),
+    lists: shouldPreserveElement('list', beforeCounts.lists, afterCounts.lists, context),
+    tables: shouldPreserveElement('table', beforeCounts.tables, afterCounts.tables, context),
+  };
+
+  const blockedElements: string[] = [];
+
+  // Check each element type
+  if (decisions.images === 'block' && afterCounts.images < beforeCounts.images) {
+    blockedElements.push(`images (${beforeCounts.images} → ${afterCounts.images})`);
+    log.warn(`[${sectionKey}] BLOCKED: Image loss detected (${beforeCounts.images} → ${afterCounts.images})`);
+  }
+
+  if (decisions.lists === 'block' && afterCounts.lists < beforeCounts.lists) {
+    blockedElements.push(`lists (${beforeCounts.lists} → ${afterCounts.lists})`);
+    log.warn(`[${sectionKey}] BLOCKED: List loss detected (${beforeCounts.lists} → ${afterCounts.lists})`);
+  }
+
+  if (decisions.tables === 'block' && afterCounts.tables < beforeCounts.tables) {
+    blockedElements.push(`tables (${beforeCounts.tables} → ${afterCounts.tables})`);
+    log.warn(`[${sectionKey}] BLOCKED: Table loss detected (${beforeCounts.tables} → ${afterCounts.tables})`);
+  }
+
+  // Also check for severe content reduction (>50%)
+  const lengthRatio = optimized.length / Math.max(original.length, 1);
+  if (lengthRatio < 0.5 && original.length > 200) {
+    blockedElements.push(`content (${Math.round(lengthRatio * 100)}% of original)`);
+    log.warn(`[${sectionKey}] BLOCKED: Severe content reduction (${Math.round(lengthRatio * 100)}% of original)`);
+  }
+
+  const shouldKeepOriginal = blockedElements.length > 0;
+
+  if (shouldKeepOriginal) {
+    log.error(`[${sectionKey}] Smart preservation BLOCKED changes: ${blockedElements.join(', ')}. Keeping original content.`);
+  }
+
+  return {
+    shouldKeepOriginal,
+    blockedElements,
+    decisions
+  };
 }
 
 /**
@@ -595,9 +781,21 @@ function validateImagePreservation(
  * - Markdown code blocks wrapping
  * - Extra whitespace
  * - Section heading duplication
- * - Image placeholder preservation validation
+ * - Smart preservation validation (blocks changes that lose critical elements)
+ *
+ * @param optimized - The AI-optimized content
+ * @param original - The original content before optimization
+ * @param sectionKey - The section key for logging
+ * @param passNumber - The current pass number
+ * @param budget - Optional format budget for smart preservation decisions
  */
-function cleanOptimizedContent(optimized: string, original: string, sectionKey?: string, passNumber?: number): string {
+function cleanOptimizedContent(
+  optimized: string,
+  original: string,
+  sectionKey?: string,
+  passNumber?: number,
+  budget?: ContentFormatBudget
+): string {
   let content = optimized.trim();
 
   // Remove markdown code block wrapper if present
@@ -623,12 +821,22 @@ function cleanOptimizedContent(optimized: string, original: string, sectionKey?:
     .replace(/[ \t]+$/gm, '')
     .trim();
 
-  // Comprehensive post-pass validation
+  // Smart preservation validation (BLOCKING)
+  // This ensures structural elements (lists, tables, images) are preserved
+  // unless we're over-budget and reduction is acceptable
   if (sectionKey && passNumber) {
+    const smartResult = validateSmartPreservation(original, content, sectionKey, passNumber, budget);
+
+    if (smartResult.shouldKeepOriginal) {
+      // Critical elements were lost - keep original content
+      console.warn(`[Pass ${passNumber}] Smart preservation: Keeping original for ${sectionKey} due to: ${smartResult.blockedElements.join(', ')}`);
+      return original;
+    }
+
+    // Also run legacy validation for logging (non-blocking)
     const validation = validatePreservation(original, content, sectionKey, passNumber);
     if (!validation.passed) {
-      // Log violations but don't block - the AI may have legitimately shortened content
-      // Critical violations (like image loss) are already logged with warnings
+      // Log but don't block - smart preservation already handled blocking cases
     }
   }
 

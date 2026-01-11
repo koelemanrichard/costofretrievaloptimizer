@@ -653,6 +653,130 @@ ${isMonetization ? '5. Includes appropriate call-to-action' : '5. Closes with ed
 }
 
 // ============================================
+// Pass 8: Final Polish (Section-by-Section)
+// ============================================
+
+/**
+ * Batch prompt for Pass 8: Final Polish
+ * Performs publication-ready polishing on individual sections while
+ * preserving structural elements (lists, tables, images) from earlier passes.
+ */
+export function buildPass8BatchPrompt(
+  batch: ContentGenerationSection[],
+  holistic: HolisticSummaryContext,
+  budget: ContentFormatBudget,
+  brief: ContentBrief,
+  businessInfo: BusinessInfo
+): string {
+  const regionalLang = getRegionalLanguageVariant(businessInfo.language, businessInfo.region);
+
+  // Count structural elements for preservation tracking
+  const sectionEntries = batch.map(section => {
+    const content = section.current_content || '';
+    const listCount = (content.match(/<ul>|<ol>|\n[-*]\s/g) || []).length;
+    const tableCount = (content.match(/<table>|\|.*\|/g) || []).length;
+    const imageCount = (content.match(/\[IMAGE:[^\]]+\]/g) || []).length;
+
+    return `
+[SECTION: ${section.section_key}]
+**Heading:** ${section.section_heading}
+**Structural Elements:** Lists: ${listCount}, Tables: ${tableCount}, Images: ${imageCount}
+**Current Content:**
+${content}
+`;
+  }).join('\n---\n');
+
+  return `You are a Senior Editor performing the FINAL polish pass on sections before publication.
+
+${getLanguageAndRegionInstruction(businessInfo.language, businessInfo.region)}
+
+## Article Context (Read-Only Reference)
+- Central Entity: ${holistic.centralEntity}
+- Target Keyword: ${brief.targetKeyword || 'Not specified'}
+- Total Sections: ${holistic.articleStructure.totalSections}
+- Article Word Count: ${holistic.articleStructure.totalWordCount} words
+
+## POLISHING TASKS (Apply to Each Section)
+1. **Smooth Transitions:** Ensure every paragraph flows naturally. Add transitional phrases where needed.
+2. **Consistent Voice:** Maintain same tone, reading level, and style throughout.
+3. **Remove Redundancy:** Eliminate repetitive phrases and unnecessary filler words.
+4. **Strengthen Weak Sentences:** Improve passive, vague, or low-impact sentences. Use definitive statements.
+5. **Final Formatting:** **Bold** key entities for scannability. Ensure lists have introductory sentences.
+
+## CRITICAL PRESERVATION REQUIREMENTS
+⚠️ **STRUCTURE PRESERVATION IS MANDATORY** ⚠️
+
+For EACH section, you MUST preserve:
+- **All [IMAGE: ...] placeholders** - Copy character-for-character
+- **All bullet lists and numbered lists** - Keep items intact, only polish wording
+- **All tables** - Keep structure, only polish cell content
+- **Heading hierarchy** - DO NOT change H2/H3 levels
+- **Internal links** - Keep all [text](url) intact
+
+If a section has "Lists: 2", your output MUST have exactly 2 lists.
+If a section has "Images: 1", your output MUST have exactly 1 image placeholder.
+
+## Sections to Polish
+${sectionEntries}
+
+## Output Format
+For EACH section, output:
+[SECTION: section-key]
+...polished content...
+
+Keep sections in order. Polish language while preserving ALL structural elements.
+
+**OUTPUT ONLY the section markers and polished content in ${regionalLang}. No explanations.**`;
+}
+
+/**
+ * Single-section prompt for Pass 8 (used when batch size is 1)
+ */
+export function buildPass8Prompt(ctx: SectionOptimizationContext): string {
+  const { section, holistic, brief, businessInfo } = ctx;
+  const regionalLang = getRegionalLanguageVariant(businessInfo.language, businessInfo.region);
+
+  const content = section.current_content || '';
+  const listCount = (content.match(/<ul>|<ol>|\n[-*]\s/g) || []).length;
+  const tableCount = (content.match(/<table>|\|.*\|/g) || []).length;
+  const imageCount = (content.match(/\[IMAGE:[^\]]+\]/g) || []).length;
+
+  return `You are a Senior Editor performing the FINAL polish on a section before publication.
+
+${getLanguageAndRegionInstruction(businessInfo.language, businessInfo.region)}
+
+## Your Task
+Polish ONE section for publication readiness. Return ONLY the polished section content.
+
+## Section to Polish
+**Heading:** ${section.section_heading}
+**Level:** H${section.section_level}
+**Structural Elements:** Lists: ${listCount}, Tables: ${tableCount}, Images: ${imageCount}
+
+**Current Content:**
+${content}
+
+## Article Context (Read-Only Reference)
+- Central Entity: ${holistic.centralEntity}
+- Target Keyword: ${brief.targetKeyword || 'Not specified'}
+
+## Polishing Tasks
+1. Smooth paragraph transitions with transitional phrases
+2. Consistent tone and voice throughout
+3. Remove redundant phrases and filler words
+4. Strengthen weak/passive sentences
+
+## PRESERVATION REQUIREMENTS (MANDATORY)
+Your output MUST contain:
+- Exactly ${imageCount} [IMAGE: ...] placeholder(s) - copied character-for-character
+- Exactly ${listCount} list(s) - keep items, polish wording only
+- Exactly ${tableCount} table(s) - keep structure, polish content only
+- Same heading (unchanged): ${section.section_heading}
+
+**OUTPUT the polished section content in ${regionalLang}. No explanations or wrappers.**`;
+}
+
+// ============================================
 // Export all builders as named object
 // ============================================
 
@@ -664,7 +788,9 @@ export const SectionOptimizationPromptBuilder = {
   buildPass5Prompt,
   buildPass6Prompt,
   buildPass7Prompt,
-  buildPass7ConclusionPrompt
+  buildPass7ConclusionPrompt,
+  buildPass8Prompt,
+  buildPass8BatchPrompt
 };
 
 export default SectionOptimizationPromptBuilder;

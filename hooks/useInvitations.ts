@@ -120,8 +120,12 @@ export function useInvitations() {
 
       if (queryError) throw queryError;
 
-      // Always return an array (never undefined)
-      return Array.isArray(data) ? data : [];
+      // Map joined inviter array to single object (Supabase returns FK joins as arrays)
+      const invitations: InvitationWithInviter[] = (data || []).map((inv: any) => ({
+        ...inv,
+        inviter: Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter,
+      }));
+      return invitations;
     } catch (err) {
       console.error('Failed to get organization invitations:', err);
       setError(err instanceof Error ? err.message : 'Failed to get invitations');
@@ -162,7 +166,12 @@ export function useInvitations() {
 
       if (queryError) throw queryError;
 
-      return data || [];
+      // Map joined inviter array to single object (Supabase returns FK joins as arrays)
+      const invitations: InvitationWithInviter[] = (data || []).map((inv: any) => ({
+        ...inv,
+        inviter: Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter,
+      }));
+      return invitations;
     } catch (err) {
       console.error('Failed to get project invitations:', err);
       setError(err instanceof Error ? err.message : 'Failed to get invitations');
@@ -255,7 +264,7 @@ export function useInvitations() {
 
       if (rpcError) throw rpcError;
 
-      return data as AcceptInvitationResult;
+      return data as unknown as AcceptInvitationResult;
     } catch (err) {
       console.error('Failed to accept invitation:', err);
       setError(err instanceof Error ? err.message : 'Failed to accept invitation');

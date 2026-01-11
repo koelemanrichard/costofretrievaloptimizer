@@ -47,6 +47,8 @@ export interface ModalProps {
   headerIcon?: React.ReactNode;
   /** Custom header content (replaces default header if provided) */
   customHeader?: React.ReactNode;
+  /** Size alias (alternative to maxWidth) - mapped to maxWidth classes */
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
 }
 
 // Get all focusable elements within a container

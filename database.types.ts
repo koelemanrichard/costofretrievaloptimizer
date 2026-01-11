@@ -286,6 +286,7 @@ export type Database = {
           contextual_vectors: Json | null
           created_at: string
           discourse_anchors: Json | null
+          draft_history: Json | null
           featured_snippet_target: Json | null
           id: string
           key_takeaways: Json | null
@@ -312,6 +313,7 @@ export type Database = {
           contextual_vectors?: Json | null
           created_at?: string
           discourse_anchors?: Json | null
+          draft_history?: Json | null
           featured_snippet_target?: Json | null
           id?: string
           key_takeaways?: Json | null
@@ -338,6 +340,7 @@ export type Database = {
           contextual_vectors?: Json | null
           created_at?: string
           discourse_anchors?: Json | null
+          draft_history?: Json | null
           featured_snippet_target?: Json | null
           id?: string
           key_takeaways?: Json | null
@@ -1343,22 +1346,864 @@ export type Database = {
           settings_data: Json | null
           updated_at: string | null
           user_id: string
+          is_super_admin: boolean | null
         }
         Insert: {
           settings_data?: Json | null
           updated_at?: string | null
           user_id: string
+          is_super_admin?: boolean | null
         }
         Update: {
           settings_data?: Json | null
           updated_at?: string | null
           user_id?: string
+          is_super_admin?: boolean | null
+        }
+        Relationships: []
+      }
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          type: 'personal' | 'team' | 'enterprise' | null
+          owner_id: string
+          settings: Json | null
+          billing_email: string | null
+          stripe_customer_id: string | null
+          cost_visibility: Json | null
+          branding: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          type?: 'personal' | 'team' | 'enterprise' | null
+          owner_id: string
+          settings?: Json | null
+          billing_email?: string | null
+          stripe_customer_id?: string | null
+          cost_visibility?: Json | null
+          branding?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          type?: 'personal' | 'team' | 'enterprise' | null
+          owner_id?: string
+          settings?: Json | null
+          billing_email?: string | null
+          stripe_customer_id?: string | null
+          cost_visibility?: Json | null
+          branding?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      organization_members: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'editor' | 'viewer' | null
+          permission_overrides: Json | null
+          invited_by: string | null
+          invited_at: string | null
+          accepted_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          user_id: string
+          role?: 'owner' | 'admin' | 'editor' | 'viewer' | null
+          permission_overrides?: Json | null
+          invited_by?: string | null
+          invited_at?: string | null
+          accepted_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          user_id?: string
+          role?: 'owner' | 'admin' | 'editor' | 'viewer' | null
+          permission_overrides?: Json | null
+          invited_by?: string | null
+          invited_at?: string | null
+          accepted_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_api_keys: {
+        Row: {
+          id: string
+          organization_id: string
+          provider: 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google'
+          vault_secret_id: string
+          key_source: 'inherit' | 'platform' | 'byok' | null
+          is_active: boolean | null
+          usage_this_month: { tokens: number; requests: number; cost_usd: number } | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+          last_used_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          provider: 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google'
+          vault_secret_id: string
+          key_source?: 'inherit' | 'platform' | 'byok' | null
+          is_active?: boolean | null
+          usage_this_month?: { tokens: number; requests: number; cost_usd: number } | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          last_used_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          provider?: 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google'
+          vault_secret_id?: string
+          key_source?: 'inherit' | 'platform' | 'byok' | null
+          is_active?: boolean | null
+          usage_this_month?: { tokens: number; requests: number; cost_usd: number } | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          last_used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_subscriptions: {
+        Row: {
+          id: string
+          organization_id: string
+          module_id: string
+          status: string | null
+          stripe_subscription_id: string | null
+          stripe_customer_id: string | null
+          current_period_start: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          module_id: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          module_id?: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_subscriptions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      invitations: {
+        Row: {
+          id: string
+          type: 'organization' | 'project'
+          organization_id: string | null
+          project_id: string | null
+          email: string
+          role: string
+          token: string
+          invited_by: string
+          message: string | null
+          created_at: string | null
+          expires_at: string | null
+          accepted_at: string | null
+          declined_at: string | null
+        }
+        Insert: {
+          id?: string
+          type: 'organization' | 'project'
+          organization_id?: string | null
+          project_id?: string | null
+          email: string
+          role: string
+          token?: string
+          invited_by: string
+          message?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          accepted_at?: string | null
+          declined_at?: string | null
+        }
+        Update: {
+          id?: string
+          type?: 'organization' | 'project'
+          organization_id?: string | null
+          project_id?: string | null
+          email?: string
+          role?: string
+          token?: string
+          invited_by?: string
+          message?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          accepted_at?: string | null
+          declined_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      modules: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          price_monthly_usd: number | null
+          price_yearly_usd: number | null
+          features: Json | null
+          is_active: boolean | null
+          sort_order: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string | null
+          price_monthly_usd?: number | null
+          price_yearly_usd?: number | null
+          features?: Json | null
+          is_active?: boolean | null
+          sort_order?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          price_monthly_usd?: number | null
+          price_yearly_usd?: number | null
+          features?: Json | null
+          is_active?: boolean | null
+          sort_order?: number | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      project_members: {
+        Row: {
+          id: string
+          project_id: string
+          user_id: string
+          role: string | null
+          permission_overrides: Json | null
+          source: string | null
+          invited_by: string | null
+          invited_at: string | null
+          accepted_at: string | null
+          created_at: string | null
+          monthly_usage_limit_usd: number | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          user_id: string
+          role?: string | null
+          permission_overrides?: Json | null
+          source?: string | null
+          invited_by?: string | null
+          invited_at?: string | null
+          accepted_at?: string | null
+          created_at?: string | null
+          monthly_usage_limit_usd?: number | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          user_id?: string
+          role?: string | null
+          permission_overrides?: Json | null
+          source?: string | null
+          invited_by?: string | null
+          invited_at?: string | null
+          accepted_at?: string | null
+          created_at?: string | null
+          monthly_usage_limit_usd?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_audit_log: {
+        Row: {
+          id: string
+          organization_id: string
+          actor_id: string | null
+          action: string
+          resource_type: string | null
+          resource_id: string | null
+          old_value: string | null
+          new_value: string | null
+          metadata: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          actor_id?: string | null
+          action: string
+          resource_type?: string | null
+          resource_id?: string | null
+          old_value?: string | null
+          new_value?: string | null
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          actor_id?: string | null
+          action?: string
+          resource_type?: string | null
+          resource_id?: string | null
+          old_value?: string | null
+          new_value?: string | null
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      role_module_access: {
+        Row: {
+          id: string
+          organization_id: string
+          role: string
+          module_id: string
+          can_access: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          role: string
+          module_id: string
+          can_access?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          role?: string
+          module_id?: string
+          can_access?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_module_access_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_module_access_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_api_keys: {
+        Row: {
+          id: string
+          project_id: string
+          provider: 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google'
+          encrypted_key: string | null
+          key_source: 'inherit' | 'platform' | 'byok' | null
+          is_active: boolean | null
+          usage_this_month: { tokens: number; requests: number; cost_usd: number } | null
+          created_by: string | null
+          created_at: string | null
+          updated_at: string | null
+          last_used_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          provider: 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google'
+          encrypted_key?: string | null
+          key_source?: 'inherit' | 'platform' | 'byok' | null
+          is_active?: boolean | null
+          usage_this_month?: { tokens: number; requests: number; cost_usd: number } | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          last_used_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          provider?: 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google'
+          encrypted_key?: string | null
+          key_source?: 'inherit' | 'platform' | 'byok' | null
+          is_active?: boolean | null
+          usage_this_month?: { tokens: number; requests: number; cost_usd: number } | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          last_used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_api_keys_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_scores: {
+        Row: {
+          id: string
+          organization_id: string
+          total_score: number | null
+          total_articles_generated: number | null
+          total_high_quality_articles: number | null
+          avg_audit_score: number | null
+          global_rank: number | null
+          score_this_week: number | null
+          score_this_month: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          total_score?: number | null
+          total_articles_generated?: number | null
+          total_high_quality_articles?: number | null
+          avg_audit_score?: number | null
+          global_rank?: number | null
+          score_this_week?: number | null
+          score_this_month?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          total_score?: number | null
+          total_articles_generated?: number | null
+          total_high_quality_articles?: number | null
+          avg_audit_score?: number | null
+          global_rank?: number | null
+          score_this_week?: number | null
+          score_this_month?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_scores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_achievements: {
+        Row: {
+          id: string
+          organization_id: string
+          achievement_id: string
+          achievement_name: string | null
+          achievement_description: string | null
+          points_awarded: number | null
+          earned_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          achievement_id: string
+          achievement_name?: string | null
+          achievement_description?: string | null
+          points_awarded?: number | null
+          earned_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          achievement_id?: string
+          achievement_name?: string | null
+          achievement_description?: string | null
+          points_awarded?: number | null
+          earned_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_achievements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      organization_leaderboard_history: {
+        Row: {
+          id: string
+          organization_id: string
+          period_type: string
+          period_start: string
+          rank: number
+          score: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          period_type: string
+          period_start: string
+          rank: number
+          score: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          period_type?: string
+          period_start?: string
+          rank?: number
+          score?: number
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_leaderboard_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      ai_usage_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          project_id: string | null
+          map_id: string | null
+          topic_id: string | null
+          brief_id: string | null
+          job_id: string | null
+          provider: string
+          model: string
+          operation: string
+          operation_detail: string | null
+          tokens_in: number
+          tokens_out: number
+          cost_usd: number
+          duration_ms: number | null
+          request_size_bytes: number | null
+          response_size_bytes: number | null
+          success: boolean
+          error_message: string | null
+          error_code: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          project_id?: string | null
+          map_id?: string | null
+          topic_id?: string | null
+          brief_id?: string | null
+          job_id?: string | null
+          provider: string
+          model: string
+          operation: string
+          operation_detail?: string | null
+          tokens_in?: number
+          tokens_out?: number
+          cost_usd?: number
+          duration_ms?: number | null
+          request_size_bytes?: number | null
+          response_size_bytes?: number | null
+          success?: boolean
+          error_message?: string | null
+          error_code?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          project_id?: string | null
+          map_id?: string | null
+          topic_id?: string | null
+          brief_id?: string | null
+          job_id?: string | null
+          provider?: string
+          model?: string
+          operation?: string
+          operation_detail?: string | null
+          tokens_in?: number
+          tokens_out?: number
+          cost_usd?: number
+          duration_ms?: number | null
+          request_size_bytes?: number | null
+          response_size_bytes?: number | null
+          success?: boolean
+          error_message?: string | null
+          error_code?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "topical_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "content_briefs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "content_generation_jobs"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      // Placeholder tables for optional logging services (disabled)
+      console_logs: {
+        Row: {
+          id: string
+          session_id: string
+          level: string
+          message: string
+          context: Json | null
+          component: string | null
+          error_type: string | null
+          stack_trace: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          level: string
+          message: string
+          context?: Json | null
+          component?: string | null
+          error_type?: string | null
+          stack_trace?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          level?: string
+          message?: string
+          context?: Json | null
+          component?: string | null
+          error_type?: string | null
+          stack_trace?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      api_call_logs: {
+        Row: {
+          id: string
+          session_id: string
+          job_id: string | null
+          category: string
+          provider: string
+          endpoint: string
+          method: string
+          status: string
+          duration_ms: number
+          metadata: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          job_id?: string | null
+          category: string
+          provider: string
+          endpoint: string
+          method: string
+          status: string
+          duration_ms: number
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          job_id?: string | null
+          category?: string
+          provider?: string
+          endpoint?: string
+          method?: string
+          status?: string
+          duration_ms?: number
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          id: string
+          session_id: string
+          job_id: string | null
+          metric_type: string
+          metric_name: string
+          value: number
+          unit: string | null
+          metadata: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          job_id?: string | null
+          metric_type: string
+          metric_name: string
+          value: number
+          unit?: string | null
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          job_id?: string | null
+          metric_type?: string
+          metric_name?: string
+          value?: number
+          unit?: string | null
+          metadata?: Json | null
+          created_at?: string | null
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      user_profiles: {
+        Row: {
+          id: string | null
+          email: string | null
+          raw_user_meta_data: Json | null
+          created_at: string | null
+          last_sign_in_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_text_column_if_not_exists: {
@@ -1641,6 +2486,204 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      resolve_api_key: {
+        Args: {
+          p_project_id: string
+          p_provider: string
+        }
+        Returns: {
+          encrypted_key: string | null
+          key_source: string
+          billable_to: string
+          billable_id: string
+        }[]
+      }
+      has_api_key: {
+        Args: {
+          p_project_id: string
+          p_provider: string
+        }
+        Returns: boolean
+      }
+      get_billable_info: {
+        Args: {
+          p_project_id: string
+          p_provider: string
+        }
+        Returns: {
+          key_source: string
+          billable_to: string
+          billable_id: string
+        }
+      }
+      get_org_role: {
+        Args: {
+          org_id: string
+        }
+        Returns: string | null
+      }
+      get_project_role: {
+        Args: {
+          proj_id: string
+        }
+        Returns: string | null
+      }
+      is_org_member: {
+        Args: {
+          org_id: string
+        }
+        Returns: boolean
+      }
+      has_project_access: {
+        Args: {
+          proj_id: string
+        }
+        Returns: boolean
+      }
+      accept_invitation: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
+      }
+      decline_invitation: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
+      }
+      log_audit_event: {
+        Args: {
+          p_org_id: string
+          p_action: string
+          p_target_type?: string
+          p_target_id?: string
+          p_target_email?: string | null
+          p_old_value?: Json | null
+          p_new_value?: Json | null
+          p_metadata?: Json
+        }
+        Returns: string
+      }
+      resend_invitation: {
+        Args: {
+          p_invitation_id: string
+        }
+        Returns: Json
+      }
+      admin_get_all_projects: {
+        Args: Record<string, never>
+        Returns: Array<{
+          id: string
+          project_name: string
+          domain: string
+          created_at: string
+          updated_at: string
+          user_id: string
+          organization_id: string | null
+          user_email: string
+          map_count: number
+        }>
+      }
+      admin_reassign_project: {
+        Args: {
+          p_project_id: string
+          p_new_user_id: string
+        }
+        Returns: {
+          success: boolean
+          project_id: string
+          project_name?: string
+          old_user_id?: string
+          new_user_id?: string
+          maps_updated: number
+          error?: string
+        }
+      }
+      can_use_feature: {
+        Args: {
+          p_org_id: string
+          p_feature: string
+        }
+        Returns: boolean
+      }
+      get_available_features: {
+        Args: {
+          p_org_id: string
+        }
+        Returns: string[]
+      }
+      get_org_cost_summary: {
+        Args: {
+          p_org_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: {
+          total_cost_usd: number
+          total_requests: number
+          total_tokens: number
+          by_provider: Record<string, { cost_usd: number; requests: number; tokens: number }>
+          by_user: Record<string, { cost_usd: number; requests: number; tokens: number; email?: string }>
+          by_project: Record<string, { cost_usd: number; requests: number; tokens: number; name?: string }>
+          daily_trend: Array<{ date: string; cost_usd: number; requests: number }>
+        }
+      }
+      recalculate_organization_scores: {
+        Args: {
+          p_org_id?: string
+        }
+        Returns: undefined
+      }
+      get_user_usage_stats: {
+        Args: {
+          p_user_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: {
+          provider: string
+          model: string
+          call_count: number
+          total_tokens_in: number
+          total_tokens_out: number
+          total_cost_usd: number
+          avg_duration_ms: number
+          success_rate: number
+        }[]
+      }
+      get_map_usage_stats: {
+        Args: {
+          p_map_id: string
+        }
+        Returns: {
+          provider: string
+          model: string
+          operation: string
+          call_count: number
+          total_tokens_in: number
+          total_tokens_out: number
+          total_cost_usd: number
+          avg_duration_ms: number
+        }[]
+      }
+      rollback_to_pass: {
+        Args: {
+          p_job_id: string
+          p_pass_number: number
+        }
+        Returns: undefined
+      }
+      get_quality_trend: {
+        Args: {
+          p_job_id: string
+        }
+        Returns: {
+          pass_number: number
+          score: number
+          delta: number
+        }[]
       }
     }
     Enums: {

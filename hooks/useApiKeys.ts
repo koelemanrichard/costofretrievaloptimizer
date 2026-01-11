@@ -208,7 +208,7 @@ export function useApiKeys(businessInfo: BusinessInfo) {
           .upsert(
             {
               project_id: projectId,
-              provider,
+              provider: provider as 'openai' | 'anthropic' | 'perplexity' | 'openrouter' | 'google',
               key_source: 'byok',
               is_active: false, // Will be activated when key is stored
             },

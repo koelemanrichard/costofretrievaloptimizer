@@ -7,11 +7,14 @@
  * @module services/errorPatternDetector
  */
 
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '../database.types';
+
 // Logging client disabled - creating separate Supabase clients causes
 // "Multiple GoTrueClient instances" warnings and RLS failures since the
 // logging client doesn't share auth with the main app client.
 // This is optional telemetry, so we disable it to avoid console noise.
-function getLoggingClient(): null {
+function getLoggingClient(): SupabaseClient<Database> | null {
   return null;
 }
 
@@ -248,7 +251,8 @@ export async function analyzeConsoleLogs(
     return createEmptyAnalysis(fromTime, toTime);
   }
 
-  const typedLogs = (logs || []) as ConsoleLogRow[];
+  // Note: This code is never reached (client is always null), cast via unknown for type safety
+  const typedLogs = (logs || []) as unknown as ConsoleLogRow[];
   return analyzeLogEntries(typedLogs, fromTime, toTime);
 }
 
@@ -281,7 +285,8 @@ export async function analyzeApiCallLogs(
     return createEmptyAnalysis(fromTime, toTime);
   }
 
-  const typedCalls = (calls || []) as ApiCallLogRow[];
+  // Note: This code is never reached (client is always null), cast via unknown for type safety
+  const typedCalls = (calls || []) as unknown as ApiCallLogRow[];
   return analyzeApiCallEntries(typedCalls, fromTime, toTime);
 }
 

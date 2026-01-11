@@ -24,76 +24,144 @@ import { DiscourseChainingValidator } from './discourseChainingValidator';
 
 export class RulesValidator {
   /**
-   * Run all validators against generated content
+   * Validators that should run during Pass 1 (draft generation).
+   * These are fundamental issues that should be caught early.
+   * Other validators address issues that later passes will fix.
    */
-  static validate(content: string, context: SectionGenerationContext): RulesValidationResult {
+  private static readonly PASS1_VALIDATORS = new Set([
+    'language',      // Content must be in correct language
+    'prohibited',    // Avoid AI-speak patterns
+    'wordcount',     // Basic length requirements
+    'structure',     // Basic S-P-O structure
+  ]);
+
+  /**
+   * Run validators against generated content.
+   * @param content The generated content to validate
+   * @param context The section generation context
+   * @param pass Optional pass number (1-9). If provided, only pass-appropriate validators run.
+   *             Pass 1 runs minimal validators; Pass 8+ runs all validators.
+   */
+  static validate(content: string, context: SectionGenerationContext, pass?: number): RulesValidationResult {
     const violations: ValidationViolation[] = [];
 
+    // Determine if we should run all validators or just pass-specific ones
+    const isPass1 = pass === 1;
+    const runAll = !pass || pass >= 8; // Pass 8 (audit) and later run all validators
+
     // S1. Language Output Validation (content must be in expected language)
+    // Always run - fundamental requirement
     violations.push(...LanguageOutputValidator.validateWithViolations(content, context));
 
     // 1. Prohibited Language (with language-aware patterns)
+    // Always run - AI-speak should be caught early
     violations.push(...ProhibitedLanguageValidator.validate(content, context));
 
     // 2. EAV Density (with language-aware verb patterns)
-    violations.push(...EAVDensityValidator.validate(content, context));
+    // Skip in Pass 1 - later passes add semantic richness
+    if (runAll || !isPass1) {
+      violations.push(...EAVDensityValidator.validate(content, context));
+    }
 
     // 3. Modality
-    violations.push(...ModalityValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 5 (Micro Semantics) handles modality
+    if (runAll || !isPass1) {
+      violations.push(...ModalityValidator.validate(content, context));
+    }
 
     // 4. Format Code Compliance
-    if (context.section.format_code) {
+    // Skip in Pass 1 - formatting is refined in later passes
+    if ((runAll || !isPass1) && context.section.format_code) {
       violations.push(...FormatCodeValidator.validate(content, context.section.format_code));
     }
 
     // 5. Centerpiece (intro only)
-    if (context.section.level === 1 || context.section.heading.toLowerCase().includes('introduction')) {
-      violations.push(...CenterpieceValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 7 (Introduction Synthesis) handles intro
+    if (runAll || !isPass1) {
+      if (context.section.level === 1 || context.section.heading.toLowerCase().includes('introduction')) {
+        violations.push(...CenterpieceValidator.validate(content, context));
+      }
     }
 
     // 6. YMYL Safe Answer Protocol
+    // Always run for YMYL content - safety is fundamental
     if (context.isYMYL) {
       violations.push(...YMYLValidator.validate(content, context));
     }
 
     // 7. S-P-O Structure
+    // Always run - basic structure is fundamental
     violations.push(...StructureValidator.validate(content, context));
 
     // 8. Contextual Bridge (for SUPPLEMENTARY zones)
-    violations.push(...ContextualBridgeValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 6 (Discourse Integration) handles bridges
+    if (runAll || !isPass1) {
+      violations.push(...ContextualBridgeValidator.validate(content, context));
+    }
 
     // 9. Repetition Detection
-    violations.push(...RepetitionValidator.validate(content));
+    // Skip in Pass 1 - later passes refine language
+    if (runAll || !isPass1) {
+      violations.push(...RepetitionValidator.validate(content));
+    }
 
     // 10. Central Entity Focus (lenient - info level)
-    violations.push(...CentralEntityFocusValidator.validate(content, context));
+    // Skip in Pass 1 - later passes strengthen entity focus
+    if (runAll || !isPass1) {
+      violations.push(...CentralEntityFocusValidator.validate(content, context));
+    }
 
     // 11. Contextual Vector (heading flow logic)
-    violations.push(...ContextualVectorValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 2 (Header Optimization) handles this
+    if (runAll || !isPass1) {
+      violations.push(...ContextualVectorValidator.validate(content, context));
+    }
 
     // 12. Word Count (G2-G4 section word count rules)
+    // Run in Pass 1 - basic length is fundamental
     violations.push(...WordCountValidator.validate(content, context));
 
     // 13. EAV Placement (C2-C3: UNIQUE in first 300 words, ROOT in first 500 words)
-    violations.push(...EavPlacementValidator.validate(content, context));
+    // Skip in Pass 1 - semantic placement is refined later
+    if (runAll || !isPass1) {
+      violations.push(...EavPlacementValidator.validate(content, context));
+    }
 
     // 14. S3 Pillar Alignment (content must align with SEO pillars)
-    violations.push(...PillarAlignmentValidator.validate(content, context));
+    // Skip in Pass 1 - alignment is validated in audit
+    if (runAll || !isPass1) {
+      violations.push(...PillarAlignmentValidator.validate(content, context));
+    }
 
     // 15. K4-K5 List Structure (item count 3-7, parallel structure)
-    violations.push(...ListStructureValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 3 (Lists & Tables) handles this
+    if (runAll || !isPass1) {
+      violations.push(...ListStructureValidator.validate(content, context));
+    }
 
     // 16. L2-L5 Table Structure (dimensions, headers, no merged cells, consistent types)
-    violations.push(...TableStructureValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 3 (Lists & Tables) handles this
+    if (runAll || !isPass1) {
+      violations.push(...TableStructureValidator.validate(content, context));
+    }
 
     // 17. H9 Cross-Section Repetition Detection
-    violations.push(...CrossSectionRepetitionValidator.validate(content, context));
+    // Skip in Pass 1 - requires all sections, validated in audit
+    if (runAll || !isPass1) {
+      violations.push(...CrossSectionRepetitionValidator.validate(content, context));
+    }
 
     // 18. S4 Readability Match (Flesch-Kincaid grade level vs audience)
-    violations.push(...ReadabilityValidator.validate(content, context));
+    // Skip in Pass 1 - readability improves through passes
+    if (runAll || !isPass1) {
+      violations.push(...ReadabilityValidator.validate(content, context));
+    }
 
     // 19. D5 Discourse Chaining (sentence-to-sentence cohesion)
-    violations.push(...DiscourseChainingValidator.validate(content, context));
+    // Skip in Pass 1 - Pass 6 (Discourse Integration) handles this
+    if (runAll || !isPass1) {
+      violations.push(...DiscourseChainingValidator.validate(content, context));
+    }
 
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);

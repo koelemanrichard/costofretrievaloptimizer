@@ -316,12 +316,16 @@ export function useOrganization(businessInfo: BusinessInfo) {
 
     const newOrg: OrganizationWithMembership = {
       ...org,
+      settings: (org.settings || {}) as Record<string, unknown>,
+      type: org.type || 'personal',
+      cost_visibility: org.cost_visibility as unknown as Organization['cost_visibility'],
+      branding: org.branding as unknown as Organization['branding'],
       membership: {
         id: membership.id,
         organization_id: membership.organization_id,
         user_id: membership.user_id,
         role: membership.role,
-        permission_overrides: membership.permission_overrides || {},
+        permission_overrides: (membership.permission_overrides as Record<string, boolean>) || {},
         invited_by: membership.invited_by,
         invited_at: membership.invited_at,
         accepted_at: membership.accepted_at,

@@ -362,9 +362,9 @@ export const useBriefEditor = (
 
             // Timeout helper for database operations
             const SAVE_TIMEOUT_MS = 30000;
-            const withTimeout = <T>(promise: Promise<T>, operation: string): Promise<T> =>
+            const withTimeout = <T>(promise: PromiseLike<T>, operation: string): Promise<T> =>
                 Promise.race([
-                    promise,
+                    Promise.resolve(promise),
                     new Promise<never>((_, reject) =>
                         setTimeout(() => reject(new Error(`${operation} timed out after ${SAVE_TIMEOUT_MS / 1000}s`)), SAVE_TIMEOUT_MS)
                     )

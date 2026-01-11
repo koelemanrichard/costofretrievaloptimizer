@@ -451,6 +451,7 @@ export type ContentZone = 'MAIN' | 'SUPPLEMENTARY';
 export interface BriefSection {
     key?: string; // Section identifier (e.g., 'section-0', 'section-1')
     heading: string;
+    section_heading?: string; // Alias for heading (backward compatibility)
     level: number;
     heading_level?: number; // Alias for level (used by compliance scoring)
     order?: number; // Position in article
@@ -496,7 +497,7 @@ export interface ValidationViolation {
   text: string;
   position: number;
   suggestion: string;
-  severity: 'error' | 'warning';
+  severity: 'error' | 'warning' | 'info';
 }
 
 export interface RulesValidationResult {
@@ -1148,6 +1149,9 @@ export interface ContentIntegrityResult {
     frameworkRules: AuditRuleResult[];
     // NEW: Semantic Triple Analysis
     tripleAnalysis?: TripleAuditResult;
+    // Computed fields for UI display
+    overallScore?: number; // Computed 0-100 score
+    algorithmicResults?: AuditRuleResult[]; // Alias for frameworkRules for backward compatibility
 }
 
 // Legacy schema result (kept for backward compatibility)

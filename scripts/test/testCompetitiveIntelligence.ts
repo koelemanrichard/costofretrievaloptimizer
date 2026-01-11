@@ -109,7 +109,7 @@ async function testTechnicalLayer() {
 
   // Test 1: Navigation Analysis
   try {
-    const navAnalysis = analyzeNavigation(sampleHtml);
+    const navAnalysis = analyzeNavigation(sampleHtml, 'https://example.com/test');
 
     // The navigation analyzer returns header, footer, sidebar, navigationScore, issues
     if (navAnalysis && typeof navAnalysis === 'object') {

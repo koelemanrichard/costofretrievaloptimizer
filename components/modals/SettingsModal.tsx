@@ -331,7 +331,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                        <TabButton tab="organization" label="Organization" id="tab-organization" />
                        <TabButton
                          tab="project"
-                         label={activeProject?.name ? `Project: ${activeProject.name.slice(0, 15)}${activeProject.name.length > 15 ? '...' : ''}` : 'Project'}
+                         label={activeProject?.project_name ? `Project: ${activeProject.project_name.slice(0, 15)}${activeProject.project_name.length > 15 ? '...' : ''}` : 'Project'}
                          id="tab-project"
                          disabled={!activeProject}
                        />
@@ -365,7 +365,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                          <div className="flex items-center justify-between">
                            <div>
                              <h3 className="text-lg font-semibold text-blue-400">Project Settings</h3>
-                             <p className="text-sm text-gray-400">Configure settings for: {activeProject.name}</p>
+                             <p className="text-sm text-gray-400">Configure settings for: {activeProject.project_name}</p>
                            </div>
                            <Button
                              variant="secondary"
@@ -386,7 +386,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                            <div className="grid grid-cols-2 gap-4 text-sm">
                              <div>
                                <span className="text-gray-500">Name:</span>
-                               <span className="ml-2 text-gray-200">{activeProject.name}</span>
+                               <span className="ml-2 text-gray-200">{activeProject.project_name}</span>
                              </div>
                              <div>
                                <span className="text-gray-500">ID:</span>
@@ -424,7 +424,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
             isOpen={isProjectSettingsOpen}
             onClose={() => setIsProjectSettingsOpen(false)}
             projectId={activeProject.id}
-            projectName={activeProject.name}
+            projectName={activeProject.project_name}
           />
         )}
     </>

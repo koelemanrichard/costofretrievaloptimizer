@@ -61,9 +61,9 @@ export const normalizeRpcData = <T>(data: unknown): T => {
     }
     if (Array.isArray(data)) {
         if (data.length === 0) throw new Error("Operation returned empty result.");
-        return data[0];
+        return data[0] as T;
     }
-    return data;
+    return data as T;
 };
 
 /**

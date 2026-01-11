@@ -2982,7 +2982,12 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 result={state.flowAuditResult}
                 onAutoFix={handleFlowAutoFix}
                 onBatchAutoFix={handleBatchFlowAutoFix}
-                onRefreshAnalysis={() => handleAnalyzeFlow()}
+                onRefreshAnalysis={async () => {
+                    const brief = state.activeBriefTopic ? briefs[state.activeBriefTopic.id] : null;
+                    if (brief?.articleDraft) {
+                        await handleAnalyzeFlow(brief.articleDraft);
+                    }
+                }}
                 isRefreshing={!!state.isLoading?.flowAudit}
             />
 

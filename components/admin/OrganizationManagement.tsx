@@ -114,6 +114,10 @@ const OrganizationManagement: React.FC = () => {
 
       const orgsWithDetails: OrganizationWithDetails[] = (orgs || []).map(org => ({
         ...org,
+        settings: (org.settings || {}) as Record<string, unknown>,
+        type: org.type || 'personal',
+        cost_visibility: org.cost_visibility as unknown as Organization['cost_visibility'],
+        branding: org.branding as unknown as Organization['branding'],
         member_count: org.organization_members?.[0]?.count || 0,
         project_count: org.projects?.[0]?.count || 0,
         owner_email: ownerMap.get(org.owner_id) || 'Unknown',
@@ -160,7 +164,12 @@ const OrganizationManagement: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrgMembers(data || []);
+      // Map joined user array to single object (Supabase returns FK joins as arrays)
+      const members: MemberWithUser[] = (data || []).map((m: any) => ({
+        ...m,
+        user: Array.isArray(m.user) ? m.user[0] : m.user,
+      }));
+      setOrgMembers(members);
     } catch (err) {
       console.error('Failed to fetch members:', err);
       setError(err instanceof Error ? err.message : 'Failed to load members');

@@ -107,12 +107,12 @@ const CircleIcon = () => (
 );
 
 const getPassStatus = (job: ContentGenerationJob, passNum: number): 'completed' | 'in_progress' | 'pending' | 'failed' => {
-  // New 10-pass order:
-  // 1: Draft, 2: Headers, 3: Intro Synthesis, 4: Lists/Tables, 5: Discourse,
-  // 6: Micro Semantics, 7: Visual Semantics, 8: Final Polish, 9: Audit, 10: Schema
+  // Correct 10-pass order:
+  // 1: Draft, 2: Headers, 3: Lists/Tables, 4: Discourse, 5: Micro Semantics,
+  // 6: Visual Semantics, 7: Intro Synthesis, 8: Final Polish, 9: Audit, 10: Schema
   const passKeys: (keyof PassesStatus)[] = [
-    'pass_1_draft', 'pass_2_headers', 'pass_3_intro', 'pass_4_lists',
-    'pass_5_discourse', 'pass_6_microsemantics', 'pass_7_visuals', 'pass_8_polish',
+    'pass_1_draft', 'pass_2_headers', 'pass_3_lists', 'pass_4_discourse',
+    'pass_5_microsemantics', 'pass_6_visuals', 'pass_7_intro', 'pass_8_polish',
     'pass_9_audit', 'pass_10_schema'
   ];
   const key = passKeys[passNum - 1];
