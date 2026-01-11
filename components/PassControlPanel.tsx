@@ -19,11 +19,15 @@ const PASS_INFO: Record<keyof PassConfigMap, { name: string; description: string
   pass_9_audit: { name: 'Final Audit', description: 'Run algorithmic quality checks' }
 };
 
+// Default config when a pass isn't defined in the passes prop
+const DEFAULT_PASS_CONFIG: PassConfig = { enabled: true, storeVersion: false };
+
 export const PassControlPanel: React.FC<Props> = ({ passes, onChange, disabled = false }) => {
   const handleToggle = (passKey: keyof PassConfigMap, field: keyof PassConfig, value: boolean) => {
+    const currentConfig = passes[passKey] || DEFAULT_PASS_CONFIG;
     onChange({
       ...passes,
-      [passKey]: { ...passes[passKey], [field]: value }
+      [passKey]: { ...currentConfig, [field]: value }
     });
   };
 
@@ -33,7 +37,8 @@ export const PassControlPanel: React.FC<Props> = ({ passes, onChange, disabled =
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         {(Object.keys(PASS_INFO) as Array<keyof PassConfigMap>).map(passKey => {
           const info = PASS_INFO[passKey];
-          const config = passes[passKey];
+          // Use default config if pass isn't defined in props
+          const config = passes[passKey] || DEFAULT_PASS_CONFIG;
           return (
             <div key={passKey} className="flex items-center justify-between py-0.5">
               <label className="flex items-center gap-1.5 cursor-pointer">
