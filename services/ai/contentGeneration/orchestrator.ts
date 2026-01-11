@@ -191,7 +191,7 @@ export class ContentGenerationOrchestrator {
       .from('content_generation_jobs')
       .select(`
         id, brief_id, map_id, user_id, status, current_pass, passes_status,
-        total_sections, completed_sections, audit_results, audit_score,
+        total_sections, completed_sections, audit_details, final_audit_score,
         progressive_schema_data, schema_data, structural_snapshots,
         pass_quality_scores, quality_warning, image_placeholders,
         created_at, updated_at
