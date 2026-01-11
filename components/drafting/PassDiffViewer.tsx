@@ -16,6 +16,8 @@ interface PassDiffViewerProps {
   supabaseUrl: string;
   supabaseAnonKey: string;
   onRollback?: (passNumber: number) => void;
+  /** If true, enables content viewing per pass (requires fetching sections) */
+  enableContentViewing?: boolean;
 }
 
 // Badge component for element changes
@@ -80,6 +82,10 @@ const PassAccordionItem: React.FC<{
   onToggle: () => void;
   onRollback?: () => void;
   isRollingBack: boolean;
+  enableContentViewing?: boolean;
+  passContent?: string;
+  isLoadingContent?: boolean;
+  onViewContent?: () => void;
 }> = ({
   passNumber,
   passName,
@@ -90,7 +96,11 @@ const PassAccordionItem: React.FC<{
   isExpanded,
   onToggle,
   onRollback,
-  isRollingBack
+  isRollingBack,
+  enableContentViewing,
+  passContent,
+  isLoadingContent,
+  onViewContent
 }) => {
   const hasData = snapshot !== undefined;
 
@@ -194,9 +204,29 @@ const PassAccordionItem: React.FC<{
             </div>
           )}
 
-          {/* Rollback button */}
-          {onRollback && passNumber > 1 && (
-            <div className="pt-2 border-t border-gray-700/50 flex justify-end">
+          {/* Action buttons */}
+          <div className="pt-2 border-t border-gray-700/50 flex justify-between items-center">
+            {/* View Content button */}
+            {enableContentViewing && (
+              <Button
+                onClick={onViewContent}
+                disabled={isLoadingContent}
+                variant="secondary"
+                className="text-xs py-1"
+              >
+                {isLoadingContent ? (
+                  <><Loader className="w-3 h-3 mr-1" /> Loading...</>
+                ) : passContent ? (
+                  <>Hide Content</>
+                ) : (
+                  <>View Content</>
+                )}
+              </Button>
+            )}
+            {!enableContentViewing && <div />}
+
+            {/* Rollback button */}
+            {onRollback && passNumber > 1 && (
               <Button
                 onClick={onRollback}
                 disabled={isRollingBack}
@@ -209,6 +239,21 @@ const PassAccordionItem: React.FC<{
                   <>Rollback to this pass</>
                 )}
               </Button>
+            )}
+          </div>
+
+          {/* Content display */}
+          {passContent && (
+            <div className="pt-3 border-t border-gray-700/50">
+              <div className="text-[10px] text-gray-500 uppercase mb-2">Content at Pass {passNumber}</div>
+              <div className="bg-gray-950 rounded-lg p-3 max-h-96 overflow-y-auto">
+                <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+                  {passContent}
+                </pre>
+              </div>
+              <div className="mt-2 text-[10px] text-gray-500">
+                {passContent.split(/\s+/).length} words
+              </div>
             </div>
           )}
         </div>
@@ -230,10 +275,13 @@ export const PassDiffViewer: React.FC<PassDiffViewerProps> = ({
   qualityWarning,
   supabaseUrl,
   supabaseAnonKey,
-  onRollback
+  onRollback,
+  enableContentViewing = true
 }) => {
   const [expandedPass, setExpandedPass] = useState<number | null>(null);
   const [isRollingBack, setIsRollingBack] = useState(false);
+  const [loadingContentPass, setLoadingContentPass] = useState<number | null>(null);
+  const [passContents, setPassContents] = useState<Record<number, string>>({});
 
   // Build snapshots array and diffs
   const passData = useMemo(() => {
@@ -304,6 +352,68 @@ export const PassDiffViewer: React.FC<PassDiffViewerProps> = ({
     }
   }, [jobId, supabaseUrl, supabaseAnonKey, onRollback]);
 
+  // Handle viewing pass content
+  const handleViewContent = useCallback(async (passNumber: number) => {
+    // If already loaded, toggle off
+    if (passContents[passNumber]) {
+      setPassContents(prev => {
+        const next = { ...prev };
+        delete next[passNumber];
+        return next;
+      });
+      return;
+    }
+
+    if (!supabaseUrl || !supabaseAnonKey) return;
+
+    setLoadingContentPass(passNumber);
+    try {
+      const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+
+      // Fetch sections with their pass_contents
+      const { data: sections, error } = await supabase
+        .from('content_generation_sections')
+        .select('section_key, section_heading, section_order, pass_contents')
+        .eq('job_id', jobId)
+        .order('section_order', { ascending: true });
+
+      if (error) {
+        console.error('[PassDiffViewer] Failed to fetch sections:', error);
+        return;
+      }
+
+      // Assemble content for this pass from all sections
+      const passKey = `pass_${passNumber}`;
+      const contentParts: string[] = [];
+
+      sections?.forEach(section => {
+        const sectionPassContents = section.pass_contents as Record<string, string> | null;
+        const content = sectionPassContents?.[passKey];
+
+        if (content) {
+          // Add section heading and content
+          const heading = section.section_heading || `Section ${section.section_order}`;
+          contentParts.push(`## ${heading}\n\n${content}`);
+        }
+      });
+
+      const assembledContent = contentParts.length > 0
+        ? contentParts.join('\n\n---\n\n')
+        : `No content saved for Pass ${passNumber}`;
+
+      setPassContents(prev => ({
+        ...prev,
+        [passNumber]: assembledContent
+      }));
+
+      console.log(`[PassDiffViewer] Loaded content for pass ${passNumber}: ${assembledContent.length} chars`);
+    } catch (err) {
+      console.error('[PassDiffViewer] Error loading pass content:', err);
+    } finally {
+      setLoadingContentPass(null);
+    }
+  }, [jobId, supabaseUrl, supabaseAnonKey, passContents]);
+
   // Check if we have any data to show
   const hasData = Object.keys(structuralSnapshots).length > 0 || Object.keys(qualityScores).length > 0;
 
@@ -350,6 +460,10 @@ export const PassDiffViewer: React.FC<PassDiffViewerProps> = ({
             )}
             onRollback={pass.snapshot ? () => handleRollback(pass.passNumber) : undefined}
             isRollingBack={isRollingBack}
+            enableContentViewing={enableContentViewing}
+            passContent={passContents[pass.passNumber]}
+            isLoadingContent={loadingContentPass === pass.passNumber}
+            onViewContent={() => handleViewContent(pass.passNumber)}
           />
         ))}
       </div>

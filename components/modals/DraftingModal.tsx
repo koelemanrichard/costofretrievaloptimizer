@@ -30,6 +30,8 @@ import { AuditIssue } from '../../types';
 import { runAlgorithmicAudit, convertToAuditIssues } from '../../services/ai/contentGeneration/passes/auditChecks';
 import { useFeatureGate } from '../../hooks/usePermissions';
 import { QualityRulePanel, ArticleQualityReport } from '../quality';
+import { PassDiffViewer } from '../drafting/PassDiffViewer';
+import type { StructuralSnapshot } from '../../services/ai/contentGeneration/structuralValidator';
 
 interface DraftingModalProps {
   isOpen: boolean;
@@ -92,6 +94,9 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     passesStatus: Record<string, string>;
     contentSource?: string; // Track the source of the content for better messaging
     schemaData?: any; // JSON-LD schema data from Pass 9
+    structuralSnapshots?: Record<string, StructuralSnapshot>; // Element counts per pass
+    passQualityScores?: Record<string, number>; // Quality scores per pass
+    qualityWarning?: string | null; // Warning for quality regressions
   } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
@@ -374,7 +379,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         // Get the latest job for this brief (any status - to detect incomplete jobs that can be resumed)
         const { data: jobData, error: jobError } = await supabase
           .from('content_generation_jobs')
-          .select('id, draft_content, updated_at, final_audit_score, passes_status, status, current_pass, schema_data')
+          .select('id, draft_content, updated_at, final_audit_score, passes_status, status, current_pass, schema_data, structural_snapshots, pass_quality_scores, quality_warning')
           .eq('brief_id', brief.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -496,6 +501,9 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           passesStatus: passesStatus, // Store full passes status for detailed display
           contentSource: sourceType, // Track the source for better sync messaging
           schemaData: jobData.schema_data, // JSON-LD schema from Pass 9
+          structuralSnapshots: (jobData as any).structural_snapshots || {}, // Element counts per pass
+          passQualityScores: (jobData as any).pass_quality_scores || {}, // Quality scores per pass
+          qualityWarning: (jobData as any).quality_warning || null, // Quality regression warning
         });
 
         // If no newer/longer content found, don't show sync option
@@ -2895,6 +2903,29 @@ ${schemaScript}`;
                                 }}
                             />
                         </div>
+
+                        {/* Pass History & Content Viewer */}
+                        {databaseJobInfo && businessInfo && (
+                            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                                <h3 className="text-lg font-semibold text-white mb-4">Pass History & Content Viewer</h3>
+                                <p className="text-sm text-gray-400 mb-4">
+                                    View structural changes and content at each pass. Click a pass to see details, then "View Content" to see the draft at that stage.
+                                </p>
+                                <PassDiffViewer
+                                    jobId={databaseJobInfo.jobId}
+                                    structuralSnapshots={databaseJobInfo.structuralSnapshots || {}}
+                                    qualityScores={databaseJobInfo.passQualityScores || {}}
+                                    qualityWarning={databaseJobInfo.qualityWarning}
+                                    supabaseUrl={businessInfo.supabaseUrl}
+                                    supabaseAnonKey={businessInfo.supabaseAnonKey}
+                                    enableContentViewing={true}
+                                    onRollback={(passNumber) => {
+                                        console.log('[DraftingModal] Rollback requested to pass:', passNumber);
+                                        dispatch({ type: 'SET_NOTIFICATION', payload: `Rolled back to pass ${passNumber}. Refresh to see changes.` });
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 ) : null}
             </div>
