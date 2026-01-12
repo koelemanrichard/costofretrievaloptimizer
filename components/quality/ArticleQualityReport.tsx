@@ -43,6 +43,12 @@ export interface ArticleQualityReportProps {
   content?: string;
   /** Systemic checks results (auto-generated from businessInfo if not provided) */
   systemicChecks?: SystemicCheckResult[];
+  /**
+   * All rules that were evaluated (both passing and failing).
+   * If provided, only categories with evaluated rules will be shown.
+   * Each item should have { ruleName, isPassing } at minimum.
+   */
+  evaluatedRules?: Array<{ ruleName: string; isPassing: boolean }>;
   /** Callback when user approves the article */
   onApprove: () => void;
   /** Callback to request fixes for specific rules */
@@ -590,6 +596,7 @@ export const ArticleQualityReport: React.FC<ArticleQualityReportProps> = ({
   businessInfo,
   content,
   systemicChecks: propSystemicChecks,
+  evaluatedRules,
   onApprove,
   onRequestFix,
   onEdit,
@@ -612,15 +619,49 @@ export const ArticleQualityReport: React.FC<ArticleQualityReportProps> = ({
   const [showPassHistory, setShowPassHistory] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(new Set());
 
-  // Calculate category scores based on actual violations
-  // This correctly maps audit rule names to categories instead of relying on ID matching
+  // Calculate category scores based on actual evaluated rules (dynamic list)
+  // Only shows categories that were actually evaluated during audit
   const categoryScores: CategoryScore[] = useMemo(() => {
-    const allRules = RuleRegistry.getAllRules();
-    const categories = RuleRegistry.getCategories();
+    // If evaluatedRules is provided, use it for dynamic category calculation
+    if (evaluatedRules && evaluatedRules.length > 0) {
+      // Group evaluated rules by category
+      const rulesByCategory = new Map<RuleCategory, { passing: number; failing: number; critical: number }>();
 
-    // Group violations by category using the mapping
+      evaluatedRules.forEach(rule => {
+        const category = getCategoryFromViolation(rule.ruleName);
+        const current = rulesByCategory.get(category) || { passing: 0, failing: 0, critical: 0 };
+
+        if (rule.isPassing) {
+          current.passing++;
+        } else {
+          current.failing++;
+          if (isViolationCritical(rule.ruleName)) {
+            current.critical++;
+          }
+        }
+        rulesByCategory.set(category, current);
+      });
+
+      // Convert to CategoryScore array - ONLY categories that were evaluated
+      return Array.from(rulesByCategory.entries())
+        .map(([category, counts]) => {
+          const total = counts.passing + counts.failing;
+          const score = total > 0 ? Math.round((counts.passing / total) * 100) : 100;
+          return {
+            category,
+            total,
+            passing: counts.passing,
+            failing: counts.failing,
+            criticalFailing: counts.critical,
+            score,
+          };
+        })
+        .sort((a, b) => a.score - b.score); // Sort by score ascending (worst first)
+    }
+
+    // Fallback: when evaluatedRules not provided, only show categories with violations
+    // (We can't know which rules passed without evaluatedRules)
     const violationsByCategory = new Map<RuleCategory, ValidationViolation[]>();
-    categories.forEach(cat => violationsByCategory.set(cat, []));
 
     violations.forEach(violation => {
       const category = getCategoryFromViolation(violation.rule);
@@ -629,36 +670,26 @@ export const ArticleQualityReport: React.FC<ArticleQualityReportProps> = ({
       violationsByCategory.set(category, categoryViolations);
     });
 
-    return categories.map(category => {
-      const categoryRules = allRules.filter(r => r.category === category);
-      const categoryViolations = violationsByCategory.get(category) || [];
+    // Only show categories that have violations (we know these were evaluated)
+    return Array.from(violationsByCategory.entries())
+      .filter(([_, violations]) => violations.length > 0)
+      .map(([category, categoryViolations]) => {
+        const failing = categoryViolations.length;
+        const criticalFailing = categoryViolations.filter(v => isViolationCritical(v.rule)).length;
 
-      // Calculate failing count from actual violations in this category
-      const failing = categoryViolations.length;
-      const criticalFailing = categoryViolations.filter(v => isViolationCritical(v.rule)).length;
-
-      // Total rules is from registry, passing is total minus violations
-      const total = categoryRules.length;
-      const passing = Math.max(0, total - failing);
-
-      // Calculate score: if no rules in registry for this category, use 100% if no violations
-      const score = total > 0
-        ? Math.round((passing / total) * 100)
-        : (failing === 0 ? 100 : 0);
-
-      return {
-        category,
-        total,
-        passing,
-        failing,
-        criticalFailing,
-        score,
-      };
-    })
-      // Filter out categories with no rules AND no violations
-      .filter(cat => cat.total > 0 || cat.failing > 0)
-      .sort((a, b) => a.score - b.score); // Sort by score ascending (worst first)
-  }, [violations]);
+        // We don't know the total rules checked, so show as "X failing"
+        // Use violations count as total for percentage calculation
+        return {
+          category,
+          total: failing, // Only count what we know about
+          passing: 0,
+          failing,
+          criticalFailing,
+          score: 0, // 0% since all we have are violations
+        };
+      })
+      .sort((a, b) => a.score - b.score);
+  }, [violations, evaluatedRules]);
 
   // Get issues grouped by severity using the audit rule mapping
   const criticalIssues = useMemo(() => {

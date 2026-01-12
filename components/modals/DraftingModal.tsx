@@ -2863,6 +2863,10 @@ ${schemaScript}`;
                                         suggestion: r.remediation || 'Review and address this issue',
                                         severity: 'warning' as const,
                                     })) || []}
+                                    evaluatedRules={brief?.contentAudit?.frameworkRules?.map((r: any) => ({
+                                        ruleName: r.ruleName,
+                                        isPassing: r.isPassing,
+                                    })) || undefined}
                                     passDeltas={[]}
                                     overallScore={databaseJobInfo?.auditScore || 0}
                                     businessInfo={businessInfo}
