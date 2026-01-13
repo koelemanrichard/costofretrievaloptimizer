@@ -329,6 +329,48 @@ export const enrichBriefWithVisualSemantics = (
     }
 };
 
+/**
+ * Suggest content length preset based on topic type and characteristics
+ * Per Korayanese framework:
+ * - Core topics (monetization): comprehensive (2000+ words)
+ * - Outer topics (authority): short (600 words)
+ * - Bridge topics: minimal (350 words)
+ */
+const suggestLengthPreset = (topic: EnrichedTopic): {
+    preset: 'minimal' | 'short' | 'standard' | 'comprehensive';
+    reason: string;
+} => {
+    // Core/monetization topics need comprehensive coverage
+    if (topic.topic_class === 'monetization' || topic.type === 'core') {
+        return {
+            preset: 'comprehensive',
+            reason: 'CORE topic (monetization) - comprehensive coverage needed to address all user criteria and outrank competitors.'
+        };
+    }
+
+    // Outer topics should be flat & informative, not deep
+    if (topic.type === 'outer') {
+        return {
+            preset: 'short',
+            reason: 'OUTER topic (authority building) - flat & informative content, not deep guides. Supports the topical map without competing with core pages.'
+        };
+    }
+
+    // Child topics (bridge content) need minimal coverage
+    if (topic.type === 'child') {
+        return {
+            preset: 'minimal',
+            reason: 'BRIDGE topic - completes the semantic network. Only needs minimal content to establish topical relationship.'
+        };
+    }
+
+    // Default to standard (SERP-based)
+    return {
+        preset: 'standard',
+        reason: 'Standard length based on SERP competitor analysis.'
+    };
+};
+
 export const generateContentBrief = async (
     businessInfo: BusinessInfo, topic: EnrichedTopic, allTopics: EnrichedTopic[], pillars: SEOPillars, knowledgeGraph: KnowledgeGraph, responseCode: ResponseCode, dispatch: React.Dispatch<any>
 ): Promise<Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>> => {
@@ -348,8 +390,16 @@ export const generateContentBrief = async (
         validateMonetizationBrief(brief, dispatch);
     }
 
-    // Enrich with enhanced visual semantics
-    return enrichBriefWithVisualSemantics(brief, topic);
+    // Suggest content length based on topic type
+    const lengthSuggestion = suggestLengthPreset(topic);
+
+    // Enrich with enhanced visual semantics and length suggestion
+    const enrichedBrief = await enrichBriefWithVisualSemantics(brief, topic);
+    return {
+        ...enrichedBrief,
+        suggestedLengthPreset: lengthSuggestion.preset,
+        suggestedLengthReason: lengthSuggestion.reason
+    };
 };
 
 export const generateArticleDraft = (

@@ -18,7 +18,10 @@ import { useContentBriefReport } from '../../hooks/useReportGeneration';
 import {
   ContentGenerationSettings,
   PRIORITY_PRESETS,
-  DEFAULT_CONTENT_GENERATION_SETTINGS
+  DEFAULT_CONTENT_GENERATION_SETTINGS,
+  LENGTH_PRESETS,
+  ContentLengthPreset,
+  DEFAULT_CONTENT_LENGTH_SETTINGS
 } from '../../types/contentGeneration';
 import { BriefHealthOverview } from '../brief/BriefHealthOverview';
 import { MoneyPagePillarsIndicator } from '../brief/MoneyPagePillarsIndicator';
@@ -652,6 +655,11 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         </header>
     );
 
+    // Check if current settings differ from AI suggestion
+    const currentLengthPreset = contentSettings?.contentLength?.preset ?? 'standard';
+    const suggestedPreset = brief?.suggestedLengthPreset;
+    const hasLengthMismatch = suggestedPreset && suggestedPreset !== currentLengthPreset;
+
     // Footer content
     const footerContent = brief ? (
         <div className="flex justify-between items-center w-full">
@@ -669,6 +677,31 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         />
                         <span id="multipass-hint">Use Multi-Pass Generation (9 passes)</span>
                     </label>
+                )}
+                {/* Length suggestion indicator - shown when AI suggests different preset */}
+                {!isGenerating && hasLengthMismatch && (
+                    <div className="flex items-center gap-2 px-2 py-1 bg-amber-900/30 border border-amber-600/40 rounded text-xs">
+                        <span className="text-amber-300">
+                            AI suggests: <strong>{suggestedPreset}</strong>
+                        </span>
+                        <button
+                            onClick={() => {
+                                setContentSettings(prev => ({
+                                    ...prev,
+                                    contentLength: {
+                                        ...(prev.contentLength ?? DEFAULT_CONTENT_LENGTH_SETTINGS),
+                                        preset: suggestedPreset as ContentLengthPreset
+                                    }
+                                }));
+                            }}
+                            className="text-amber-400 hover:text-amber-200 underline"
+                            title={brief.suggestedLengthReason}
+                        >
+                            Use it
+                        </button>
+                        <span className="text-gray-500">|</span>
+                        <span className="text-gray-400">Current: {currentLengthPreset}</span>
+                    </div>
                 )}
             </div>
             <div className="flex gap-2">

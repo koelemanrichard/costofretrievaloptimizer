@@ -169,6 +169,16 @@ Place links AFTER defining the concept, never in the first sentence.
       prompt += priorityGuidance;
     }
 
+    // Add content length guidance if available
+    if (context.lengthGuidance) {
+      const { targetWords, presetName, isShortContent } = context.lengthGuidance;
+      prompt += `## Content Length (${presetName} preset)
+Target: ${targetWords.min}-${targetWords.max} words for this section.
+${isShortContent ? `**SHORT CONTENT MODE**: Be concise and dense. Every sentence must add unique value. No padding or transitions for their own sake.` : `Standard length section - balance depth with clarity.`}
+
+`;
+    }
+
     // Add fix instructions if this is a retry
     if (fixInstructions) {
       prompt += `## CORRECTIONS REQUIRED (from previous attempt)

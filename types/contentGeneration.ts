@@ -35,6 +35,80 @@ export enum AudienceExpertise {
   EXPERT = 'expert',
 }
 
+// ============================================================================
+// CONTENT LENGTH TYPES
+// ============================================================================
+
+/**
+ * Content length presets based on Korayanese framework
+ * - minimal: Bridge topics, definitions, simple queries (200-400 words)
+ * - short: Outer topics, informational content (500-700 words)
+ * - standard: Standard articles based on SERP analysis (dynamic)
+ * - comprehensive: Core topics, quality nodes, pillar content (2000+ words)
+ */
+export type ContentLengthPreset = 'minimal' | 'short' | 'standard' | 'comprehensive';
+
+/**
+ * Preset configuration for content length
+ */
+export interface LengthPresetConfig {
+  targetWords: number | 'serp';  // 'serp' means use SERP average
+  maxSections: number;
+  description: string;
+  sectionWordRange: {
+    min: number;
+    max: number;
+  };
+}
+
+/**
+ * Content length preset definitions
+ */
+export const LENGTH_PRESETS: Record<ContentLengthPreset, LengthPresetConfig> = {
+  minimal: {
+    targetWords: 350,
+    maxSections: 3,
+    description: 'Bridge topics, definitions, simple queries',
+    sectionWordRange: { min: 80, max: 150 }
+  },
+  short: {
+    targetWords: 600,
+    maxSections: 5,
+    description: 'Outer topics, informational content',
+    sectionWordRange: { min: 100, max: 180 }
+  },
+  standard: {
+    targetWords: 'serp',  // Dynamic based on competitor analysis
+    maxSections: 8,
+    description: 'Standard articles based on SERP analysis',
+    sectionWordRange: { min: 150, max: 300 }
+  },
+  comprehensive: {
+    targetWords: 2000,
+    maxSections: 12,
+    description: 'Core topics, quality nodes, pillar content',
+    sectionWordRange: { min: 200, max: 400 }
+  }
+};
+
+/**
+ * User-configurable content length settings
+ */
+export interface ContentLengthSettings {
+  preset: ContentLengthPreset;
+  targetWordCount?: number;        // User override (optional, takes precedence)
+  maxSections?: number;            // User override for max sections
+  respectTopicType: boolean;       // Auto-adjust for core vs outer topics
+}
+
+/**
+ * Default content length settings
+ */
+export const DEFAULT_CONTENT_LENGTH_SETTINGS: ContentLengthSettings = {
+  preset: 'standard',
+  respectTopicType: true
+};
+
 /**
  * Configuration for individual refinement passes
  */
@@ -79,6 +153,9 @@ export interface ContentGenerationSettings {
   tone: ContentTone;
   audienceExpertise: AudienceExpertise;
 
+  // Content length control
+  contentLength: ContentLengthSettings;
+
   // Pass control
   checkpointAfterPass1: boolean;
   passes: PassConfigMap;
@@ -103,6 +180,11 @@ export interface ContentGenerationSettingsRow {
   priority_factual_density: number;
   tone: string;
   audience_expertise: string;
+  // Content length columns
+  length_preset: string;
+  target_word_count: number | null;
+  max_sections: number | null;
+  respect_topic_type: boolean;
   pass_config: {
     checkpoint_after_pass_1: boolean;
     passes: Record<string, { enabled: boolean; store_version: boolean }>;
@@ -442,6 +524,7 @@ export const DEFAULT_CONTENT_GENERATION_SETTINGS: Omit<ContentGenerationSettings
   priorities: PRIORITY_PRESETS.balanced,
   tone: ContentTone.PROFESSIONAL,
   audienceExpertise: AudienceExpertise.INTERMEDIATE,
+  contentLength: DEFAULT_CONTENT_LENGTH_SETTINGS,
   checkpointAfterPass1: false,
   passes: {
     pass_2_headers: { enabled: true, storeVersion: true },
@@ -477,6 +560,12 @@ export function settingsRowToInterface(row: ContentGenerationSettingsRow): Conte
     },
     tone: row.tone as ContentTone,
     audienceExpertise: row.audience_expertise as AudienceExpertise,
+    contentLength: {
+      preset: (row.length_preset as ContentLengthPreset) ?? 'standard',
+      targetWordCount: row.target_word_count ?? undefined,
+      maxSections: row.max_sections ?? undefined,
+      respectTopicType: row.respect_topic_type ?? true
+    },
     checkpointAfterPass1: row.pass_config.checkpoint_after_pass_1,
     passes: {
       pass_2_headers: {
@@ -534,6 +623,11 @@ export function settingsToDbInsert(
     priority_factual_density: settings.priorities.factualDensity,
     tone: settings.tone,
     audience_expertise: settings.audienceExpertise,
+    // Content length columns
+    length_preset: settings.contentLength.preset,
+    target_word_count: settings.contentLength.targetWordCount ?? null,
+    max_sections: settings.contentLength.maxSections ?? null,
+    respect_topic_type: settings.contentLength.respectTopicType,
     pass_config: {
       checkpoint_after_pass_1: settings.checkpointAfterPass1,
       passes: {

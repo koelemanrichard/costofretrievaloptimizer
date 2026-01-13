@@ -355,7 +355,16 @@ export class ContentGenerationOrchestrator {
     return Math.round(progress);
   }
 
-  parseSectionsFromBrief(brief: ContentBrief): SectionDefinition[] {
+  /**
+   * Parse sections from a content brief
+   * @param brief - The content brief
+   * @param options - Optional configuration for section parsing
+   * @param options.maxSections - Maximum total sections (including intro/conclusion)
+   */
+  parseSectionsFromBrief(
+    brief: ContentBrief,
+    options?: { maxSections?: number }
+  ): SectionDefinition[] {
     const sections: SectionDefinition[] = [];
 
     // Add introduction with topic-aware heading (avoid generic "Introduction")
@@ -375,9 +384,10 @@ export class ContentGenerationOrchestrator {
     });
 
     // Parse structured_outline if available
+    const bodySections: SectionDefinition[] = [];
     if (brief.structured_outline && brief.structured_outline.length > 0) {
       brief.structured_outline.forEach((section, idx) => {
-        sections.push({
+        bodySections.push({
           key: `section_${idx + 1}`,
           heading: section.heading,
           level: section.level || 2,
@@ -389,7 +399,7 @@ export class ContentGenerationOrchestrator {
         // Add subsections if present
         if (section.subsections) {
           section.subsections.forEach((sub, subIdx) => {
-            sections.push({
+            bodySections.push({
               key: `section_${idx + 1}_sub_${subIdx + 1}`,
               heading: sub.heading,
               level: 3,
@@ -405,7 +415,7 @@ export class ContentGenerationOrchestrator {
       lines.forEach((line, idx) => {
         const match = line.match(/^(#{2,3})\s*(.+)/);
         if (match) {
-          sections.push({
+          bodySections.push({
             key: `section_${idx + 1}`,
             heading: match[2].trim(),
             level: match[1].length,
@@ -414,6 +424,19 @@ export class ContentGenerationOrchestrator {
         }
       });
     }
+
+    // Apply maxSections limit if specified (accounting for intro + conclusion = 2 reserved)
+    if (options?.maxSections && options.maxSections > 2) {
+      const maxBodySections = options.maxSections - 2; // Reserve spots for intro & conclusion
+      if (bodySections.length > maxBodySections) {
+        console.log(`[Orchestrator] Limiting sections: ${bodySections.length} → ${maxBodySections} body sections (maxSections: ${options.maxSections})`);
+        // Keep only the first N body sections (which are already importance-ordered)
+        bodySections.splice(maxBodySections);
+      }
+    }
+
+    // Add limited body sections
+    sections.push(...bodySections);
 
     // Add conclusion with topic-aware heading (avoid generic "Conclusion")
     // Priority: targetKeyword > title > fallback

@@ -741,7 +741,11 @@ export function useContentGeneration({
           (key, heading, current, total) => {
             onLog(`Section ${current}/${total}: ${heading}`, 'success');
           },
-          shouldAbort
+          shouldAbort,
+          {
+            settings: generationSettings,
+            topicType: topic?.type ?? 'unknown'
+          }
         );
         if (shouldAbort()) return;
         // Refresh job state

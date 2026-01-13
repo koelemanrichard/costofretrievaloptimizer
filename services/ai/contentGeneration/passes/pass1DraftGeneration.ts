@@ -13,6 +13,7 @@ import * as perplexityService from '../../../perplexityService';
 import * as openRouterService from '../../../openRouterService';
 import { dispatchToProvider } from '../../providerDispatcher';
 import { createLogger } from '../../../../utils/debugLogger';
+import { ContentGenerationSettings, LENGTH_PRESETS, DEFAULT_CONTENT_LENGTH_SETTINGS } from '../../../../types/contentGeneration';
 
 const log = createLogger('Pass1');
 
@@ -35,18 +36,48 @@ async function callProviderWithPrompt(
   });
 }
 
+export interface Pass1Options {
+  /** Content generation settings including length presets */
+  settings?: ContentGenerationSettings;
+  /** Topic type for auto-adjusting content length */
+  topicType?: 'core' | 'outer' | 'child' | 'unknown';
+}
+
 export async function executePass1(
   orchestrator: ContentGenerationOrchestrator,
   job: ContentGenerationJob,
   brief: ContentBrief,
   businessInfo: BusinessInfo,
   onSectionComplete: (key: string, heading: string, current: number, total: number) => void,
-  shouldAbort: () => boolean
+  shouldAbort: () => boolean,
+  options?: Pass1Options
 ): Promise<string> {
-  // 1. Parse sections from brief
-  let sections = orchestrator.parseSectionsFromBrief(brief);
+  // 1. Determine effective max sections from settings
+  const lengthSettings = options?.settings?.contentLength ?? DEFAULT_CONTENT_LENGTH_SETTINGS;
+  const preset = LENGTH_PRESETS[lengthSettings.preset];
 
-  // 2. Order sections using AttributeRanker (ROOT → UNIQUE → RARE → COMMON)
+  // Calculate effective max sections
+  let effectiveMaxSections: number | undefined;
+  if (lengthSettings.maxSections !== undefined) {
+    // User override takes precedence
+    effectiveMaxSections = lengthSettings.maxSections;
+  } else if (lengthSettings.respectTopicType && options?.topicType && options.topicType !== 'unknown') {
+    // Auto-adjust based on topic type
+    const topicTypePreset = options.topicType === 'core' ? 'comprehensive' :
+                            options.topicType === 'outer' ? 'short' : 'standard';
+    effectiveMaxSections = LENGTH_PRESETS[topicTypePreset].maxSections;
+    log.info(`Auto-adjusting maxSections for ${options.topicType} topic: ${effectiveMaxSections}`);
+  } else {
+    // Use preset default
+    effectiveMaxSections = preset.maxSections;
+  }
+
+  log.info(`Content length settings: preset=${lengthSettings.preset}, maxSections=${effectiveMaxSections}`);
+
+  // 2. Parse sections from brief with maxSections limit
+  let sections = orchestrator.parseSectionsFromBrief(brief, { maxSections: effectiveMaxSections });
+
+  // 3. Order sections using AttributeRanker (ROOT → UNIQUE → RARE → COMMON)
   // Convert to BriefSection for ordering, then convert back
   const briefSections: BriefSection[] = sections.map(s => ({
     key: s.key,
@@ -86,7 +117,18 @@ export async function executePass1(
   // 5. Track discourse context for S-P-O chaining
   let previousContent: string | null = null;
 
-  // 6. Generate each section
+  // 6. Build length guidance for section prompts
+  const sectionWordRange = lengthSettings.respectTopicType && options?.topicType && options.topicType !== 'unknown'
+    ? LENGTH_PRESETS[options.topicType === 'core' ? 'comprehensive' : options.topicType === 'outer' ? 'short' : 'standard'].sectionWordRange
+    : preset.sectionWordRange;
+  const lengthGuidance: LengthGuidance = {
+    targetWords: sectionWordRange,
+    presetName: lengthSettings.preset,
+    isShortContent: lengthSettings.preset === 'minimal' || lengthSettings.preset === 'short'
+  };
+  log.info(`Section word range: ${sectionWordRange.min}-${sectionWordRange.max} words (${lengthSettings.preset} preset)`);
+
+  // 7. Generate each section
   for (const section of sections) {
     // Check for abort
     if (shouldAbort()) {
@@ -118,7 +160,8 @@ export async function executePass1(
       businessInfo,
       sections,
       discourseContext,
-      3
+      3,
+      lengthGuidance
     );
 
     // Save to sections table
@@ -164,13 +207,20 @@ export async function executePass1(
   return fullDraft;
 }
 
+interface LengthGuidance {
+  targetWords: { min: number; max: number };
+  presetName: string;
+  isShortContent: boolean;
+}
+
 async function generateSectionWithRetry(
   section: SectionDefinition,
   brief: ContentBrief,
   businessInfo: BusinessInfo,
   allSections: SectionDefinition[],
   discourseContext: DiscourseContext | null,
-  maxRetries: number
+  maxRetries: number,
+  lengthGuidance?: LengthGuidance
 ): Promise<string> {
   let lastError: Error | null = null;
   let fixInstructions: string | undefined = undefined;
@@ -210,6 +260,7 @@ async function generateSectionWithRetry(
         isYMYL: ymylDetection.isYMYL,
         ymylCategory: ymylDetection.category,
         language: businessInfo.language, // Pass language for multilingual validation
+        lengthGuidance, // Content length guidance from settings
       };
 
       // Use SectionPromptBuilder instead of legacy prompt

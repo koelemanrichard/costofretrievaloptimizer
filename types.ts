@@ -527,6 +527,12 @@ export interface SectionGenerationContext {
   totalSections?: number;
   /** SEO pillars for pillar alignment validation (S3 rule) */
   pillars?: SEOPillars;
+  /** Content length guidance for this section */
+  lengthGuidance?: {
+    targetWords: { min: number; max: number };
+    presetName: string;
+    isShortContent: boolean;
+  };
 }
 
 export interface VisualSemantics {
@@ -750,6 +756,10 @@ export interface ContentBrief {
   suggested_h1?: string;    // Legacy: suggested H1 headline
   response_code?: ResponseCode | string; // Legacy: response format code
   topic_class?: 'monetization' | 'informational'; // Legacy: topic classification
+
+  // Content length recommendation
+  suggestedLengthPreset?: 'minimal' | 'short' | 'standard' | 'comprehensive';
+  suggestedLengthReason?: string;
 }
 
 export interface SerpResult {
