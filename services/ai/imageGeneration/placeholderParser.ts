@@ -78,9 +78,9 @@ export function createImagePlaceholder(
   const type = determineImageType(parsed.description, parsed.position, isFirst);
   const specs = IMAGE_SPECS_BY_TYPE[type];
 
-  // Use deterministic ID based on description + alt text
-  // This ensures the same placeholder gets the same ID across re-parses
-  const idSource = `${parsed.description}|${parsed.altText}`;
+  // Use deterministic ID based on description + alt text + position
+  // Position ensures uniqueness even if same description appears multiple times in draft
+  const idSource = `${parsed.description}|${parsed.altText}|${parsed.position}`;
 
   return {
     id: deterministicId(idSource),

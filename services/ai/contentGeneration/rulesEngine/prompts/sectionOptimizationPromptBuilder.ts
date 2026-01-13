@@ -226,6 +226,34 @@ Preserve prose where structured content is not needed.
 // ============================================
 
 /**
+ * Extract image descriptions from previous sections to avoid duplicates.
+ * Looks for [IMAGE: description | alt="..."] patterns.
+ */
+function extractExistingImageDescriptions(
+  currentSection: ContentGenerationSection,
+  allSections: ContentGenerationSection[]
+): string[] {
+  const imagePattern = /\[IMAGE:\s*([^|]+)\s*\|/gi;
+  const descriptions: string[] = [];
+
+  for (const section of allSections) {
+    // Only check sections that come before the current one
+    if (section.section_order >= currentSection.section_order) continue;
+
+    const content = section.current_content || '';
+    let match;
+    while ((match = imagePattern.exec(content)) !== null) {
+      const desc = match[1].trim();
+      if (desc && desc.length > 10) {
+        descriptions.push(desc);
+      }
+    }
+  }
+
+  return descriptions;
+}
+
+/**
  * Get visual semantics suggestions relevant to a specific section.
  * Matches based on section heading, key, or description overlap.
  */
@@ -267,6 +295,9 @@ export function buildPass4Prompt(ctx: SectionOptimizationContext): string {
   const briefVisualSemantics = brief?.visual_semantics || [];
   const relevantSemantics = getRelevantVisualSemantics(section, briefVisualSemantics);
 
+  // Check what images already exist in previous sections to avoid duplicates
+  const existingImageDescriptions = extractExistingImageDescriptions(section, ctx.allSections || []);
+
   // Format visual semantics for the prompt
   const visualSemanticsSection = relevantSemantics.length > 0
     ? `
@@ -287,6 +318,17 @@ The brief contains ${briefVisualSemantics.length} planned images. If none apply 
 generate appropriate images based on the content.
 `
       : '';
+
+  // Add deduplication warning if there are already images in the article
+  const deduplicationWarning = existingImageDescriptions.length > 0
+    ? `
+## CRITICAL: AVOID DUPLICATE IMAGES
+The following images ALREADY exist in earlier sections. DO NOT use similar descriptions:
+${existingImageDescriptions.slice(0, 5).map(d => `- "${d.slice(0, 60)}..."`).join('\n')}
+
+Generate a UNIQUE image specific to THIS section's content. Each section needs its own distinct visual.
+`
+    : '';
 
   return `You are a Holistic SEO editor applying KORAYANESE FRAMEWORK for visual semantics.
 
@@ -340,7 +382,7 @@ For body sections (non-intro):
 - NEVER place image between heading and its answer
 `}
 ${visualSemanticsSection}
-
+${deduplicationWarning}
 ## KORAYANESE IMAGE POSITIONING RULES:
 
 ### RULE 1: HEADING-ANSWER PROXIMITY
