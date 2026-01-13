@@ -266,6 +266,12 @@ export async function analyzeContentForUrl(
     // Calculate overall content score
     const contentScore = calculateContentScore(attributeDistribution, centralEntityAnalysis);
 
+    // Extract actual metrics
+    const wordCount = parsedContent.fullText
+      ? parsedContent.fullText.split(/\s+/).filter(Boolean).length
+      : 0;
+    const headingCount = (parsedContent.h2s?.length || 0) + (parsedContent.h3s?.length || 0);
+
     return {
       url,
       domain: extractDomain(url),
@@ -274,6 +280,8 @@ export async function analyzeContentForUrl(
       attributeDistribution,
       centralEntityAnalysis,
       contentScore,
+      wordCount,
+      headingCount,
     };
   };
 

@@ -2876,9 +2876,9 @@ ${schemaScript}`;
                                         return null;
                                     })()}
 
-                                    {/* Main Content */}
+                                    {/* Main Content - strip leading H1 since we render title separately */}
                                     <div className="prose prose-invert max-w-none">
-                                        <SimpleMarkdown content={safeString(draftContent)} />
+                                        <SimpleMarkdown content={safeString(draftContent).replace(/^#\s+[^\n]+\n*/m, '')} />
                                     </div>
 
                                     {/* All Image Placeholders Summary */}

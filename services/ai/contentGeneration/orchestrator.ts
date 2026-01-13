@@ -438,13 +438,15 @@ export class ContentGenerationOrchestrator {
     // Add limited body sections
     sections.push(...bodySections);
 
-    // Add conclusion with topic-aware heading (avoid generic "Conclusion")
-    // Priority: targetKeyword > title > fallback
-    const conclusionHeading = brief.targetKeyword
-      ? `Conclusie: ${brief.targetKeyword} Samengevat`
-      : brief.title
-        ? `Samenvatting: ${brief.title}`
-        : 'Conclusie';
+    // Add conclusion with action-oriented heading (avoid "Samenvatting" which repeats title)
+    // Priority: Create short, actionable heading that doesn't duplicate the title
+    // Extract core topic from targetKeyword or first few words of title
+    const coreTopic = brief.targetKeyword
+      || (brief.title?.split(/[:|–-]/)[0]?.trim().substring(0, 50))
+      || 'dit onderwerp';
+
+    // Create action-oriented heading, NOT a summary heading
+    const conclusionHeading = `Volgende Stappen voor ${coreTopic}`;
 
     sections.push({
       key: 'conclusion',

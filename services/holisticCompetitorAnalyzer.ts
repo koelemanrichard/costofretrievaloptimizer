@@ -227,9 +227,17 @@ function aggregatePatterns(
   const dominantContentType = Object.entries(typeCounts)
     .sort((a, b) => b[1] - a[1])[0]?.[0] || 'article';
 
-  // Average word count (estimated from EAVs)
+  // Average word count - use actual word count if available, otherwise estimate from EAVs
+  const wordCounts = competitors.map(c => {
+    // Prefer actual word count from ContentLayerAnalysis
+    if (c.content.wordCount && c.content.wordCount > 0) {
+      return c.content.wordCount;
+    }
+    // Fallback: estimate from EAV count (50 words per EAV as rough estimate)
+    return c.content.eavTriples.length * 50;
+  });
   const avgWordCount = Math.round(
-    competitors.reduce((sum, c) => sum + c.content.eavTriples.length * 50, 0) / competitors.length
+    wordCounts.reduce((sum, wc) => sum + wc, 0) / wordCounts.length
   );
 
   // Common schema types

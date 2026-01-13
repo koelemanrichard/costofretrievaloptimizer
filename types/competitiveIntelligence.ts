@@ -208,6 +208,12 @@ export interface ContentLayerAnalysis {
 
   // Overall content score
   contentScore: number;
+
+  // Content metrics (NEW - actual data)
+  wordCount?: number;           // Actual word count from content
+  headingCount?: number;        // Number of headings
+  imageCount?: number;          // Number of images
+  schemaTypesFound?: string[];  // Schema types found on page
 }
 
 // =============================================================================
