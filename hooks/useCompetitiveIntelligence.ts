@@ -16,7 +16,8 @@ import {
   TopicSerpIntelligence,
   CompetitorAnalysis,
 } from '../types/competitiveIntelligence';
-import { SerpMode } from '../services/serpService';
+import { SerpMode, analyzeSerpForTopic } from '../services/serpService';
+import { FullSerpResult } from '../services/serpApiService';
 import {
   analyzeTopicCompetitors,
   HolisticAnalysisOptions,
@@ -54,9 +55,27 @@ export interface CompetitiveIntelligenceState {
   cacheExpiresAt: Date | null;
 }
 
+/**
+ * SERP Competitor for selection UI
+ */
+export interface SerpCompetitorForSelection {
+  url: string;
+  domain: string;
+  title: string;
+  position: number;
+  snippet?: string;
+}
+
 export interface UseCompetitiveIntelligenceResult extends CompetitiveIntelligenceState {
   /** Trigger analysis for a topic */
-  analyze: (topic: string, mode: SerpMode, topicId?: string) => Promise<void>;
+  analyze: (
+    topic: string,
+    mode: SerpMode,
+    topicId?: string,
+    selectedCompetitorUrls?: Array<{ url: string; position: number; domain?: string; title?: string }>
+  ) => Promise<void>;
+  /** Fetch SERP competitors for user selection (deep mode only) */
+  fetchSerpCompetitors: (topic: string) => Promise<SerpCompetitorForSelection[]>;
   /** Load cached analysis for a topic */
   loadCached: (topicId?: string, topicTitle?: string) => Promise<boolean>;
   /** Reset state */
@@ -150,8 +169,72 @@ export function useCompetitiveIntelligence(
     }
   }, [supabase]);
 
+  // Fetch SERP competitors for user selection (deep mode only)
+  const fetchSerpCompetitors = useCallback(async (topic: string): Promise<SerpCompetitorForSelection[]> => {
+    if (!isDeepModeAvailable) {
+      console.warn('Deep mode not available - cannot fetch SERP competitors');
+      return [];
+    }
+
+    try {
+      setState(prev => ({
+        ...prev,
+        status: 'loading',
+        progress: 5,
+        progressStage: 'Fetching SERP data',
+        progressDetail: topic,
+        error: null,
+      }));
+
+      const serpResult = await analyzeSerpForTopic(topic, 'deep', businessInfo);
+
+      if (serpResult.mode === 'deep' && 'organicResults' in serpResult.data) {
+        const fullSerp = serpResult.data as FullSerpResult;
+
+        setState(prev => ({
+          ...prev,
+          status: 'idle',
+          progress: 0,
+          progressStage: '',
+          progressDetail: '',
+        }));
+
+        return fullSerp.organicResults.slice(0, 20).map(r => ({
+          url: r.url,
+          domain: r.domain,
+          title: r.title,
+          position: r.position,
+          snippet: r.snippet,
+        }));
+      }
+
+      setState(prev => ({
+        ...prev,
+        status: 'idle',
+        progress: 0,
+        progressStage: '',
+        progressDetail: '',
+      }));
+
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch SERP competitors:', error);
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Failed to fetch SERP data',
+      }));
+      return [];
+    }
+  }, [businessInfo, isDeepModeAvailable]);
+
   // Analyze topic
-  const analyze = useCallback(async (topic: string, mode: SerpMode, topicId?: string) => {
+  const analyze = useCallback(async (
+    topic: string,
+    mode: SerpMode,
+    topicId?: string,
+    selectedCompetitorUrls?: Array<{ url: string; position: number; domain?: string; title?: string }>
+  ) => {
     // Validate mode availability
     if (mode === 'deep' && !isDeepModeAvailable) {
       setState(prev => ({
@@ -178,7 +261,8 @@ export function useCompetitiveIntelligence(
       const options: HolisticAnalysisOptions = {
         mode,
         businessInfo,
-        competitorLimit: 5,
+        competitorLimit: selectedCompetitorUrls?.length || 5,
+        selectedCompetitorUrls, // Pass user-selected URLs if provided
         onProgress: (stage, progress, detail) => {
           setState(prev => ({
             ...prev,
@@ -241,6 +325,7 @@ export function useCompetitiveIntelligence(
   return {
     ...state,
     analyze,
+    fetchSerpCompetitors,
     loadCached,
     reset,
     isDeepModeAvailable,

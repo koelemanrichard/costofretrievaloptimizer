@@ -28,6 +28,12 @@ import { PublishToWordPressModal } from '../wordpress';
 import { AuditIssuesPanel } from '../drafting/AuditIssuesPanel';
 import { AuditIssue } from '../../types';
 import { runAlgorithmicAudit, convertToAuditIssues } from '../../services/ai/contentGeneration/passes/auditChecks';
+import {
+  convertMarkdownToBasicHtml,
+  convertMarkdownToSemanticHtml,
+  extractCenterpiece,
+  buildFullHtmlDocument,
+} from '../../services/contentAssemblyService';
 import { useFeatureGate } from '../../hooks/usePermissions';
 import { QualityRulePanel, ArticleQualityReport } from '../quality';
 import { PassDiffViewer } from '../drafting/PassDiffViewer';
@@ -1231,7 +1237,7 @@ ${JSON.stringify(schemaData, null, 2)}
       </div>
     </header>
     <div itemprop="articleBody">
-    ${convertMarkdownToHtml(draftContent)}
+    ${convertMarkdownToBasicHtml(draftContent)}
     </div>
   </article>
 </body>
@@ -1497,69 +1503,6 @@ Image ${i + 1}: ${img.type}
     URL.revokeObjectURL(url);
   };
 
-  // Simple markdown to HTML converter for export
-  const convertMarkdownToHtml = (md: string): string => {
-    let html = md
-      // Headers
-      .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      // Bold and italic
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Images with alt text - wrap in figure with figcaption
-      .replace(/!\[([^\]]+)\]\(([^)]+)\)/g, (match, alt, src) => {
-        // If image has meaningful alt text, wrap in figure with figcaption
-        if (alt && alt.length > 5) {
-          return `<figure><img src="${src}" alt="${alt}" loading="lazy" /><figcaption>${alt}</figcaption></figure>`;
-        }
-        return `<img src="${src}" alt="${alt || ''}" loading="lazy" />`;
-      })
-      // Images without alt text
-      .replace(/!\[\]\(([^)]+)\)/g, '<img src="$1" alt="" loading="lazy" />')
-      // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-      // Code blocks
-      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      // Inline code
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Horizontal rules
-      .replace(/^---$/gm, '<hr />')
-      // Blockquotes
-      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-      // Unordered lists - use temporary marker to distinguish from ordered
-      .replace(/^- (.+)$/gm, '<uli>$1</uli>')
-      // Ordered lists - use temporary marker to distinguish from unordered
-      .replace(/^\d+\. (.+)$/gm, '<oli>$1</oli>')
-      // Paragraphs (lines with content that aren't already tags)
-      .split('\n')
-      .map(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return '';
-        if (trimmed.startsWith('<')) return line;
-        return `<p>${line}</p>`;
-      })
-      .join('\n');
-
-    // Wrap consecutive unordered list items in <ul> (Rule: use <ul> for features, types, benefits)
-    html = html.replace(/(<uli>[\s\S]*?<\/uli>\n?)+/g, (match) => {
-      const items = match.replace(/<\/?uli>/g, (tag) => tag === '<uli>' ? '<li>' : '</li>');
-      return `<ul>\n${items}</ul>`;
-    });
-    // Wrap consecutive ordered list items in <ol> (Rule: use <ol> for sequential/instructional content)
-    html = html.replace(/(<oli>[\s\S]*?<\/oli>\n?)+/g, (match) => {
-      const items = match.replace(/<\/?oli>/g, (tag) => tag === '<oli>' ? '<li>' : '</li>');
-      return `<ol>\n${items}</ol>`;
-    });
-    // Merge consecutive blockquotes
-    html = html.replace(/(<blockquote>[^<]+<\/blockquote>\n?)+/g, (match) => {
-      const content = match.replace(/<\/?blockquote>/g, '').trim().split('\n').join('<br/>');
-      return `<blockquote>${content}</blockquote>`;
-    });
-
-    return html;
-  };
 
   // Download only the HTML file (quick download for publishing)
   // Follows HTML Writing Best Practices for SEO: semantic tags, centerpiece annotation, CLS prevention, proper schema nesting
@@ -1716,209 +1659,8 @@ Image ${i + 1}: ${img.type}
   <meta property="article:published_time" content="${publishDate}">
   ${businessInfo.authorName ? `<meta property="article:author" content="${businessInfo.authorName.replace(/"/g, '&quot;')}">` : ''}`;
 
-    // Extract first meaningful paragraph for centerpiece (first 400 chars rule)
-    const extractCenterpiece = (content: string): string => {
-      // Find first paragraph after any heading
-      const paragraphMatch = content.match(/^(?:#{1,6}\s+.+\n+)?([^#\n].+)/m);
-      if (paragraphMatch && paragraphMatch[1]) {
-        return paragraphMatch[1].trim().substring(0, 300);
-      }
-      // Fallback to meta description
-      return brief.metaDescription || '';
-    };
-    const centerpiece = extractCenterpiece(draftContent);
-
-    // Convert markdown to semantic HTML with sections
-    const convertToSemanticHtml = (md: string): string => {
-      const lines = md.split('\n');
-      let html = '';
-      let inSection = false;
-      let currentSectionLevel = 0;
-      let inTable = false;
-      let tableHeaders: string[] = [];
-      let tableBody: string[][] = [];
-      // List state tracking: 'none' | 'ul' | 'ol'
-      let currentListType: 'none' | 'ul' | 'ol' = 'none';
-
-      // Helper to close current list if open
-      const closeList = () => {
-        if (currentListType !== 'none') {
-          html += currentListType === 'ol' ? '</ol>\n' : '</ul>\n';
-          currentListType = 'none';
-        }
-      };
-
-      // Helper to flush table HTML (semantic structure per framework rules)
-      const flushTable = () => {
-        if (tableHeaders.length > 0 || tableBody.length > 0) {
-          html += '<table>\n';
-          if (tableHeaders.length > 0) {
-            // Use scope="col" for machine readability (Rule D: Machine Readability)
-            html += '<thead><tr>' + tableHeaders.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>\n';
-          }
-          if (tableBody.length > 0) {
-            html += '<tbody>' + tableBody.map(row => '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>').join('\n') + '</tbody>\n';
-          }
-          html += '</table>\n';
-        }
-        tableHeaders = [];
-        tableBody = [];
-        inTable = false;
-      };
-
-      // Helper to parse a markdown table row
-      const parseTableRow = (line: string): string[] => {
-        // Remove leading/trailing pipes and split by |
-        return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
-      };
-
-      // Helper to check if line is a table separator (|---|---|)
-      const isTableSeparator = (line: string): boolean => {
-        return /^\|?[\s:-]+\|[\s|:-]+\|?$/.test(line.trim());
-      };
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const h2Match = line.match(/^## (.+)$/);
-        const h3Match = line.match(/^### (.+)$/);
-        const h4Match = line.match(/^#### (.+)$/);
-
-        // Check if this is a table line (starts with | or contains | separator pattern)
-        const isTableLine = line.trim().startsWith('|') && line.includes('|');
-
-        // Handle table parsing
-        if (isTableLine) {
-          if (!inTable) {
-            // Starting a new table - this is the header row
-            inTable = true;
-            tableHeaders = parseTableRow(line);
-          } else if (isTableSeparator(line)) {
-            // Skip separator row (|---|---|)
-            continue;
-          } else {
-            // Body row
-            tableBody.push(parseTableRow(line));
-          }
-          continue;
-        } else if (inTable) {
-          // We hit a non-table line, flush the table
-          flushTable();
-        }
-
-        // Close previous section if starting new H2
-        if (h2Match) {
-          if (inSection) {
-            html += '</section>\n';
-          }
-          html += `<section>\n<h2>${h2Match[1]}</h2>\n`;
-          inSection = true;
-          currentSectionLevel = 2;
-          continue;
-        }
-
-        // H3 within section
-        if (h3Match) {
-          html += `<h3>${h3Match[1]}</h3>\n`;
-          continue;
-        }
-
-        // H4 within section
-        if (h4Match) {
-          html += `<h4>${h4Match[1]}</h4>\n`;
-          continue;
-        }
-
-        // Process other content
-        let processedLine = line
-          // Bold and italic
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*(.+?)\*/g, '<em>$1</em>')
-          // Inline code
-          .replace(/`([^`]+)`/g, '<code>$1</code>');
-
-        // Images with dimensions and proper figure (Rule: include height/width for CLS)
-        // Uses embedded base64 data URLs for self-contained HTML
-        processedLine = processedLine.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-          // Replace URL with embedded base64 if available
-          const embeddedSrc = imageUrlMap.get(src) || src;
-          const isHero = src === ogImageUrl;
-          // Hero image should NOT be lazy loaded (LCP rule)
-          const loadingAttr = isHero ? '' : ' loading="lazy"';
-          // Include estimated dimensions for CLS prevention (Rule: always specify height/width)
-          const dimensionAttrs = ' width="800" height="450"';
-          if (alt && alt.length > 5) {
-            return `<figure><img src="${embeddedSrc}" alt="${alt}"${dimensionAttrs}${loadingAttr}><figcaption>${alt}</figcaption></figure>`;
-          }
-          return `<img src="${embeddedSrc}" alt="${alt || ''}"${dimensionAttrs}${loadingAttr}>`;
-        });
-
-        // Links - ensure pure HTML links (Rule: use pure HTML over JS)
-        processedLine = processedLine.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-
-        // Horizontal rules
-        if (processedLine.trim() === '---') {
-          html += '<hr>\n';
-          continue;
-        }
-
-        // Blockquotes
-        if (processedLine.startsWith('> ')) {
-          closeList(); // Close any open list before blockquote
-          html += `<blockquote>${processedLine.substring(2)}</blockquote>\n`;
-          continue;
-        }
-
-        // Unordered Lists (- item) - Rule: use <ul> for features, types, benefits without sequence
-        const ulMatch = processedLine.match(/^- (.+)$/);
-        if (ulMatch) {
-          if (currentListType !== 'ul') {
-            closeList(); // Close previous list if different type
-            html += '<ul>\n';
-            currentListType = 'ul';
-          }
-          html += `<li>${ulMatch[1]}</li>\n`;
-          continue;
-        }
-
-        // Ordered Lists (1. item) - Rule: use <ol> for sequential/instructional content, superlatives
-        const olMatch = processedLine.match(/^\d+\. (.+)$/);
-        if (olMatch) {
-          if (currentListType !== 'ol') {
-            closeList(); // Close previous list if different type
-            html += '<ol>\n';
-            currentListType = 'ol';
-          }
-          html += `<li>${olMatch[1]}</li>\n`;
-          continue;
-        }
-
-        // If we reach here and were in a list, close it (non-list content)
-        closeList();
-
-        // Paragraphs
-        const trimmed = processedLine.trim();
-        if (trimmed && !trimmed.startsWith('<')) {
-          html += `<p>${processedLine}</p>\n`;
-        } else if (trimmed) {
-          html += processedLine + '\n';
-        }
-      }
-
-      // Flush any remaining table
-      if (inTable) {
-        flushTable();
-      }
-
-      // Close any remaining open list
-      closeList();
-
-      // Close final section
-      if (inSection) {
-        html += '</section>\n';
-      }
-
-      return html;
-    };
+    // Extract centerpiece using canonical service (first 300 chars rule)
+    const centerpiece = extractCenterpiece(draftContent, 300) || brief.metaDescription || '';
 
     // Build HTML following SEO best practices
     // Rule: DOM under 1500 nodes, minified, semantic tags, centerpiece in first 400 chars
@@ -1946,7 +1688,7 @@ ${schemaScript}
 <p class="byline">${businessInfo.authorName ? `By <strong>${businessInfo.authorName}</strong> · ` : ''}<time datetime="${publishDate}">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time> · ${wordCount.toLocaleString()} words</p>
 </header>
 <p><strong>${centerpiece}</strong></p>
-${convertToSemanticHtml(draftContent)}
+${convertMarkdownToSemanticHtml(draftContent, { imageUrlMap, ogImageUrl })}
 </article>
 </main>
 </body>
@@ -1968,154 +1710,8 @@ ${convertToSemanticHtml(draftContent)}
     const publishDate = new Date().toISOString();
     const schemaData = databaseJobInfo?.schemaData;
 
-    // Extract first meaningful paragraph for centerpiece (first 400 chars rule)
-    const extractCenterpiece = (content: string): string => {
-      const paragraphMatch = content.match(/^(?:#{1,6}\s+.+\n+)?([^#\n].+)/m);
-      if (paragraphMatch && paragraphMatch[1]) {
-        return paragraphMatch[1].trim().substring(0, 300);
-      }
-      return brief.metaDescription || '';
-    };
-    const centerpiece = extractCenterpiece(draftContent);
-
-    // Convert markdown to semantic HTML with sections (SAME as download)
-    const convertToSemanticHtml = (md: string): string => {
-      const lines = md.split('\n');
-      let html = '';
-      let inSection = false;
-      let inTable = false;
-      let tableHeaders: string[] = [];
-      let tableBody: string[][] = [];
-      // List state tracking: 'none' | 'ul' | 'ol'
-      let currentListType: 'none' | 'ul' | 'ol' = 'none';
-
-      // Helper to close current list if open
-      const closeList = () => {
-        if (currentListType !== 'none') {
-          html += currentListType === 'ol' ? '</ol>\n' : '</ul>\n';
-          currentListType = 'none';
-        }
-      };
-
-      // Helper to flush table HTML (semantic structure per framework rules)
-      const flushTable = () => {
-        if (tableHeaders.length > 0 || tableBody.length > 0) {
-          html += '<table>\n';
-          if (tableHeaders.length > 0) {
-            // Use scope="col" for machine readability (Rule D: Machine Readability)
-            html += '<thead><tr>' + tableHeaders.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>\n';
-          }
-          if (tableBody.length > 0) {
-            html += '<tbody>' + tableBody.map(row => '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>').join('\n') + '</tbody>\n';
-          }
-          html += '</table>\n';
-        }
-        tableHeaders = [];
-        tableBody = [];
-        inTable = false;
-      };
-
-      const parseTableRow = (line: string): string[] => {
-        return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
-      };
-
-      const isTableSeparator = (line: string): boolean => {
-        return /^\|?[\s:-]+\|[\s|:-]+\|?$/.test(line.trim());
-      };
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const h2Match = line.match(/^## (.+)$/);
-        const h3Match = line.match(/^### (.+)$/);
-        const h4Match = line.match(/^#### (.+)$/);
-        const isTableLine = line.trim().startsWith('|') && line.includes('|');
-
-        // Handle table parsing
-        if (isTableLine) {
-          closeList(); // Close any open list before table
-          if (!inTable) {
-            inTable = true;
-            tableHeaders = parseTableRow(line);
-          } else if (isTableSeparator(line)) {
-            continue;
-          } else {
-            tableBody.push(parseTableRow(line));
-          }
-          continue;
-        } else if (inTable) {
-          flushTable();
-        }
-
-        if (h2Match) {
-          closeList(); // Close any open list before heading
-          if (inSection) html += '</section>\n';
-          html += `<section>\n<h2>${h2Match[1]}</h2>\n`;
-          inSection = true;
-          continue;
-        }
-        if (h3Match) { closeList(); html += `<h3>${h3Match[1]}</h3>\n`; continue; }
-        if (h4Match) { closeList(); html += `<h4>${h4Match[1]}</h4>\n`; continue; }
-
-        let processedLine = line
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*(.+?)\*/g, '<em>$1</em>')
-          .replace(/`([^`]+)`/g, '<code>$1</code>');
-
-        // Images with dimensions for CLS prevention (Rule: always specify height/width)
-        processedLine = processedLine.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-          const dimensionAttrs = ' width="800" height="450"';
-          if (alt && alt.length > 5) {
-            return `<figure><img src="${src}" alt="${alt}"${dimensionAttrs} loading="lazy"><figcaption>${alt}</figcaption></figure>`;
-          }
-          return `<img src="${src}" alt="${alt || ''}"${dimensionAttrs} loading="lazy">`;
-        });
-
-        // Links - pure HTML (Rule: use pure HTML over JS)
-        processedLine = processedLine.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-
-        if (processedLine.trim() === '---') { closeList(); html += '<hr>\n'; continue; }
-        if (processedLine.startsWith('> ')) { closeList(); html += `<blockquote>${processedLine.substring(2)}</blockquote>\n`; continue; }
-
-        // Unordered Lists (- item) - Rule: use <ul> for features, types, benefits without sequence
-        const ulMatch = processedLine.match(/^- (.+)$/);
-        if (ulMatch) {
-          if (currentListType !== 'ul') {
-            closeList();
-            html += '<ul>\n';
-            currentListType = 'ul';
-          }
-          html += `<li>${ulMatch[1]}</li>\n`;
-          continue;
-        }
-
-        // Ordered Lists (1. item) - Rule: use <ol> for sequential/instructional content, superlatives
-        const olMatch = processedLine.match(/^\d+\. (.+)$/);
-        if (olMatch) {
-          if (currentListType !== 'ol') {
-            closeList();
-            html += '<ol>\n';
-            currentListType = 'ol';
-          }
-          html += `<li>${olMatch[1]}</li>\n`;
-          continue;
-        }
-
-        // If we reach here and were in a list, close it
-        closeList();
-
-        const trimmed = processedLine.trim();
-        if (trimmed && !trimmed.startsWith('<')) {
-          html += `<p>${processedLine}</p>\n`;
-        } else if (trimmed) {
-          html += processedLine + '\n';
-        }
-      }
-
-      if (inTable) flushTable();
-      closeList(); // Close any remaining open list
-      if (inSection) html += '</section>\n';
-      return html;
-    };
+    // Extract centerpiece using canonical service (first 300 chars rule)
+    const centerpiece = extractCenterpiece(draftContent, 300) || brief.metaDescription || '';
 
     // Build enhanced JSON-LD schema
     const buildSchema = () => {
@@ -2156,7 +1752,7 @@ ${businessInfo.authorName ? `<p class="byline">By <strong>${businessInfo.authorN
 <!-- Centerpiece: First 400 chars for search snippets -->
 <p><strong>${centerpiece}</strong></p>
 
-${convertToSemanticHtml(draftContent)}
+${convertMarkdownToSemanticHtml(draftContent)}
 </article>
 
 <!-- JSON-LD Schema Markup (paste in Yoast/RankMath custom schema or theme footer) -->

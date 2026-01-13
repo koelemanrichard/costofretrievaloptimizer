@@ -184,6 +184,16 @@ ${isShortContent ? `**SHORT CONTENT MODE**: Be concise and dense. Every sentence
 `;
     }
 
+    // Add competitor-derived specifications if available
+    if (brief.competitorSpecs && brief.competitorSpecs.dataQuality !== 'none') {
+      prompt += this.buildCompetitorSpecsSection(brief.competitorSpecs, context.allSections?.length || 0);
+    }
+
+    // Add search intent alignment guidance
+    if (brief.searchIntent) {
+      prompt += this.buildSearchIntentGuidance(brief.searchIntent, section, context.allSections || []);
+    }
+
     // Add fix instructions if this is a retry
     if (fixInstructions) {
       prompt += `## CORRECTIONS REQUIRED (from previous attempt)
@@ -275,5 +285,126 @@ ${this.getFlowInstructions(fg)}
       default:
         return '- Follow natural topic progression';
     }
+  }
+
+  /**
+   * Build competitor-derived specifications guidance
+   * Uses data from SERP competitor analysis to inform content creation
+   */
+  private static buildCompetitorSpecsSection(
+    specs: NonNullable<import('../../../../../types').ContentBrief['competitorSpecs']>,
+    totalSections: number
+  ): string {
+    let section = `## Competitor Analysis Insights (${specs.dataQuality} confidence)
+Based on analysis of ${specs.competitorsAnalyzed} ranking competitors:
+
+`;
+
+    // Word count target
+    if (specs.targetWordCount > 0) {
+      const sectionTarget = totalSections > 0
+        ? Math.round(specs.targetWordCount / totalSections)
+        : specs.targetWordCount;
+      section += `**Target Article Length**: ~${specs.targetWordCount.toLocaleString()} words total
+**Per-Section Target**: ~${sectionTarget} words (to match competitors)
+`;
+      if (specs.wordCountConfidence === 'high') {
+        section += `This is a HIGH CONFIDENCE target - competitors consistently use this length.
+`;
+      }
+    }
+
+    // Required schema types
+    if (specs.requiredSchemaTypes && specs.requiredSchemaTypes.length > 0) {
+      section += `
+**Competitors Use Schema**: ${specs.requiredSchemaTypes.join(', ')}
+(Ensure content supports these structured data types)
+`;
+    }
+
+    // Image guidance
+    if (specs.targetImageCount > 0) {
+      section += `
+**Image Expectation**: ${specs.targetImageCount} images (${specs.recommendedImageTypes?.join(', ') || 'general illustrations'})
+`;
+    }
+
+    section += '\n';
+    return section;
+  }
+
+  /**
+   * Build search intent alignment guidance
+   * Adjusts content structure and focus based on user's search intent
+   */
+  private static buildSearchIntentGuidance(
+    intent: string,
+    currentSection: BriefSection,
+    allSections: BriefSection[]
+  ): string {
+    const normalizedIntent = intent.toLowerCase().trim();
+    const sectionIndex = allSections.findIndex(s => s.key === currentSection.key);
+    const isEarlySection = sectionIndex < 3;
+
+    let section = `## Search Intent Alignment (${normalizedIntent})
+`;
+
+    switch (normalizedIntent) {
+      case 'informational':
+        section += `**INFORMATIONAL INTENT - User wants to LEARN**
+- Lead with clear definitions and explanations
+- Use what/why/how structure
+- Prioritize educational value over promotion
+- Include examples that clarify concepts
+${isEarlySection ? '- Early sections should establish foundational understanding' : '- Build on established concepts from earlier sections'}
+
+`;
+        break;
+
+      case 'commercial':
+      case 'commercial investigation':
+        section += `**COMMERCIAL INTENT - User wants to COMPARE/EVALUATE**
+- Lead with benefits and value propositions
+- Use comparison structures where appropriate
+- Highlight differentiating factors
+- Address common objections or concerns
+- Include specific features with clear benefits
+${isEarlySection ? '- Early sections should establish credibility and unique value' : '- Build toward decision-making information'}
+
+`;
+        break;
+
+      case 'transactional':
+        section += `**TRANSACTIONAL INTENT - User wants to ACT/BUY**
+- Lead with action-oriented steps
+- Clear, direct instructions
+- Minimize barriers to action
+- Include specific next steps
+- Use imperative verbs ("Get", "Start", "Contact")
+${isEarlySection ? '- Early sections should quickly establish what to do and how' : '- Guide toward conversion/action'}
+
+`;
+        break;
+
+      case 'navigational':
+        section += `**NAVIGATIONAL INTENT - User wants to FIND**
+- Be direct and specific
+- Include relevant paths/links
+- Clear signposting for navigation
+- Minimize unnecessary explanation
+
+`;
+        break;
+
+      default:
+        // Mixed or unclear intent - provide balanced guidance
+        section += `**BALANCED APPROACH**
+- Mix educational content with practical application
+- Include both explanations and actionable guidance
+
+`;
+    }
+
+    return section;
   }
 }

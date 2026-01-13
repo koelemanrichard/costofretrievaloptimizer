@@ -657,6 +657,10 @@ export function buildPass7ConclusionPrompt(ctx: SectionOptimizationContext): str
   const isMonetization = brief.topic_class === 'monetization' ||
     (brief as any).topicClass === 'monetization';
 
+  // Get user-provided CTA from brief if available
+  const userCta = brief.cta?.trim();
+  const hasCta = userCta && userCta.length > 0;
+
   return `You are a Holistic SEO editor applying the KORAYANESE FRAMEWORK for conclusion writing.
 
 ${getLanguageAndRegionInstruction(businessInfo.language, businessInfo.region)}
@@ -677,6 +681,12 @@ Title: ${holistic.articleStructure.title}
 Central Entity: ${holistic.centralEntity}
 ${isMonetization ? `Business: This is a MONETIZATION topic - include service/product CTA` : 'This is an INFORMATIONAL topic - reinforce practical value'}
 
+${hasCta ? `## USER-PROVIDED CALL-TO-ACTION (MUST BE INCLUDED)
+**IMPORTANT:** The following CTA text MUST be incorporated into the conclusion:
+"${userCta}"
+
+Integrate this CTA naturally into the conclusion. You may slightly adapt the wording to fit the flow, but the core message and action must be preserved.
+` : ''}
 ## KORAYANESE CONCLUSION RULES
 
 ### RULE 1: TOPIC-SPECIFIC HEADING (NOT "Samenvatting" or "Conclusie")
@@ -685,7 +695,11 @@ ${isMonetization ? `Business: This is a MONETIZATION topic - include service/pro
 - Examples: "Neem Contact Op voor ${holistic.centralEntity}", "Start Vandaag met ${holistic.centralEntity}", "${holistic.centralEntity}: Uw Volgende Stap"
 
 ### RULE 2: CALL-TO-ACTION FOCUS
-${isMonetization ? `
+${hasCta ? `
+**INCLUDE USER'S CTA:**
+The CTA "${userCta}" must appear in the conclusion.
+Format it prominently, either as its own sentence or as a clear closing statement.
+` : isMonetization ? `
 **MONETIZATION CTA:**
 - Direct invitation to contact/request quote
 - Specific next step (call, email, form)

@@ -3,24 +3,38 @@
  *
  * Displays SERP analysis results for a topic including:
  * - Mode selector (Fast/Deep)
+ * - Competitor selection (for Deep mode)
  * - SERP snapshot summary
  * - Gap scores
  * - Attribute gaps (Root/Rare/Unique)
  * - Priority actions
  *
  * Created: December 25, 2024
+ * Updated: January 13, 2026 - Added competitor selection for deep mode
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   TopicSerpIntelligence,
-  ComprehensiveGapAnalysis,
 } from '../../types/competitiveIntelligence';
 import { SerpMode } from '../../services/serpService';
+import CompetitorSelectionPanel, { CompetitorItem } from './CompetitorSelectionPanel';
 
 // =============================================================================
 // Types
 // =============================================================================
+
+/** Phase of the analysis workflow */
+type AnalysisPhase = 'idle' | 'selecting_competitors' | 'analyzing' | 'complete';
+
+/** Competitor from SERP results */
+export interface SerpCompetitor {
+  url: string;
+  domain: string;
+  title: string;
+  position: number;
+  snippet?: string;
+}
 
 interface TopicSerpPanelProps {
   /** Topic being analyzed */
@@ -35,8 +49,10 @@ interface TopicSerpPanelProps {
   progressDetail?: string;
   /** Error message if analysis failed */
   error?: string;
-  /** Callback to trigger analysis */
-  onAnalyze: (mode: SerpMode) => void;
+  /** Callback to trigger analysis - now accepts optional competitor URLs for deep mode */
+  onAnalyze: (mode: SerpMode, selectedCompetitorUrls?: string[]) => void;
+  /** Callback to fetch SERP competitors without full analysis */
+  onFetchSerpCompetitors?: (mode: SerpMode) => Promise<SerpCompetitor[]>;
   /** Whether deep mode is available (has DataForSEO credentials) */
   deepModeAvailable: boolean;
   /** Custom class name */
@@ -127,6 +143,11 @@ const SerpFeatureBadge: React.FC<{ feature: string }> = ({ feature }) => {
     hasSitelinks: 'Sitelinks',
     hasReviews: 'Reviews',
     hasFaq: 'FAQ',
+    // Also handle simple feature names
+    FeaturedSnippet: 'Featured Snippet',
+    PeopleAlsoAsk: 'PAA',
+    PAA: 'PAA',
+    RelatedSearches: 'Related Searches',
   };
 
   const label = featureLabels[feature] || feature.replace('has', '');
@@ -150,16 +171,69 @@ const TopicSerpPanel: React.FC<TopicSerpPanelProps> = ({
   progressDetail,
   error,
   onAnalyze,
+  onFetchSerpCompetitors,
   deepModeAvailable,
   className = '',
 }) => {
   const [selectedMode, setSelectedMode] = useState<SerpMode>('fast');
+  const [analysisPhase, setAnalysisPhase] = useState<AnalysisPhase>('idle');
+  const [serpCompetitors, setSerpCompetitors] = useState<SerpCompetitor[]>([]);
+  const [selectedCompetitorUrls, setSelectedCompetitorUrls] = useState<string[]>([]);
+  const [fetchingCompetitors, setFetchingCompetitors] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const handleAnalyze = () => {
-    onAnalyze(selectedMode);
-  };
+  // Handle initial analyze button click
+  const handleAnalyze = useCallback(async () => {
+    // Fast mode: go directly to analysis
+    if (selectedMode === 'fast') {
+      onAnalyze('fast');
+      return;
+    }
 
-  // Render loading state
+    // Deep mode: first fetch competitors for selection (if callback provided)
+    if (selectedMode === 'deep' && onFetchSerpCompetitors) {
+      setFetchingCompetitors(true);
+      setFetchError(null);
+      try {
+        const competitors = await onFetchSerpCompetitors('deep');
+        setSerpCompetitors(competitors);
+        // Pre-select first 5
+        setSelectedCompetitorUrls(competitors.slice(0, 5).map(c => c.url));
+        setAnalysisPhase('selecting_competitors');
+      } catch (err) {
+        setFetchError(err instanceof Error ? err.message : 'Failed to fetch competitors');
+      } finally {
+        setFetchingCompetitors(false);
+      }
+    } else {
+      // No competitor selection callback - go directly to analysis
+      onAnalyze('deep');
+    }
+  }, [selectedMode, onAnalyze, onFetchSerpCompetitors]);
+
+  // Handle competitor selection confirmation
+  const handleConfirmCompetitors = useCallback(() => {
+    setAnalysisPhase('analyzing');
+    onAnalyze('deep', selectedCompetitorUrls);
+  }, [onAnalyze, selectedCompetitorUrls]);
+
+  // Handle back from competitor selection
+  const handleBackFromSelection = useCallback(() => {
+    setAnalysisPhase('idle');
+    setSerpCompetitors([]);
+    setSelectedCompetitorUrls([]);
+  }, []);
+
+  // Convert SerpCompetitor to CompetitorItem for the panel
+  const competitorItems: CompetitorItem[] = serpCompetitors.map(c => ({
+    url: c.url,
+    domain: c.domain,
+    title: c.title,
+    position: c.position,
+    snippet: c.snippet,
+  }));
+
+  // Render loading state (during deep analysis)
   if (isLoading) {
     return (
       <div className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6 ${className}`}>
@@ -191,6 +265,31 @@ const TopicSerpPanel: React.FC<TopicSerpPanelProps> = ({
         >
           Retry Analysis
         </button>
+      </div>
+    );
+  }
+
+  // Render competitor selection phase (for deep mode)
+  if (analysisPhase === 'selecting_competitors') {
+    return (
+      <div className={`${className}`}>
+        <div className="mb-4">
+          <button
+            onClick={handleBackFromSelection}
+            className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
+          >
+            <span>←</span> Back to mode selection
+          </button>
+        </div>
+        <CompetitorSelectionPanel
+          competitors={competitorItems}
+          selectedUrls={selectedCompetitorUrls}
+          onSelectionChange={setSelectedCompetitorUrls}
+          onConfirm={handleConfirmCompetitors}
+          isLoading={false}
+          autoSelectCount={5}
+          confirmButtonLabel="Analyze Selected Competitors"
+        />
       </div>
     );
   }
@@ -241,14 +340,33 @@ const TopicSerpPanel: React.FC<TopicSerpPanelProps> = ({
         <p className="text-xs text-gray-500 mb-4">
           {selectedMode === 'fast'
             ? 'Uses AI to infer SERP characteristics. Quick and cost-effective.'
-            : 'Fetches real SERP data from DataForSEO. More accurate but uses API credits.'}
+            : 'Fetches real SERP data from DataForSEO. You can select which competitors to analyze.'}
         </p>
+
+        {fetchError && (
+          <div className="text-red-400 bg-red-900/20 p-3 rounded-md text-sm mb-4">
+            {fetchError}
+          </div>
+        )}
 
         <button
           onClick={handleAnalyze}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
+          disabled={fetchingCompetitors}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Analyze SERP
+          {fetchingCompetitors ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Fetching Competitors...
+            </span>
+          ) : selectedMode === 'deep' && onFetchSerpCompetitors ? (
+            'Fetch Competitors'
+          ) : (
+            'Analyze SERP'
+          )}
         </button>
       </div>
     );
@@ -272,7 +390,10 @@ const TopicSerpPanel: React.FC<TopicSerpPanelProps> = ({
             </p>
           </div>
           <button
-            onClick={handleAnalyze}
+            onClick={() => {
+              setAnalysisPhase('idle');
+              handleAnalyze();
+            }}
             className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm"
           >
             Re-analyze

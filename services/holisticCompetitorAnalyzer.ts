@@ -51,6 +51,12 @@ export interface HolisticAnalysisOptions {
   competitorLimit?: number;
   /** Progress callback */
   onProgress?: (stage: string, progress: number, detail?: string) => void;
+  /**
+   * User-selected competitor URLs to analyze.
+   * If provided, skips auto-extraction from SERP and uses these URLs instead.
+   * Each item should have url and position.
+   */
+  selectedCompetitorUrls?: Array<{ url: string; position: number; domain?: string; title?: string }>;
 }
 
 /**
@@ -589,19 +595,32 @@ export async function analyzeTopicCompetitors(
 
     reportProgress('Starting analysis', 0, topic);
 
-    // Step 1: Get SERP data
+    // Step 1: Get SERP data (needed for summary even if user selected URLs)
     reportProgress('Fetching SERP data', 5);
 
     const serpResult = await analyzeSerpForTopic(topic, options.mode, options.businessInfo);
 
-    // Extract competitor URLs
+    // Extract competitor URLs - use user-selected if provided, otherwise auto-extract
     let competitorUrls: Array<{ url: string; position: number }> = [];
+    let serpSummaryData: FullSerpResult | null = null;
 
     if (serpResult.mode === 'deep' && 'organicResults' in serpResult.data) {
-      const fullSerp = serpResult.data as FullSerpResult;
-      competitorUrls = fullSerp.organicResults
-        .slice(0, options.competitorLimit || 5)
-        .map(r => ({ url: r.url, position: r.position }));
+      serpSummaryData = serpResult.data as FullSerpResult;
+
+      // Use user-selected URLs if provided, otherwise extract from SERP
+      if (options.selectedCompetitorUrls && options.selectedCompetitorUrls.length > 0) {
+        // User provided specific URLs - use those
+        competitorUrls = options.selectedCompetitorUrls.map(c => ({
+          url: c.url,
+          position: c.position,
+        }));
+        reportProgress('Using user-selected competitors', 8, `${competitorUrls.length} URLs`);
+      } else {
+        // Auto-extract from SERP results
+        competitorUrls = serpSummaryData.organicResults
+          .slice(0, options.competitorLimit || 5)
+          .map(r => ({ url: r.url, position: r.position }));
+      }
     } else {
       // Fast mode - use estimated domains
       // For now, return with limited data
@@ -723,19 +742,20 @@ export async function analyzeTopicCompetitors(
     // Calculate scores
     const scores = calculateScores(competitors, gaps);
 
-    // Build SERP summary
-    const fullSerp = serpResult.data as FullSerpResult;
+    // Build SERP summary (use the already-extracted serpSummaryData)
     const serpSummary = {
-      totalResults: fullSerp.totalResults,
-      features: Object.entries(fullSerp.features)
-        .filter(([_, has]) => has === true)
-        .map(([feature]) => feature),
-      topCompetitors: fullSerp.organicResults.slice(0, 10).map(r => ({
+      totalResults: serpSummaryData?.totalResults || 0,
+      features: serpSummaryData?.features
+        ? Object.entries(serpSummaryData.features)
+          .filter(([_, has]) => has === true)
+          .map(([feature]) => feature)
+        : [],
+      topCompetitors: serpSummaryData?.organicResults.slice(0, 10).map(r => ({
         position: r.position,
         url: r.url,
         domain: r.domain,
         title: r.title,
-      })),
+      })) || [],
     };
 
     reportProgress('Complete', 100);
