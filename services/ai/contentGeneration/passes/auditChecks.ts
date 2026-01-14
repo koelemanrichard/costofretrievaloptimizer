@@ -1,6 +1,7 @@
 // services/ai/contentGeneration/passes/auditChecks.ts
 import { ContentBrief, BusinessInfo, AuditRuleResult, AuditIssue, AuditIssueType } from '../../../../types';
 import { v4 as uuidv4 } from 'uuid';
+import { splitSentences } from '../../../../utils/sentenceTokenizer';
 import * as geminiService from '../../../geminiService';
 import * as openAiService from '../../../openAiService';
 import * as anthropicService from '../../../anthropicService';
@@ -185,7 +186,7 @@ function checkStopWords(text: string, language?: string): AuditRuleResult {
 }
 
 function checkSubjectPositioning(text: string, centralEntity: string): AuditRuleResult {
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+  const sentences = splitSentences(text);
   const entityRegex = new RegExp(centralEntity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
   let entityAsSubject = 0;
@@ -548,7 +549,7 @@ function checkCenterpieceAnnotation(text: string, centralEntity: string, languag
 }
 
 function checkInformationDensity(text: string, centralEntity: string): AuditRuleResult {
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+  const sentences = splitSentences(text);
   const entityRegex = new RegExp(centralEntity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
 
   let repetitiveCount = 0;
@@ -1261,6 +1262,27 @@ export function checkListDefinitionSentences(draft: string): AuditRuleResult {
   let violations = 0;
   const violationExamples: string[] = [];
 
+  // Helper to check if text ends with a definition sentence (colon before list)
+  const hasDefinitionSentenceBeforeList = (textBefore: string): boolean => {
+    // First, check if the whole textBefore ends with ":"
+    if (/:[\s]*\n?$/.test(textBefore.trim())) {
+      return true;
+    }
+    // Use sentence tokenizer to get proper sentences, then check if any trailing
+    // text after the last sentence ends with ":"
+    const sentences = splitSentences(textBefore);
+    if (sentences.length === 0) {
+      // No complete sentences, check if the raw text ends with ":"
+      return /:[\s\n]*$/.test(textBefore);
+    }
+    // Get the last sentence and any trailing text after it
+    const lastSentence = sentences[sentences.length - 1];
+    const lastSentenceEnd = textBefore.lastIndexOf(lastSentence) + lastSentence.length;
+    const trailingText = textBefore.substring(lastSentenceEnd);
+    // Check if trailing text (after last complete sentence) ends with ":"
+    return /:[\s\n]*$/.test(trailingText) || /:[\s\n]*$/.test(lastSentence);
+  };
+
   // Check unordered lists
   let match;
   while ((match = listPattern.exec(draft)) !== null) {
@@ -1268,12 +1290,7 @@ export function checkListDefinitionSentences(draft: string): AuditRuleResult {
     // Get 200 chars before the list
     const textBefore = draft.substring(Math.max(0, listStart - 200), listStart);
 
-    // Check if last sentence before list ends with ":"
-    const lastSentence = textBefore.split(/[.!?]/).pop() || '';
-    const hasDefinitionSentence = /:[\s\n]*$/.test(lastSentence) ||
-                                  /:[\s]*\n?$/.test(textBefore.trim());
-
-    if (!hasDefinitionSentence) {
+    if (!hasDefinitionSentenceBeforeList(textBefore)) {
       violations++;
       const firstListItem = match[1].split('\n')[0].substring(0, 30);
       if (violationExamples.length < 2) {
@@ -1287,11 +1304,7 @@ export function checkListDefinitionSentences(draft: string): AuditRuleResult {
     const listStart = match.index;
     const textBefore = draft.substring(Math.max(0, listStart - 200), listStart);
 
-    const lastSentence = textBefore.split(/[.!?]/).pop() || '';
-    const hasDefinitionSentence = /:[\s\n]*$/.test(lastSentence) ||
-                                  /:[\s]*\n?$/.test(textBefore.trim());
-
-    if (!hasDefinitionSentence) {
+    if (!hasDefinitionSentenceBeforeList(textBefore)) {
       violations++;
       const firstListItem = match[1].split('\n')[0].substring(0, 30);
       if (violationExamples.length < 2) {
