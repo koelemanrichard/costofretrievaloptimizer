@@ -40,6 +40,7 @@ import {
 
 import { extractPageContent } from './jinaService';
 import { scrapeUrl as firecrawlScrapeUrl } from './firecrawlService';
+import { extractPageTechnicalData as apifyScrapeUrl } from './apifyService';
 import { cacheService } from './cacheService';
 
 // =============================================================================
@@ -66,6 +67,8 @@ export interface ContentAnalysisOptions {
   jinaApiKey?: string;
   /** Firecrawl API key (fallback scraper) */
   firecrawlApiKey?: string;
+  /** Apify token (third fallback, uses browser rendering) */
+  apifyToken?: string;
   /** Supabase URL for fetch proxy (required for browser CORS) */
   supabaseUrl?: string;
   /** Supabase anon key for fetch proxy */
@@ -251,15 +254,40 @@ export async function analyzeContentForUrl(
         }
       }
 
+      // Fallback to Apify (if both Jina and Firecrawl failed and token available)
+      // Apify uses browser rendering which handles JS-heavy sites
+      let apifyParsedContent: ParsedContent | null = null;
+      if (!content && options.apifyToken) {
+        try {
+          console.log(`[ContentAnalysis] Trying Apify fallback for ${url}`);
+          const apifyResult = await apifyScrapeUrl(url, options.apifyToken);
+          if (apifyResult) {
+            // Prefer markdown if available, otherwise parse HTML
+            if (apifyResult.markdown) {
+              content = apifyResult.markdown;
+              console.log(`[ContentAnalysis] Fetched ${url} via Apify fallback (markdown)`);
+            } else if (apifyResult.html) {
+              // Parse HTML directly since we don't have markdown
+              apifyParsedContent = parseHtmlContent(apifyResult.html);
+              console.log(`[ContentAnalysis] Fetched ${url} via Apify fallback (HTML)`);
+            }
+          }
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error(String(error));
+          console.warn(`[ContentAnalysis] Apify fallback also failed for ${url}:`, lastError.message);
+        }
+      }
+
       // If still no content, throw error
-      if (!content) {
-        if (!options.jinaApiKey && !options.firecrawlApiKey) {
-          throw new Error('No API key provided. Provide jinaApiKey or firecrawlApiKey.');
+      if (!content && !apifyParsedContent) {
+        if (!options.jinaApiKey && !options.firecrawlApiKey && !options.apifyToken) {
+          throw new Error('No API key provided. Provide jinaApiKey, firecrawlApiKey, or apifyToken.');
         }
         throw lastError || new Error(`Failed to fetch content from ${url} - all providers failed`);
       }
 
-      parsedContent = parseMarkdownContent(content);
+      // Use Apify's parsed HTML if we have it, otherwise parse markdown
+      parsedContent = apifyParsedContent || parseMarkdownContent(content!);
     }
 
     // Extract EAVs

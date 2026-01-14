@@ -2,22 +2,24 @@
  * HTML Fetcher Service
  *
  * Multi-provider HTML fetching with automatic fallback.
- * Tries providers in order: Jina -> Firecrawl -> Direct fetch
+ * Tries providers in order: Jina -> Firecrawl -> Apify -> Direct fetch
  *
  * @module services/htmlFetcherService
  */
 
 import { jinaLogger, firecrawlLogger, directFetchLogger } from './apiCallLogger';
+import { extractPageTechnicalData } from './apifyService';
 
 export interface HtmlFetchResult {
   html: string;
-  provider: 'jina' | 'firecrawl' | 'direct';
+  provider: 'jina' | 'firecrawl' | 'apify' | 'direct';
   error?: string;
 }
 
 export interface FetcherConfig {
   jinaApiKey?: string;
   firecrawlApiKey?: string;
+  apifyToken?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
 }
@@ -77,6 +79,22 @@ export async function fetchHtml(
     } catch (error) {
       firecrawlLogger.error(firecrawlLog.id, error, { url });
       errors.push(`Firecrawl: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Try Apify third (if token available) - uses browser rendering for JS-heavy sites
+  if (config.apifyToken) {
+    try {
+      console.log(`[HtmlFetcher] Trying Apify for ${url}`);
+      const apifyResult = await extractPageTechnicalData(url, config.apifyToken);
+      if (apifyResult?.html && apifyResult.html.length > 500) {
+        console.log(`[HtmlFetcher] Apify success for ${url}, size: ${apifyResult.html.length}`);
+        return { html: apifyResult.html, provider: 'apify' };
+      }
+      errors.push('Apify: Empty or too short response');
+    } catch (error) {
+      console.warn(`[HtmlFetcher] Apify failed for ${url}:`, error instanceof Error ? error.message : String(error));
+      errors.push(`Apify: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -302,6 +320,7 @@ export function getAvailableProviders(config: FetcherConfig): string[] {
   const providers: string[] = [];
   if (config.jinaApiKey) providers.push('jina');
   if (config.firecrawlApiKey) providers.push('firecrawl');
+  if (config.apifyToken) providers.push('apify');
   if (config.supabaseUrl && config.supabaseAnonKey) providers.push('direct');
   return providers;
 }

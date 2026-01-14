@@ -52,6 +52,8 @@ export interface TechnicalAnalysisOptions {
   jinaApiKey?: string;
   /** Firecrawl API key (fallback scraper) */
   firecrawlApiKey?: string;
+  /** Apify token (third fallback, uses browser rendering) */
+  apifyToken?: string;
   /** Supabase URL for fetch proxy (required for browser CORS) */
   supabaseUrl?: string;
   /** Supabase anon key for fetch proxy */
@@ -168,17 +170,18 @@ export async function analyzeTechnicalForUrl(
     if (options.providedHtml) {
       html = options.providedHtml;
     } else {
-      // Fetch via multi-provider fetcher (Jina -> Firecrawl -> Direct)
+      // Fetch via multi-provider fetcher (Jina -> Firecrawl -> Apify -> Direct)
       const fetcherConfig: FetcherConfig = {
         jinaApiKey: options.jinaApiKey,
         firecrawlApiKey: options.firecrawlApiKey,
+        apifyToken: options.apifyToken,
         supabaseUrl: options.supabaseUrl,
         supabaseAnonKey: options.supabaseAnonKey,
       };
 
       // Check if any provider is available
-      if (!options.jinaApiKey && !options.firecrawlApiKey && !(options.supabaseUrl && options.supabaseAnonKey)) {
-        throw new Error('At least one scraping provider (Jina, Firecrawl) or Supabase proxy config required.');
+      if (!options.jinaApiKey && !options.firecrawlApiKey && !options.apifyToken && !(options.supabaseUrl && options.supabaseAnonKey)) {
+        throw new Error('At least one scraping provider (Jina, Firecrawl, Apify) or Supabase proxy config required.');
       }
 
       const result = await fetchHtml(url, fetcherConfig);
