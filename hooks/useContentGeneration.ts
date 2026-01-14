@@ -1160,9 +1160,11 @@ export function useContentGeneration({
         updatedJob = await orchestrator.getJobWithDraft(updatedJob.id) || updatedJob;
 
         // Collect progressive schema data from Pass 9 (audit scores)
+        // CRITICAL: Pass final draft content to update wordCount (was stale from Pass 1)
         try {
           const existingData = updatedJob.progressive_schema_data || createEmptyProgressiveData();
-          const newData = collectFromPass8(existingData, result.score);
+          const finalDraft = updatedJob.draft_content || '';
+          const newData = collectFromPass8(existingData, result.score, undefined, finalDraft);
           await orchestrator.updateJob(updatedJob.id, {
             progressive_schema_data: newData
           });

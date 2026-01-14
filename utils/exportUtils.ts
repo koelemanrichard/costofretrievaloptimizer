@@ -1,3 +1,13 @@
+/**
+ * @deprecated This module contains legacy export functions.
+ * For new code, prefer using enhancedExportUtils.ts which provides:
+ * - generateEnhancedExport() - comprehensive export with settings
+ * - generateImageSitemap() - image sitemap generation
+ * - downloadImageSitemap() - download image sitemap
+ *
+ * The functions here (generateMasterExport, generateFullZipExport) are maintained
+ * for backward compatibility but will be removed in a future version.
+ */
 
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
@@ -55,6 +65,10 @@ const truncateForExcel = (text: string | undefined, maxLen: number = 30000): str
     return text.substring(0, maxLen) + '... [TRUNCATED - see ZIP export for full content]';
 };
 
+/**
+ * @deprecated Use generateEnhancedExport from enhancedExportUtils.ts instead.
+ * This function is maintained for backward compatibility with CSV quick exports.
+ */
 export const generateMasterExport = (input: ExportDataInput, format: 'csv' | 'xlsx', filename: string) => {
     const { topics, briefs, pillars, metrics } = input;
 
@@ -672,6 +686,10 @@ interface FullExportInput {
     expandedTemplateResults?: ExpandedTemplateResult[];
 }
 
+/**
+ * @deprecated Use generateEnhancedExport from enhancedExportUtils.ts instead.
+ * This function is maintained for backward compatibility only.
+ */
 export const generateFullZipExport = async (input: FullExportInput, filename: string) => {
     const { topics, briefs, pillars, metrics, businessInfo, mapName } = input;
     const zip = new JSZip();

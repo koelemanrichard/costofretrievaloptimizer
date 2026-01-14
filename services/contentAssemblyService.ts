@@ -498,6 +498,110 @@ export function calculateWordCount(markdown: string): number {
 }
 
 // =============================================================================
+// Content Validation for Export
+// =============================================================================
+
+export interface ExportValidationResult {
+  valid: boolean;
+  issues: string[];
+  blockers: string[];  // Critical issues that should block export
+  warnings: string[];  // Non-critical issues to warn about
+}
+
+/**
+ * Validate content before export to HTML.
+ * Checks for issues that would result in poor quality output.
+ */
+export function validateForExport(markdown: string): ExportValidationResult {
+  const blockers: string[] = [];
+  const warnings: string[] = [];
+
+  // Check for unresolved IMAGE placeholders
+  const imagePlaceholders = markdown.match(/\[IMAGE:[^\]]+\]/g);
+  if (imagePlaceholders && imagePlaceholders.length > 0) {
+    blockers.push(`${imagePlaceholders.length} unresolved [IMAGE:...] placeholder(s) found`);
+  }
+
+  // Check for other placeholders
+  const todoPlaceholders = markdown.match(/\[TODO:[^\]]+\]/g);
+  if (todoPlaceholders && todoPlaceholders.length > 0) {
+    blockers.push(`${todoPlaceholders.length} unresolved [TODO:...] placeholder(s) found`);
+  }
+
+  const insertPlaceholders = markdown.match(/\[INSERT:[^\]]+\]/g);
+  if (insertPlaceholders && insertPlaceholders.length > 0) {
+    blockers.push(`${insertPlaceholders.length} unresolved [INSERT:...] placeholder(s) found`);
+  }
+
+  const mustachePlaceholders = markdown.match(/\{\{[^}]+\}\}/g);
+  if (mustachePlaceholders && mustachePlaceholders.length > 0) {
+    blockers.push(`${mustachePlaceholders.length} unresolved {{...}} placeholder(s) found`);
+  }
+
+  // Check for raw markdown H1 in body (after first line) - indicates formatting issues
+  const lines = markdown.split('\n');
+  const h1InBody = lines.slice(1).filter(line => /^#\s+[^#]/.test(line.trim()));
+  if (h1InBody.length > 0) {
+    warnings.push(`${h1InBody.length} H1 heading(s) found in body (should only be one at start)`);
+  }
+
+  // Check for duplicate headings
+  const headings = markdown.match(/^#{2,4}\s+.+$/gm) || [];
+  const headingCounts = new Map<string, number>();
+  for (const h of headings) {
+    const normalized = h.toLowerCase().trim();
+    headingCounts.set(normalized, (headingCounts.get(normalized) || 0) + 1);
+  }
+  const duplicateHeadings = [...headingCounts.entries()].filter(([, count]) => count > 1);
+  if (duplicateHeadings.length > 0) {
+    warnings.push(`${duplicateHeadings.length} duplicate heading(s) detected`);
+  }
+
+  // Check for very short content (likely incomplete generation)
+  const wordCount = calculateWordCount(markdown);
+  if (wordCount < 300) {
+    warnings.push(`Content is only ${wordCount} words (expected 500+ for quality article)`);
+  }
+
+  return {
+    valid: blockers.length === 0,
+    issues: [...blockers, ...warnings],
+    blockers,
+    warnings,
+  };
+}
+
+/**
+ * Clean content for export - removes/fixes common issues.
+ */
+export function cleanForExport(markdown: string): string {
+  let cleaned = markdown;
+
+  // Remove multiple consecutive H1s, keep only first
+  const h1Pattern = /^#\s+.+$/gm;
+  const h1Matches = cleaned.match(h1Pattern);
+  if (h1Matches && h1Matches.length > 1) {
+    // Keep first H1, remove others
+    let firstH1Found = false;
+    cleaned = cleaned.replace(h1Pattern, (match) => {
+      if (!firstH1Found) {
+        firstH1Found = true;
+        return match;
+      }
+      return ''; // Remove subsequent H1s
+    });
+  }
+
+  // Clean up excessive blank lines (more than 2 consecutive)
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  // Ensure content ends with single newline
+  cleaned = cleaned.trimEnd() + '\n';
+
+  return cleaned;
+}
+
+// =============================================================================
 // Export Default
 // =============================================================================
 
@@ -509,4 +613,6 @@ export default {
   extractCenterpiece,
   stripH1FromMarkdown,
   calculateWordCount,
+  validateForExport,
+  cleanForExport,
 };

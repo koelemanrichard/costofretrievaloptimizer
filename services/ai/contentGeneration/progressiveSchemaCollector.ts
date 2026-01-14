@@ -114,12 +114,15 @@ export function collectFromPass7(
 export function collectFromPass8(
   existingData: ProgressiveSchemaData,
   auditScore: number,
-  readabilityScore?: number
+  readabilityScore?: number,
+  finalDraftContent?: string
 ): ProgressiveSchemaData {
   return {
     ...existingData,
     qualityScore: auditScore,
     readabilityScore,
+    // CRITICAL: Update wordCount with final content (Pass 1 wordCount is stale after all optimizations)
+    wordCount: finalDraftContent ? countWords(finalDraftContent) : existingData.wordCount,
     passesContributed: [...(existingData.passesContributed || []), 8],
     lastUpdatedAt: new Date().toISOString()
   };

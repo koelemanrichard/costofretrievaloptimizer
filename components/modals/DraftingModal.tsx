@@ -33,6 +33,8 @@ import {
   convertMarkdownToSemanticHtml,
   extractCenterpiece,
   buildFullHtmlDocument,
+  validateForExport,
+  cleanForExport,
 } from '../../services/contentAssemblyService';
 import { useFeatureGate } from '../../hooks/usePermissions';
 import { QualityRulePanel, ArticleQualityReport } from '../quality';
@@ -1512,6 +1514,24 @@ Image ${i + 1}: ${img.type}
   const handleDownloadHtml = async () => {
     if (!brief || !draftContent) return;
 
+    // Validate content before export
+    const validation = validateForExport(draftContent);
+    if (!validation.valid) {
+      console.warn('[handleDownloadHtml] Content validation issues:', validation.issues);
+      // Show warning but allow export for warnings (only block on blockers)
+      if (validation.blockers.length > 0) {
+        dispatch({ type: 'SET_ERROR', payload: `Cannot export: ${validation.blockers.join(', ')}. Please resolve these issues first.` });
+        return;
+      }
+      // For warnings, show notification but continue
+      if (validation.warnings.length > 0) {
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Export warnings: ${validation.warnings.join(', ')}` });
+      }
+    }
+
+    // Clean content before export (fix H1 duplicates, excessive whitespace)
+    const cleanedContent = cleanForExport(draftContent);
+
     dispatch({ type: 'SET_NOTIFICATION', payload: 'Preparing HTML with embedded images...' });
 
     const slug = brief.slug || 'article';
@@ -1561,10 +1581,10 @@ Image ${i + 1}: ${img.type}
       }
     }
 
-    // Also extract image URLs from markdown content
+    // Also extract image URLs from markdown content (use cleaned content)
     const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
     let match;
-    while ((match = markdownImageRegex.exec(draftContent)) !== null) {
+    while ((match = markdownImageRegex.exec(cleanedContent)) !== null) {
       const url = match[1];
       if (url && !url.startsWith('blob:') && !url.startsWith('data:') && !imageUrls.includes(url)) {
         imageUrls.push(url);
@@ -1662,7 +1682,7 @@ Image ${i + 1}: ${img.type}
   ${businessInfo.authorName ? `<meta property="article:author" content="${businessInfo.authorName.replace(/"/g, '&quot;')}">` : ''}`;
 
     // Extract centerpiece using canonical service (first 300 chars rule)
-    const centerpiece = extractCenterpiece(draftContent, 300) || brief.metaDescription || '';
+    const centerpiece = extractCenterpiece(cleanedContent, 300) || brief.metaDescription || '';
 
     // Build HTML following SEO best practices
     // Rule: DOM under 1500 nodes, minified, semantic tags, centerpiece in first 400 chars
@@ -1690,7 +1710,7 @@ ${schemaScript}
 <p class="byline">${businessInfo.authorName ? `By <strong>${businessInfo.authorName}</strong> · ` : ''}<time datetime="${publishDate}">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time> · ${wordCount.toLocaleString()} words</p>
 </header>
 <p><strong>${centerpiece}</strong></p>
-${convertMarkdownToSemanticHtml(draftContent, { imageUrlMap, ogImageUrl })}
+${convertMarkdownToSemanticHtml(cleanedContent, { imageUrlMap, ogImageUrl })}
 </article>
 </main>
 </body>
@@ -1706,14 +1726,30 @@ ${convertMarkdownToSemanticHtml(draftContent, { imageUrlMap, ogImageUrl })}
   const handleCopyHtml = async () => {
     if (!brief || !draftContent) return;
 
+    // Validate content before copy
+    const validation = validateForExport(draftContent);
+    if (!validation.valid) {
+      console.warn('[handleCopyHtml] Content validation issues:', validation.issues);
+      if (validation.blockers.length > 0) {
+        dispatch({ type: 'SET_ERROR', payload: `Cannot copy: ${validation.blockers.join(', ')}. Please resolve these issues first.` });
+        return;
+      }
+      if (validation.warnings.length > 0) {
+        dispatch({ type: 'SET_NOTIFICATION', payload: `Copy warnings: ${validation.warnings.join(', ')}` });
+      }
+    }
+
+    // Clean content before copy
+    const cleanedContent = cleanForExport(draftContent);
+
     dispatch({ type: 'SET_NOTIFICATION', payload: 'Preparing optimized HTML with schema markup...' });
 
-    const wordCount = draftContent.split(/\s+/).length;
+    const wordCount = cleanedContent.split(/\s+/).length;
     const publishDate = new Date().toISOString();
     const schemaData = databaseJobInfo?.schemaData;
 
     // Extract centerpiece using canonical service (first 300 chars rule)
-    const centerpiece = extractCenterpiece(draftContent, 300) || brief.metaDescription || '';
+    const centerpiece = extractCenterpiece(cleanedContent, 300) || brief.metaDescription || '';
 
     // Build enhanced JSON-LD schema
     const buildSchema = () => {
@@ -1754,7 +1790,7 @@ ${businessInfo.authorName ? `<p class="byline">By <strong>${businessInfo.authorN
 <!-- Centerpiece: First 400 chars for search snippets -->
 <p><strong>${centerpiece}</strong></p>
 
-${convertMarkdownToSemanticHtml(draftContent)}
+${convertMarkdownToSemanticHtml(cleanedContent)}
 </article>
 
 <!-- JSON-LD Schema Markup (paste in Yoast/RankMath custom schema or theme footer) -->

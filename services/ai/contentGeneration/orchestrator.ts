@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../../supabaseClient';
 import { ContentGenerationJob, ContentGenerationSection, ContentBrief, PassesStatus, SectionDefinition, PASS_NAMES, ImagePlaceholder } from '../../../types';
 import { performanceLogger, setCurrentJobId } from '../../performanceLogger';
 import { Json } from '../../../database.types';
+import { deduplicateContent, stripH1FromMarkdown, validateContentForExport } from './contentValidator';
 
 export interface OrchestratorCallbacks {
   onPassStart: (passNumber: number, passName: string) => void;
@@ -522,7 +523,8 @@ export class ContentGenerationOrchestrator {
       // Build draft with deduplicated sections
       const sectionContent = sortedSections
         .map(s => {
-          const content = (s.current_content || '').trim();
+          // Strip any H1 from section content (H1 will be added from title)
+          let content = stripH1FromMarkdown((s.current_content || '').trim());
           const expectedHeading = s.section_level === 2 ? `## ${s.section_heading}` : `### ${s.section_heading}`;
 
           // Check if content already starts with a markdown heading (## or ###)
@@ -551,7 +553,22 @@ export class ContentGenerationOrchestrator {
         parts.push(sectionContent);
       }
 
-      const result = parts.join('\n\n');
+      let result = parts.join('\n\n');
+
+      // DEDUPLICATION STEP 3: Run content-level deduplication on the assembled draft
+      // This catches duplicate paragraphs that made it through the section-level checks
+      const dedupResult = deduplicateContent(result);
+      if (dedupResult.removedCount > 0) {
+        console.warn(`[assembleDraft] Content deduplication removed ${dedupResult.removedCount} duplicate(s)`);
+        dedupResult.log.forEach(msg => console.log(msg));
+        result = dedupResult.content;
+      }
+
+      // Validate final content and log any remaining issues
+      const validation = validateContentForExport(result);
+      if (!validation.valid) {
+        console.warn(`[assembleDraft] Content validation warnings:`, validation.issues);
+      }
 
       performanceLogger.endEvent(event.id);
       return result;
