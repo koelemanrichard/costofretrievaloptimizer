@@ -76,7 +76,8 @@ describe('Schema Vocabulary Validation', () => {
       expect(errors.some(e => e.includes('WrongType'))).toBe(true);
     });
 
-    it('warns about deprecated properties', () => {
+    it('does NOT flag mainEntityOfPage as deprecated (it is valid Schema.org)', () => {
+      // mainEntityOfPage is a valid Schema.org property and should NOT be flagged
       const schema = {
         '@context': 'https://schema.org',
         '@type': 'Article',
@@ -85,9 +86,8 @@ describe('Schema Vocabulary Validation', () => {
       };
 
       const errors = validateSchemaVocabulary(schema);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.includes('mainEntityOfPage'))).toBe(true);
-      expect(errors.some(e => e.includes('deprecated') || e.includes('Deprecated'))).toBe(true);
+      // Should not contain any errors about mainEntityOfPage being deprecated
+      expect(errors.some(e => e.includes('mainEntityOfPage'))).toBe(false);
     });
 
     it('validates all common Schema.org types correctly', () => {

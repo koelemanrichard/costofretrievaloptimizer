@@ -11,17 +11,31 @@ import type {
 } from '../../../types';
 import { SCHEMA_TEMPLATES } from '../../../config/schemaTemplates';
 
-// Schema.org type hierarchy for validation
+// Schema.org type hierarchy for validation - single source of truth
+// Used by both validateSchemaOrg() and validateSchemaVocabulary()
 const SCHEMA_ORG_TYPES = new Set([
+  // Article types
   'Article', 'BlogPosting', 'NewsArticle', 'TechArticle',
-  'Product', 'Offer', 'AggregateRating', 'Review',
+  // Product/Commerce types
+  'Product', 'Offer', 'AggregateRating', 'Review', 'Rating', 'Service',
+  // Organization types
   'Organization', 'Corporation', 'LocalBusiness',
+  // Person types
   'Person', 'ProfilePage',
+  // Page types
   'WebPage', 'WebSite', 'CollectionPage', 'FAQPage', 'HowTo',
-  'Question', 'Answer', 'HowToStep', 'HowToSection',
-  'BreadcrumbList', 'ListItem', 'ItemList',
+  'AboutPage', 'ContactPage', 'MedicalWebPage', 'HealthTopicContent',
+  // Q&A types
+  'Question', 'Answer', 'ClaimReview',
+  // HowTo types
+  'HowToStep', 'HowToSection', 'HowToDirection', 'HowToTip', 'HowToSupply', 'HowToTool',
+  // List types
+  'BreadcrumbList', 'ListItem', 'ItemList', 'ItemListElement',
+  // Media types
   'ImageObject', 'VideoObject',
+  // Location types
   'Place', 'PostalAddress', 'GeoCoordinates',
+  // Other types
   'Event', 'Thing', 'CreativeWork',
   'MonetaryAmount', 'QuantitativeValue'
 ]);
@@ -344,6 +358,10 @@ function validateContentParity(
   if (draftContent && articleItem.wordCount) {
     const actualWordCount = draftContent.split(/\s+/).filter(w => w.length > 0).length;
     const schemaWordCount = articleItem.wordCount;
+
+    // Guard against division by zero
+    if (actualWordCount === 0) return errors;
+
     const difference = Math.abs(actualWordCount - schemaWordCount) / actualWordCount;
 
     if (difference > 0.1) { // More than 10% difference
@@ -579,27 +597,15 @@ export async function runExternalSchemaValidation(
 /**
  * Validate schema against Schema.org vocabulary
  * Checks @type values, property names, and deprecated properties
+ * Uses the top-level SCHEMA_ORG_TYPES as single source of truth
  */
 export function validateSchemaVocabulary(schema: object): string[] {
   const errors: string[] = [];
 
-  // Common Schema.org types
-  const VALID_TYPES = new Set([
-    'Article', 'NewsArticle', 'BlogPosting', 'TechArticle', 'HowTo', 'FAQPage',
-    'Organization', 'LocalBusiness', 'Person', 'Product', 'Service', 'Event',
-    'WebPage', 'WebSite', 'BreadcrumbList', 'ListItem', 'ImageObject', 'VideoObject',
-    'Question', 'Answer', 'Review', 'AggregateRating', 'Offer', 'ItemList',
-    'HowToStep', 'HowToSection', 'HowToDirection', 'HowToTip', 'HowToSupply', 'HowToTool',
-    'MedicalWebPage', 'HealthTopicContent', 'AboutPage', 'ContactPage',
-    'ItemListElement', 'ClaimReview', 'Rating', 'PostalAddress', 'GeoCoordinates',
-    // Additional types from existing SCHEMA_ORG_TYPES set
-    'Corporation', 'ProfilePage', 'CollectionPage', 'Place', 'Thing', 'CreativeWork',
-    'MonetaryAmount', 'QuantitativeValue'
-  ]);
-
   // Deprecated Schema.org properties to warn about
-  const DEPRECATED_PROPERTIES = new Set([
-    'mainEntityOfPage', // Replaced by @id or isPartOf
+  // Note: mainEntityOfPage is NOT deprecated - it's a valid Schema.org property
+  const DEPRECATED_PROPERTIES = new Set<string>([
+    // Currently no deprecated properties to check
   ]);
 
   // Validate recursively
@@ -611,11 +617,11 @@ export function validateSchemaVocabulary(schema: object): string[] {
       return;
     }
 
-    // Check @type
+    // Check @type against the consolidated SCHEMA_ORG_TYPES set
     if (node['@type']) {
       const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
       for (const type of types) {
-        if (!VALID_TYPES.has(type)) {
+        if (!SCHEMA_ORG_TYPES.has(type)) {
           errors.push(`Unknown @type "${type}" at ${path} - verify it exists in Schema.org vocabulary`);
         }
       }
