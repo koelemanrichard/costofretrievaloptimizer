@@ -584,6 +584,27 @@ export interface VisualSemantics {
     width_hint?: string;
 }
 
+/**
+ * Maps image placement to specific entity mentions in content.
+ * Framework: "Images anchored to entity mentions"
+ */
+export interface VisualPlacementEntry {
+  /** The section heading where image should appear */
+  section_heading: string;
+  /** The entity mention this image supports */
+  entity_anchor: string;
+  /** The EAV triple this image illustrates (if applicable) */
+  eav_reference?: {
+    subject: string;
+    predicate: string;
+    object: string;
+  };
+  /** Image type from visual_semantics */
+  image_type: 'data_visualization' | 'comparison_table' | 'process_diagram' | 'infographic' | 'photograph' | 'screenshot';
+  /** Why this image belongs at this location */
+  placement_rationale: string;
+}
+
 // Image Generation Types
 export type ImageType = 'HERO' | 'SECTION' | 'INFOGRAPHIC' | 'CHART' | 'DIAGRAM' | 'AUTHOR';
 
@@ -777,6 +798,8 @@ export interface ContentBrief {
   query_type_format?: string; // e.g., 'Ordered List', 'Prose'
   featured_snippet_target?: FeaturedSnippetTarget;
   visual_semantics?: VisualSemantics[];
+  /** Map of image placements anchored to entity mentions */
+  visual_placement_map?: VisualPlacementEntry[];
   discourse_anchors?: string[]; // List of mutual words for transitions
 
   // Enhanced Visual Semantics (Koray's "Pixels, Letters, and Bytes" Framework)

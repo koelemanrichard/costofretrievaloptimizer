@@ -127,6 +127,26 @@ export const CONTENT_BRIEF_SCHEMA = {
             }
         }
     },
+    visual_placement_map: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          section_heading: { type: Type.STRING },
+          entity_anchor: { type: Type.STRING },
+          eav_reference: {
+            type: Type.OBJECT,
+            properties: {
+              subject: { type: Type.STRING },
+              predicate: { type: Type.STRING },
+              object: { type: Type.STRING },
+            },
+          },
+          image_type: { type: Type.STRING },
+          placement_rationale: { type: Type.STRING },
+        },
+      },
+    },
     discourse_anchors: { type: Type.ARRAY, items: { type: Type.STRING } }
   },
   required: ["title", "slug", "metaDescription", "keyTakeaways", "outline", "structured_outline", "serpAnalysis", "visuals", "contextualVectors", "contextualBridge", "visual_semantics", "discourse_anchors"]
@@ -161,5 +181,6 @@ export const CONTENT_BRIEF_FALLBACK = {
     query_type_format: '',
     featured_snippet_target: undefined,
     visual_semantics: [],
+    visual_placement_map: [],
     discourse_anchors: []
 };

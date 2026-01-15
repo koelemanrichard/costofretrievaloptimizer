@@ -716,6 +716,11 @@ ${businessContext(info)}
     - Informational: Diagrams, infographics, process charts, data visualizations
     - Transactional: Product photos, before/after, trust badges, team photos
     - Commercial: Comparison tables, feature matrices, pricing visuals
+8.  **Visual Placement Anchoring (Rule IV.H):** For each image in visual_semantics, specify in 'visual_placement_map':
+    - Which section heading it belongs under
+    - Which entity mention it anchors to
+    - Which EAV triple it illustrates (if applicable)
+    - Rationale for placement (why here, not elsewhere)
 
 #### **V. INTERLINKING**
 1.  **Post-Definition Linking (Rule V.C):** In the 'contextualBridge' instructions, specify that links must be placed *after* the entity has been defined, never in the first sentence of a paragraph.
@@ -783,6 +788,15 @@ Respond with a SINGLE valid JSON object. Generate the 'structured_outline' FIRST
       "type": "INFOGRAPHIC | CHART | DIAGRAM",
       "description": "string",
       "caption_data": "string"
+    }
+  ],
+  "visual_placement_map": [
+    {
+      "section_heading": "Section title where image appears",
+      "entity_anchor": "The entity name mentioned near image",
+      "eav_reference": { "subject": "Entity", "predicate": "attribute", "object": "value" },
+      "image_type": "data_visualization|comparison_table|process_diagram|infographic|photograph|screenshot",
+      "placement_rationale": "Why this image supports this entity mention"
     }
   ],
   "discourse_anchors": ["string", "string"],
