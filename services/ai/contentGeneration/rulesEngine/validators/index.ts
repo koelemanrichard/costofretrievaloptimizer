@@ -22,6 +22,7 @@ import { TableStructureValidator } from './tableStructureValidator';
 import { ReadabilityValidator } from './readabilityValidator';
 import { DiscourseChainingValidator } from './discourseChainingValidator';
 import { EavPerSentenceValidator } from './eavPerSentenceValidator';
+import { AttributeOrderingValidator } from './attributeOrderingValidator';
 
 export class RulesValidator {
   /**
@@ -140,6 +141,12 @@ export class RulesValidator {
       violations.push(...PillarAlignmentValidator.validate(content, context));
     }
 
+    // 15b. Attribute Ordering (UNIQUE -> ROOT -> RARE -> COMMON)
+    // Skip in Pass 1 - structure is established in brief generation
+    if (runAll || !isPass1) {
+      violations.push(...AttributeOrderingValidator.validate(content, context));
+    }
+
     // 16. K4-K5 List Structure (item count 3-7, parallel structure)
     // Skip in Pass 1 - Pass 3 (Lists & Tables) handles this
     if (runAll || !isPass1) {
@@ -229,3 +236,4 @@ export type { DiscourseChainAnalysis } from './discourseChainingValidator';
 export { validateCrossPageEavConsistency } from './crossPageEavValidator';
 export type { EavContradiction, EavConsistencyWarning, EavConsistencyResult } from './crossPageEavValidator';
 export { EavPerSentenceValidator } from './eavPerSentenceValidator';
+export { AttributeOrderingValidator } from './attributeOrderingValidator';
