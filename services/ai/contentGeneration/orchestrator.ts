@@ -20,6 +20,20 @@ export class ContentGenerationOrchestrator {
   private callbacks: OrchestratorCallbacks;
   private abortController: AbortController;
 
+  /**
+   * In-memory cache of sections per job to reduce database queries.
+   * Key: jobId, Value: { sections, timestamp }
+   */
+  private sectionCache: Map<string, {
+    sections: ContentGenerationSection[];
+    timestamp: number;
+  }> = new Map();
+
+  /**
+   * Cache TTL in milliseconds (30 seconds)
+   */
+  private readonly SECTION_CACHE_TTL = 30000;
+
   constructor(
     supabaseUrl: string,
     supabaseKey: string,
@@ -220,7 +234,11 @@ export class ContentGenerationOrchestrator {
     return { ...jobStatus, draft_content: draftContent };
   }
 
-  async getSections(jobId: string): Promise<ContentGenerationSection[]> {
+  /**
+   * Fetch sections directly from database (bypasses cache)
+   * @internal Use getCachedSections instead for cached access
+   */
+  private async fetchSectionsFromDb(jobId: string): Promise<ContentGenerationSection[]> {
     const { data, error } = await this.supabase
       .from('content_generation_sections')
       .select('*')
@@ -229,6 +247,60 @@ export class ContentGenerationOrchestrator {
 
     if (error) throw new Error(`Failed to get sections: ${error.message}`);
     return (data || []) as ContentGenerationSection[];
+  }
+
+  /**
+   * Get sections from cache if valid, otherwise fetch from database.
+   */
+  private async getCachedSections(jobId: string, forceFresh = false): Promise<ContentGenerationSection[]> {
+    const cached = this.sectionCache.get(jobId);
+    const now = Date.now();
+
+    // Return cached if valid and not forcing fresh
+    if (!forceFresh && cached && (now - cached.timestamp) < this.SECTION_CACHE_TTL) {
+      return cached.sections;
+    }
+
+    // Fetch fresh from database
+    const sections = await this.fetchSectionsFromDb(jobId);
+
+    // Update cache
+    this.sectionCache.set(jobId, {
+      sections,
+      timestamp: now,
+    });
+
+    return sections;
+  }
+
+  /**
+   * Invalidate section cache for a job (call after writes)
+   */
+  private invalidateSectionCache(jobId: string): void {
+    this.sectionCache.delete(jobId);
+  }
+
+  /**
+   * Update a single section in cache without full invalidation
+   */
+  private updateSectionInCache(jobId: string, updatedSection: ContentGenerationSection): void {
+    const cached = this.sectionCache.get(jobId);
+    if (cached) {
+      const index = cached.sections.findIndex(s => s.id === updatedSection.id);
+      if (index >= 0) {
+        cached.sections[index] = updatedSection;
+      } else {
+        cached.sections.push(updatedSection);
+      }
+      cached.timestamp = Date.now();
+    }
+  }
+
+  /**
+   * Get sections for a job (uses cache)
+   */
+  async getSections(jobId: string): Promise<ContentGenerationSection[]> {
+    return this.getCachedSections(jobId);
   }
 
   async upsertSection(section: Partial<ContentGenerationSection> & { job_id: string; section_key: string }): Promise<void> {
@@ -244,6 +316,9 @@ export class ContentGenerationOrchestrator {
         .upsert(section as any, { onConflict: 'job_id,section_key' });
 
       if (error) throw new Error(`Failed to upsert section: ${error.message}`);
+
+      // Invalidate cache after successful write
+      this.invalidateSectionCache(section.job_id);
 
       performanceLogger.endEvent(event.id);
     } catch (error) {
@@ -261,6 +336,9 @@ export class ContentGenerationOrchestrator {
       .select('id');
 
     if (error) throw new Error(`Failed to delete job: ${error.message}`);
+
+    // Invalidate section cache for this job
+    this.invalidateSectionCache(jobId);
 
     // Verify the delete actually removed a row (RLS can silently fail)
     if (!data || data.length === 0) {
