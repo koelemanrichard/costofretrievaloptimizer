@@ -349,6 +349,8 @@ export function useContentGeneration({
   const [job, setJob] = useState<ContentGenerationJob | null>(null);
   const [sections, setSections] = useState<ContentGenerationSection[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Brief caching: stores fetched brief to avoid redundant database queries during generation
+  const [cachedBrief, setCachedBrief] = useState<{ briefId: string; data: ContentBrief } | null>(null);
   const abortRef = useRef(false);
   const orchestratorRef = useRef<ContentGenerationOrchestrator | null>(null);
 
@@ -438,6 +440,8 @@ export function useContentGeneration({
         setJob(null);
         setSections([]);
         setError(null);
+        // Clear cached brief when switching to a different brief
+        setCachedBrief(null);
       }
       previousBriefIdRef.current = briefId;
 
@@ -556,27 +560,40 @@ export function useContentGeneration({
 
     // CRITICAL FIX: Fetch fresh brief from database to ensure edits are used
     // The 'brief' from hook props may be stale if user edited it before clicking Generate
+    // OPTIMIZATION: Use cached brief if available and matches current briefId
     let activeBrief = brief;
-    try {
-      const { data: freshBrief, error: briefError } = await supabase
-        .from('content_briefs')
-        .select('*')
-        .eq('id', briefId)
-        .single();
+    if (cachedBrief && cachedBrief.briefId === briefId) {
+      // Use cached brief - avoids redundant database query
+      activeBrief = cachedBrief.data;
+      console.log('[runPasses] Using cached brief:', {
+        sections: activeBrief.structured_outline?.length || 0,
+        title: activeBrief.title
+      });
+    } else {
+      // Fetch fresh brief from database and cache it
+      try {
+        const { data: freshBrief, error: briefError } = await supabase
+          .from('content_briefs')
+          .select('*')
+          .eq('id', briefId)
+          .single();
 
-      if (!briefError && freshBrief) {
-        // Use the fresh brief from database
-        activeBrief = freshBrief as unknown as ContentBrief;
-        console.log('[runPasses] Using fresh brief from database:', {
-          sections: activeBrief.structured_outline?.length || 0,
-          title: activeBrief.title
-        });
-      } else {
-        console.warn('[runPasses] Could not fetch fresh brief, using prop value:', briefError?.message);
+        if (!briefError && freshBrief) {
+          // Use the fresh brief from database
+          activeBrief = freshBrief as unknown as ContentBrief;
+          // Cache the fetched brief
+          setCachedBrief({ briefId, data: activeBrief });
+          console.log('[runPasses] Fetched and cached brief from database:', {
+            sections: activeBrief.structured_outline?.length || 0,
+            title: activeBrief.title
+          });
+        } else {
+          console.warn('[runPasses] Could not fetch fresh brief, using prop value:', briefError?.message);
+        }
+      } catch (err) {
+        console.warn('[runPasses] Error fetching fresh brief:', err);
+        // Fall back to prop brief if fetch fails
       }
-    } catch (err) {
-      console.warn('[runPasses] Error fetching fresh brief:', err);
-      // Fall back to prop brief if fetch fails
     }
 
     // Ensure businessInfo has required fields with defaults
