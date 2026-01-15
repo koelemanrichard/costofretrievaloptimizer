@@ -104,6 +104,72 @@ const normalizeUrl = (input: string): string => {
   return `https://${trimmed}`;
 };
 
+/** Result type for scrapeWebsite that includes error details */
+interface ScrapeResult {
+  success: boolean;
+  data?: { title: string; description: string; content: string };
+  error?: string;
+  errorType?: 'no_api_key' | 'insufficient_balance' | 'rate_limit' | 'auth_error' | 'network_error' | 'unknown';
+}
+
+/**
+ * Parse Jina API error to extract user-friendly message
+ */
+const parseJinaError = (errorMessage: string): { message: string; type: ScrapeResult['errorType'] } => {
+  // Try to extract JSON error from message
+  const jsonMatch = errorMessage.match(/\{.*\}/);
+  if (jsonMatch) {
+    try {
+      const errorData = JSON.parse(jsonMatch[0]);
+      if (errorData.code === 402 || errorData.name === 'InsufficientBalanceError') {
+        return {
+          message: 'Jina API account has insufficient balance. Please recharge at jina.ai',
+          type: 'insufficient_balance'
+        };
+      }
+      if (errorData.code === 401) {
+        return {
+          message: 'Jina API key is invalid. Please check your API key in Settings.',
+          type: 'auth_error'
+        };
+      }
+      if (errorData.code === 429) {
+        return {
+          message: 'Jina API rate limit exceeded. Please try again in a few minutes.',
+          type: 'rate_limit'
+        };
+      }
+      if (errorData.readableMessage) {
+        return { message: errorData.readableMessage, type: 'unknown' };
+      }
+    } catch {
+      // JSON parse failed, continue with string matching
+    }
+  }
+
+  // Fallback to string matching
+  if (errorMessage.includes('402') || errorMessage.includes('InsufficientBalance')) {
+    return {
+      message: 'Jina API account has insufficient balance. Please recharge at jina.ai',
+      type: 'insufficient_balance'
+    };
+  }
+  if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+    return {
+      message: 'Jina API key is invalid. Please check your API key in Settings.',
+      type: 'auth_error'
+    };
+  }
+  if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+    return {
+      message: 'Jina API rate limit exceeded. Please try again in a few minutes.',
+      type: 'rate_limit'
+    };
+  }
+
+  return { message: 'Failed to scrape website content.', type: 'unknown' };
+};
+
 /**
  * Scrape website content using Jina.ai
  */
@@ -111,12 +177,8 @@ const scrapeWebsite = async (
   url: string,
   businessInfo: BusinessInfo,
   dispatch: React.Dispatch<AppAction>
-): Promise<{ title: string; description: string; content: string } | null> => {
-  console.log('[SmartWizard] scrapeWebsite called for URL:', url);
-  console.log('[SmartWizard] jinaApiKey available:', !!businessInfo.jinaApiKey);
-
+): Promise<ScrapeResult> => {
   if (!businessInfo.jinaApiKey) {
-    console.warn('[SmartWizard] No Jina API key configured - scraping will be skipped');
     dispatch({
       type: 'LOG_EVENT',
       payload: {
@@ -126,7 +188,11 @@ const scrapeWebsite = async (
         timestamp: Date.now(),
       },
     });
-    return null;
+    return {
+      success: false,
+      error: 'Jina API key not configured. Add it in Settings to enable website scraping.',
+      errorType: 'no_api_key'
+    };
   }
 
   try {
@@ -144,32 +210,37 @@ const scrapeWebsite = async (
       ? { supabaseUrl: businessInfo.supabaseUrl, supabaseAnonKey: businessInfo.supabaseAnonKey }
       : undefined;
 
-    console.log('[SmartWizard] proxyConfig available:', !!proxyConfig);
-    console.log('[SmartWizard] supabaseUrl:', businessInfo.supabaseUrl ? 'SET' : 'NOT SET');
-    console.log('[SmartWizard] supabaseAnonKey:', businessInfo.supabaseAnonKey ? 'SET' : 'NOT SET');
-    console.log('[SmartWizard] jinaApiKey length:', businessInfo.jinaApiKey?.length || 0);
-    console.log('[SmartWizard] Calling extractPageContent...');
-
     const extraction = await extractPageContent(url, businessInfo.jinaApiKey, proxyConfig);
-    console.log('[SmartWizard] extractPageContent returned:', extraction ? 'success' : 'null');
 
     return {
-      title: extraction.title || '',
-      description: extraction.description || '',
-      content: extraction.content?.substring(0, 8000) || '', // Limit content size for AI
+      success: true,
+      data: {
+        title: extraction.title || '',
+        description: extraction.description || '',
+        content: extraction.content?.substring(0, 8000) || '', // Limit content size for AI
+      }
     };
   } catch (error) {
-    console.error('[SmartWizard] Failed to scrape website:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Parse the error to get user-friendly message
+    const parsedError = parseJinaError(errorMessage);
+
     dispatch({
       type: 'LOG_EVENT',
       payload: {
         service: 'SmartWizard',
-        message: `Failed to scrape website: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Failed to scrape website: ${parsedError.message}`,
         status: 'failure',
         timestamp: Date.now(),
       },
     });
-    return null;
+
+    return {
+      success: false,
+      error: parsedError.message,
+      errorType: parsedError.type
+    };
   }
 };
 
@@ -322,14 +393,16 @@ export const researchBusiness = async (
 
   // Step 1: If URL present (either pure URL or mixed), try to scrape the website
   if (parsedInput.extractedUrl) {
-    const scraped = await scrapeWebsite(parsedInput.extractedUrl, businessInfo, dispatch);
+    const scrapeResult = await scrapeWebsite(parsedInput.extractedUrl, businessInfo, dispatch);
 
-    if (scraped && scraped.content) {
-      scrapedContent = scraped;
+    if (scrapeResult.success && scrapeResult.data?.content) {
+      scrapedContent = scrapeResult.data;
       source = 'scraped';
       confidence = 'high';
     } else {
-      warnings.push('Could not scrape website content. Using AI knowledge only.');
+      // Use specific error message if available, otherwise generic message
+      const errorMessage = scrapeResult.error || 'Could not scrape website content.';
+      warnings.push(`${errorMessage} Using AI knowledge only.`);
       source = 'ai_knowledge';
       // If mixed input, we still have description so confidence stays medium
       confidence = parsedInput.inputType === 'mixed' ? 'medium' : 'low';

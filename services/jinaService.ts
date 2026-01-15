@@ -160,17 +160,11 @@ const doExtraction = async (
 ): Promise<JinaExtraction> => {
   let responseData: JinaResponse;
 
-  console.log('[JinaService] doExtraction called for URL:', url);
-  console.log('[JinaService] Using proxy:', !!proxyConfig?.supabaseUrl);
-
   if (proxyConfig?.supabaseUrl) {
     // Use Supabase Edge Function proxy to avoid CORS
     const proxyUrl = `${proxyConfig.supabaseUrl}/functions/v1/fetch-proxy`;
     // NOTE: URL should NOT be encoded - Jina expects raw URL after base
     const jinaUrl = `${JINA_READER_URL}${url}`;
-
-    console.log('[JinaService] Proxy URL:', proxyUrl);
-    console.log('[JinaService] Jina URL:', jinaUrl);
 
     const proxyResponse = await fetch(proxyUrl, {
       method: 'POST',
@@ -199,25 +193,19 @@ const doExtraction = async (
       }),
     });
 
-    console.log('[JinaService] Proxy response status:', proxyResponse.status, proxyResponse.ok);
-
     if (!proxyResponse.ok) {
       const errorText = await proxyResponse.text();
-      console.error('[JinaService] Proxy request failed:', proxyResponse.status, errorText);
       throw new Error(`Proxy request failed: ${proxyResponse.status} - ${errorText}`);
     }
 
     const proxyResult = await proxyResponse.json();
-    console.log('[JinaService] Proxy result ok:', proxyResult.ok, 'status:', proxyResult.status);
 
     if (!proxyResult.ok) {
-      console.error('[JinaService] Jina API error:', proxyResult.status, proxyResult.error || proxyResult.body);
       throw new Error(`Jina API error: ${proxyResult.status} - ${proxyResult.error || proxyResult.body}`);
     }
 
     // Parse the body from proxy response
     responseData = typeof proxyResult.body === 'string' ? JSON.parse(proxyResult.body) : proxyResult.body;
-    console.log('[JinaService] Successfully parsed response, content length:', responseData?.data?.content?.length || 0);
   } else {
     // Direct fetch (will fail with CORS in browser, but works server-side)
     // NOTE: URL should NOT be encoded - Jina expects raw URL after base
