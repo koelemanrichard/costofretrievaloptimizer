@@ -21,6 +21,7 @@ import { ListStructureValidator } from './listStructureValidator';
 import { TableStructureValidator } from './tableStructureValidator';
 import { ReadabilityValidator } from './readabilityValidator';
 import { DiscourseChainingValidator } from './discourseChainingValidator';
+import { EavPerSentenceValidator } from './eavPerSentenceValidator';
 
 export class RulesValidator {
   /**
@@ -121,43 +122,49 @@ export class RulesValidator {
     // Run in Pass 1 - basic length is fundamental
     violations.push(...WordCountValidator.validate(content, context));
 
-    // 13. EAV Placement (C2-C3: UNIQUE in first 300 words, ROOT in first 500 words)
+    // 13. EAV Per Sentence (one EAV per sentence rule)
+    // Skip in Pass 1 - semantic structure refined in later passes
+    if (runAll || !isPass1) {
+      violations.push(...EavPerSentenceValidator.validate(content, context));
+    }
+
+    // 14. EAV Placement (C2-C3: UNIQUE in first 300 words, ROOT in first 500 words)
     // Skip in Pass 1 - semantic placement is refined later
     if (runAll || !isPass1) {
       violations.push(...EavPlacementValidator.validate(content, context));
     }
 
-    // 14. S3 Pillar Alignment (content must align with SEO pillars)
+    // 15. S3 Pillar Alignment (content must align with SEO pillars)
     // Skip in Pass 1 - alignment is validated in audit
     if (runAll || !isPass1) {
       violations.push(...PillarAlignmentValidator.validate(content, context));
     }
 
-    // 15. K4-K5 List Structure (item count 3-7, parallel structure)
+    // 16. K4-K5 List Structure (item count 3-7, parallel structure)
     // Skip in Pass 1 - Pass 3 (Lists & Tables) handles this
     if (runAll || !isPass1) {
       violations.push(...ListStructureValidator.validate(content, context));
     }
 
-    // 16. L2-L5 Table Structure (dimensions, headers, no merged cells, consistent types)
+    // 17. L2-L5 Table Structure (dimensions, headers, no merged cells, consistent types)
     // Skip in Pass 1 - Pass 3 (Lists & Tables) handles this
     if (runAll || !isPass1) {
       violations.push(...TableStructureValidator.validate(content, context));
     }
 
-    // 17. H9 Cross-Section Repetition Detection
+    // 18. H9 Cross-Section Repetition Detection
     // Skip in Pass 1 - requires all sections, validated in audit
     if (runAll || !isPass1) {
       violations.push(...CrossSectionRepetitionValidator.validate(content, context));
     }
 
-    // 18. S4 Readability Match (Flesch-Kincaid grade level vs audience)
+    // 19. S4 Readability Match (Flesch-Kincaid grade level vs audience)
     // Skip in Pass 1 - readability improves through passes
     if (runAll || !isPass1) {
       violations.push(...ReadabilityValidator.validate(content, context));
     }
 
-    // 19. D5 Discourse Chaining (sentence-to-sentence cohesion)
+    // 20. D5 Discourse Chaining (sentence-to-sentence cohesion)
     // Skip in Pass 1 - Pass 6 (Discourse Integration) handles this
     if (runAll || !isPass1) {
       violations.push(...DiscourseChainingValidator.validate(content, context));
@@ -221,3 +228,4 @@ export { DiscourseChainingValidator } from './discourseChainingValidator';
 export type { DiscourseChainAnalysis } from './discourseChainingValidator';
 export { validateCrossPageEavConsistency } from './crossPageEavValidator';
 export type { EavContradiction, EavConsistencyWarning, EavConsistencyResult } from './crossPageEavValidator';
+export { EavPerSentenceValidator } from './eavPerSentenceValidator';
