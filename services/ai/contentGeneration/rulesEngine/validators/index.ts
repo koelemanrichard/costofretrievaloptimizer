@@ -219,3 +219,5 @@ export type { AudienceLevel, FleschKincaidResult } from './readabilityValidator'
 export { AUDIENCE_GRADE_RANGES } from './readabilityValidator';
 export { DiscourseChainingValidator } from './discourseChainingValidator';
 export type { DiscourseChainAnalysis } from './discourseChainingValidator';
+export { validateCrossPageEavConsistency } from './crossPageEavValidator';
+export type { EavContradiction, EavConsistencyWarning, EavConsistencyResult } from './crossPageEavValidator';
