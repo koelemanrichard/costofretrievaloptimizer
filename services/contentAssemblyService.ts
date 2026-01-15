@@ -436,7 +436,7 @@ export function buildFullHtmlDocument(markdown: string, options: FullHtmlOptions
   const wordCount = options.wordCount ?? markdown.split(/\s+/).filter(Boolean).length;
 
   // Convert content to semantic HTML (includes IMAGE placeholder conversion)
-  const contentHtml = convertMarkdownToSemanticHtml(markdown, options);
+  let contentHtml = convertMarkdownToSemanticHtml(markdown, options);
 
   // Check if we have IMAGE placeholders (to include placeholder styles)
   const hasImagePlaceholders = contentHtml.includes('class="image-placeholder"');
