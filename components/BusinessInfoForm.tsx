@@ -1,6 +1,7 @@
 
 // components/BusinessInfoForm.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppState } from '../state/appState';
 import { AppStep, BusinessInfo, AuthorProfile, StylometryType, WebsiteType, WEBSITE_TYPE_CONFIG } from '../types';
 import { Card } from './ui/Card';
@@ -432,6 +433,10 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
       }));
     }, [state.businessInfo.aiProvider, state.businessInfo.aiModel]);
 
+    // Portal-based tooltip state for website types
+    const [activeTooltip, setActiveTooltip] = useState<{ type: WebsiteType; rect: DOMRect } | null>(null);
+    const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setLocalBusinessInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -484,10 +489,18 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                                         const config = WEBSITE_TYPE_CONFIG[type];
                                         const isSelected = localBusinessInfo.websiteType === type;
                                         return (
-                                            <div key={type} className="relative group">
+                                            <div key={type} className="relative">
                                                 <button
                                                     type="button"
                                                     onClick={() => setLocalBusinessInfo(prev => ({ ...prev, websiteType: type }))}
+                                                    onMouseEnter={(e) => {
+                                                        if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        setActiveTooltip({ type, rect });
+                                                    }}
+                                                    onMouseLeave={() => {
+                                                        tooltipTimeoutRef.current = setTimeout(() => setActiveTooltip(null), 100);
+                                                    }}
                                                     className={`w-full p-3 rounded-lg border text-left transition-all ${
                                                         isSelected
                                                             ? 'border-cyan-500 bg-cyan-900/30 ring-1 ring-cyan-500'
@@ -511,32 +524,6 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                                                     </div>
                                                     <p className="text-xs text-gray-400 line-clamp-2">{config.description}</p>
                                                 </button>
-                                                {/* Tooltip on hover */}
-                                                <div className="absolute left-0 right-0 bottom-full mb-2 z-50 hidden group-hover:block">
-                                                    <div className="bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl text-xs">
-                                                        <div className="mb-2">
-                                                            <span className="text-cyan-400 font-medium">Key Attributes:</span>
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                {config.keyAttributes.slice(0, 6).map(attr => (
-                                                                    <span key={attr} className="bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded text-[10px]">
-                                                                        {attr.replace(/_/g, ' ')}
-                                                                    </span>
-                                                                ))}
-                                                                {config.keyAttributes.length > 6 && (
-                                                                    <span className="text-gray-500 text-[10px]">+{config.keyAttributes.length - 6} more</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="mb-2">
-                                                            <span className="text-green-400 font-medium">Core Focus:</span>
-                                                            <p className="text-gray-300 mt-0.5">{config.coreSectionFocus}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-purple-400 font-medium">Authority Focus:</span>
-                                                            <p className="text-gray-300 mt-0.5">{config.authorSectionFocus}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
                                             </div>
                                         );
                                     })}
@@ -595,6 +582,45 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                     </Button>
                 </footer>
             </form>
+
+            {/* Portal-rendered tooltip for website types - escapes overflow containers */}
+            {activeTooltip && createPortal(
+                <div
+                    className="fixed z-[9999] pointer-events-none"
+                    style={{
+                        left: activeTooltip.rect.left + activeTooltip.rect.width / 2,
+                        top: activeTooltip.rect.top - 8,
+                        transform: 'translate(-50%, -100%)',
+                    }}
+                >
+                    <div className="bg-slate-950 border-2 border-cyan-500/50 rounded-lg p-3 shadow-2xl shadow-black/50 text-xs ring-1 ring-cyan-500/20 max-w-xs">
+                        <div className="mb-2">
+                            <span className="text-cyan-300 font-semibold">Key Attributes:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {WEBSITE_TYPE_CONFIG[activeTooltip.type].keyAttributes.slice(0, 6).map(attr => (
+                                    <span key={attr} className="bg-cyan-900/50 text-cyan-100 px-1.5 py-0.5 rounded text-[10px] border border-cyan-700/50">
+                                        {attr.replace(/_/g, ' ')}
+                                    </span>
+                                ))}
+                                {WEBSITE_TYPE_CONFIG[activeTooltip.type].keyAttributes.length > 6 && (
+                                    <span className="text-gray-400 text-[10px]">+{WEBSITE_TYPE_CONFIG[activeTooltip.type].keyAttributes.length - 6} more</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="mb-2">
+                            <span className="text-emerald-400 font-semibold">Core Focus:</span>
+                            <p className="text-gray-100 mt-0.5">{WEBSITE_TYPE_CONFIG[activeTooltip.type].coreSectionFocus}</p>
+                        </div>
+                        <div>
+                            <span className="text-violet-400 font-semibold">Authority Focus:</span>
+                            <p className="text-gray-100 mt-0.5">{WEBSITE_TYPE_CONFIG[activeTooltip.type].authorSectionFocus}</p>
+                        </div>
+                        {/* Arrow pointing down */}
+                        <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 bg-slate-950 border-r-2 border-b-2 border-cyan-500/50 transform rotate-45"></div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </Card>
     );
 };
