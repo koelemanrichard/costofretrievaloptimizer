@@ -10,6 +10,7 @@ import { EnrichedTopic, ExpansionMode, ContentBrief } from '../types';
 import { safeString } from '../utils/parsers';
 import { calculateBriefQualityScore } from '../utils/briefQualityScore';
 import { Button } from './ui/Button';
+import { SmartLoader } from './ui/FunLoaders';
 
 interface TopicInlineDetailProps {
   topic: EnrichedTopic;
@@ -145,7 +146,7 @@ export const TopicInlineDetail: React.FC<TopicInlineDetailProps> = ({
               disabled={isExpanding || !canExpand}
               className="text-xs whitespace-nowrap"
             >
-              {isExpanding ? 'Expanding...' : 'Expand Topic'}
+              {isExpanding ? <SmartLoader context="expanding" size="sm" showText={false} /> : 'Expand Topic'}
             </Button>
           )}
 

@@ -6,7 +6,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { BriefSection, FormatCode, AttributeCategory, ContentZone, EnrichedTopic } from '../../types';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 interface SectionEditorProps {
     section: BriefSection;
@@ -142,7 +142,7 @@ export const SectionEditor: React.FC<SectionEditorProps> = ({
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
-                    {isRefining && <Loader className="w-4 h-4" />}
+                    {isRefining && <SmartLoader context="generating" size="sm" showText={false} />}
                     <button
                         className="p-1.5 hover:bg-slate-600 rounded text-slate-400 hover:text-white"
                         onClick={() => setShowAIInput(!showAIInput)}

@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Select } from '../ui/Select';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { Modal } from '../ui/Modal';
 import * as modelDiscovery from '../../services/modelDiscoveryService';
 import { WordPressConnectionManager } from '../wordpress';
@@ -98,7 +98,7 @@ const AIProviderSettings: React.FC<{ settings: Partial<BusinessInfo>, setSetting
                     />
                 </div>
                 <Button type="button" onClick={handleTestKey} variant="secondary" className="!py-2 !px-3" disabled={validationStatus === 'loading'}>
-                    {validationStatus === 'loading' ? <Loader className="w-5 h-5"/> : 'Test Key'}
+                    {validationStatus === 'loading' ? <SmartLoader context="validating" size="sm" showText={false} /> : 'Test Key'}
                 </Button>
                 <div className="w-6 h-6 flex items-center justify-center">
                     {validationStatus === 'success' && <span title="Valid Key">✅</span>}
@@ -134,7 +134,7 @@ const AIProviderSettings: React.FC<{ settings: Partial<BusinessInfo>, setSetting
                          <Select id="aiModel" name="aiModel" value={settings.aiModel || ''} onChange={handleChange} disabled={isFetchingModels || models.length === 0}>
                             {models.length > 0 ? models.map(m => <option key={m} value={m}>{m}</option>) : <option>Test a valid key to populate models</option>}
                         </Select>
-                        {isFetchingModels && <Loader className="w-5 h-5"/>}
+                        {isFetchingModels && <SmartLoader context="loading" size="sm" showText={false} />}
                     </div>
                 </div>
             </div>
@@ -305,7 +305,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
         <div className="flex justify-end gap-4 w-full">
             <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
             <Button type="submit" form="settings-form" disabled={isSaving || state.isLoading.settings}>
-                {(isSaving || state.isLoading.settings) ? <Loader className="w-5 h-5" /> : 'Save Settings'}
+                {(isSaving || state.isLoading.settings) ? <SmartLoader context="saving" size="sm" showText={false} /> : 'Save Settings'}
             </Button>
         </div>
     );

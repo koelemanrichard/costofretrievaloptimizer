@@ -12,7 +12,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 interface NewMapModalProps {
   isOpen: boolean;
@@ -55,7 +55,7 @@ const NewMapModal: React.FC<NewMapModalProps> = ({ isOpen, onClose, onCreateMap 
                         Cancel
                     </Button>
                     <Button type="submit" form="new-map-form" disabled={isLoading || !mapName}>
-                        {isLoading ? <Loader className="w-5 h-5" /> : 'Create & Setup'}
+                        {isLoading ? <SmartLoader context="building" size="sm" showText={false} /> : 'Create & Setup'}
                     </Button>
                 </>
             }

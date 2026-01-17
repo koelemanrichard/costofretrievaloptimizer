@@ -8,6 +8,7 @@ import { discoverCompetitorsWithAI } from '../../services/perplexityService';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 type DiscoveryMethod = 'idle' | 'serp' | 'ai' | 'done';
 
@@ -160,12 +161,15 @@ const CompetitorRefinementWizard: React.FC<CompetitorRefinementWizardProps> = ({
                 </header>
                 {isLoading && (
                     <div className="flex flex-col items-center gap-3 py-8">
-                        <Loader />
-                        <p className="text-gray-400 text-sm">
-                            {discoveryMethod === 'serp' && 'Discovering competitors via DataForSEO...'}
-                            {discoveryMethod === 'ai' && 'SERP returned empty. Discovering competitors via AI (Perplexity)...'}
-                            {discoveryMethod === 'idle' && 'Initializing competitor discovery...'}
-                        </p>
+                        <SmartLoader
+                            context="discovering"
+                            size="lg"
+                            customText={
+                                discoveryMethod === 'serp' ? 'Discovering competitors via SERP...' :
+                                discoveryMethod === 'ai' ? 'Discovering via AI...' :
+                                'Initializing...'
+                            }
+                        />
                     </div>
                 )}
                 {error && <div className="text-red-400 bg-red-900/20 p-4 rounded-md text-center">{error}</div>}

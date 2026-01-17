@@ -4,7 +4,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { Project, AppStep } from '../../types';
 import { OrganizationSwitcher, PendingInvitationsBanner } from '../organization';
 import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from '../../services/supabaseClient';
@@ -109,7 +109,7 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
               </div>
             </div>
             <Button type="submit" className="mt-6 w-full" disabled={isLoading.createProject}>
-              {isLoading.createProject ? <Loader /> : 'Create and Open Project'}
+              {isLoading.createProject ? <SmartLoader context="building" size="sm" /> : 'Create and Open Project'}
             </Button>
           </form>
         </Card>
@@ -119,7 +119,7 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
           <h2 className="text-2xl font-bold text-white mb-6">Load Existing Project</h2>
           {isLoading.projects ? (
             <div className="flex justify-center items-center h-48">
-              <Loader />
+              <SmartLoader context="loading" size="lg" />
             </div>
           ) : projects.length === 0 ? (
             <p className="text-gray-400 text-center">No projects found.</p>

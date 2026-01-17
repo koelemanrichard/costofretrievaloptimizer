@@ -11,7 +11,7 @@ import { Select } from '../ui/Select';
 import { Modal } from '../ui/Modal';
 import * as aiService from '../../services/aiService';
 import { useAppState } from '../../state/appState';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { QueryTemplatePanel } from '../templates/QueryTemplatePanel';
 
 interface AddTopicModalProps {
@@ -274,7 +274,7 @@ const AddTopicModal: React.FC<AddTopicModalProps> = ({
                         <div className="flex gap-2">
                             <Input id="topic-title" value={title} onChange={(e) => setTitle(e.target.value)} required onBlur={() => { if(title && !viabilityResult) handleCheckViability() }} />
                             <Button type="button" onClick={handleCheckViability} variant="secondary" disabled={isCheckingViability || !title} className="text-xs">
-                                {isCheckingViability ? <Loader className="w-4 h-4"/> : 'Check Viability'}
+                                {isCheckingViability ? <SmartLoader context="validating" size="sm" showText={false} /> : 'Check Viability'}
                             </Button>
                         </div>
                     </div>
@@ -373,7 +373,7 @@ const AddTopicModal: React.FC<AddTopicModalProps> = ({
                         />
                         <div className="mt-2 text-right">
                             <Button onClick={handleGenerateSuggestions} disabled={isGenerating || !userThoughts.trim()} className="bg-purple-600 hover:bg-purple-700">
-                                {isGenerating ? <Loader className="w-4 h-4" /> : 'Generate Structure'}
+                                {isGenerating ? <SmartLoader context="generating" size="sm" showText={false} /> : 'Generate Structure'}
                             </Button>
                         </div>
                     </div>

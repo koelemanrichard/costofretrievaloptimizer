@@ -7,6 +7,7 @@ import { Textarea } from '../ui/Textarea';
 import { EnrichedTopic, ExpansionMode } from '../../types';
 import { useAppState } from '../../state/appState';
 import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { AIModelSelector } from '../ui/AIModelSelector';
 import { Modal } from '../ui/Modal';
 
@@ -88,7 +89,7 @@ const TopicExpansionModal: React.FC<TopicExpansionModalProps> = ({ isOpen, onClo
             <div className="flex justify-end gap-4">
                 <Button variant="secondary" onClick={onClose} disabled={!!isProcessing}>Cancel</Button>
                 <Button onClick={handleExpand} disabled={!!isProcessing}>
-                    {isProcessing ? <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Expanding...</span></div> : 'Expand Topic'}
+                    {isProcessing ? <SmartLoader context="expanding" size="sm" /> : 'Expand Topic'}
                 </Button>
             </div>
         </div>

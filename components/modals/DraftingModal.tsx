@@ -5,7 +5,7 @@ import { ContentBrief, BusinessInfo, EnrichedTopic, FreshnessProfile, ImagePlace
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAppState } from '../../state/appState';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { safeString } from '../../utils/parsers';
 import { Textarea } from '../ui/Textarea';
 import { getSupabaseClient } from '../../services/supabaseClient';
@@ -2140,7 +2140,7 @@ ${schemaScript}`;
                     className="!py-1 !px-4 text-sm bg-green-700 hover:bg-green-600"
                     disabled={isSaving || isPolishing}
                  >
-                    {isSaving ? <Loader className="w-4 h-4"/> : 'Save to Map'}
+                    {isSaving ? <SmartLoader context="saving" size="sm" showText={false} /> : 'Save to Map'}
                  </Button>
              ) : (
                  <>
@@ -2149,7 +2149,7 @@ ${schemaScript}`;
                         className="!py-1 !px-4 text-sm"
                         disabled={isSaving || isPolishing}
                      >
-                        {isSaving ? <Loader className="w-4 h-4"/> : 'Save Draft'}
+                        {isSaving ? <SmartLoader context="saving" size="sm" showText={false} /> : 'Save Draft'}
                      </Button>
                      {draftHistory.length > 0 && (
                          <button
@@ -2428,7 +2428,7 @@ ${schemaScript}`;
                 {isLoadingDraft ? (
                     <div className="flex-1 flex items-center justify-center bg-gray-900">
                         <div className="text-center">
-                            <Loader className="w-8 h-8 mx-auto mb-4 text-blue-500" />
+                            <SmartLoader context="loading" size="lg" showText={false} className="mx-auto mb-4" />
                             <p className="text-gray-400">Loading draft from database...</p>
                         </div>
                     </div>
@@ -2886,7 +2886,7 @@ ${schemaScript}`;
                         className="text-xs py-1 px-3 bg-gray-600 hover:bg-gray-500 opacity-80"
                         title={!canGenerateContent ? (featureReason || 'Content generation requires a subscription upgrade') : "Optional: Refines intro as abstractive summary, converts dense paragraphs to lists, applies stylometry for author voice. Note: Pass 7 already handles intro synthesis."}
                     >
-                        {isPolishing ? <Loader className="w-3 h-3"/> : '⚡ Polish'}
+                        {isPolishing ? <SmartLoader context="generating" size="sm" showText={false} /> : '⚡ Polish'}
                     </Button>
                     <Button
                         onClick={() => onAnalyzeFlow(draftContent)}
@@ -2904,7 +2904,7 @@ ${schemaScript}`;
                         className={`text-xs py-1 px-2 ${showAuditPanel ? 'bg-emerald-600' : 'bg-emerald-700 hover:bg-emerald-600'}`}
                         title="Run algorithmic audit and show issues with auto-fix suggestions"
                     >
-                        {isRunningAudit ? <Loader className="w-3 h-3" /> : showAuditPanel ? '◉ Audit' : '✓ Audit'}
+                        {isRunningAudit ? <SmartLoader context="auditing" size="sm" showText={false} /> : showAuditPanel ? '◉ Audit' : '✓ Audit'}
                         {auditIssues.filter(i => !i.fixApplied).length > 0 && (
                             <span className="ml-1 px-1 py-0.5 text-[10px] bg-red-600 rounded-full">
                                 {auditIssues.filter(i => !i.fixApplied).length}
@@ -3066,7 +3066,7 @@ ${schemaScript}`;
                 disabled={selectedPasses.length === 0 || isRerunning}
                 className="bg-teal-600 hover:bg-teal-700"
               >
-                {isRerunning ? <Loader className="w-4 h-4" /> : `Re-run ${selectedPasses.length} Pass${selectedPasses.length !== 1 ? 'es' : ''}`}
+                {isRerunning ? <SmartLoader context="generating" size="sm" showText={false} /> : `Re-run ${selectedPasses.length} Pass${selectedPasses.length !== 1 ? 'es' : ''}`}
               </Button>
             </div>
           </div>
@@ -3195,7 +3195,7 @@ ${schemaScript}`;
                         disabled={isRestoringVersion}
                         className="w-full !py-2 text-sm bg-teal-600 hover:bg-teal-700"
                       >
-                        {isRestoringVersion ? <Loader className="w-4 h-4" /> : '⏪ Restore This Version'}
+                        {isRestoringVersion ? <SmartLoader context="loading" size="sm" showText={false} /> : '⏪ Restore This Version'}
                       </Button>
                     </div>
                   );

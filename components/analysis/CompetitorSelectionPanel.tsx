@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 // =============================================================================
 // Types
@@ -137,7 +137,7 @@ export const CompetitorSelectionPanel: React.FC<CompetitorSelectionPanelProps> =
       <div className="p-4 max-h-80 overflow-y-auto">
         {isLoading && competitors.length === 0 ? (
           <div className="flex justify-center py-8">
-            <Loader />
+            <SmartLoader context="analyzing" size="sm" showText={false} />
           </div>
         ) : (
           <div className="space-y-2">
@@ -208,7 +208,7 @@ export const CompetitorSelectionPanel: React.FC<CompetitorSelectionPanelProps> =
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <Loader />
+                <SmartLoader context="analyzing" size="sm" showText={false} />
                 Analyzing...
               </span>
             ) : (

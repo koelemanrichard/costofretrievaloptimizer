@@ -14,7 +14,7 @@ import {
   getHealthLevelColor
 } from '../../utils/briefQualityScore';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 interface BriefHealthOverviewProps {
   brief: ContentBrief;
@@ -81,7 +81,7 @@ export const BriefHealthOverview: React.FC<BriefHealthOverviewProps> = ({
           )}
           {(isRepairing || isRegenerating) && (
             <div className="flex items-center gap-1 text-xs text-gray-400">
-              <Loader className="w-3 h-3" />
+              <SmartLoader context="loading" size="sm" showText={false} />
               {isRepairing ? 'Repairing...' : 'Regenerating...'}
             </div>
           )}
@@ -120,7 +120,7 @@ export const BriefHealthOverview: React.FC<BriefHealthOverviewProps> = ({
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               {isRepairing || isRegenerating ? (
                 <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Loader className="w-4 h-4" />
+                  <SmartLoader context="loading" size="sm" showText={false} />
                   {isRepairing ? 'Repairing...' : 'Regenerating...'}
                 </div>
               ) : (

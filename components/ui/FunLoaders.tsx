@@ -360,4 +360,114 @@ export const ButtonLoader: React.FC<{
   return <Component size="sm" className={className} />;
 };
 
-export default FunLoader;
+// ============================================
+// CONTEXT-AWARE LOADER - Auto-picks animation & messages
+// ============================================
+type LoadingContext =
+  | 'generating' | 'expanding' | 'analyzing' | 'saving' | 'loading'
+  | 'briefing' | 'mapping' | 'auditing' | 'publishing' | 'importing'
+  | 'discovering' | 'validating' | 'connecting' | 'researching' | 'building';
+
+const contextConfig: Record<LoadingContext, {
+  Loader: React.FC<LoaderProps>;
+  messages: string[];
+  color: string;
+}> = {
+  generating: {
+    Loader: MagicSparkles,
+    messages: ['Generating...', 'Creating magic...', 'Crafting content...', 'Almost ready...'],
+    color: 'text-purple-400',
+  },
+  expanding: {
+    Loader: DnaHelix,
+    messages: ['Expanding...', 'Growing knowledge...', 'Connecting dots...', 'Building out...'],
+    color: 'text-cyan-400',
+  },
+  analyzing: {
+    Loader: BrainPulse,
+    messages: ['Analyzing...', 'Processing data...', 'Finding patterns...', 'Crunching numbers...'],
+    color: 'text-blue-400',
+  },
+  saving: {
+    Loader: BouncingDots,
+    messages: ['Saving...', 'Storing data...', 'Almost done...'],
+    color: 'text-green-400',
+  },
+  loading: {
+    Loader: TypingDots,
+    messages: ['Loading...', 'Fetching data...', 'Please wait...'],
+    color: 'text-gray-400',
+  },
+  briefing: {
+    Loader: BuildingBlocks,
+    messages: ['Creating brief...', 'Structuring content...', 'Building outline...', 'Finalizing...'],
+    color: 'text-amber-400',
+  },
+  mapping: {
+    Loader: KnowledgeNodes,
+    messages: ['Building map...', 'Connecting topics...', 'Organizing structure...', 'Almost there...'],
+    color: 'text-indigo-400',
+  },
+  auditing: {
+    Loader: WaveBars,
+    messages: ['Auditing...', 'Checking quality...', 'Scanning content...', 'Reviewing...'],
+    color: 'text-orange-400',
+  },
+  publishing: {
+    Loader: Orbit,
+    messages: ['Publishing...', 'Sending to server...', 'Updating site...', 'Going live...'],
+    color: 'text-emerald-400',
+  },
+  importing: {
+    Loader: BuildingBlocks,
+    messages: ['Importing...', 'Processing files...', 'Reading data...', 'Organizing...'],
+    color: 'text-teal-400',
+  },
+  discovering: {
+    Loader: Orbit,
+    messages: ['Discovering...', 'Searching...', 'Exploring...', 'Finding gems...'],
+    color: 'text-violet-400',
+  },
+  validating: {
+    Loader: WaveBars,
+    messages: ['Validating...', 'Checking...', 'Verifying...', 'Confirming...'],
+    color: 'text-sky-400',
+  },
+  connecting: {
+    Loader: KnowledgeNodes,
+    messages: ['Connecting...', 'Linking...', 'Establishing...', 'Almost there...'],
+    color: 'text-pink-400',
+  },
+  researching: {
+    Loader: BrainPulse,
+    messages: ['Researching...', 'Gathering intel...', 'Exploring sources...', 'Learning...'],
+    color: 'text-rose-400',
+  },
+  building: {
+    Loader: BuildingBlocks,
+    messages: ['Building...', 'Constructing...', 'Assembling...', 'Putting together...'],
+    color: 'text-lime-400',
+  },
+};
+
+export const SmartLoader: React.FC<{
+  context: LoadingContext;
+  size?: 'sm' | 'md' | 'lg';
+  showText?: boolean;
+  customText?: string;
+  className?: string;
+}> = ({ context, size = 'sm', showText = true, customText, className = '' }) => {
+  const config = contextConfig[context];
+  const LoaderComponent = config.Loader;
+
+  return (
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <LoaderComponent size={size} className={config.color} />
+      {showText && (
+        customText
+          ? <span>{customText}</span>
+          : <ProgressText messages={config.messages} interval={2000} />
+      )}
+    </span>
+  );
+};

@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { BriefSection, FormatCode, AttributeCategory, ContentZone } from '../../types';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 interface AddSectionModalProps {
     insertIndex: number;
@@ -285,7 +285,7 @@ export const AddSectionModal: React.FC<AddSectionModalProps> = ({
                         >
                             {isGenerating ? (
                                 <>
-                                    <Loader className="w-4 h-4" />
+                                    <SmartLoader context="generating" size="sm" showText={false} />
                                     <span className="ml-2">Generating...</span>
                                 </>
                             ) : (

@@ -21,7 +21,7 @@ import {
 import { ContentBrief, BriefSection, EnrichedTopic, SEOPillars, BusinessInfo } from '../../types';
 import { useBriefEditor } from '../../hooks/useBriefEditor';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { SectionEditor } from './SectionEditor';
 import { AIPreviewModal } from './AIPreviewModal';
 import { AddSectionModal } from './AddSectionModal';
@@ -484,7 +484,7 @@ export const BriefEditModal: React.FC<BriefEditModalProps> = ({
                         >
                             {isSaving ? (
                                 <>
-                                    <Loader className="w-4 h-4" />
+                                    <SmartLoader context="saving" size="sm" showText={false} />
                                     <span className="ml-2">Saving...</span>
                                 </>
                             ) : (

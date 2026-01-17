@@ -11,6 +11,7 @@ import { Textarea } from './ui/Textarea';
 import { Select } from './ui/Select';
 import { InfoTooltip } from './ui/InfoTooltip';
 import { Loader } from './ui/Loader';
+import { SmartLoader } from './ui/FunLoaders';
 import * as modelDiscovery from '../services/modelDiscoveryService';
 import { useSmartWizard } from '../hooks/useSmartWizard';
 import { detectInputType } from '../services/ai/businessResearch';
@@ -272,10 +273,7 @@ const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
                     className="whitespace-nowrap"
                 >
                     {smartWizard.isResearching ? (
-                        <>
-                            <Loader className="w-4 h-4 mr-2" />
-                            Researching...
-                        </>
+                        <SmartLoader context="researching" size="sm" />
                     ) : (
                         <>
                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

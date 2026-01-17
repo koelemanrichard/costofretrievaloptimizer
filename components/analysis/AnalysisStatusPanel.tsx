@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 // =============================================================================
 // INLINE ICONS (avoiding external icon library dependency)
@@ -152,7 +152,7 @@ export const AnalysisStatusPanel: React.FC<AnalysisStatusPanelProps> = ({
         <div className="flex items-center gap-3">
           {/* Status Icon */}
           {isActive ? (
-            <Loader className="w-5 h-5 text-blue-400 animate-spin" />
+            <SmartLoader context="analyzing" size="sm" showText={false} />
           ) : status.stage === 'complete' ? (
             <CheckCircle className="w-5 h-5 text-green-400" />
           ) : status.stage === 'failed' ? (
@@ -306,7 +306,7 @@ export const CompactProgress: React.FC<CompactProgressProps> = ({
 }) => {
   return (
     <div className="flex items-center gap-2">
-      {isLoading && <Loader className="w-4 h-4 text-blue-400 animate-spin" />}
+      {isLoading && <SmartLoader context="analyzing" size="sm" showText={false} />}
       <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden min-w-[60px]">
         <div
           className="h-full bg-blue-500 transition-all duration-300"

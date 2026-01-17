@@ -5,6 +5,7 @@ import { useAppState } from '../../state/appState';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { Modal } from '../ui/Modal';
 import { EnrichedTopic, ContentBrief, ContextualBridgeLink, BriefSection, EnhancedSchemaResult, ResponseCode } from '../../types';
 import { safeString } from '../../utils/parsers';
@@ -778,7 +779,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 title={!canGenerateContent && !featureLoading ? (featureReason || 'Content generation requires a subscription upgrade') : 'Regenerate the article draft based on the current brief'}
                             >
                                 {isStartingGeneration ? (
-                                    <div className="flex items-center gap-2"><Loader className="w-3 h-3" /> <span>Starting...</span></div>
+                                    <SmartLoader context="generating" size="sm" customText="Starting..." />
                                 ) : (
                                     'Regenerate Draft'
                                 )}
@@ -791,9 +792,9 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                             title={!canGenerateContent && !featureLoading && !brief.articleDraft ? (featureReason || 'Content generation requires a subscription upgrade') : undefined}
                         >
                             {isDrafting ? (
-                                <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Generating...</span></div>
+                                <SmartLoader context="generating" size="sm" />
                             ) : featureLoading && !brief.articleDraft ? (
-                                <div className="flex items-center gap-2"><Loader className="w-4 h-4" /> <span>Checking...</span></div>
+                                <SmartLoader context="loading" size="sm" customText="Checking..." />
                             ) : (
                                 brief.articleDraft ? 'View Draft' : (useMultiPass ? 'Generate (Multi-Pass)' : 'Generate Article Draft')
                             )}

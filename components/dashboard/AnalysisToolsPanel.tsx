@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { AuditProgress } from '../../services/ai/unifiedAudit';
 
 interface AnalysisToolsPanelProps {
@@ -68,7 +68,7 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
             if (phase === 'preparing') {
                 return (
                     <span className="flex items-center gap-2">
-                        <Loader className="w-4 h-4" /> Preparing...
+                        <SmartLoader context="loading" size="sm" showText={false} /> Preparing...
                     </span>
                 );
             }
@@ -76,7 +76,7 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
                 return (
                     <span className="flex flex-col items-center text-xs">
                         <span className="flex items-center gap-1">
-                            <Loader className="w-3 h-3" /> {percentComplete}%
+                            <SmartLoader context="analyzing" size="sm" showText={false} /> {percentComplete}%
                         </span>
                         <span className="truncate max-w-[80px]">{currentCategory}</span>
                     </span>
@@ -85,26 +85,26 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
             if (phase === 'calculating') {
                 return (
                     <span className="flex items-center gap-2">
-                        <Loader className="w-4 h-4" /> {issuesFound} issues
+                        <SmartLoader context="auditing" size="sm" showText={false} /> {issuesFound} issues
                     </span>
                 );
             }
         }
 
-        return <Loader />;
+        return <SmartLoader context="analyzing" size="sm" showText={false} />;
     };
 
     return (
         <Card className="p-6">
             <h2 className="text-2xl font-bold text-white mb-4">Advanced Analysis & Tools</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-                <Button onClick={onValidateMap} disabled={isLoading.validation} variant="secondary">{isLoading.validation ? <Loader /> : 'Validate Map'}</Button>
-                <Button onClick={onFindMergeOpportunities} disabled={isLoading.merge} variant="secondary">{isLoading.merge ? <Loader /> : 'Find Merges'}</Button>
-                <Button onClick={onAnalyzeSemanticRelationships} disabled={isLoading.semantic} variant="secondary">{isLoading.semantic ? <Loader /> : 'Semantics'}</Button>
-                <Button onClick={onAnalyzeContextualCoverage} disabled={isLoading.coverage} variant="secondary">{isLoading.coverage ? <Loader /> : 'Coverage'}</Button>
-                <Button onClick={onAuditInternalLinking} disabled={isLoading.linkingAudit} variant="secondary">{isLoading.linkingAudit ? <Loader /> : 'Link Audit'}</Button>
-                <Button onClick={onCalculateTopicalAuthority} disabled={isLoading.authority} variant="secondary">{isLoading.authority ? <Loader /> : 'Authority'}</Button>
-                <Button onClick={onGeneratePublicationPlan} disabled={isLoading.plan} variant="secondary">{isLoading.plan ? <Loader /> : 'Plan'}</Button>
+                <Button onClick={onValidateMap} disabled={isLoading.validation} variant="secondary">{isLoading.validation ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Validate Map'}</Button>
+                <Button onClick={onFindMergeOpportunities} disabled={isLoading.merge} variant="secondary">{isLoading.merge ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Find Merges'}</Button>
+                <Button onClick={onAnalyzeSemanticRelationships} disabled={isLoading.semantic} variant="secondary">{isLoading.semantic ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Semantics'}</Button>
+                <Button onClick={onAnalyzeContextualCoverage} disabled={isLoading.coverage} variant="secondary">{isLoading.coverage ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Coverage'}</Button>
+                <Button onClick={onAuditInternalLinking} disabled={isLoading.linkingAudit} variant="secondary">{isLoading.linkingAudit ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Link Audit'}</Button>
+                <Button onClick={onCalculateTopicalAuthority} disabled={isLoading.authority} variant="secondary">{isLoading.authority ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Authority'}</Button>
+                <Button onClick={onGeneratePublicationPlan} disabled={isLoading.plan} variant="secondary">{isLoading.plan ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Plan'}</Button>
                 <Button onClick={onRunUnifiedAudit} disabled={isLoading.unifiedAudit} className="bg-purple-700 hover:bg-purple-600">{renderAuditButton()}</Button>
                 {onQueryNetworkAudit && (
                     <Button onClick={onQueryNetworkAudit} className="bg-blue-700 hover:bg-blue-600">Query Network</Button>
@@ -150,7 +150,7 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
                             variant="secondary"
                             className="text-xs"
                         >
-                            {isRepairing ? <><Loader className="w-3 h-3 mr-1" /> Repairing...</> : 'Repair Briefs'}
+                            {isRepairing ? <><SmartLoader context="building" size="sm" showText={false} /> Repairing...</> : 'Repair Briefs'}
                         </Button>
                     </div>
                     {repairResult && (

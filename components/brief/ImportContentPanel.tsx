@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 interface ImportContentPanelProps {
     onImport: (url: string) => Promise<void>;
@@ -34,7 +34,7 @@ export const ImportContentPanel: React.FC<ImportContentPanelProps> = ({ onImport
                     disabled={!url || isLoading} 
                     className="whitespace-nowrap text-sm py-2 bg-blue-700 hover:bg-blue-600"
                 >
-                    {isLoading ? <Loader className="w-4 h-4" /> : 'Import & Audit'}
+                    {isLoading ? <SmartLoader context="importing" size="sm" showText={false} /> : 'Import & Audit'}
                 </Button>
             </div>
             <p className="text-xs text-gray-400 mt-2">

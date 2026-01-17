@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { BriefRegenerationProgress } from './BriefRegenerationProgress';
 import { RegenerationProgress } from '../../hooks/useBriefEditor';
 
@@ -135,7 +135,7 @@ export const RegenerateBriefPanel: React.FC<RegenerateBriefPanelProps> = ({
                 >
                     {isRegenerating ? (
                         <>
-                            <Loader className="w-4 h-4" />
+                            <SmartLoader context="generating" size="sm" showText={false} />
                             <span className="ml-2">Regenerating...</span>
                         </>
                     ) : (

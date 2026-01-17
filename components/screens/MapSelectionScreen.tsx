@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { TopicalMap } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import MergeMapWizard from '../merge/MergeMapWizard';
 
 interface MapSelectionScreenProps {
@@ -72,7 +72,7 @@ const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                 <div className="lg:col-span-2">
                     <Card className="p-8 h-full">
                         <h2 className="text-2xl font-bold text-white mb-6">Existing Topical Maps</h2>
-                        {state.isLoading.map ? <div className="flex justify-center"><Loader /></div> :
+                        {state.isLoading.map ? <div className="flex justify-center"><SmartLoader context="loading" size="lg" /></div> :
                          topicalMaps.length === 0 ? (
                             <p className="text-gray-400 text-center">No topical maps have been created for this project yet.</p>
                         ) : (

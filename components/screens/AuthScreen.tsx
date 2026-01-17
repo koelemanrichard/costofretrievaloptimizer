@@ -6,7 +6,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { AppStep } from '../../types';
 
 const AuthScreen: React.FC = () => {
@@ -137,7 +137,7 @@ const AuthScreen: React.FC = () => {
 
                     <div>
                         <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? <Loader className="w-5 h-5 mx-auto" /> : (isSignUp ? 'Sign Up' : 'Sign In')}
+                            {loading ? <SmartLoader context="connecting" size="sm" showText={false} /> : (isSignUp ? 'Sign Up' : 'Sign In')}
                         </Button>
                     </div>
                 </form>

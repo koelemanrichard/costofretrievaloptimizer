@@ -5,7 +5,7 @@ import { AppStep, CandidateEntity, SourceContextOption, SEOPillars, BusinessInfo
 import * as aiService from '../../services/aiService';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { CandidateCard } from '../ui/CandidateCard';
 import { Textarea } from '../ui/Textarea';
 
@@ -125,7 +125,7 @@ const PillarDefinitionWizard: React.FC<PillarDefinitionWizardProps> = ({ onFinal
     };
 
     const renderContent = () => {
-        if (isLoading) return <div className="flex justify-center h-64 items-center"><Loader /></div>;
+        if (isLoading) return <div className="flex flex-col justify-center h-64 items-center gap-4"><SmartLoader context="analyzing" size="lg" /></div>;
         if (error) return <p className="text-red-400 bg-red-900/20 p-4 rounded-md">{error}</p>;
 
         switch (subStep) {
