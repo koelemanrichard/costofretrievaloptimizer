@@ -29,7 +29,7 @@ const CompetitorManagerModal: React.FC<CompetitorManagerModalProps> = ({ isOpen,
   const sectionId = useId();
 
   // Get active map and pillars
-  const activeMap = state.activeMapId ? state.topicalMaps[state.activeMapId] : null;
+  const activeMap = state.topicalMaps.find(m => m.id === state.activeMapId);
   const pillars = activeMap?.pillars;
 
   // Build effective business info (same logic as CompetitorRefinementWizard)
