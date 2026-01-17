@@ -14,6 +14,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useSupabase } from '../../services/supabaseClient';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { OrganizationMember, OrganizationRole } from '../../types';
 
 // ============================================================================

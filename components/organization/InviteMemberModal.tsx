@@ -14,7 +14,7 @@ import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { useInvitations } from '../../hooks/useInvitations';
 import { useOrganizationContext } from './OrganizationProvider';
 import { OrganizationRole } from '../../types';
@@ -134,7 +134,7 @@ export function InviteMemberModal({ isOpen, onClose, onSuccess }: InviteMemberMo
       >
         {isLoading ? (
           <span className="flex items-center gap-2">
-            <Loader className="w-4 h-4" />
+            <SmartLoader context="saving" size="sm" showText={false} />
             Sending...
           </span>
         ) : (

@@ -11,7 +11,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useOrganizationContext } from './OrganizationProvider';
 import { CreateOrganizationModal } from './CreateOrganizationModal';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 interface OrganizationSwitcherProps {
   className?: string;
@@ -63,7 +63,7 @@ export function OrganizationSwitcher({ className = '' }: OrganizationSwitcherPro
   if (isLoading) {
     return (
       <div className={`flex items-center gap-2 px-3 py-2 text-gray-400 ${className}`}>
-        <Loader className="w-4 h-4" />
+        <SmartLoader context="loading" size="sm" showText={false} />
         <span className="text-sm">Loading...</span>
       </div>
     );
@@ -93,7 +93,7 @@ export function OrganizationSwitcher({ className = '' }: OrganizationSwitcherPro
         aria-haspopup="listbox"
       >
         {isSwitching ? (
-          <Loader className="w-4 h-4" />
+          <SmartLoader context="loading" size="sm" showText={false} />
         ) : (
           <OrgIcon type={current.type} />
         )}

@@ -11,7 +11,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useInvitations } from '../../hooks/useInvitations';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { Invitation } from '../../types';
 
 // ============================================================================
@@ -57,7 +57,7 @@ function ConfirmDialog({
             Cancel
           </Button>
           <Button variant="secondary" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? <Loader className="w-4 h-4" /> : confirmLabel}
+            {isLoading ? <SmartLoader context="loading" size="sm" showText={false} /> : confirmLabel}
           </Button>
         </div>
       </div>
@@ -156,7 +156,7 @@ function InvitationCard({
           onClick={() => onAccept(invitation)}
           disabled={isProcessing}
         >
-          {isProcessing ? <Loader className="w-4 h-4" /> : 'Accept'}
+          {isProcessing ? <SmartLoader context="loading" size="sm" showText={false} /> : 'Accept'}
         </Button>
       </div>
     </div>

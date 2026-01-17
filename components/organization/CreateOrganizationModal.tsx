@@ -13,7 +13,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Select } from '../ui/Select';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { useOrganizationContext } from './OrganizationProvider';
 
 // ============================================================================
@@ -143,7 +143,7 @@ export function CreateOrganizationModal({ isOpen, onClose, onSuccess }: CreateOr
       >
         {isLoading ? (
           <span className="flex items-center gap-2">
-            <Loader className="w-4 h-4" />
+            <SmartLoader context="building" size="sm" showText={false} />
             Creating...
           </span>
         ) : (

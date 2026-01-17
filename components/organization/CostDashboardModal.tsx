@@ -18,7 +18,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { useCosts, CostReport } from '../../hooks/useCosts';
 
 // ============================================================================
@@ -434,7 +434,7 @@ export function CostDashboardModal({ isOpen, onClose }: CostDashboardModalProps)
       {/* Loading State */}
       {(isLoading || hookLoading) && (
         <div className="flex items-center justify-center py-12">
-          <Loader className="w-8 h-8" />
+          <SmartLoader context="loading" size="lg" showText={false} />
         </div>
       )}
 

@@ -10,7 +10,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useCosts, CostReport } from '../../hooks/useCosts';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 // ============================================================================
 // Types
@@ -120,7 +120,7 @@ export function CostSummaryWidget({ className, onViewDetails }: CostSummaryWidge
     return (
       <div className={`bg-gray-800/50 rounded-lg p-4 ${className || ''}`}>
         <div className="flex items-center justify-center py-8">
-          <Loader className="w-6 h-6" />
+          <SmartLoader context="loading" size="md" showText={false} />
         </div>
       </div>
     );

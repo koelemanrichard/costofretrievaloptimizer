@@ -14,7 +14,7 @@ import { useOrganizationContext } from './OrganizationProvider';
 import { usePermissions } from '../../hooks/usePermissions';
 import { Button } from '../ui/Button';
 import { Label } from '../ui/Label';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { useAppState } from '../../state/appState';
 
@@ -48,7 +48,7 @@ function StatCard({ label, value, icon }: StatCardProps) {
         <span className="text-xs text-gray-400 uppercase tracking-wider">{label}</span>
       </div>
       <p className="text-2xl font-bold text-gray-200 capitalize">
-        {value === null ? <Loader className="w-4 h-4" /> : value ?? '-'}
+        {value === null ? <SmartLoader context="loading" size="sm" showText={false} /> : value ?? '-'}
       </p>
     </div>
   );
@@ -174,7 +174,7 @@ export function OrganizationSettingsTab({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader className="w-8 h-8" />
+        <SmartLoader context="loading" size="lg" showText={false} />
       </div>
     );
   }

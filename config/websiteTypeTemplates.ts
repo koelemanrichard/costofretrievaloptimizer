@@ -577,7 +577,9 @@ export const AFFILIATE_REVIEW_CONFIG: WebsiteTypeConfig = {
 // CONFIGURATION MAP
 // =============================================================================
 
-export const WEBSITE_TYPE_TEMPLATES: Record<WebsiteType, WebsiteTypeConfig> = {
+// Note: Only types with detailed template configs are included here.
+// Types without explicit configs will fall back to INFORMATIONAL_CONFIG.
+export const WEBSITE_TYPE_TEMPLATES: Partial<Record<WebsiteType, WebsiteTypeConfig>> = {
   ECOMMERCE: ECOMMERCE_CONFIG,
   SAAS: SAAS_CONFIG,
   SERVICE_B2B: SERVICE_B2B_CONFIG,
@@ -590,10 +592,11 @@ export const WEBSITE_TYPE_TEMPLATES: Record<WebsiteType, WebsiteTypeConfig> = {
 // =============================================================================
 
 /**
- * Get the configuration for a specific website type
+ * Get the configuration for a specific website type.
+ * Falls back to INFORMATIONAL_CONFIG for types without explicit templates.
  */
 export function getWebsiteTypeConfig(type: WebsiteType): WebsiteTypeConfig {
-  return WEBSITE_TYPE_TEMPLATES[type] || WEBSITE_TYPE_TEMPLATES.INFORMATIONAL;
+  return WEBSITE_TYPE_TEMPLATES[type] ?? INFORMATIONAL_CONFIG;
 }
 
 /**

@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { MemberList } from './MemberList';
 import { InviteMemberModal } from './InviteMemberModal';
 import { useOrganizationContext } from './OrganizationProvider';
@@ -189,7 +189,7 @@ function ConfirmDialog({
             Cancel
           </Button>
           <Button variant="primary" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? <Loader className="w-4 h-4" /> : confirmLabel}
+            {isLoading ? <SmartLoader context="loading" size="sm" showText={false} /> : confirmLabel}
           </Button>
         </div>
       </div>
@@ -397,7 +397,7 @@ export function MemberManagementModal({ isOpen, onClose }: MemberManagementModal
             {/* Invitations list */}
             {isLoadingInvitations ? (
               <div className="flex items-center justify-center p-8">
-                <Loader className="w-8 h-8" />
+                <SmartLoader context="loading" size="lg" showText={false} />
               </div>
             ) : pendingInvitations.length === 0 ? (
               <div className="text-center p-8 text-gray-400 bg-gray-800/30 rounded-lg">

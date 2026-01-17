@@ -11,7 +11,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOrganizationContext } from './OrganizationProvider';
 import { usePermissions } from '../../hooks/usePermissions';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { useAppState } from '../../state/appState';
 
@@ -362,7 +362,7 @@ export function SubscriptionBillingTab({ onClose }: SubscriptionBillingTabProps)
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader className="w-8 h-8" />
+        <SmartLoader context="loading" size="lg" showText={false} />
       </div>
     );
   }

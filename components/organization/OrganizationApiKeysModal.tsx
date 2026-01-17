@@ -13,7 +13,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Label } from '../ui/Label';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 import { useOrganizationContext } from './OrganizationProvider';
 import { useAppState } from '../../state/appState';
 import { useApiKeys, AI_PROVIDERS, AIProvider } from '../../hooks/useApiKeys';
@@ -312,7 +312,7 @@ function ConfigureKeyModal({ isOpen, provider, onClose, onSave, isSaving }: Conf
           <Button onClick={handleSave} disabled={isSaving || !apiKey.trim()}>
             {isSaving ? (
               <span className="flex items-center gap-2">
-                <Loader className="w-4 h-4" />
+                <SmartLoader context="validating" size="sm" showText={false} />
                 Saving...
               </span>
             ) : (
@@ -493,7 +493,7 @@ export function OrganizationApiKeysModal({ isOpen, onClose }: OrganizationApiKey
           {/* Loading State */}
           {statusLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader className="w-8 h-8" />
+              <SmartLoader context="loading" size="lg" showText={false} />
             </div>
           )}
 

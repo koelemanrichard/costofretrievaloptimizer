@@ -10,7 +10,7 @@
 
 import React, { ReactNode } from 'react';
 import { useFeatureGate, usePermissions, Permission } from '../../hooks/usePermissions';
-import { Loader } from '../ui/Loader';
+import { SmartLoader } from '../ui/FunLoaders';
 
 // ============================================================================
 // FeatureGate Component
@@ -65,7 +65,7 @@ export function FeatureGate({
   if (loading && showLoader) {
     return (
       <div className="flex items-center justify-center p-4">
-        <Loader className="h-5 w-5" />
+        <SmartLoader context="loading" size="sm" showText={false} />
       </div>
     );
   }
