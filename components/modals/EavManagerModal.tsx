@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Loader } from '../ui/Loader';
+import { KnowledgeNodes, ProgressText } from '../ui/FunLoaders';
 import { SemanticTriple, BusinessInfo, SEOPillars } from '../../types';
 import { safeString } from '../../utils/parsers';
 import { useAppState } from '../../state/appState';
@@ -412,10 +413,13 @@ const EavManagerModal: React.FC<EavManagerModalProps> = ({ isOpen, onClose, eavs
                         className="flex-1 !py-2"
                       >
                         {isExpanding ? (
-                          <>
-                            <Loader className="w-4 h-4 mr-2" />
-                            Expanding...
-                          </>
+                          <span className="flex items-center gap-2">
+                            <KnowledgeNodes size="sm" className="text-purple-400" />
+                            <ProgressText
+                              messages={['Expanding...', 'Analyzing semantics...', 'Building graph...', 'Almost ready...']}
+                              interval={2000}
+                            />
+                          </span>
                         ) : (
                           `Expand +${expansionCount} with AI`
                         )}

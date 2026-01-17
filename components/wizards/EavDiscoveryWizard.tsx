@@ -7,6 +7,7 @@ import * as aiService from '../../services/aiService';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { DnaHelix, ProgressText } from '../ui/FunLoaders';
 import { EavCompletenessCard, EavCompletenessBadge } from '../eav/EavCompletenessCard';
 import { EavCategoryChartInline } from '../eav/EavCategoryChart';
 import { calculateEavCompleteness, meetsMinimumRequirements } from '../../utils/eavAnalytics';
@@ -223,7 +224,15 @@ const EavDiscoveryWizard: React.FC<EavDiscoveryWizardProps> = ({ onFinalize, onB
                     <div className="relative">
                         <div className="flex items-center gap-1">
                             <Button onClick={() => handleExpand()} variant="secondary" disabled={isLoading}>
-                                {isLoading ? 'Expanding...' : `Expand +${expansionCount}`}
+                                {isLoading ? (
+                                    <span className="flex items-center gap-2">
+                                        <DnaHelix size="sm" className="text-cyan-400" />
+                                        <ProgressText
+                                            messages={['Expanding...', 'Connecting dots...', 'Building knowledge...', 'Almost there...']}
+                                            interval={2500}
+                                        />
+                                    </span>
+                                ) : `Expand +${expansionCount}`}
                             </Button>
                             <button
                                 onClick={() => setShowExpansionConfig(!showExpansionConfig)}
