@@ -135,79 +135,96 @@ export const analyzeCompetitorSitemap = async (domain: string): Promise<string[]
 
 
 export const fetchSerpResults = async (query: string, login: string, password: string, locationName: string, languageCode: string): Promise<SerpResult[]> => {
-    
-    const fetchFn = async () => {
-        const postData = [{
-            keyword: query,
-            location_name: locationName,
-            language_code: languageCode,
-            depth: 30, // Fetch more results since we filter out publications and own domain
-        }];
+    const cacheKey = `serp:dataforseo:${JSON.stringify({ query, locationName, languageCode })}`;
 
-        const url = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced';
-        const credentials = btoa(`${login}:${password}`);
+    // Check cache first
+    const cachedResult = await cacheService.get<SerpResult[]>(cacheKey);
+    if (cachedResult !== null && cachedResult.length > 0) {
+        console.log(`[CACHE HIT]: serp:dataforseo (${cachedResult.length} results)`);
+        return cachedResult;
+    }
 
-        console.log('[DataForSEO] Starting SERP request for:', { query, locationName, languageCode });
-        const startTime = Date.now();
+    // If cache miss or cached empty results, fetch fresh data
+    console.log(`[CACHE MISS or EMPTY]: serp:dataforseo`);
 
-        try {
-            const response = await fetchWithProxy(url, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Basic ${credentials}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(postData)
-            });
+    const postData = [{
+        keyword: query,
+        location_name: locationName,
+        language_code: languageCode,
+        depth: 30, // Fetch more results since we filter out publications and own domain
+    }];
 
-            console.log(`[DataForSEO] Response received in ${Date.now() - startTime}ms, status: ${response.status}`);
+    const url = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced';
+    const credentials = btoa(`${login}:${password}`);
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`DataForSEO API HTTP Error: ${response.status} ${response.statusText}. Response: ${errorText}`);
-            }
+    console.log('[DataForSEO] Starting SERP request for:', { query, locationName, languageCode });
+    const startTime = Date.now();
 
-            const data = await response.json();
-            console.log(`[DataForSEO] Parsed response, status_code: ${data.status_code}, tasks: ${data.tasks?.length}`);
+    try {
+        const response = await fetchWithProxy(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${credentials}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(postData)
+        });
 
-            if (data.status_code !== 20000) {
-                throw new Error(`DataForSEO API Error: ${data.status_message}`);
-            }
-            
-            const taskResult = data.tasks?.[0]?.result?.[0];
-            if (!taskResult || !taskResult.items) {
-                console.warn('[DataForSEO] No SERP results returned. Response structure:', {
-                    hasTaskResult: !!taskResult,
-                    hasItems: !!taskResult?.items,
-                    itemCount: taskResult?.items?.length,
-                    tasks: data.tasks?.length,
-                    statusMessage: data.status_message
-                });
-                // Return empty array but log for debugging - this is a valid state (no organic results)
-                return [];
-            }
+        console.log(`[DataForSEO] Response received in ${Date.now() - startTime}ms, status: ${response.status}`);
 
-            return taskResult.items
-                .filter((item: any) => item.type === 'organic')
-                .map((item: any): SerpResult => ({
-                    position: item.rank_absolute,
-                    title: item.title,
-                    link: item.url,
-                    snippet: item.description || ''
-                }));
-
-        } catch (error) {
-            console.error("Failed to fetch SERP data from DataForSEO:", error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown Error';
-            if (errorMessage.includes('timed out')) {
-                 throw new Error(`Could not get SERP data: The request to DataForSEO timed out. This can happen with very broad queries or if their service is slow. Please try again or refine your seed keyword.`);
-            }
-            throw new Error(`Could not fetch SERP data. Please check your query and API credentials. [${errorMessage}]`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`DataForSEO API HTTP Error: ${response.status} ${response.statusText}. Response: ${errorText}`);
         }
-    };
 
-    // Cache SERP results for 7 days (604800 seconds)
-    return cacheService.cacheThrough('serp:dataforseo', { query, locationName, languageCode }, fetchFn, 604800);
+        const data = await response.json();
+        console.log(`[DataForSEO] Parsed response, status_code: ${data.status_code}, tasks: ${data.tasks?.length}`);
+
+        if (data.status_code !== 20000) {
+            throw new Error(`DataForSEO API Error: ${data.status_message}`);
+        }
+
+        const taskResult = data.tasks?.[0]?.result?.[0];
+        if (!taskResult || !taskResult.items) {
+            console.warn('[DataForSEO] No SERP results returned. Response structure:', {
+                hasTaskResult: !!taskResult,
+                hasItems: !!taskResult?.items,
+                itemCount: taskResult?.items?.length,
+                tasks: data.tasks?.length,
+                statusMessage: data.status_message,
+                fullTaskResult: taskResult // Log full result for debugging
+            });
+            // Don't cache empty results - allow retry on next request
+            return [];
+        }
+
+        const results = taskResult.items
+            .filter((item: any) => item.type === 'organic')
+            .map((item: any): SerpResult => ({
+                position: item.rank_absolute,
+                title: item.title,
+                link: item.url,
+                snippet: item.description || ''
+            }));
+
+        // Only cache non-empty results for 7 days
+        if (results.length > 0) {
+            await cacheService.set(cacheKey, results, 604800);
+            console.log(`[DataForSEO] Cached ${results.length} results`);
+        } else {
+            console.log('[DataForSEO] No organic results found, not caching');
+        }
+
+        return results;
+
+    } catch (error) {
+        console.error("Failed to fetch SERP data from DataForSEO:", error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown Error';
+        if (errorMessage.includes('timed out')) {
+             throw new Error(`Could not get SERP data: The request to DataForSEO timed out. This can happen with very broad queries or if their service is slow. Please try again or refine your seed keyword.`);
+        }
+        throw new Error(`Could not fetch SERP data. Please check your query and API credentials. [${errorMessage}]`);
+    }
 };
 
 // =============================================================================
@@ -567,17 +584,14 @@ const scoreLocaleRelevance = (url: string, languageCode: string): number => {
 
 /**
  * Build an enhanced search query with locale context
+ * NOTE: Since DataForSEO API handles location/language targeting natively via
+ * location_name and language_code parameters, we no longer add locale keywords
+ * to the query. This was causing over-specification that returned fewer results.
+ *
+ * The locale scoring is still used for post-filtering/ranking results.
  */
-const buildLocalizedQuery = (baseQuery: string, languageCode: string, targetMarket: string): string => {
-    // If query already contains locale keywords, don't add more
-    const localeKeyword = LANGUAGE_TO_LOCALE_KEYWORDS[languageCode] || '';
-
-    if (localeKeyword &&
-        !baseQuery.toLowerCase().includes(localeKeyword.toLowerCase()) &&
-        !baseQuery.toLowerCase().includes(targetMarket.toLowerCase())) {
-        return `${baseQuery} ${localeKeyword}`;
-    }
-
+const buildLocalizedQuery = (baseQuery: string, _languageCode: string, _targetMarket: string): string => {
+    // Return base query unchanged - DataForSEO handles locale targeting via API params
     return baseQuery;
 };
 

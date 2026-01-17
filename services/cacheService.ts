@@ -148,6 +148,58 @@ class CacheService {
             console.error("Error deleting item from IndexedDB:", error);
         }
     }
+
+    /**
+     * Clear all cache entries that match a prefix
+     * Useful for clearing all SERP cache: clearByPrefix('serp:')
+     */
+    public async clearByPrefix(prefix: string): Promise<number> {
+        let cleared = 0;
+
+        // Clear from memory cache
+        for (const key of this.memoryCache.keys()) {
+            if (key.startsWith(prefix)) {
+                this.memoryCache.delete(key);
+                cleared++;
+            }
+        }
+
+        // Clear from IndexedDB
+        try {
+            const db = await this.dbPromise;
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const allKeys = await store.getAllKeys();
+
+            for (const key of allKeys) {
+                if (typeof key === 'string' && key.startsWith(prefix)) {
+                    await store.delete(key);
+                    cleared++;
+                }
+            }
+
+            await tx.done;
+        } catch (error) {
+            console.error("Error clearing cache by prefix:", error);
+        }
+
+        console.log(`[CACHE] Cleared ${cleared} entries with prefix: ${prefix}`);
+        return cleared;
+    }
+
+    /**
+     * Clear all cache entries (full reset)
+     */
+    public async clearAll(): Promise<void> {
+        this.memoryCache.clear();
+        try {
+            const db = await this.dbPromise;
+            await db.clear(STORE_NAME);
+            console.log('[CACHE] Cleared all cache entries');
+        } catch (error) {
+            console.error("Error clearing all cache:", error);
+        }
+    }
 }
 
 // Singleton instance

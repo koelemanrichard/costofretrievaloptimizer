@@ -768,9 +768,16 @@ IMPORTANT: Return ONLY the JSON array, no markdown, no explanation.`;
   const fallback: SerpResult[] = [];
 
   try {
+    // Force Perplexity-specific model since this function always uses Perplexity API
+    // regardless of the user's global AI provider setting
+    const perplexityBusinessInfo = {
+      ...businessInfo,
+      aiModel: 'sonar-pro' // Always use Perplexity's sonar-pro model for competitor discovery
+    };
+
     const result = await callApi(
       prompt,
-      businessInfo,
+      perplexityBusinessInfo,
       dispatch,
       (text) => sanitizer.sanitizeArray<SerpResult>(text, fallback),
       'discoverCompetitorsWithAI'

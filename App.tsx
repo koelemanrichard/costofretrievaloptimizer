@@ -7,6 +7,7 @@ import { getSupabaseClient, resetSupabaseClient, clearSupabaseAuthStorage } from
 import { verifiedDelete, verifiedBulkDelete } from './services/verifiedDatabaseService';
 import { parseTopicalMap, normalizeRpcData, parseProject, repairBriefsInMap } from './utils/parsers';
 import { setGlobalUsageContext, clearGlobalUsageContext, setBillingContext, determineKeySource } from './services/telemetryService';
+import { cacheService } from './services/cacheService';
 import { setVerboseLogging } from './utils/debugLogger';
 import { consoleLogger, setLogContext } from './services/consoleLogger';
 import { apiCallLogger } from './services/apiCallLogger';
@@ -318,7 +319,22 @@ const App: React.FC = () => {
             }, 100);
         };
 
-        console.log('[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.getActiveMapId(), window.getActiveProjectId()');
+        // Clear SERP cache - useful when competitor discovery returns stale/empty results
+        (window as any).clearSerpCache = async () => {
+            console.log('[ClearCache] Clearing all SERP cache entries...');
+            const cleared = await cacheService.clearByPrefix('serp:');
+            console.log(`[ClearCache] Cleared ${cleared} SERP cache entries. Refresh the page and try competitor discovery again.`);
+            return cleared;
+        };
+
+        // Clear all cache - full reset of API caches
+        (window as any).clearAllCache = async () => {
+            console.log('[ClearCache] Clearing ALL cache entries...');
+            await cacheService.clearAll();
+            console.log('[ClearCache] All cache cleared. Refresh the page.');
+        };
+
+        console.log('[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()');
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, state.activeMapId, state.activeProjectId]);
 
     useEffect(() => {
