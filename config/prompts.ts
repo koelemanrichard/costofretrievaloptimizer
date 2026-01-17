@@ -197,9 +197,12 @@ A Central Entity is the core concept the business wants to be known for. It shou
 
 **CRITICAL: You MUST return EXACTLY 5 different candidates. Do not return fewer than 5.**
 
+${getLanguageAndRegionInstruction(info.language, info.targetMarket)}
+**The "entity" field MUST be written in the target language specified above. The "reasoning" field should also be in the target language.**
+
 For each candidate, provide:
-1.  "entity": The candidate entity (e.g., "Contract Management Software").
-2.  "reasoning": A brief explanation of why it's a strong candidate.
+1.  "entity": The candidate entity in the target language (e.g., for Dutch: "Contractbeheer Software", for English: "Contract Management Software").
+2.  "reasoning": A brief explanation of why it's a strong candidate (in the target language).
 3.  "score": A confidence score from 0.0 to 1.0, where 1.0 is a perfect fit.
 
 ${businessContext(info)}
@@ -222,9 +225,12 @@ A Source Context is a statement that defines the unique angle, authority, and pe
 
 **CRITICAL: You MUST return EXACTLY 4 different options. Do not return fewer than 4.**
 
+${getLanguageAndRegionInstruction(info.language, info.targetMarket)}
+**The "context" field MUST be written in the target language specified above. The "reasoning" field should also be in the target language.**
+
 For each option, provide:
-1.  "context": The source context statement.
-2.  "reasoning": Why this context is effective for the business.
+1.  "context": The source context statement in the target language.
+2.  "reasoning": Why this context is effective for the business (in the target language).
 3.  "score": A confidence score from 0.0 to 1.0.
 
 ${businessContext(info)}
@@ -248,9 +254,12 @@ Based on the above and the full business context, suggest EXACTLY 3 different "C
 
 **CRITICAL: You MUST return EXACTLY 3 different intent options. Do not return fewer than 3.**
 
+${getLanguageAndRegionInstruction(info.language, info.targetMarket)}
+**The "intent" field MUST be written in the target language specified above - this is the actual search query users would type. The "reasoning" field should also be in the target language.**
+
 For each option, provide:
-1. "intent": The search intent phrase
-2. "reasoning": Why this intent is effective
+1. "intent": The search intent phrase in the target language (e.g., for Dutch: "Appartement kopen Amsterdam", for English: "Buy apartment Amsterdam")
+2. "reasoning": Why this intent is effective (in the target language)
 
 ${businessContext(info)}
 ${jsonResponseInstruction}
