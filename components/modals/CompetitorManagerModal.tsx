@@ -47,10 +47,8 @@ const CompetitorManagerModal: React.FC<CompetitorManagerModalProps> = ({ isOpen,
     };
   }, [state.businessInfo, activeMap, state.activeProjectId, state.projects]);
 
-  // Check if discovery is possible
-  const canDiscover = pillars?.centralEntity && (
-    effectiveBusinessInfo.dataForSeoLogin || effectiveBusinessInfo.perplexityApiKey
-  );
+  // Show discover section if pillars are configured (API key check happens on click)
+  const canDiscover = !!pillars?.centralEntity;
 
   useEffect(() => {
     if (isOpen) {
@@ -79,6 +77,15 @@ const CompetitorManagerModal: React.FC<CompetitorManagerModalProps> = ({ isOpen,
       return;
     }
 
+    // Check if any discovery method is available
+    const hasDataForSeo = !!(effectiveBusinessInfo.dataForSeoLogin && effectiveBusinessInfo.dataForSeoPassword);
+    const hasPerplexity = !!effectiveBusinessInfo.perplexityApiKey;
+
+    if (!hasDataForSeo && !hasPerplexity) {
+      setDiscoveryError('No API keys configured. Please configure DataForSEO or Perplexity API keys in Settings.');
+      return;
+    }
+
     setIsDiscovering(true);
     setDiscoveryError(null);
     setDiscoveryMethod('serp');
@@ -86,7 +93,7 @@ const CompetitorManagerModal: React.FC<CompetitorManagerModalProps> = ({ isOpen,
     let results: SerpResult[] = [];
 
     // Step 1: Try DataForSEO/SERP-based discovery
-    if (effectiveBusinessInfo.dataForSeoLogin) {
+    if (hasDataForSeo) {
       try {
         console.log('[CompetitorManager] Starting SERP discovery...');
         results = await serpApiService.discoverInitialCompetitors(
@@ -101,7 +108,7 @@ const CompetitorManagerModal: React.FC<CompetitorManagerModalProps> = ({ isOpen,
     }
 
     // Step 2: If SERP returns empty and Perplexity is configured, try AI discovery
-    if (results.length === 0 && effectiveBusinessInfo.perplexityApiKey) {
+    if (results.length === 0 && hasPerplexity) {
       setDiscoveryMethod('ai');
       try {
         console.log('[CompetitorManager] SERP returned empty, falling back to AI discovery...');
