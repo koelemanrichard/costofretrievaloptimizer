@@ -486,28 +486,60 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                                         const config = WEBSITE_TYPE_CONFIG[type];
                                         const isSelected = localBusinessInfo.websiteType === type;
                                         return (
-                                            <button
-                                                key={type}
-                                                type="button"
-                                                onClick={() => setLocalBusinessInfo(prev => ({ ...prev, websiteType: type }))}
-                                                className={`p-3 rounded-lg border text-left transition-all ${
-                                                    isSelected
-                                                        ? 'border-cyan-500 bg-cyan-900/30 ring-1 ring-cyan-500'
-                                                        : 'border-gray-700 bg-gray-800/50 hover:border-gray-600 hover:bg-gray-800'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className={`font-medium text-sm ${isSelected ? 'text-cyan-300' : 'text-gray-200'}`}>
-                                                        {config.label}
-                                                    </span>
-                                                    {isSelected && (
-                                                        <svg className="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                        </svg>
-                                                    )}
+                                            <div key={type} className="relative group">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLocalBusinessInfo(prev => ({ ...prev, websiteType: type }))}
+                                                    className={`w-full p-3 rounded-lg border text-left transition-all ${
+                                                        isSelected
+                                                            ? 'border-cyan-500 bg-cyan-900/30 ring-1 ring-cyan-500'
+                                                            : 'border-gray-700 bg-gray-800/50 hover:border-gray-600 hover:bg-gray-800'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className={`font-medium text-sm ${isSelected ? 'text-cyan-300' : 'text-gray-200'}`}>
+                                                            {config.label}
+                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            {isSelected && (
+                                                                <svg className="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                </svg>
+                                                            )}
+                                                            <svg className="w-3.5 h-3.5 text-gray-500 hover:text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 line-clamp-2">{config.description}</p>
+                                                </button>
+                                                {/* Tooltip on hover */}
+                                                <div className="absolute left-0 right-0 bottom-full mb-2 z-50 hidden group-hover:block">
+                                                    <div className="bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl text-xs">
+                                                        <div className="mb-2">
+                                                            <span className="text-cyan-400 font-medium">Key Attributes:</span>
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {config.keyAttributes.slice(0, 6).map(attr => (
+                                                                    <span key={attr} className="bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded text-[10px]">
+                                                                        {attr.replace(/_/g, ' ')}
+                                                                    </span>
+                                                                ))}
+                                                                {config.keyAttributes.length > 6 && (
+                                                                    <span className="text-gray-500 text-[10px]">+{config.keyAttributes.length - 6} more</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="mb-2">
+                                                            <span className="text-green-400 font-medium">Core Focus:</span>
+                                                            <p className="text-gray-300 mt-0.5">{config.coreSectionFocus}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-purple-400 font-medium">Authority Focus:</span>
+                                                            <p className="text-gray-300 mt-0.5">{config.authorSectionFocus}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs text-gray-400 line-clamp-2">{config.description}</p>
-                                            </button>
+                                            </div>
                                         );
                                     })}
                                 </div>
