@@ -2938,7 +2938,7 @@ ${schemaScript}`;
                         className="text-xs py-0.5 px-2 bg-purple-600/20 !text-purple-400 hover:bg-purple-600/40 hover:!text-purple-300 border border-purple-500/30"
                         title="Add Related Topics section with contextual bridges (SEO internal linking)"
                     >
-                        🔗 Add Links
+                        🔗 Contextual Links
                     </Button>
                     <Button
                         onClick={handleCopyHtml}

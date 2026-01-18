@@ -99,41 +99,42 @@ function generateRelatedTopicsSection(
   const topLinks = links.slice(0, 5);
 
   // Language-aware section headers and bridge text
-  const i18n: Record<string, { header: string; bridge: string; learnMore: string }> = {
+  // Per Semantic SEO: heading should follow "Why [Micro] Matters for [Macro]" or "Continue Exploring [Entity]"
+  const i18n: Record<string, { headerPrefix: string; bridge: string; learnMore: string }> = {
     'nl': {
-      header: 'Verdiep Je Kennis',
-      bridge: 'Om je begrip te verdiepen, verken deze gerelateerde onderwerpen:',
-      learnMore: 'Meer over'
+      headerPrefix: 'Ontdek Meer over',
+      bridge: 'Deze onderwerpen bouwen voort op de concepten die in dit artikel worden besproken en bieden aanvullende inzichten:',
+      learnMore: 'Lees meer over'
     },
     'de': {
-      header: 'Vertiefen Sie Ihr Wissen',
-      bridge: 'Um Ihr Verständnis zu vertiefen, erkunden Sie diese verwandten Themen:',
-      learnMore: 'Mehr über'
+      headerPrefix: 'Entdecken Sie Mehr über',
+      bridge: 'Diese Themen bauen auf den in diesem Artikel besprochenen Konzepten auf und bieten zusätzliche Einblicke:',
+      learnMore: 'Erfahren Sie mehr über'
     },
     'fr': {
-      header: 'Approfondissez Vos Connaissances',
-      bridge: 'Pour approfondir votre compréhension, explorez ces sujets connexes:',
+      headerPrefix: 'Découvrez Plus sur',
+      bridge: 'Ces sujets complètent les concepts abordés dans cet article et offrent des perspectives supplémentaires:',
       learnMore: 'En savoir plus sur'
     },
     'es': {
-      header: 'Profundice Su Conocimiento',
-      bridge: 'Para profundizar su comprensión, explore estos temas relacionados:',
-      learnMore: 'Más sobre'
+      headerPrefix: 'Descubra Más sobre',
+      bridge: 'Estos temas complementan los conceptos discutidos en este artículo y ofrecen perspectivas adicionales:',
+      learnMore: 'Más información sobre'
     },
     'it': {
-      header: 'Approfondisci la Tua Conoscenza',
-      bridge: 'Per approfondire la tua comprensione, esplora questi argomenti correlati:',
-      learnMore: 'Scopri di più su'
+      headerPrefix: 'Scopri di Più su',
+      bridge: 'Questi argomenti completano i concetti discussi in questo articolo e offrono approfondimenti aggiuntivi:',
+      learnMore: 'Per saperne di più su'
     },
     'pt': {
-      header: 'Aprofunde Seu Conhecimento',
-      bridge: 'Para aprofundar sua compreensão, explore estes tópicos relacionados:',
+      headerPrefix: 'Descubra Mais sobre',
+      bridge: 'Estes tópicos complementam os conceitos discutidos neste artigo e oferecem perspectivas adicionais:',
       learnMore: 'Saiba mais sobre'
     },
     'en': {
-      header: 'Expand Your Understanding',
-      bridge: 'To deepen your knowledge, explore these related topics:',
-      learnMore: 'Learn more about'
+      headerPrefix: 'Continue Exploring',
+      bridge: 'These topics build on the concepts discussed in this article and provide additional context:',
+      learnMore: 'Read more about'
     }
   };
 
@@ -142,13 +143,14 @@ function generateRelatedTopicsSection(
   const entity = centralEntity || articleTitle;
 
   // Build Contextual Bridge section per Semantic SEO requirements:
-  // 1. Section heading that signals relationship
+  // 1. Section heading that signals relationship to central entity
   // 2. Bridge paragraph that justifies the transition (annotation text)
   // 3. Links with proper context
-  let section = `\n\n## ${lang.header}\n\n`;
+  // Header follows pattern: "[Prefix] [Central Entity]" to tie back to macro context
+  let section = `\n\n## ${lang.headerPrefix} ${entity}\n\n`;
 
   // Add contextual bridge paragraph (required per semantic SEO)
-  section += `The concepts discussed in ${articleTitle} connect to broader aspects of ${entity}. ${lang.bridge}\n\n`;
+  section += `${lang.bridge}\n\n`;
 
   for (const link of topLinks) {
     // Generate a URL-safe slug for the topic
