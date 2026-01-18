@@ -1,7 +1,21 @@
 // components/ContentGenerationProgress.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ContentGenerationJob, ContentGenerationSection, PASS_NAMES, PassesStatus } from '../types';
 import { SimpleMarkdown } from './ui/SimpleMarkdown';
+
+// Activity messages for each pass to show what's happening
+const PASS_ACTIVITY_MESSAGES: Record<number, string[]> = {
+  1: ['Generating draft content...', 'Writing section content...', 'Creating initial draft...'],
+  2: ['Optimizing headings...', 'Improving header hierarchy...', 'Refining section titles...'],
+  3: ['Adding lists and tables...', 'Structuring data...', 'Creating formatted elements...'],
+  4: ['Integrating discourse flow...', 'Adding transitions...', 'Improving content flow...'],
+  5: ['Applying micro semantics...', 'Optimizing word choice...', 'Refining language...'],
+  6: ['Adding visual elements...', 'Inserting image placeholders...', 'Optimizing visual layout...'],
+  7: ['Synthesizing introduction...', 'Crafting opening...', 'Finalizing intro paragraph...'],
+  8: ['Final polish pass...', 'Smoothing transitions...', 'Final content refinement...'],
+  9: ['Running content audit...', 'Checking quality rules...', 'Validating SEO compliance...'],
+  10: ['Generating schema...', 'Creating structured data...', 'Building JSON-LD markup...'],
+};
 
 interface ContentGenerationProgressProps {
   job: ContentGenerationJob;
@@ -121,6 +135,14 @@ const getPassStatus = (job: ContentGenerationJob, passNum: number): 'completed' 
   return job.passes_status[key] || 'pending';
 };
 
+// Pulsing dot indicator for active processing
+const PulsingDot = () => (
+  <span className="relative flex h-2 w-2">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+  </span>
+);
+
 export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps> = ({
   job,
   sections,
@@ -133,6 +155,53 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
   error
 }) => {
   const [showLivePreview, setShowLivePreview] = useState(false);
+  const [activityMessageIndex, setActivityMessageIndex] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Cycle through activity messages every 3 seconds
+  useEffect(() => {
+    if (job.status !== 'in_progress') return;
+
+    const messageInterval = setInterval(() => {
+      setActivityMessageIndex(prev => prev + 1);
+    }, 3000);
+
+    return () => clearInterval(messageInterval);
+  }, [job.status]);
+
+  // Track elapsed time for current operation
+  useEffect(() => {
+    if (job.status !== 'in_progress') {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [job.status, job.current_pass, job.current_section_key]);
+
+  // Reset elapsed time when pass or section changes
+  useEffect(() => {
+    setElapsedSeconds(0);
+  }, [job.current_pass, job.current_section_key]);
+
+  // Get current activity message
+  const currentActivityMessage = useMemo(() => {
+    const messages = PASS_ACTIVITY_MESSAGES[job.current_pass] || ['Processing...'];
+    return messages[activityMessageIndex % messages.length];
+  }, [job.current_pass, activityMessageIndex]);
+
+  // Get current section being processed (for passes 2+)
+  const currentProcessingSection = useMemo(() => {
+    if (job.current_section_key) {
+      const section = sections.find(s => s.section_key === job.current_section_key);
+      return section?.section_heading || job.current_section_key;
+    }
+    return null;
+  }, [job.current_section_key, sections]);
 
   // Get completed sections with content for preview
   const completedSections = sections
@@ -197,26 +266,68 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
         </div>
       </div>
 
-      {/* Pass 1 Section Progress */}
-      {job.current_pass === 1 && sections.length > 0 && (
-        <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
-          <p className="text-sm text-gray-400 mb-2">
-            Section {job.completed_sections || 0} of {job.total_sections || '?'}
-          </p>
-          {sections.map((section, idx) => (
-            <div key={`${section.section_key}-${section.id || idx}`} className="flex items-center gap-2 text-sm">
-              {section.status === 'completed' ? (
-                <CheckIcon />
-              ) : section.section_key === job.current_section_key ? (
-                <SpinnerIcon />
-              ) : (
-                <CircleIcon />
+      {/* Real-time Activity Status */}
+      {job.status === 'in_progress' && (
+        <div className="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg">
+          <div className="flex items-center gap-3">
+            <PulsingDot />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-blue-200 font-medium truncate">
+                {currentActivityMessage}
+              </p>
+              {currentProcessingSection && (
+                <p className="text-xs text-blue-300/70 mt-0.5 truncate">
+                  Section: {currentProcessingSection}
+                </p>
               )}
-              <span className={section.status === 'completed' ? 'text-gray-400' : 'text-gray-200'}>
-                {section.section_heading || section.section_key}
-              </span>
             </div>
-          ))}
+            <div className="text-xs text-blue-400/60 tabular-nums">
+              {elapsedSeconds > 0 && `${elapsedSeconds}s`}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section Progress - Show for ALL passes now, not just Pass 1 */}
+      {job.status === 'in_progress' && sections.length > 0 && (
+        <div className="space-y-2 mb-4 max-h-48 overflow-y-auto border border-gray-700/50 rounded-lg p-3 bg-gray-900/30">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-sm text-gray-400">
+              {job.current_pass === 1
+                ? `Section ${job.completed_sections || 0} of ${job.total_sections || sections.length}`
+                : `Processing ${sections.length} sections`
+              }
+            </p>
+            {job.current_pass > 1 && (
+              <span className="text-xs text-gray-500">Pass {job.current_pass} optimization</span>
+            )}
+          </div>
+          {sections.map((section, idx) => {
+            // For Pass 1, use section.status
+            // For later passes, check if section.current_pass >= job.current_pass
+            const isCompleted = job.current_pass === 1
+              ? section.status === 'completed'
+              : section.current_pass >= job.current_pass;
+            const isProcessing = section.section_key === job.current_section_key;
+
+            return (
+              <div key={`${section.section_key}-${section.id || idx}`} className="flex items-center gap-2 text-sm">
+                {isCompleted ? (
+                  <CheckIcon />
+                ) : isProcessing ? (
+                  <SpinnerIcon />
+                ) : (
+                  <CircleIcon />
+                )}
+                <span className={`flex-1 truncate ${isCompleted ? 'text-gray-500' : isProcessing ? 'text-blue-300' : 'text-gray-400'}`}>
+                  {section.section_heading || section.section_key}
+                </span>
+                {isProcessing && (
+                  <span className="text-xs text-blue-400 animate-pulse">processing</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -241,6 +352,24 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
           );
         })}
       </div>
+
+      {/* Stall Warning - Show if processing for too long */}
+      {job.status === 'in_progress' && elapsedSeconds > 90 && (
+        <div className="mb-4 p-3 bg-amber-900/30 border border-amber-700/50 rounded">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-amber-300 font-medium">Taking longer than expected</p>
+              <p className="text-xs text-amber-400/80 mt-1">
+                This operation is taking longer than usual ({Math.floor(elapsedSeconds / 60)}m {elapsedSeconds % 60}s).
+                The AI model may be experiencing high load. You can wait, or try pausing and resuming.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {(job.last_error || error) && (

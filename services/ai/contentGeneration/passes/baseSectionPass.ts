@@ -95,12 +95,16 @@ export async function executeSectionPass(
   console.log(`[Pass ${config.passNumber}] STARTING - passKey: ${config.passKey}, nextPass: ${config.nextPassNumber}`);
 
   // Mark pass as in_progress
+  console.log(`[Pass ${config.passNumber}] Updating job status to in_progress...`);
   await orchestrator.updateJob(job.id, {
     passes_status: { ...job.passes_status, [config.passKey]: 'in_progress' }
   });
+  console.log(`[Pass ${config.passNumber}] Job status updated successfully`);
 
   // Get all sections
+  console.log(`[Pass ${config.passNumber}] Fetching sections...`);
   const sections = await orchestrator.getSections(job.id);
+  console.log(`[Pass ${config.passNumber}] Fetched ${sections.length} sections`);
   const sortedSections = [...sections].sort((a, b) => a.section_order - b.section_order);
 
   // Create logger for this pass
@@ -116,14 +120,18 @@ export async function executeSectionPass(
   }
 
   // Phase A: Build holistic summary + format budget (once per pass)
+  console.log(`[Pass ${config.passNumber}] Phase A: Building holistic summary from ${sortedSections.length} sections...`);
   log.log(`Phase A: Building holistic summary + format budget from ${sortedSections.length} sections...`);
   const holisticContext = buildHolisticSummary(sortedSections, brief, businessInfo);
+  console.log(`[Pass ${config.passNumber}] Holistic summary complete, analyzing format budget...`);
   const formatBudget = analyzeContentFormatBudget(sortedSections, brief, businessInfo);
+  console.log(`[Pass ${config.passNumber}] Format budget analysis complete`);
 
   log.log(`Holistic context: ${holisticContext.articleStructure.totalWordCount} words, TTR: ${(holisticContext.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%`);
   log.log(formatBudgetSummary(formatBudget));
 
   // Phase B: Determine which sections to process (selective)
+  console.log(`[Pass ${config.passNumber}] Phase B: Filtering sections for processing...`);
   let sectionsToProcess: ContentGenerationSection[];
 
   // First, apply intro/conclusion filtering based on pass number
@@ -141,15 +149,21 @@ export async function executeSectionPass(
       s.section_heading?.toLowerCase().includes('introduction') ||
       s.section_heading?.toLowerCase().includes('inleiding')
     );
+    console.log(`[Pass ${config.passNumber}] Intro-only mode: ${sectionsToProcess.length} sections to process`);
   } else if (config.filterSections) {
     // Use format budget filtering for selective processing
+    console.log(`[Pass ${config.passNumber}] Running custom section filter...`);
     sectionsToProcess = config.filterSections(passFilteredSections, formatBudget);
+    console.log(`[Pass ${config.passNumber}] Custom filter complete: ${sectionsToProcess.length}/${passFilteredSections.length} sections need optimization`);
     log.log(`Selective processing: ${sectionsToProcess.length}/${passFilteredSections.length} sections need optimization`);
   } else if (config.sectionFilter) {
     // Legacy holistic-based filtering
+    console.log(`[Pass ${config.passNumber}] Running legacy section filter...`);
     sectionsToProcess = passFilteredSections.filter(s => config.sectionFilter!(s, holisticContext));
+    console.log(`[Pass ${config.passNumber}] Legacy filter complete: ${sectionsToProcess.length} sections`);
   } else {
     sectionsToProcess = passFilteredSections;
+    console.log(`[Pass ${config.passNumber}] No filter applied: ${sectionsToProcess.length} sections`);
   }
 
   const totalSections = sectionsToProcess.length;
@@ -164,11 +178,13 @@ export async function executeSectionPass(
     return await orchestrator.assembleDraft(job.id);
   }
 
+  console.log(`[Pass ${config.passNumber}] Phase C: Processing ${totalSections} sections...`);
   log.log(`Phase C: Processing ${totalSections} sections...`);
 
   // Phase C: Process sections (batched or individual)
   const batchSize = config.batchSize || 1;
   const useBatchProcessing = batchSize > 1 && config.buildBatchPrompt;
+  console.log(`[Pass ${config.passNumber}] Processing mode: ${useBatchProcessing ? `batched (size ${batchSize})` : 'individual'}`);
 
   if (useBatchProcessing) {
     // Batch processing mode
@@ -256,10 +272,14 @@ async function processSectionsBatched(
 
     try {
       // Build batch prompt
+      console.log(`[Pass ${config.passNumber}] Building batch prompt for batch ${batchIndex + 1}...`);
       const prompt = config.buildBatchPrompt!(batch, holisticContext, formatBudget, brief, businessInfo);
 
       // Call AI with batch prompt
+      console.log(`[Pass ${config.passNumber}] Calling AI provider for batch ${batchIndex + 1}...`);
+      const startTime = Date.now();
       const response = await callProviderWithFallback(businessInfo, prompt, 2);
+      console.log(`[Pass ${config.passNumber}] AI response received for batch ${batchIndex + 1} (${Date.now() - startTime}ms)`);
 
       // Parse batch response
       const parsedResults = parseBatchResponse(response, batch);
@@ -407,7 +427,10 @@ async function processSectionsIndividually(
 
     try {
       const prompt = config.promptBuilder(ctx);
+      console.log(`[Pass ${config.passNumber}] Calling AI for section ${section.section_key}...`);
+      const startTime = Date.now();
       const optimizedContent = await callProviderWithFallback(businessInfo, prompt, 2);
+      console.log(`[Pass ${config.passNumber}] AI response for ${section.section_key} (${Date.now() - startTime}ms)`);
 
       if (typeof optimizedContent !== 'string' || !optimizedContent.trim()) {
         log.warn(`Empty response for section ${section.section_key}, keeping original`);
