@@ -115,6 +115,97 @@ Secondary focus: ${secondary.label} (${secondary.value}%)
   }
 
   /**
+   * Build template-aware format guidance section
+   * Uses section.format_code directly (when available) and adds visual semantics
+   */
+  private static buildTemplateFormatGuidance(section: BriefSection, brief: ContentBrief): string {
+    const formatCode = section.format_code;
+    if (!formatCode) return '';
+
+    let guidance = `\n## FORMAT REQUIREMENTS (from template)\n`;
+
+    // Get format constraints based on format code
+    switch (formatCode) {
+      case 'FS':
+        guidance += `Format: Featured Snippet\n`;
+        guidance += `- Keep the definition/answer in 40-50 words\n`;
+        guidance += `- Lead with the entity name\n`;
+        guidance += `- Use a single, self-contained paragraph\n`;
+        guidance += `- Optimize for Google's Featured Snippet box\n`;
+        break;
+      case 'PAA':
+        guidance += `Format: People Also Ask\n`;
+        guidance += `- Structure as clear question-answer pairs\n`;
+        guidance += `- Each answer should be 2-4 sentences\n`;
+        guidance += `- Focus on commonly searched questions\n`;
+        break;
+      case 'LISTING':
+        guidance += `Format: List/Bullet Points\n`;
+        guidance += `- Use semantic HTML list structure\n`;
+        guidance += `- Each item should be concise but complete\n`;
+        guidance += `- Ideal for comparison and quick scanning\n`;
+        break;
+      case 'TABLE':
+        guidance += `Format: Table/Comparison\n`;
+        guidance += `- Structure data in HTML table format\n`;
+        guidance += `- Include clear headers and consistent columns\n`;
+        guidance += `- Optimize for featured snippet table display\n`;
+        break;
+      case 'DEFINITIVE':
+        guidance += `Format: Definitive/Comprehensive\n`;
+        guidance += `- Provide complete, authoritative coverage\n`;
+        guidance += `- Include all relevant sub-topics\n`;
+        guidance += `- Use proper heading hierarchy\n`;
+        break;
+      default:
+        guidance += `Format: ${formatCode}\n`;
+    }
+
+    // Add visual semantics if available for this section
+    // Handle both array-based sectionImages (types/content.ts) and Record-based section_images (types.ts)
+    const enhancedVS = brief.enhanced_visual_semantics;
+    if (enhancedVS) {
+      const sectionKey = section.key || section.heading?.toLowerCase().replace(/\s+/g, '-');
+      const headingLower = section.heading?.toLowerCase() || '';
+
+      // Try Record-based section_images first (from types.ts BriefVisualSemantics)
+      if (enhancedVS.section_images && typeof enhancedVS.section_images === 'object') {
+        // Look for exact key match or partial match in the Record
+        const matchingEntry = Object.entries(enhancedVS.section_images).find(
+          ([key]) => key.toLowerCase() === sectionKey || headingLower.includes(key.toLowerCase())
+        );
+
+        if (matchingEntry) {
+          const [, vs] = matchingEntry;
+          // Derive type from n_gram_match if available, otherwise use 'SECTION'
+          const imageType = vs.n_gram_match?.[0]?.toUpperCase() || 'SECTION';
+          guidance += `\n## VISUAL PLACEHOLDER\n`;
+          guidance += `Type: ${imageType}\n`;
+          guidance += `Description: ${vs.image_description}\n`;
+          guidance += `Alt text to include: ${vs.alt_text_recommendation}\n`;
+          guidance += `Insert image placeholder: [IMAGE: ${vs.image_description}]\n`;
+        }
+      }
+      // Fall back to array-based sectionImages (from types/content.ts BriefVisualSemantics)
+      else if (Array.isArray((enhancedVS as any).sectionImages)) {
+        const visualGuide = (enhancedVS as any).sectionImages.find(
+          (v: { sectionKey: string }) => v.sectionKey === sectionKey || headingLower.includes(v.sectionKey)
+        );
+
+        if (visualGuide) {
+          guidance += `\n## VISUAL PLACEHOLDER\n`;
+          guidance += `Type: ${visualGuide.type}\n`;
+          guidance += `Description: ${visualGuide.description}\n`;
+          guidance += `Alt text to include: ${visualGuide.altText}\n`;
+          guidance += `Insert image placeholder: [IMAGE: ${visualGuide.description}]\n`;
+        }
+      }
+    }
+
+    return guidance;
+  }
+
+  /**
    * Build a comprehensive prompt for section generation
    * Includes all semantic framework rules
    */
@@ -144,6 +235,12 @@ Title: ${brief.title}
 Central Entity: ${businessInfo.seedKeyword}
 
 `;
+
+    // Add template-aware format guidance (uses section.format_code directly + visual semantics)
+    const templateGuidance = this.buildTemplateFormatGuidance(section, brief);
+    if (templateGuidance) {
+      prompt += templateGuidance;
+    }
 
     // Add discourse context if available
     if (discourseContext) {
