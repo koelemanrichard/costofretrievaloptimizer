@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { useAppState } from '../state/appState';
-import { ContentBrief, BriefSection, EnrichedTopic, SEOPillars } from '../types';
+import { ContentBrief, BriefSection, EnrichedTopic, SEOPillars, TemplateName, DepthMode } from '../types';
 import { getSupabaseClient } from '../services/supabaseClient';
 import * as briefEditingService from '../services/ai/briefEditing';
 import { RegenerationProgress } from '../services/ai/briefEditing';
@@ -40,6 +40,9 @@ export interface UseBriefEditorReturn {
     // Brief operations
     updateBriefField: <K extends keyof ContentBrief>(field: K, value: ContentBrief[K]) => void;
     regenerateBrief: (instruction: string, topic: EnrichedTopic, pillars: SEOPillars, allTopics: EnrichedTopic[]) => Promise<ContentBrief | null>;
+
+    // Template operations
+    updateTemplateSelection: (templateName: TemplateName, confidence: number, depthMode: DepthMode) => void;
 
     // Persistence
     saveToDB: () => Promise<boolean>;
@@ -207,6 +210,20 @@ export const useBriefEditor = (
             [field]: value
         });
     }, [editedBrief]);
+
+    // Update template selection
+    const updateTemplateSelection = useCallback((
+        templateName: TemplateName,
+        confidence: number,
+        depthMode: DepthMode
+    ) => {
+        setEditedBrief(prev => ({
+            ...prev!,
+            selectedTemplate: templateName,
+            templateConfidence: confidence,
+            depthMode: depthMode,
+        }));
+    }, []);
 
     // Regenerate entire brief with user instructions (uses multi-pass for large briefs)
     const regenerateBrief = useCallback(async (
@@ -475,6 +492,7 @@ export const useBriefEditor = (
         aiGenerateSection,
         updateBriefField,
         regenerateBrief,
+        updateTemplateSelection,
         saveToDB,
         discardChanges,
         setEditedBrief: updateEditedBrief,  // For applying changes (keeps unsaved state)

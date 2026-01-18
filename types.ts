@@ -22,6 +22,8 @@
 import { Json } from './database.types';
 // FIX: Export KnowledgeGraph to be available for other modules.
 export { KnowledgeGraph } from './lib/knowledgeGraph';
+// Import types needed for ContentBrief template fields
+import { TemplateName, DepthMode } from './types/contentTemplates';
 
 // Re-export from domain modules for backward compatibility
 export * from './types/core';
@@ -970,6 +972,19 @@ export interface ContentBrief {
     };
     warnings: string[];
   };
+
+  // Template routing fields (Task 12 - Brief Sync Mechanism)
+  /** Selected template name */
+  selectedTemplate?: TemplateName;
+
+  /** Template selection confidence from AI */
+  templateConfidence?: number;
+
+  /** User-selected depth mode */
+  depthMode?: DepthMode;
+
+  /** Resolved conflict choice */
+  conflictResolution?: 'template' | 'brief' | 'merge';
 }
 
 export interface SerpResult {
