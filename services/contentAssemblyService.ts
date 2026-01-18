@@ -845,14 +845,16 @@ export function generateRelatedTopicsMarkdown(options: AppendRelatedTopicsOption
     const hasReasoning = topic.reasoning &&
                          !topic.reasoning.startsWith('Related') &&
                          topic.reasoning.length > 10;
-
     const annotationHint = topic.annotation_text_hint || '';
 
     if (hasReasoning || annotationHint) {
+      // Use the provided reasoning/annotation as contextual bridge
       const context = annotationHint || topic.reasoning;
       section += `- **${topic.title}**: ${context} [${lang.learnMore} ${anchorText}](${url}).\n`;
     } else {
-      section += `- **${topic.title}**: Explore how this relates to ${entity}. [${lang.learnMore} ${anchorText}](${url}).\n`;
+      // No annotation available - use clean link format without boilerplate
+      // The bridge paragraph provides context; fake annotation text hurts SEO
+      section += `- [${topic.title}](${url})\n`;
     }
   }
 

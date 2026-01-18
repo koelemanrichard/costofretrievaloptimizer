@@ -157,12 +157,10 @@ function generateRelatedTopicsSection(
     const slug = slugify(link.targetTopic);
     const url = `/topics/${slug}`;
 
-    // Create annotation text that provides semantic context for the link
-    // Per semantic SEO: surrounding text must discuss target topic
+    // Check for meaningful annotation text
     const hasReasoning = link.reasoning &&
                          !link.reasoning.startsWith('Related') &&
                          link.reasoning.length > 10;
-
     const annotationHint = link.annotation_text_hint || '';
 
     if (hasReasoning || annotationHint) {
@@ -170,8 +168,9 @@ function generateRelatedTopicsSection(
       const context = annotationHint || link.reasoning;
       section += `- **${link.targetTopic}**: ${context} [${lang.learnMore} ${link.anchorText}](${url}).\n`;
     } else {
-      // Generate minimal but semantic annotation
-      section += `- **${link.targetTopic}**: Explore how this relates to ${entity}. [${lang.learnMore} ${link.anchorText}](${url}).\n`;
+      // No annotation available - use clean link format without boilerplate
+      // The bridge paragraph provides context; fake annotation text hurts SEO
+      section += `- [${link.targetTopic}](${url})\n`;
     }
   }
 
