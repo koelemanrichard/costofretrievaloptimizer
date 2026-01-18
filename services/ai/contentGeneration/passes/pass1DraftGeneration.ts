@@ -1,5 +1,5 @@
 // services/ai/contentGeneration/passes/pass1DraftGeneration.ts
-import { ContentBrief, ContentGenerationJob, SectionDefinition, BusinessInfo, BriefSection, SectionGenerationContext, DiscourseContext, SectionFlowGuidance } from '../../../../types';
+import { ContentBrief, ContentGenerationJob, SectionDefinition, BusinessInfo, BriefSection, SectionGenerationContext, DiscourseContext, SectionFlowGuidance, WebsiteType } from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
 import { ContextChainer } from '../rulesEngine/contextChainer';
 import { AttributeRanker } from '../rulesEngine/attributeRanker';
@@ -15,6 +15,8 @@ import { dispatchToProvider } from '../../providerDispatcher';
 import { createLogger } from '../../../../utils/debugLogger';
 import { ContentGenerationSettings, LENGTH_PRESETS, DEFAULT_CONTENT_LENGTH_SETTINGS } from '../../../../types/contentGeneration';
 import { buildFlowGuidance } from '../flowGuidanceBuilder';
+import { selectTemplate } from '../templateRouter';
+import { TemplateRouterInput, TemplateSelectionResult } from '../../../../types/contentTemplates';
 
 const log = createLogger('Pass1');
 
@@ -93,6 +95,43 @@ export async function executePass1(
   }
 
   log.info(`Content length decision: ${decisionReason} → maxSections=${effectiveMaxSections || 'unlimited'}`);
+
+  // 1b. SELECT TEMPLATE based on context using AI-driven router
+  const topicType = options?.topicType || 'outer';
+  const topicClass = (brief as any).topic_class || (brief as any).topicClass || 'informational';
+
+  const templateInput: TemplateRouterInput = {
+    websiteType: (businessInfo.websiteType as WebsiteType) || 'INFORMATIONAL',
+    queryIntent: (brief.searchIntent as 'informational' | 'transactional' | 'commercial' | 'navigational') || 'informational',
+    queryType: brief.serpAnalysis?.query_type || 'definitional',
+    topicType: topicType as 'core' | 'outer' | 'child',
+    topicClass: topicClass as 'monetization' | 'informational',
+    briefHints: {
+      hasComparisonSections: brief.structured_outline?.some(s =>
+        s.heading?.toLowerCase().includes('vs') || s.heading?.toLowerCase().includes('comparison')
+      ) || false,
+      hasStepSections: brief.structured_outline?.some(s =>
+        s.heading?.toLowerCase().includes('step') || s.heading?.toLowerCase().includes('how to')
+      ) || false,
+      hasSpecsSections: brief.structured_outline?.some(s =>
+        s.heading?.toLowerCase().includes('spec') || s.heading?.toLowerCase().includes('feature')
+      ) || false,
+    },
+    competitorAnalysis: brief.serpAnalysis?.avgWordCount ? {
+      dominantFormat: brief.serpAnalysis.commonStructure || 'prose',
+      avgSectionCount: brief.serpAnalysis.avgHeadings || 6,
+      avgWordCount: brief.serpAnalysis.avgWordCount,
+    } : undefined,
+  };
+
+  const templateSelection: TemplateSelectionResult = selectTemplate(templateInput);
+  log.info(`[Pass1] Using template: ${templateSelection.template.templateName} (${templateSelection.confidence}% confidence)`);
+  for (const reason of templateSelection.reasoning) {
+    log.info(`[Pass1]   - ${reason}`);
+  }
+  if (templateSelection.alternatives.length > 0) {
+    log.log(`[Pass1] Alternative templates: ${templateSelection.alternatives.map(a => a.templateName).join(', ')}`);
+  }
 
   // 2. Parse sections from brief with maxSections limit
   let sections = orchestrator.parseSectionsFromBrief(brief, { maxSections: effectiveMaxSections });
