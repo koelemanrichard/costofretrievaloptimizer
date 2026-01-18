@@ -349,19 +349,25 @@ const App: React.FC = () => {
                     // This returns all projects the user has access to:
                     // - Projects in organizations they're a member of (has_project_access)
                     // - Legacy projects they own directly (user_id = auth.uid())
-                    // Include map_count via Supabase relation count
+                    // Include topical_maps with updated_at to calculate map_count and last_activity
                     const { data: projectsData, error: projectsError } = await supabase
                         .from('projects')
-                        .select('*, topical_maps(count)')
-                        .order('updated_at', { ascending: false, nullsFirst: false });
+                        .select('*, topical_maps(updated_at)')
+                        .order('created_at', { ascending: false });
                     if (projectsError) throw projectsError;
-                    // Transform to include map_count at top level
-                    const projectsWithMapCount = (projectsData || []).map((p: any) => ({
-                        ...p,
-                        map_count: p.topical_maps?.[0]?.count ?? 0,
-                        topical_maps: undefined // Remove nested relation data
-                    }));
-                    dispatch({ type: 'SET_PROJECTS', payload: projectsWithMapCount });
+                    // Transform to include map_count and last_activity at top level
+                    const projectsWithActivity = (projectsData || []).map((p: any) => {
+                        const maps = p.topical_maps || [];
+                        const mapDates = maps.map((m: any) => new Date(m.updated_at).getTime());
+                        const lastActivity = mapDates.length > 0 ? new Date(Math.max(...mapDates)).toISOString() : null;
+                        return {
+                            ...p,
+                            map_count: maps.length,
+                            last_activity: lastActivity,
+                            topical_maps: undefined // Remove nested relation data
+                        };
+                    });
+                    dispatch({ type: 'SET_PROJECTS', payload: projectsWithActivity });
 
                     // Fetch Settings (global credentials only)
                     const { data: settingsData, error: settingsError } = await supabase.functions.invoke('get-settings');

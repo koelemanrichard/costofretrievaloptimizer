@@ -1649,10 +1649,10 @@ export interface Project {
     project_name: string;
     domain: string;
     created_at: string;
-    updated_at?: string;
     organization_id?: string;
     api_key_mode?: 'inherit' | 'byok';
     map_count?: number; // Populated via subquery when fetching projects
+    last_activity?: string | null; // Most recent updated_at from related topical_maps
 }
 
 /** Extended Project interface for admin management (includes user info) */

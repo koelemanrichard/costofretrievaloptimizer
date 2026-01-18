@@ -57,9 +57,9 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
         case 'modified':
-          // Use updated_at if available, fallback to created_at
-          const aDate = a.updated_at || a.created_at;
-          const bDate = b.updated_at || b.created_at;
+          // Use last_activity (most recent map update) if available, fallback to created_at
+          const aDate = a.last_activity || a.created_at;
+          const bDate = b.last_activity || b.created_at;
           comparison = new Date(aDate).getTime() - new Date(bDate).getTime();
           break;
       }
@@ -272,7 +272,7 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
                     className="text-left py-3 px-4 text-sm font-medium text-gray-400 cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('modified')}
                   >
-                    Modified <SortIcon field="modified" />
+                    Last Activity <SortIcon field="modified" />
                   </th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">
                     Actions
@@ -316,7 +316,7 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-gray-400 text-sm">
-                        {project.updated_at ? formatDate(project.updated_at) : '-'}
+                        {project.last_activity ? formatDate(project.last_activity) : '-'}
                       </span>
                     </td>
                     <td className="py-3 px-4">
