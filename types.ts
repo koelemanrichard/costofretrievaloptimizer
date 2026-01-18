@@ -16,6 +16,7 @@
 // - types/migration.ts - Migration types (TransitionStatus, MapMergeState, SiteInventoryItem)
 // - types/siteAnalysis.ts - Site analysis V2 types (SiteAnalysisProject, SitePageRecord, JinaExtraction)
 // - types/contentGeneration.ts - Content generation V2 types
+// - types/contentTemplates.ts - Content template routing types
 
 // FIX: Corrected import path for database types to be a relative path, fixing module resolution error.
 import { Json } from './database.types';
@@ -34,6 +35,7 @@ export * from './types/navigation';
 export * from './types/migration';
 export * from './types/siteAnalysis';
 export * from './types/contentGeneration';
+export * from './types/contentTemplates';
 export * from './types/competitiveIntelligence';
 export * from './types/wordpress';
 export * from './types/organization';
