@@ -725,7 +725,7 @@ const App: React.FC = () => {
         <AppStateContext.Provider value={{ state, dispatch }}>
             <OrganizationProvider>
                 <MainLayout>
-                <div className="bg-gray-900 text-gray-200 min-h-screen font-sans">
+                <div className="bg-gray-900 text-gray-200 min-h-screen font-sans" style={{ backgroundColor: '#111827', color: '#e5e7eb', minHeight: '100vh' }}>
                     <GlobalLoadingBar />
                     <CelebrationOverlay />
                     <UpdateBanner
