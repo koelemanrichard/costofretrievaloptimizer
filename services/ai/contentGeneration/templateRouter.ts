@@ -261,53 +261,56 @@ function generateReasoning(input: TemplateRouterInput, selectedTemplate: Templat
 
 /**
  * Generate alternative templates with reasons
+ * Always provides at least 2-3 alternatives so users can override the selection
  */
 function generateAlternatives(
   input: TemplateRouterInput,
   selectedTemplate: TemplateName
 ): Array<{ templateName: TemplateName; reason: string }> {
   const alternatives: Array<{ templateName: TemplateName; reason: string }> = [];
+  const addedTemplates = new Set<TemplateName>([selectedTemplate]);
+
+  const addAlternative = (templateName: TemplateName, reason: string) => {
+    if (!addedTemplates.has(templateName)) {
+      alternatives.push({ templateName, reason });
+      addedTemplates.add(templateName);
+    }
+  };
 
   // Add website type default if different
   const websiteDefault = WEBSITE_TYPE_TEMPLATE_MAP[input.websiteType];
   if (websiteDefault !== selectedTemplate) {
-    alternatives.push({
-      templateName: websiteDefault,
-      reason: `Default template for ${input.websiteType} website type`,
-    });
+    addAlternative(websiteDefault, `Default template for ${input.websiteType} website type`);
   }
 
   // Add query type template if different
   const queryTypeTemplate = QUERY_TYPE_TEMPLATE_MAP[input.queryType];
-  if (queryTypeTemplate && queryTypeTemplate !== selectedTemplate && queryTypeTemplate !== websiteDefault) {
-    alternatives.push({
-      templateName: queryTypeTemplate,
-      reason: `Matches query type '${input.queryType}'`,
-    });
+  if (queryTypeTemplate) {
+    addAlternative(queryTypeTemplate, `Matches query type '${input.queryType}'`);
   }
 
   // Add DEFINITIONAL as fallback for informational intent
-  if (
-    input.queryIntent === 'informational' &&
-    selectedTemplate !== 'DEFINITIONAL' &&
-    websiteDefault !== 'DEFINITIONAL'
-  ) {
-    alternatives.push({
-      templateName: 'DEFINITIONAL',
-      reason: 'Standard template for informational content',
-    });
+  if (input.queryIntent === 'informational') {
+    addAlternative('DEFINITIONAL', 'Standard template for informational content');
   }
 
   // Add COMPARISON for commercial intent
-  if (
-    input.queryIntent === 'commercial' &&
-    selectedTemplate !== 'COMPARISON' &&
-    websiteDefault !== 'COMPARISON'
-  ) {
-    alternatives.push({
-      templateName: 'COMPARISON',
-      reason: 'Comparison template suits commercial research intent',
-    });
+  if (input.queryIntent === 'commercial') {
+    addAlternative('COMPARISON', 'Comparison template suits commercial research intent');
+  }
+
+  // Always ensure at least 2-3 popular alternatives are available
+  // These are commonly useful templates users might want to override to
+  const popularAlternatives: Array<{ templateName: TemplateName; reason: string }> = [
+    { templateName: 'PROCESS_HOWTO', reason: 'Step-by-step guide format for instructional content' },
+    { templateName: 'COMPARISON', reason: 'Side-by-side comparison format for evaluative content' },
+    { templateName: 'LISTING_DIRECTORY', reason: 'List-based format for collections and roundups' },
+    { templateName: 'DEFINITIONAL', reason: 'Educational format for explaining concepts' },
+  ];
+
+  for (const alt of popularAlternatives) {
+    if (alternatives.length >= 3) break;
+    addAlternative(alt.templateName, alt.reason);
   }
 
   // Limit to 3 alternatives

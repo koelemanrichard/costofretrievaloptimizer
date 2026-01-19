@@ -50,7 +50,8 @@ const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
 
   const handleConfirm = () => {
     onSelect(chosen);
-    onClose();
+    // Don't call onClose() here - the parent flow advances to the next step
+    // onClose is only for cancellation
   };
 
   const getConfidenceColor = (conf: number) => {

@@ -68,7 +68,8 @@ const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = ({
 
   const handleApply = () => {
     onResolve(chosen);
-    onClose();
+    // Don't call onClose() here - the parent flow advances to the next step
+    // onClose is only for cancellation
   };
 
   const getSeverityColor = (severity: string) => {

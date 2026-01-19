@@ -47,7 +47,8 @@ const DepthSelectionModal: React.FC<DepthSelectionModalProps> = ({
 
   const handleConfirm = () => {
     onSelect(chosen, undefined);
-    onClose();
+    // Don't call onClose() here - the parent flow advances to the next step
+    // onClose is only for cancellation
   };
 
   const getSettingsForMode = (mode: DepthMode) => {
