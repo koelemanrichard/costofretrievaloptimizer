@@ -11,6 +11,14 @@ import {
 type SupportedLanguage = 'en' | 'nl' | 'de' | 'fr' | 'es';
 
 /**
+ * PERFORMANCE: Yields to main thread to prevent browser freeze
+ * Critical for preventing "Page not responding" during analysis
+ */
+function yieldToMainThread(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+/**
  * Format Budget Analyzer
  *
  * Implements the "Baker Principle" from research:
@@ -181,12 +189,13 @@ const COMPARISON_HEADING_PATTERNS: Record<SupportedLanguage, RegExp[]> = {
 
 /**
  * Analyzes the article's content format distribution and creates an optimization budget.
+ * ASYNC: Yields to main thread to prevent browser freeze during analysis.
  */
-export function analyzeContentFormatBudget(
+export async function analyzeContentFormatBudget(
   sections: ContentGenerationSection[],
   brief: ContentBrief,
   businessInfo?: BusinessInfo
-): ContentFormatBudget {
+): Promise<ContentFormatBudget> {
   const totalSections = sections.length;
 
   // Detect language from businessInfo or from content
@@ -201,7 +210,9 @@ export function analyzeContentFormatBudget(
 
   const sectionClassifications: ContentFormatBudget['sectionClassifications'] = [];
 
-  sections.forEach((section, index) => {
+  // PERFORMANCE: Process sections with periodic yields to prevent browser freeze
+  for (let index = 0; index < sections.length; index++) {
+    const section = sections[index];
     const content = section.current_content || '';
     const heading = section.section_heading || '';
 
@@ -230,7 +241,12 @@ export function analyzeContentFormatBudget(
       hasTableAlready: hasTable,
       hasImageAlready: hasImage,
     });
-  });
+
+    // PERFORMANCE: Yield every 3 sections to keep UI responsive
+    if (index > 0 && index % 3 === 0) {
+      await yieldToMainThread();
+    }
+  }
 
   // Calculate overall prose ratio
   const totalChars = totalProseChars + totalStructuredChars;
@@ -244,8 +260,11 @@ export function analyzeContentFormatBudget(
     targetProseRatio: 0.7, // 70% prose target
   };
 
+  // Yield before optimization determination (also expensive)
+  await yieldToMainThread();
+
   // Determine which sections NEED optimization
-  const sectionsNeedingOptimization = determineSectionsNeedingOptimization(
+  const sectionsNeedingOptimization = await determineSectionsNeedingOptimization(
     sections,
     sectionClassifications,
     constraints,
@@ -315,8 +334,9 @@ function classifySectionType(
 /**
  * Determines which sections should receive lists, tables, or other optimizations.
  * Respects the format budget to prevent over-optimization.
+ * ASYNC: Yields periodically to prevent browser freeze.
  */
-function determineSectionsNeedingOptimization(
+async function determineSectionsNeedingOptimization(
   sections: ContentGenerationSection[],
   classifications: ContentFormatBudget['sectionClassifications'],
   constraints: ContentFormatBudget['constraints'],
@@ -324,7 +344,7 @@ function determineSectionsNeedingOptimization(
   currentTableCount: number,
   brief: ContentBrief,
   language: SupportedLanguage
-): ContentFormatBudget['sectionsNeedingOptimization'] {
+): Promise<ContentFormatBudget['sectionsNeedingOptimization']> {
   const listsNeeded: string[] = [];
   const tablesNeeded: string[] = [];
   const imagesNeeded: string[] = [];
@@ -337,7 +357,9 @@ function determineSectionsNeedingOptimization(
   let listsAssigned = 0;
   let tablesAssigned = 0;
 
-  for (const classification of classifications) {
+  // PERFORMANCE: Process with periodic yields
+  for (let i = 0; i < classifications.length; i++) {
+    const classification = classifications[i];
     const section = sections.find(s => s.section_key === classification.sectionKey);
     if (!section) continue;
 
@@ -381,6 +403,11 @@ function determineSectionsNeedingOptimization(
     // Check if section needs discourse improvement
     if (needsDiscourseImprovement(section, language)) {
       discourseNeeded.push(section.section_key);
+    }
+
+    // PERFORMANCE: Yield every 3 sections
+    if (i > 0 && i % 3 === 0) {
+      await yieldToMainThread();
     }
   }
 

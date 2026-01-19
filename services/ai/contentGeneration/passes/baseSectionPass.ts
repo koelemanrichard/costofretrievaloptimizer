@@ -126,9 +126,9 @@ export async function executeSectionPass(
 
   // Phase A: Build holistic summary + format budget (once per pass)
   log.log(`Phase A: Building holistic summary from ${sortedSections.length} sections...`);
-  // NOTE: buildHolisticSummary is now async and yields to prevent browser freeze
+  // NOTE: buildHolisticSummary and analyzeContentFormatBudget are now async to prevent browser freeze
   const holisticContext = await buildHolisticSummary(sortedSections, brief, businessInfo);
-  const formatBudget = analyzeContentFormatBudget(sortedSections, brief, businessInfo);
+  const formatBudget = await analyzeContentFormatBudget(sortedSections, brief, businessInfo);
 
   log.log(`Holistic context: ${holisticContext.articleStructure.totalWordCount} words, TTR: ${(holisticContext.vocabularyMetrics.typeTokenRatio * 100).toFixed(1)}%`);
   log.log(formatBudgetSummary(formatBudget));
