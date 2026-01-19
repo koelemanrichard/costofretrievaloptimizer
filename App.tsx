@@ -698,6 +698,9 @@ const App: React.FC = () => {
     };
 
     const renderStep = () => {
+        // Debug: Log current app step to help diagnose blank screen issues
+        console.log('[App] Rendering step:', state.appStep, 'user:', !!state.user, 'activeProject:', !!state.activeProjectId, 'activeMap:', !!state.activeMapId);
+
         switch (state.appStep) {
             case AppStep.AUTH: return <AuthScreen />;
             case AppStep.PROJECT_SELECTION: return <ProjectSelectionScreen onCreateProject={handleCreateProject} onLoadProject={handleLoadProject} onInitiateDeleteProject={handleInitiateDeleteProject} />;
@@ -712,7 +715,9 @@ const App: React.FC = () => {
             case AppStep.BLUEPRINT_WIZARD:
             case AppStep.PROJECT_DASHBOARD:
                 return <ProjectWorkspace />;
-            default: return <p>Unknown application step.</p>;
+            default:
+                console.warn('[App] Unknown app step:', state.appStep);
+                return <p>Unknown application step: {state.appStep}</p>;
         }
     };
 
