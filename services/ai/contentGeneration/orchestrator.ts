@@ -615,12 +615,27 @@ export class ContentGenerationOrchestrator {
       return 0;
     }
 
-    const passKeys = Object.keys(passesStatus) as (keyof PassesStatus)[];
+    // IMPORTANT: Use ORDERED array of pass keys to ensure correct progress calculation
+    // Object.keys() order is not guaranteed, which was causing incorrect progress (e.g., 30% at pass 8)
+    const orderedPassKeys: (keyof PassesStatus)[] = [
+      'pass_1_draft',
+      'pass_2_headers',
+      'pass_3_lists',
+      'pass_4_discourse',
+      'pass_5_micro_semantics',
+      'pass_6_visual_semantics',
+      'pass_7_intro_synthesis',
+      'pass_8_final_polish',
+      'pass_9_audit',
+      'pass_10_schema',
+    ];
 
-    for (let i = 0; i < passKeys.length; i++) {
-      if (passesStatus[passKeys[i]] === 'completed') {
+    for (let i = 0; i < orderedPassKeys.length; i++) {
+      const status = passesStatus[orderedPassKeys[i]];
+
+      if (status === 'completed') {
         progress += passWeight;
-      } else if (passesStatus[passKeys[i]] === 'in_progress') {
+      } else if (status === 'in_progress') {
         // For pass 1, calculate section progress
         if (i === 0 && job.total_sections && job.total_sections > 0) {
           const sectionProgress = (job.completed_sections / job.total_sections) * passWeight;
@@ -629,10 +644,9 @@ export class ContentGenerationOrchestrator {
           // For other passes, assume 50% if in progress
           progress += passWeight * 0.5;
         }
-        break;
-      } else {
-        break;
+        break; // Stop after the in-progress pass
       }
+      // If 'pending' or 'failed', don't add to progress, but continue counting completed passes
     }
 
     return Math.round(progress);

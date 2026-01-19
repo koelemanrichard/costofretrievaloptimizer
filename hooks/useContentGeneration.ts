@@ -690,13 +690,17 @@ export function useContentGeneration({
       const currentDraft = updatedJob.draft_content || '';
       // Return cached results if draft hasn't changed
       if (cachedAuditResults !== null && cachedAuditDraft === currentDraft) {
+        console.log('[getAuditResults] Returning cached results');
         return cachedAuditResults;
       }
       // Run audit and cache results
       if (!currentDraft || currentDraft.length < 100) {
+        console.log('[getAuditResults] Draft too short, skipping audit');
         cachedAuditResults = [];
       } else {
+        console.log(`[getAuditResults] Running audit on ${currentDraft.length} chars...`);
         cachedAuditResults = await runAlgorithmicAudit(currentDraft, activeBrief, safeBusinessInfo);
+        console.log(`[getAuditResults] Audit complete, ${cachedAuditResults.length} results`);
       }
       cachedAuditDraft = currentDraft;
       return cachedAuditResults;
@@ -824,9 +828,11 @@ export function useContentGeneration({
     // Helper to check quality gate and store results
     // PERFORMANCE: Uses cached audit results to avoid running expensive audit twice per pass
     const checkAndStoreQualityGate = async (passNumber: number) => {
+      console.log(`[QualityGate] Starting quality gate check for pass ${passNumber}...`);
       try {
         // Use cached audit results instead of running audit again
         const auditResults = await getAuditResults();
+        console.log(`[QualityGate] Got ${auditResults.length} audit results`);
         const scoreAfter = calculateQualityScore(auditResults);
         const scoreBefore = lastQualityScore ?? scoreAfter;
         const delta = scoreAfter - scoreBefore;
@@ -1423,6 +1429,15 @@ export function useContentGeneration({
 
         // Mark job as completed and save quality report
         await orchestrator.updateJob(updatedJob.id, {
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          quality_report: qualityReport
+        });
+
+        // CRITICAL: Update React state so UI knows generation is complete
+        // This ensures the progress UI hides and "taking longer than expected" warning clears
+        setJob({
+          ...updatedJob,
           status: 'completed',
           completed_at: new Date().toISOString(),
           quality_report: qualityReport

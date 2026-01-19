@@ -341,6 +341,13 @@ export class EAVDensityValidator {
    */
   static calculateDensity(content: string, language?: string): number {
     const sentences = splitSentences(content);
+    return this.calculateDensityCached(sentences, language);
+  }
+
+  /**
+   * PERFORMANCE: Cached version that takes pre-computed sentences
+   */
+  static calculateDensityCached(sentences: string[], language?: string): number {
     if (sentences.length === 0) return 0;
 
     const patterns = getEavPatterns(language);

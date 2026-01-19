@@ -74,72 +74,100 @@ export async function runAlgorithmicAudit(
   // Get language-specific patterns
   const patterns = getAuditPatterns(language || 'en');
 
+  // DEBUG: Track timing of audit checks
+  const startTime = performance.now();
+  console.log(`[Audit] Starting audit of ${draft.length} chars...`);
+
+  // PERFORMANCE: Pre-compute sentences once (splitSentences is expensive - 50+ regex ops)
+  // This avoids calling splitSentences 4+ times during the audit
+  const cachedSentences = splitSentences(draft);
+  console.log(`[Audit] Pre-computed ${cachedSentences.length} sentences: ${(performance.now() - startTime).toFixed(0)}ms`);
+
   // Phase A: Language & Style Checks (1-14)
   // 1. Modality Check
   results.push(checkModality(draft, language));
+  console.log(`[Audit] 1/30 Modality: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 2. Stop Words Check
   results.push(checkStopWords(draft, language));
+  console.log(`[Audit] 2/30 StopWords: ${(performance.now() - startTime).toFixed(0)}ms`);
 
-  // 3. Subject Positioning
-  results.push(checkSubjectPositioning(draft, info.seedKeyword));
+  // 3. Subject Positioning (uses cached sentences)
+  results.push(checkSubjectPositioningCached(cachedSentences, info.seedKeyword));
+  console.log(`[Audit] 3/30 SubjectPos: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 4. Heading Hierarchy
   results.push(checkHeadingHierarchy(draft));
+  console.log(`[Audit] 4/30 HeadingHier: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update after first batch of checks
   await yieldToMainThread();
 
   // NEW: Generic Headings Check (avoid "Introduction", "Conclusion")
   results.push(checkGenericHeadings(draft, language));
+  console.log(`[Audit] 5/30 GenericHead: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // NEW: Passive Voice Check
   results.push(checkPassiveVoice(draft, language));
+  console.log(`[Audit] 6/30 PassiveVoice: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // NEW: Heading-Entity Alignment Check
   results.push(checkHeadingEntityAlignment(draft, info.seedKeyword, brief.title, language));
+  console.log(`[Audit] 7/30 HeadingEntity: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // NEW: Future Tense for Facts Check
   results.push(checkFutureTenseForFacts(draft, language));
+  console.log(`[Audit] 8/30 FutureTense: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // NEW: Stop Word Density (full document)
   results.push(checkStopWordDensity(draft, language));
+  console.log(`[Audit] 9/30 StopWordDens: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update after second batch
   await yieldToMainThread();
 
   // 5. List Count Specificity
   results.push(checkListCountSpecificity(draft, language));
+  console.log(`[Audit] 10/30 ListCount: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 6. Pronoun Density
   results.push(checkPronounDensity(draft, brief.title, language));
+  console.log(`[Audit] 11/30 PronounDens: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 7. Link Positioning
   results.push(checkLinkPositioning(draft));
+  console.log(`[Audit] 12/30 LinkPos: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 8. First Sentence Precision
   results.push(checkFirstSentencePrecision(draft, language));
+  console.log(`[Audit] 13/30 FirstSent: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 9. Centerpiece Annotation
   results.push(checkCenterpieceAnnotation(draft, info.seedKeyword, language));
+  console.log(`[Audit] 14/30 Centerpiece: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update after third batch
   await yieldToMainThread();
 
-  // 10. Repetitive Language (formerly Information Density)
-  results.push(checkRepetitiveLanguage(draft, info.seedKeyword));
+  // 10. Repetitive Language (uses cached sentences)
+  results.push(checkRepetitiveLanguageCached(cachedSentences, info.seedKeyword));
+  console.log(`[Audit] 15/30 Repetitive: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 11. LLM Signature Phrases
   results.push(checkLLMSignaturePhrases(draft, language));
+  console.log(`[Audit] 16/30 LLMPhrases: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 12. Predicate Consistency
   results.push(checkPredicateConsistency(draft, brief.title, language));
+  console.log(`[Audit] 17/30 PredConsis: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 13. Content Coverage Weight
   results.push(checkCoverageWeight(draft));
+  console.log(`[Audit] 18/30 Coverage: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 14. Vocabulary Richness
   results.push(checkVocabularyRichness(draft));
+  console.log(`[Audit] 19/30 Vocabulary: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update after fourth batch
   await yieldToMainThread();
@@ -147,12 +175,15 @@ export async function runAlgorithmicAudit(
   // Phase B: Structural Enhancements (15-17)
   // 15. Macro/Micro Border
   results.push(checkMacroMicroBorder(draft));
+  console.log(`[Audit] 20/30 MacroMicro: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 16. Extractive Summary Alignment
   results.push(checkExtractiveSummaryAlignment(draft, language));
+  console.log(`[Audit] 21/30 ExtractSum: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 17. Query-Format Alignment
   results.push(checkQueryFormatAlignment(draft, brief, language));
+  console.log(`[Audit] 22/30 QueryFormat: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update after Phase B
   await yieldToMainThread();
@@ -160,37 +191,47 @@ export async function runAlgorithmicAudit(
   // Phase C: Link Optimization (18-20)
   // 18. Anchor Text Variety
   results.push(checkAnchorTextVariety(draft));
+  console.log(`[Audit] 23/30 AnchorVar: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 19. Annotation Text Quality
   results.push(checkAnnotationTextQuality(draft, language));
+  console.log(`[Audit] 24/30 AnnotQual: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 20. Supplementary Link Placement
   results.push(checkSupplementaryLinkPlacement(draft, language));
+  console.log(`[Audit] 25/30 SuppLink: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // Phase D: Content Format Balance (21-24) - Baker Principle
   // 21. Prose/Structured Balance
   results.push(checkProseStructuredBalance(draft));
+  console.log(`[Audit] 26/30 ProseBalance: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 22. List Definition Sentences
   results.push(checkListDefinitionSentences(draft));
+  console.log(`[Audit] 27/30 ListDefSent: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update after Phase C/D start
   await yieldToMainThread();
 
   // 23. Table Appropriateness
   results.push(checkTableAppropriateness(draft));
+  console.log(`[Audit] 28/30 TableApprop: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 24. Image Placement
   results.push(checkImagePlacement(draft));
+  console.log(`[Audit] 29/30 ImagePlace: ${(performance.now() - startTime).toFixed(0)}ms`);
 
-  // 25. Sentence Length (Semantic SEO Requirement)
-  results.push(checkSentenceLength(draft, language));
+  // 25. Sentence Length (uses cached sentences)
+  results.push(checkSentenceLengthCached(cachedSentences, language));
+  console.log(`[Audit] 30/30 SentLength: ${(performance.now() - startTime).toFixed(0)}ms`);
 
-  // 26. EAV Density (Semantic SEO Requirement)
-  results.push(checkEavDensity(draft, eavs, language));
+  // 26. EAV Density (uses cached sentences)
+  results.push(checkEavDensityCached(cachedSentences, draft, eavs, language));
+  console.log(`[Audit] 31/30 EAVDensity: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 27. Internal Link Insertion (Contextual Bridge Links)
   results.push(checkInternalLinkInsertion(draft, brief));
+  console.log(`[Audit] 32/30 IntLinkIns: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // YIELD: Allow UI to update before final phase
   await yieldToMainThread();
@@ -198,12 +239,15 @@ export async function runAlgorithmicAudit(
   // Phase E: Template Compliance (28-30)
   // 28. Template Format Code Compliance
   results.push(checkTemplateFormatCompliance(draft, brief, template));
+  console.log(`[Audit] 33/30 TemplFormat: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 29. Template Section Coverage
   results.push(checkTemplateSectionCoverage(draft, brief, template));
+  console.log(`[Audit] 34/30 TemplCover: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 30. Content Zone Balance
   results.push(checkContentZoneBalance(draft, brief));
+  console.log(`[Audit] COMPLETE: ${(performance.now() - startTime).toFixed(0)}ms total for ${results.length} checks`);
 
   return results;
 }
@@ -247,6 +291,11 @@ function checkStopWords(text: string, language?: string): AuditRuleResult {
 
 function checkSubjectPositioning(text: string, centralEntity: string): AuditRuleResult {
   const sentences = splitSentences(text);
+  return checkSubjectPositioningCached(sentences, centralEntity);
+}
+
+// PERFORMANCE: Cached version that takes pre-computed sentences
+function checkSubjectPositioningCached(sentences: string[], centralEntity: string): AuditRuleResult {
   const entityRegex = new RegExp(centralEntity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
   let entityAsSubject = 0;
@@ -616,7 +665,13 @@ function checkCenterpieceAnnotation(text: string, centralEntity: string, languag
  */
 function checkRepetitiveLanguage(text: string, centralEntity: string): AuditRuleResult {
   const sentences = splitSentences(text);
-  const entityRegex = new RegExp(centralEntity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return checkRepetitiveLanguageCached(sentences, centralEntity);
+}
+
+// PERFORMANCE: Cached version that takes pre-computed sentences
+function checkRepetitiveLanguageCached(sentences: string[], centralEntity: string): AuditRuleResult {
+  // Don't use 'g' flag here - it causes lastIndex issues in loops
+  const entityRegex = new RegExp(centralEntity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
   let repetitiveCount = 0;
   let lastSentenceHadEntity = false;
@@ -1445,10 +1500,15 @@ export function checkTableAppropriateness(draft: string): AuditRuleResult {
  * naturally create longer sentences). Currently uses universal 30-word threshold.
  */
 function checkSentenceLength(text: string, language?: string): AuditRuleResult {
+  const sentences = splitSentences(text);
+  return checkSentenceLengthCached(sentences, language);
+}
+
+// PERFORMANCE: Cached version that takes pre-computed sentences
+function checkSentenceLengthCached(sentences: string[], language?: string): AuditRuleResult {
   // Language parameter available for future language-specific thresholds
   void language;
 
-  const sentences = splitSentences(text);
   const threshold = 30; // Universal threshold - could vary by language in future
 
   const longSentences = sentences.filter(sentence => {
@@ -1502,6 +1562,25 @@ function checkEavDensity(text: string, eavs: SemanticTriple[] | undefined, langu
     termDensity = EAVDensityValidator.calculateTermDensity(text, eavs);
   }
 
+  return buildEavDensityResult(patternDensity, termDensity, eavs);
+}
+
+// PERFORMANCE: Cached version that takes pre-computed sentences
+function checkEavDensityCached(sentences: string[], text: string, eavs: SemanticTriple[] | undefined, language?: string): AuditRuleResult {
+  // Calculate pattern-based density using cached sentences
+  const patternDensity = EAVDensityValidator.calculateDensityCached(sentences, language);
+
+  // Calculate term density if EAVs provided (this doesn't use sentences)
+  let termDensity = 0;
+  if (eavs && eavs.length > 0) {
+    termDensity = EAVDensityValidator.calculateTermDensity(text, eavs);
+  }
+
+  return buildEavDensityResult(patternDensity, termDensity, eavs);
+}
+
+// Helper to build the EAV density result
+function buildEavDensityResult(patternDensity: number, termDensity: number, eavs: SemanticTriple[] | undefined): AuditRuleResult {
   // Combined score (weight pattern density higher)
   const combinedScore = eavs && eavs.length > 0
     ? Math.round(patternDensity * 0.6 + termDensity * 0.4)
