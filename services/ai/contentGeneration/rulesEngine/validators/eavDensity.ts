@@ -5,6 +5,13 @@ import { getLanguageName } from '../../../../../utils/languageUtils';
 import { splitSentences } from '../../../../../utils/sentenceTokenizer';
 
 /**
+ * PERFORMANCE: Yield to main thread to prevent browser freeze
+ */
+function yieldToMainThread(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+/**
  * Result of EAV density validation
  */
 export interface EavDensityResult {
@@ -124,12 +131,19 @@ function getEavPatterns(language?: string): LanguageEavPatterns {
 
 /**
  * Build dynamic EAV regex patterns from verb list
+ *
+ * PERFORMANCE FIX: The original pattern `(?:\\s+[A-Z]?[a-z]+)*` caused catastrophic
+ * backtracking on long sentences. Changed to possessive-like matching using a
+ * simpler non-greedy pattern that doesn't backtrack excessively.
  */
 function buildEavRegexPatterns(verbs: string[]): RegExp[] {
   const verbPattern = verbs.join('|');
   return [
     // Entity + verb + value: "X is/are Y"
-    new RegExp(`\\b[A-Z][a-z]+(?:\\s+[A-Z]?[a-z]+)*\\s+(?:${verbPattern})\\s+`, 'i'),
+    // FIX: Use word boundary + non-greedy match to avoid catastrophic backtracking
+    // Old pattern: \\b[A-Z][a-z]+(?:\\s+[A-Z]?[a-z]+)*\\s+(?:${verbPattern})\\s+
+    // Problem: The (?:\\s+[A-Z]?[a-z]+)* part caused exponential backtracking
+    new RegExp(`\\b[A-Z][a-z]+\\s+(?:${verbPattern})\\b`, 'i'),
     // Numeric values (universal - strong EAV indicator)
     /\d+(?:\.\d+)?(?:\s*(?:percent|%|kg|lb|cm|mm|m|ft|hours?|minutes?|days?|weeks?|months?|years?|uur|minuten?|dagen?|weken?|maanden?|jaren?|Stunden?|Minuten?|Tagen?|Wochen?|Monaten?|Jahren?|heures?|minutes?|jours?|semaines?|mois|années?|horas?|minutos?|días?|semanas?|meses|años?))?/i,
   ];
@@ -339,15 +353,16 @@ export class EAVDensityValidator {
   /**
    * Calculate EAV density percentage based on EAV patterns
    */
-  static calculateDensity(content: string, language?: string): number {
+  static async calculateDensity(content: string, language?: string): Promise<number> {
     const sentences = splitSentences(content);
     return this.calculateDensityCached(sentences, language);
   }
 
   /**
    * PERFORMANCE: Cached version that takes pre-computed sentences
+   * Now async with yields to prevent browser freeze on large documents
    */
-  static calculateDensityCached(sentences: string[], language?: string): number {
+  static async calculateDensityCached(sentences: string[], language?: string): Promise<number> {
     if (sentences.length === 0) return 0;
 
     const patterns = getEavPatterns(language);
@@ -355,10 +370,16 @@ export class EAVDensityValidator {
     eavPatterns.push(patterns.attributeOf);
 
     let eavCount = 0;
-    sentences.forEach(sentence => {
+    for (let i = 0; i < sentences.length; i++) {
+      const sentence = sentences[i];
       const hasEAV = eavPatterns.some(pattern => pattern.test(sentence));
       if (hasEAV) eavCount++;
-    });
+
+      // Yield every 20 sentences to prevent browser freeze
+      if (i > 0 && i % 20 === 0) {
+        await yieldToMainThread();
+      }
+    }
 
     return Math.round((eavCount / sentences.length) * 100);
   }

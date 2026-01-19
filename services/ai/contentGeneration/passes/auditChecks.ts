@@ -225,8 +225,8 @@ export async function runAlgorithmicAudit(
   results.push(checkSentenceLengthCached(cachedSentences, language));
   console.log(`[Audit] 30/30 SentLength: ${(performance.now() - startTime).toFixed(0)}ms`);
 
-  // 26. EAV Density (uses cached sentences)
-  results.push(checkEavDensityCached(cachedSentences, draft, eavs, language));
+  // 26. EAV Density (uses cached sentences) - now async to prevent browser freeze
+  results.push(await checkEavDensityCached(cachedSentences, draft, eavs, language));
   console.log(`[Audit] 31/30 EAVDensity: ${(performance.now() - startTime).toFixed(0)}ms`);
 
   // 27. Internal Link Insertion (Contextual Bridge Links)
@@ -1552,9 +1552,9 @@ function checkSentenceLengthCached(sentences: string[], language?: string): Audi
  * @param eavs - Optional EAV triples for term-based density calculation
  * @param language - Optional language code for multilingual EAV pattern matching
  */
-function checkEavDensity(text: string, eavs: SemanticTriple[] | undefined, language?: string): AuditRuleResult {
+async function checkEavDensity(text: string, eavs: SemanticTriple[] | undefined, language?: string): Promise<AuditRuleResult> {
   // Calculate pattern-based density (sentences with EAV structure)
-  const patternDensity = EAVDensityValidator.calculateDensity(text, language);
+  const patternDensity = await EAVDensityValidator.calculateDensity(text, language);
 
   // Calculate term density if EAVs provided
   let termDensity = 0;
@@ -1566,9 +1566,10 @@ function checkEavDensity(text: string, eavs: SemanticTriple[] | undefined, langu
 }
 
 // PERFORMANCE: Cached version that takes pre-computed sentences
-function checkEavDensityCached(sentences: string[], text: string, eavs: SemanticTriple[] | undefined, language?: string): AuditRuleResult {
+// Now async because calculateDensityCached yields to prevent browser freeze
+async function checkEavDensityCached(sentences: string[], text: string, eavs: SemanticTriple[] | undefined, language?: string): Promise<AuditRuleResult> {
   // Calculate pattern-based density using cached sentences
-  const patternDensity = EAVDensityValidator.calculateDensityCached(sentences, language);
+  const patternDensity = await EAVDensityValidator.calculateDensityCached(sentences, language);
 
   // Calculate term density if EAVs provided (this doesn't use sentences)
   let termDensity = 0;
