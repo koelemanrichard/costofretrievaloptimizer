@@ -43,6 +43,14 @@ const FUTURE_TENSE_PATTERNS = getAuditPatterns('en').futureTensePatterns;
 const STOP_WORDS_FULL = getAuditPatterns('en').stopWordsFull;
 
 /**
+ * Yield to main thread to prevent browser freeze during long-running operations.
+ * Uses setTimeout(0) which works reliably in both foreground and background tabs.
+ */
+const yieldToMainThread = (): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, 0));
+};
+
+/**
  * Run algorithmic audit checks on the draft content
  * @param draft - The content to audit
  * @param brief - The content brief
@@ -50,19 +58,23 @@ const STOP_WORDS_FULL = getAuditPatterns('en').stopWordsFull;
  * @param language - ISO language code (e.g., 'nl', 'en', 'de', 'fr', 'es') for multilingual pattern matching
  * @param eavs - Optional SemanticTriple array for EAV density validation
  * @param template - Optional TemplateConfig for template compliance validation
+ *
+ * NOTE: This function is async and yields to the main thread periodically
+ * to prevent browser freezing during the 30+ audit checks.
  */
-export function runAlgorithmicAudit(
+export async function runAlgorithmicAudit(
   draft: string,
   brief: ContentBrief,
   info: BusinessInfo,
   language?: string,
   eavs?: SemanticTriple[],
   template?: TemplateConfig
-): AuditRuleResult[] {
+): Promise<AuditRuleResult[]> {
   const results: AuditRuleResult[] = [];
   // Get language-specific patterns
   const patterns = getAuditPatterns(language || 'en');
 
+  // Phase A: Language & Style Checks (1-14)
   // 1. Modality Check
   results.push(checkModality(draft, language));
 
@@ -74,6 +86,9 @@ export function runAlgorithmicAudit(
 
   // 4. Heading Hierarchy
   results.push(checkHeadingHierarchy(draft));
+
+  // YIELD: Allow UI to update after first batch of checks
+  await yieldToMainThread();
 
   // NEW: Generic Headings Check (avoid "Introduction", "Conclusion")
   results.push(checkGenericHeadings(draft, language));
@@ -90,6 +105,9 @@ export function runAlgorithmicAudit(
   // NEW: Stop Word Density (full document)
   results.push(checkStopWordDensity(draft, language));
 
+  // YIELD: Allow UI to update after second batch
+  await yieldToMainThread();
+
   // 5. List Count Specificity
   results.push(checkListCountSpecificity(draft, language));
 
@@ -104,6 +122,9 @@ export function runAlgorithmicAudit(
 
   // 9. Centerpiece Annotation
   results.push(checkCenterpieceAnnotation(draft, info.seedKeyword, language));
+
+  // YIELD: Allow UI to update after third batch
+  await yieldToMainThread();
 
   // 10. Repetitive Language (formerly Information Density)
   results.push(checkRepetitiveLanguage(draft, info.seedKeyword));
@@ -120,6 +141,9 @@ export function runAlgorithmicAudit(
   // 14. Vocabulary Richness
   results.push(checkVocabularyRichness(draft));
 
+  // YIELD: Allow UI to update after fourth batch
+  await yieldToMainThread();
+
   // Phase B: Structural Enhancements (15-17)
   // 15. Macro/Micro Border
   results.push(checkMacroMicroBorder(draft));
@@ -129,6 +153,9 @@ export function runAlgorithmicAudit(
 
   // 17. Query-Format Alignment
   results.push(checkQueryFormatAlignment(draft, brief, language));
+
+  // YIELD: Allow UI to update after Phase B
+  await yieldToMainThread();
 
   // Phase C: Link Optimization (18-20)
   // 18. Anchor Text Variety
@@ -147,6 +174,9 @@ export function runAlgorithmicAudit(
   // 22. List Definition Sentences
   results.push(checkListDefinitionSentences(draft));
 
+  // YIELD: Allow UI to update after Phase C/D start
+  await yieldToMainThread();
+
   // 23. Table Appropriateness
   results.push(checkTableAppropriateness(draft));
 
@@ -161,6 +191,9 @@ export function runAlgorithmicAudit(
 
   // 27. Internal Link Insertion (Contextual Bridge Links)
   results.push(checkInternalLinkInsertion(draft, brief));
+
+  // YIELD: Allow UI to update before final phase
+  await yieldToMainThread();
 
   // Phase E: Template Compliance (28-30)
   // 28. Template Format Code Compliance
