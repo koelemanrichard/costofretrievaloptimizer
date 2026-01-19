@@ -410,10 +410,8 @@ export function useContentGeneration({
   useEffect(() => {
     // Skip realtime subscriptions entirely during active generation
     // The generation loop handles all state updates directly
-    if (!job?.id || isGenerating) return;
-
-    // Only set up realtime for viewing completed/paused jobs
-    if (job.status === 'in_progress') return;
+    const isCurrentlyGenerating = job?.status === 'in_progress';
+    if (!job?.id || isCurrentlyGenerating) return;
 
     const jobChannel = supabase
       .channel(`job-${job.id}`)
@@ -430,7 +428,7 @@ export function useContentGeneration({
     return () => {
       supabase.removeChannel(jobChannel);
     };
-  }, [job?.id, job?.status, isGenerating, supabase]);
+  }, [job?.id, job?.status, supabase]);
 
   // Handle browser tab visibility changes - refetch state when tab becomes visible
   // This handles stale state after browser throttles background tabs
