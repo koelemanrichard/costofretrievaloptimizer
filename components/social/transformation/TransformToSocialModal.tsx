@@ -2,7 +2,8 @@
  * TransformToSocialModal Component
  *
  * Main modal for transforming article content into social media posts.
- * Guides users through platform selection, template configuration, and preview.
+ * Guides users through platform selection, template configuration, preview,
+ * and provides full campaign management with export/edit capabilities.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -21,9 +22,9 @@ import type {
 import { SOCIAL_PLATFORM_CONFIG } from '../../../types/social';
 import { PlatformSelector } from './PlatformSelector';
 import { TemplateSelector } from './TemplateSelector';
-import { CampaignPreview } from './CampaignPreview';
+import { SocialCampaignManager } from '../SocialCampaignManager';
 
-type ModalStep = 'select_platforms' | 'configure' | 'preview' | 'generating' | 'complete';
+type ModalStep = 'select_platforms' | 'configure' | 'generating' | 'manage';
 
 interface TransformToSocialModalProps {
   isOpen: boolean;
@@ -36,14 +37,18 @@ interface TransformToSocialModalProps {
     complianceReport: CampaignComplianceReport;
   }>;
   onComplete?: (campaign: SocialCampaign, posts: SocialPost[]) => void;
+  onUpdatePost?: (postId: string, updates: Partial<SocialPost>) => Promise<boolean>;
+  onExportCampaign?: (campaign: SocialCampaign, posts: SocialPost[], format: 'json' | 'text' | 'zip') => Promise<void>;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+  userId?: string;
 }
 
 const STEP_TITLES: Record<ModalStep, string> = {
   select_platforms: 'Select Platforms',
   configure: 'Configure Templates',
-  preview: 'Preview Campaign',
   generating: 'Generating Posts',
-  complete: 'Campaign Ready'
+  manage: 'Manage Campaign'
 };
 
 const DEFAULT_TEMPLATES: Record<SocialMediaPlatform, SocialPostTemplate[]> = {
@@ -60,7 +65,12 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
   source,
   templates = DEFAULT_TEMPLATES,
   onTransform,
-  onComplete
+  onComplete,
+  onUpdatePost,
+  onExportCampaign,
+  supabaseUrl,
+  supabaseAnonKey,
+  userId
 }) => {
   const [step, setStep] = useState<ModalStep>('select_platforms');
   const [selections, setSelections] = useState<PlatformSelection[]>([]);
@@ -74,6 +84,7 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
   const [complianceReport, setComplianceReport] = useState<CampaignComplianceReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -116,7 +127,12 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
           setGeneratedCampaign(result.campaign);
           setGeneratedPosts(result.posts);
           setComplianceReport(result.complianceReport);
-          setStep('preview');
+          setStep('manage');
+
+          // Notify parent
+          if (onComplete) {
+            onComplete(result.campaign, result.posts);
+          }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to generate posts');
           setStep('configure');
@@ -125,32 +141,109 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
         }
         break;
 
-      case 'preview':
-        setStep('complete');
-        if (generatedCampaign && onComplete) {
-          onComplete(generatedCampaign, generatedPosts);
-        }
-        break;
-
-      case 'complete':
+      case 'manage':
         onClose();
         break;
     }
-  }, [step, selections, hubPlatform, utmCampaign, includeHashtags, maxSpokePosts, onTransform, generatedCampaign, generatedPosts, onComplete, onClose]);
+  }, [step, selections, hubPlatform, utmCampaign, includeHashtags, maxSpokePosts, onTransform, onComplete, onClose]);
 
   const handleBack = useCallback(() => {
     switch (step) {
       case 'configure':
         setStep('select_platforms');
         break;
-      case 'preview':
-        setStep('configure');
-        break;
-      case 'complete':
-        setStep('preview');
+      case 'manage':
+        // Can't go back from manage - campaign is already saved
         break;
     }
   }, [step]);
+
+  // Handle post updates (persisted locally and optionally to DB)
+  const handleUpdatePost = useCallback(async (postId: string, updates: Partial<SocialPost>): Promise<boolean> => {
+    // Update local state first
+    setGeneratedPosts(prev => prev.map(post =>
+      post.id === postId ? { ...post, ...updates } : post
+    ));
+
+    // If parent handler provided, also persist to DB
+    if (onUpdatePost) {
+      return onUpdatePost(postId, updates);
+    }
+
+    return true;
+  }, [onUpdatePost]);
+
+  // Handle marking post as posted
+  const handleMarkAsPosted = useCallback(async (postId: string, postUrl?: string): Promise<boolean> => {
+    const updates: Partial<SocialPost> = {
+      status: 'posted',
+      manually_posted_at: new Date().toISOString(),
+      platform_post_url: postUrl
+    };
+
+    return handleUpdatePost(postId, updates);
+  }, [handleUpdatePost]);
+
+  // Handle unmarking post as posted
+  const handleUnmarkAsPosted = useCallback(async (postId: string): Promise<boolean> => {
+    const updates: Partial<SocialPost> = {
+      status: 'ready',
+      manually_posted_at: undefined,
+      platform_post_url: undefined
+    };
+
+    return handleUpdatePost(postId, updates);
+  }, [handleUpdatePost]);
+
+  // Handle campaign export
+  const handleExportCampaign = useCallback(async (format: 'json' | 'text' | 'zip') => {
+    if (!generatedCampaign || !generatedPosts.length) return;
+
+    setIsExporting(true);
+    try {
+      if (onExportCampaign) {
+        await onExportCampaign(generatedCampaign, generatedPosts, format);
+      } else {
+        // Default export handling
+        let content: string;
+        let filename: string;
+        let mimeType: string;
+
+        const campaignSlug = generatedCampaign.campaign_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'campaign';
+        const timestamp = new Date().toISOString().slice(0, 10);
+
+        if (format === 'json') {
+          content = JSON.stringify({ campaign: generatedCampaign, posts: generatedPosts }, null, 2);
+          filename = `${campaignSlug}-${timestamp}.json`;
+          mimeType = 'application/json';
+        } else if (format === 'text') {
+          content = buildMarkdownExport(generatedCampaign, generatedPosts);
+          filename = `${campaignSlug}-${timestamp}.md`;
+          mimeType = 'text/markdown';
+        } else {
+          // ZIP format - simplified fallback
+          content = JSON.stringify({ campaign: generatedCampaign, posts: generatedPosts }, null, 2);
+          filename = `${campaignSlug}-${timestamp}.json`;
+          mimeType = 'application/json';
+        }
+
+        // Download
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [generatedCampaign, generatedPosts, onExportCampaign]);
 
   const canProceed = () => {
     switch (step) {
@@ -158,11 +251,9 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
         return selections.length > 0;
       case 'configure':
         return selections.every(s => s.template_type);
-      case 'preview':
-        return generatedPosts.length > 0;
       case 'generating':
         return false;
-      case 'complete':
+      case 'manage':
         return true;
     }
   };
@@ -261,54 +352,35 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
           </div>
         );
 
-      case 'preview':
-        return (
-          <div>
-            {generatedCampaign && (
-              <CampaignPreview
-                campaign={generatedCampaign}
-                posts={generatedPosts}
-                complianceReport={complianceReport || undefined}
-              />
-            )}
-          </div>
-        );
-
-      case 'complete':
-        return (
-          <div className="py-8 text-center">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Campaign Created!</h3>
-            <p className="text-gray-400">
-              Your social media campaign with {generatedPosts.length} posts is ready.
-            </p>
-            {complianceReport && (
-              <p className={`mt-2 text-sm ${
-                complianceReport.overall_score >= 85 ? 'text-green-400' : 'text-yellow-400'
-              }`}>
-                Compliance Score: {Math.round(complianceReport.overall_score)}%
-              </p>
-            )}
-            <div className="mt-6 flex justify-center gap-3">
-              <Button variant="secondary" onClick={() => setStep('preview')}>
-                Review Posts
-              </Button>
-              <Button onClick={onClose}>
-                Go to Campaign
-              </Button>
-            </div>
-          </div>
-        );
+      case 'manage':
+        return generatedCampaign ? (
+          <SocialCampaignManager
+            campaign={generatedCampaign}
+            posts={generatedPosts}
+            complianceReport={complianceReport || undefined}
+            onUpdatePost={handleUpdatePost}
+            onMarkAsPosted={handleMarkAsPosted}
+            onUnmarkAsPosted={handleUnmarkAsPosted}
+            onExportCampaign={handleExportCampaign}
+            isExporting={isExporting}
+          />
+        ) : null;
     }
   };
 
   const renderFooter = () => {
-    if (step === 'generating' || step === 'complete') {
+    if (step === 'generating') {
       return null;
+    }
+
+    if (step === 'manage') {
+      return (
+        <div className="flex items-center justify-end w-full gap-3">
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      );
     }
 
     return (
@@ -328,31 +400,31 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
             onClick={handleNext}
             disabled={!canProceed() || isGenerating}
           >
-            {step === 'preview' ? 'Finish' : 'Continue'}
+            {step === 'configure' ? 'Generate Posts' : 'Continue'}
           </Button>
         </div>
       </div>
     );
   };
 
-  // Step indicator
-  const steps: ModalStep[] = ['select_platforms', 'configure', 'preview'];
-  const currentStepIndex = steps.indexOf(step);
+  // Step indicator (only for setup steps)
+  const setupSteps: ModalStep[] = ['select_platforms', 'configure'];
+  const currentStepIndex = setupSteps.indexOf(step);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={STEP_TITLES[step]}
-      maxWidth="max-w-4xl"
+      maxWidth={step === 'manage' ? 'max-w-5xl' : 'max-w-4xl'}
       footer={renderFooter()}
     >
-      {/* Step indicator */}
-      {step !== 'complete' && (
+      {/* Step indicator (only during setup) */}
+      {step !== 'manage' && step !== 'generating' && (
         <div className="flex items-center justify-center gap-2 mb-6">
-          {steps.map((s, i) => {
+          {setupSteps.map((s, i) => {
             const isActive = i === currentStepIndex;
-            const isComplete = i < currentStepIndex || step === 'complete';
+            const isComplete = i < currentStepIndex;
 
             return (
               <React.Fragment key={s}>
@@ -374,7 +446,7 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
                   </div>
                   <span className="text-sm hidden sm:inline">{STEP_TITLES[s]}</span>
                 </div>
-                {i < steps.length - 1 && (
+                {i < setupSteps.length - 1 && (
                   <div className={`w-8 h-0.5 ${
                     i < currentStepIndex ? 'bg-green-400' : 'bg-gray-600'
                   }`} />
@@ -393,9 +465,53 @@ export const TransformToSocialModal: React.FC<TransformToSocialModalProps> = ({
       )}
 
       {/* Step content */}
-      {renderStepContent()}
+      <div className={step === 'manage' ? 'min-h-[500px]' : ''}>
+        {renderStepContent()}
+      </div>
     </Modal>
   );
 };
+
+// Helper function to build markdown export
+function buildMarkdownExport(campaign: SocialCampaign, posts: SocialPost[]): string {
+  let content = `# Social Media Campaign: ${campaign.campaign_name || 'Untitled'}\n\n`;
+  content += `Created: ${new Date(campaign.created_at).toLocaleDateString()}\n`;
+  content += `UTM Campaign: ${campaign.utm_campaign || 'N/A'}\n\n`;
+  content += `---\n\n`;
+
+  // Group by platform
+  const byPlatform = posts.reduce((acc, post) => {
+    if (!acc[post.platform]) acc[post.platform] = [];
+    acc[post.platform].push(post);
+    return acc;
+  }, {} as Record<string, SocialPost[]>);
+
+  for (const [platform, platformPosts] of Object.entries(byPlatform)) {
+    const config = SOCIAL_PLATFORM_CONFIG[platform as SocialMediaPlatform];
+    content += `## ${config.name}\n\n`;
+
+    for (const post of platformPosts) {
+      content += `### ${post.is_hub ? 'Hub Post' : `Spoke #${post.spoke_position || 1}`}\n\n`;
+      content += `**Type:** ${post.post_type}\n\n`;
+      content += `**Content:**\n\n${post.content_text}\n\n`;
+
+      if (post.hashtags && post.hashtags.length > 0) {
+        content += `**Hashtags:** ${post.hashtags.map(h => `#${h}`).join(' ')}\n\n`;
+      }
+
+      if (post.link_url) {
+        content += `**Link:** ${post.link_url}\n\n`;
+      }
+
+      if (post.posting_instructions) {
+        content += `**Instructions:**\n\n${post.posting_instructions}\n\n`;
+      }
+
+      content += `---\n\n`;
+    }
+  }
+
+  return content;
+}
 
 export default TransformToSocialModal;

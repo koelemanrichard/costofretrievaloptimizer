@@ -45,8 +45,10 @@ import type { StructuralSnapshot } from '../../services/ai/contentGeneration/str
 import { ContentAnalysisPanel } from '../analysis/ContentAnalysisPanel';
 import { exportDebugData, formatForClaudeAnalysis, getPassSnapshots, clearDebugData } from '../../services/contentGenerationDebugger';
 import { TransformToSocialModal } from '../social/transformation/TransformToSocialModal';
+import { SocialCampaignsModal } from '../social/SocialCampaignsModal';
 import type { ArticleTransformationSource, TransformationConfig, SocialCampaign, SocialPost, CampaignComplianceReport } from '../../types/social';
 import { transformArticleToSocialPosts } from '../../services/social/transformation/contentTransformer';
+import { useSocialCampaigns } from '../../hooks/useSocialCampaigns';
 
 interface DraftingModalProps {
   isOpen: boolean;
@@ -136,6 +138,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
 
   // Social Media Posts State
   const [showSocialModal, setShowSocialModal] = useState(false);
+  const [showCampaignsModal, setShowCampaignsModal] = useState(false);
 
   // Audit Panel State
   const [showAuditPanel, setShowAuditPanel] = useState(false);
@@ -251,6 +254,35 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
 
     return result;
   }, [socialTransformSource, businessInfo.supabaseUrl, businessInfo.supabaseAnonKey, state.user?.id]);
+
+  // Social Campaigns Hook - for viewing saved campaigns
+  const socialCampaigns = useSocialCampaigns({
+    topicId: activeBriefTopic?.id || '',
+    userId: state.user?.id || '',
+    supabaseUrl: businessInfo.supabaseUrl,
+    supabaseAnonKey: businessInfo.supabaseAnonKey
+  });
+
+  // Handler for updating posts in campaigns
+  const handleUpdateSocialPost = useCallback(async (postId: string, updates: Partial<SocialPost>): Promise<boolean> => {
+    const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+    try {
+      const { error } = await supabase
+        .from('social_posts')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', postId);
+
+      if (error) throw error;
+      await socialCampaigns.refreshCampaigns();
+      return true;
+    } catch (err) {
+      console.error('Failed to update post:', err);
+      return false;
+    }
+  }, [businessInfo.supabaseUrl, businessInfo.supabaseAnonKey, socialCampaigns]);
 
   // Track which brief/draft we've loaded to avoid re-fetching
   const loadedBriefIdRef = useRef<string | null>(null);
@@ -3160,6 +3192,15 @@ ${schemaScript}`;
                     >
                         Social Posts
                     </Button>
+                    <Button
+                        onClick={() => setShowCampaignsModal(true)}
+                        disabled={!activeBriefTopic?.id}
+                        variant="secondary"
+                        className="text-xs py-1 px-2 bg-purple-600 hover:bg-purple-500"
+                        title="View saved social media campaigns"
+                    >
+                        Campaigns{socialCampaigns.campaigns.length > 0 ? ` (${socialCampaigns.campaigns.length})` : ''}
+                    </Button>
                     {reportHook.canGenerate && (
                         <ReportExportButton
                             reportType="article-draft"
@@ -3454,9 +3495,33 @@ ${schemaScript}`;
               payload: `Created social campaign with ${posts.length} posts across ${new Set(posts.map(p => p.platform)).size} platforms`
             });
             setShowSocialModal(false);
+            // Refresh campaigns list
+            socialCampaigns.refreshCampaigns();
           }}
         />
       )}
+
+      {/* Social Campaigns Modal */}
+      <SocialCampaignsModal
+        isOpen={showCampaignsModal}
+        onClose={() => setShowCampaignsModal(false)}
+        topicId={activeBriefTopic?.id || ''}
+        campaigns={socialCampaigns.campaigns}
+        isLoading={socialCampaigns.isLoading}
+        error={socialCampaigns.error}
+        onRefresh={socialCampaigns.refreshCampaigns}
+        onCreateNew={() => {
+          setShowCampaignsModal(false);
+          setShowSocialModal(true);
+        }}
+        onUpdatePost={handleUpdateSocialPost}
+        onUpdateCampaign={async (campaignId, updates) => {
+          return socialCampaigns.updateCampaign(campaignId, updates);
+        }}
+        onDeleteCampaign={async (campaignId) => {
+          return socialCampaigns.deleteCampaign(campaignId);
+        }}
+      />
     </div>
   );
 };
