@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { slugify } from '../../utils/helpers';
 import { RequirementsRail } from '../drafting/RequirementsRail';
 import { extractPlaceholdersFromDraft } from '../../services/ai/imageGeneration/placeholderParser';
+import { generateImage as generateImageFromOrchestrator, initImageGeneration } from '../../services/ai/imageGeneration/orchestrator';
 import { ImageGenerationModal } from '../imageGeneration/ImageGenerationModal';
 import { ImageManagementPanel } from '../imageGeneration/ImageManagementPanel';
 import { ReportExportButton, ReportModal } from '../reports';
@@ -49,6 +50,12 @@ import { SocialCampaignsModal } from '../social/SocialCampaignsModal';
 import type { ArticleTransformationSource, TransformationConfig, SocialCampaign, SocialPost, CampaignComplianceReport } from '../../types/social';
 import { transformArticleToSocialPosts } from '../../services/social/transformation/contentTransformer';
 import { useSocialCampaigns } from '../../hooks/useSocialCampaigns';
+
+// Contextual Editor
+import { useContextualEditor } from '../../hooks/useContextualEditor';
+import { ContextMenu, EditorPanel, InlineDiff, ImageGenerationPanel } from '../contextualEditor';
+import { shouldUseInlineDiff } from '../../services/ai/contextualEditing';
+import { ImageStyle, AspectRatio } from '../../types/contextualEditor';
 
 /**
  * Replace IMAGE placeholders with actual markdown images if they have generated URLs.
@@ -142,6 +149,9 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     draftContentRef.current = draftContent;
   }, [draftContent]);
 
+  // Ref for contextual editor text selection
+  const contentContainerRef = useRef<HTMLDivElement>(null);
+
   // Database sync detection state
   const [databaseDraft, setDatabaseDraft] = useState<string | null>(null);
   const [databaseJobInfo, setDatabaseJobInfo] = useState<{
@@ -172,6 +182,10 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState<ImagePlaceholder | null>(null);
   const [openInVisualEditor, setOpenInVisualEditor] = useState(false);
+
+  // Contextual Image Generation State
+  const [contextualImageUrl, setContextualImageUrl] = useState<string | undefined>(undefined);
+  const [isGeneratingContextualImage, setIsGeneratingContextualImage] = useState(false);
 
   // Re-run Passes State
   const [showPassesModal, setShowPassesModal] = useState(false);
@@ -424,6 +438,26 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     supabaseAnonKey: businessInfo.supabaseAnonKey
   });
 
+  // Contextual editor for text selection and AI editing
+  const contextualEditor = useContextualEditor({
+    containerRef: contentContainerRef,
+    fullArticle: draftContent,
+    businessInfo,
+    brief: brief || {} as ContentBrief,
+    eavs: activeMap?.eavs || [],
+    onContentChange: (newContent, sectionKey) => {
+      // Replace the selected text in draft content
+      if (contextualEditor.state.rewriteResult) {
+        setDraftContent(prev => prev.replace(
+          contextualEditor.state.rewriteResult!.originalText,
+          newContent
+        ));
+      }
+      setHasUnsavedChanges(true);
+    },
+    dispatch,
+  });
+
   // Handler for updating posts in campaigns
   const handleUpdateSocialPost = useCallback(async (postId: string, updates: Partial<SocialPost>): Promise<boolean> => {
     const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
@@ -637,6 +671,27 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
       loadedDraftLengthRef.current = stateDraft.length;
     }
   }, [brief?.articleDraft, draftContent, hasUnsavedChanges]);
+
+  // Keyboard shortcuts for contextual editor
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if (contextualEditor.canUndo) {
+          e.preventDefault();
+          contextualEditor.undo();
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        if (contextualEditor.canRedo) {
+          e.preventDefault();
+          contextualEditor.redo();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [contextualEditor.canUndo, contextualEditor.canRedo, contextualEditor.undo, contextualEditor.redo]);
 
   // Check for newer content in database (from completed multi-pass generation)
   useEffect(() => {
@@ -2258,6 +2313,107 @@ ${schemaScript}`;
     }
   };
 
+  // Handle contextual image generation (from selected text)
+  const handleContextualImageGenerate = useCallback(async (prompt: string, style: ImageStyle, aspectRatio: AspectRatio) => {
+    if (!contextualEditor.selection) return;
+
+    setIsGeneratingContextualImage(true);
+    setContextualImageUrl(undefined);
+
+    try {
+      // Initialize image generation
+      const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+      initImageGeneration(supabase);
+
+      // Create a temporary placeholder for the image generation
+      const tempPlaceholder: ImagePlaceholder = {
+        id: `contextual_${Date.now()}`,
+        description: prompt,
+        altTextSuggestion: contextualEditor.state.imagePromptResult?.altTextSuggestion || prompt.slice(0, 100),
+        type: style === 'diagram' ? 'DIAGRAM' : style === 'infographic' ? 'INFOGRAPHIC' : 'ILLUSTRATION',
+        status: 'placeholder',
+        specs: {
+          width: aspectRatio === '16:9' ? 1920 : aspectRatio === '4:3' ? 1600 : aspectRatio === '1:1' ? 1200 : 1200,
+          height: aspectRatio === '16:9' ? 1080 : aspectRatio === '4:3' ? 1200 : aspectRatio === '1:1' ? 1200 : 1600,
+          format: 'webp',
+          maxFileSize: 500000,
+        },
+        metadata: {
+          altText: contextualEditor.state.imagePromptResult?.altTextSuggestion || '',
+        },
+      };
+
+      const result = await generateImageFromOrchestrator(
+        tempPlaceholder,
+        { provider: 'auto' },
+        businessInfo,
+        (progress) => {
+          console.log('[Contextual Image] Progress:', progress.message);
+        }
+      );
+
+      if (result.generatedUrl) {
+        setContextualImageUrl(result.generatedUrl);
+        dispatch({ type: 'SET_NOTIFICATION', payload: 'Image generated successfully!' });
+      } else if (result.status === 'error') {
+        dispatch({ type: 'SET_ERROR', payload: result.errorMessage || 'Image generation failed' });
+      }
+    } catch (error) {
+      console.error('[Contextual Image] Generation error:', error);
+      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Image generation failed' });
+    } finally {
+      setIsGeneratingContextualImage(false);
+    }
+  }, [contextualEditor.selection, contextualEditor.state.imagePromptResult, businessInfo, dispatch]);
+
+  // Handle accepting and inserting contextual image
+  const handleContextualImageAccept = useCallback((imageUrl: string, altText: string) => {
+    if (!contextualEditor.selection) return;
+
+    // Insert image markdown after the current paragraph
+    const imageMarkdown = `\n\n![${altText}](${imageUrl})\n\n`;
+
+    // Find the end of the current paragraph in the draft
+    const selectionText = contextualEditor.selection.text;
+    const selectionIndex = draftContent.indexOf(selectionText);
+
+    if (selectionIndex !== -1) {
+      // Find the next paragraph break after the selection
+      const afterSelection = draftContent.slice(selectionIndex + selectionText.length);
+      const nextParagraphBreak = afterSelection.search(/\n\n|\n(?=[#\-\*])/);
+
+      let insertPosition: number;
+      if (nextParagraphBreak !== -1) {
+        insertPosition = selectionIndex + selectionText.length + nextParagraphBreak;
+      } else {
+        insertPosition = selectionIndex + selectionText.length;
+      }
+
+      const newDraft = draftContent.slice(0, insertPosition) + imageMarkdown + draftContent.slice(insertPosition);
+      setDraftContent(newDraft);
+      setHasUnsavedChanges(true);
+      dispatch({ type: 'SET_NOTIFICATION', payload: 'Image inserted into article!' });
+    }
+
+    // Clear contextual editor state
+    contextualEditor.acceptImage();
+    setContextualImageUrl(undefined);
+  }, [contextualEditor, draftContent, dispatch]);
+
+  // Handle rejecting contextual image
+  const handleContextualImageReject = useCallback(() => {
+    contextualEditor.rejectImage();
+    setContextualImageUrl(undefined);
+    setIsGeneratingContextualImage(false);
+  }, [contextualEditor]);
+
+  // Handle closing contextual image panel
+  const handleContextualImageClose = useCallback(() => {
+    contextualEditor.closePanel();
+    setContextualImageUrl(undefined);
+    setIsGeneratingContextualImage(false);
+  }, [contextualEditor]);
+
   // Handle re-running optimization passes
   const handleRerunPasses = async () => {
     if (!brief || !databaseJobInfo || selectedPasses.length === 0) return;
@@ -2911,12 +3067,96 @@ ${schemaScript}`;
 
                                     {/* Main Content - strip leading H1 since we render title separately */}
                                     {/* Also replace IMAGE placeholders with actual images if they've been generated */}
-                                    <div className="prose prose-invert max-w-none">
-                                        <SimpleMarkdown content={replaceImagePlaceholdersWithUrls(
-                                          safeString(draftContent).replace(/^#\s+[^\n]+\n*/m, ''),
-                                          imagePlaceholders
-                                        )} />
+                                    {/* Content Preview with Contextual Editor */}
+                                    <div
+                                      ref={contentContainerRef}
+                                      className="relative"
+                                      onContextMenu={(e) => {
+                                        if (contextualEditor.selection) {
+                                          e.preventDefault();
+                                          contextualEditor.openMenu();
+                                        }
+                                      }}
+                                    >
+                                      {/* Existing SimpleMarkdown rendering */}
+                                      <div className="prose prose-invert max-w-none">
+                                          <SimpleMarkdown content={replaceImagePlaceholdersWithUrls(
+                                            safeString(draftContent).replace(/^#\s+[^\n]+\n*/m, ''),
+                                            imagePlaceholders
+                                          )} />
+                                      </div>
+
+                                      {/* Contextual Editor UI */}
+                                      {contextualEditor.selection && contextualEditor.state.mode === 'menu' && (
+                                        <ContextMenu
+                                          selection={contextualEditor.selection}
+                                          analysis={contextualEditor.state.analysis}
+                                          onQuickAction={contextualEditor.executeQuickAction}
+                                          onMoreOptions={contextualEditor.openTextPanel}
+                                          onGenerateImage={() => {
+                                            contextualEditor.openImagePanel();
+                                            contextualEditor.generateImage();
+                                          }}
+                                          onClose={contextualEditor.closeMenu}
+                                          isProcessing={contextualEditor.state.isProcessing}
+                                        />
+                                      )}
+
+                                      {/* Inline diff for small changes */}
+                                      {contextualEditor.state.mode === 'preview' &&
+                                       contextualEditor.state.rewriteResult &&
+                                       shouldUseInlineDiff(
+                                         contextualEditor.state.rewriteResult.originalText,
+                                         contextualEditor.state.rewriteResult.rewrittenText
+                                       ) && (
+                                        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                                          <InlineDiff
+                                            result={contextualEditor.state.rewriteResult}
+                                            onAccept={contextualEditor.acceptRewrite}
+                                            onReject={contextualEditor.rejectRewrite}
+                                            onRetry={contextualEditor.retryRewrite}
+                                          />
+                                        </div>
+                                      )}
                                     </div>
+
+                                    {/* Editor Panel for expanded editing */}
+                                    {(contextualEditor.state.mode === 'panel_text' ||
+                                      (contextualEditor.state.mode === 'preview' &&
+                                       contextualEditor.state.rewriteResult &&
+                                       !shouldUseInlineDiff(
+                                         contextualEditor.state.rewriteResult.originalText,
+                                         contextualEditor.state.rewriteResult.rewrittenText
+                                       ))) &&
+                                      contextualEditor.selection && (
+                                      <EditorPanel
+                                        selection={contextualEditor.selection}
+                                        analysis={contextualEditor.state.analysis}
+                                        rewriteResult={contextualEditor.state.rewriteResult}
+                                        imagePromptResult={contextualEditor.state.imagePromptResult}
+                                        activeTab={contextualEditor.state.activeTab}
+                                        isProcessing={contextualEditor.state.isProcessing}
+                                        onTabChange={contextualEditor.setActiveTab}
+                                        onQuickAction={contextualEditor.executeQuickAction}
+                                        onAcceptRewrite={contextualEditor.acceptRewrite}
+                                        onRejectRewrite={contextualEditor.rejectRewrite}
+                                        onRetryRewrite={contextualEditor.retryRewrite}
+                                        onClose={contextualEditor.closePanel}
+                                      />
+                                    )}
+
+                                    {/* Image Generation Panel for contextual image creation */}
+                                    {contextualEditor.state.mode === 'panel_image' && (
+                                      <ImageGenerationPanel
+                                        promptResult={contextualEditor.state.imagePromptResult}
+                                        isGenerating={isGeneratingContextualImage}
+                                        onGenerate={handleContextualImageGenerate}
+                                        onAccept={handleContextualImageAccept}
+                                        onReject={handleContextualImageReject}
+                                        onClose={handleContextualImageClose}
+                                        generatedImageUrl={contextualImageUrl}
+                                      />
+                                    )}
 
                                     {/* All Article Images Summary */}
                                     {imagePlaceholders.length > 0 && (
@@ -3289,6 +3529,30 @@ ${schemaScript}`;
 
                 {/* Center: Main Actions */}
                 <div className="flex items-center gap-1">
+                    {/* Undo/Redo for contextual edits */}
+                    {contextualEditor.editCount > 0 && (
+                      <div className="flex items-center gap-1 mr-4">
+                        <button
+                          onClick={contextualEditor.undo}
+                          disabled={!contextualEditor.canUndo}
+                          className="px-2 py-1 text-sm text-slate-400 hover:text-white disabled:opacity-30"
+                          title="Undo (Ctrl+Z)"
+                        >
+                          ↩
+                        </button>
+                        <button
+                          onClick={contextualEditor.redo}
+                          disabled={!contextualEditor.canRedo}
+                          className="px-2 py-1 text-sm text-slate-400 hover:text-white disabled:opacity-30"
+                          title="Redo (Ctrl+Y)"
+                        >
+                          ↪
+                        </button>
+                        <span className="text-xs text-slate-500">
+                          {contextualEditor.editCount} edit{contextualEditor.editCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
                     <Button
                         onClick={handlePolishDraft}
                         disabled={isPolishing || !draftContent || activeTab === 'preview' || !canGenerateContent}
