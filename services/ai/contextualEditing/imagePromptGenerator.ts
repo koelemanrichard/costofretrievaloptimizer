@@ -154,10 +154,12 @@ Generate a single, detailed prompt (50-100 words) for creating this ${style}.
 Focus on specific visual elements, composition, and style.
 Do not include any explanations, just the prompt.`;
 
+  // Use a specific Gemini model to avoid using non-Gemini models from user settings
   const result = await generateText(
     systemPrompt,
     businessInfo,
-    dispatch
+    dispatch,
+    'gemini-3-pro-preview'  // Explicit model to avoid Claude/other model warnings
   );
 
   return result.trim();

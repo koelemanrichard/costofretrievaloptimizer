@@ -121,9 +121,25 @@ async function generateViaProxy(
     clearTimeout(timeoutId);
 
     if (error) {
+      // Try to extract the actual error message from the response data
+      // Supabase SDK may put the response body in data even on error
+      let errorMessage = 'Image generation proxy failed';
+
+      if (data?.error) {
+        // The edge function returned a JSON error response
+        errorMessage = data.error;
+      } else if (error.message) {
+        // Check if it's a generic Supabase error vs actual error
+        if (error.message.includes('non-2xx')) {
+          errorMessage = 'OpenAI image proxy returned an error. Check your API key configuration in Settings.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       return {
         success: false,
-        error: error.message || 'Image generation proxy failed',
+        error: errorMessage,
         provider: 'dall-e-3',
         durationMs: Date.now() - startTime,
       };

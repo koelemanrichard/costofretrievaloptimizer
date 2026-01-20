@@ -230,7 +230,8 @@ const callApi = async <T>(
     responseSchema?: any,
     maxTokens: number = 8192,
     retryWithFallback: boolean = true,
-    operationName?: string
+    operationName?: string,
+    modelOverride?: string
 ): Promise<T> => {
     const startTime = Date.now();
     const operation = operationName || currentOperation;
@@ -243,7 +244,8 @@ const callApi = async <T>(
     }
 
     const ai = getAi(apiKey);
-    const validatedModel = validateModel(businessInfo.aiModel, dispatch);
+    // Use model override if provided, otherwise validate the configured model
+    const validatedModel = modelOverride || validateModel(businessInfo.aiModel, dispatch);
 
     // Get supabase client for database logging (if available)
     let supabase: any;
@@ -1422,13 +1424,18 @@ export const generateJson = async <T extends object>(
 
 /**
  * Generic text generation method for migration workflows
+ * @param prompt - The prompt to send to the model
+ * @param businessInfo - Business context including API keys
+ * @param dispatch - Redux dispatch for logging
+ * @param modelOverride - Optional: specific Gemini model to use (bypasses user's model setting)
  */
 export const generateText = async (
     prompt: string,
     businessInfo: BusinessInfo,
-    dispatch: React.Dispatch<any>
+    dispatch: React.Dispatch<any>,
+    modelOverride?: string
 ): Promise<string> => {
-    return callApi(prompt, businessInfo, dispatch, (text) => text, false);
+    return callApi(prompt, businessInfo, dispatch, (text) => text, false, undefined, 8192, true, undefined, modelOverride);
 };
 
 /**
