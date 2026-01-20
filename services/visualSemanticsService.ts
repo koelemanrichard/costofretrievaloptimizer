@@ -297,13 +297,24 @@ export function analyzeImageRequirements(
   const heroImage = generateHeroImageSpec(brief, entities, imageNGrams);
 
   // Generate section images
+  // Skip intro section since hero image already covers it (prevents duplicate images)
   const sectionImages: Record<string, VisualSemanticAnalysis> = {};
   const sections = brief.structured_outline || [];
 
   for (let i = 0; i < sections.length && i < 5; i++) {
     const section = sections[i];
+    const sectionKey = section.key || `section-${i}`;
+    const isIntroSection = sectionKey === 'intro' ||
+      sectionKey.toLowerCase().includes('intro') ||
+      i === 0 && section.heading?.toLowerCase().includes('introduction');
+
+    // Skip intro section - hero image already covers it
+    if (isIntroSection) {
+      continue;
+    }
+
     if (section.heading) {
-      sectionImages[section.key || `section-${i}`] = generateSectionImageSpec(
+      sectionImages[sectionKey] = generateSectionImageSpec(
         section,
         entities,
         primaryEntity,

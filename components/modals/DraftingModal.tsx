@@ -50,6 +50,50 @@ import type { ArticleTransformationSource, TransformationConfig, SocialCampaign,
 import { transformArticleToSocialPosts } from '../../services/social/transformation/contentTransformer';
 import { useSocialCampaigns } from '../../hooks/useSocialCampaigns';
 
+/**
+ * Replace IMAGE placeholders with actual markdown images if they have generated URLs.
+ * This allows preview and export to show actual images instead of placeholder text.
+ */
+function replaceImagePlaceholdersWithUrls(content: string, placeholders: ImagePlaceholder[]): string {
+  if (!content || !placeholders || placeholders.length === 0) return content;
+
+  let result = content;
+
+  // Build a map of description prefix to URL for matching
+  const urlMap = new Map<string, { url: string; alt: string }>();
+  for (const p of placeholders) {
+    const url = p.generatedUrl || p.userUploadUrl;
+    if (url && p.description) {
+      // Index by first 50 chars of description (lowercased) for fuzzy matching
+      urlMap.set(p.description.slice(0, 50).toLowerCase(), {
+        url,
+        alt: p.metadata?.altText || p.altTextSuggestion || p.description.slice(0, 100),
+      });
+    }
+  }
+
+  if (urlMap.size === 0) return content;
+
+  // Replace [IMAGE: description | alt="text"] patterns with ![alt](url)
+  result = result.replace(
+    /\[IMAGE:\s*([^|\]]+)(?:\s*\|\s*alt="([^"]*)")?\]/gi,
+    (match, description, altFromPattern) => {
+      const descKey = description.trim().slice(0, 50).toLowerCase();
+      const imgData = urlMap.get(descKey);
+
+      if (imgData) {
+        const alt = altFromPattern?.trim() || imgData.alt;
+        return `![${alt}](${imgData.url})`;
+      }
+
+      // No URL found, keep original placeholder
+      return match;
+    }
+  );
+
+  return result;
+}
+
 interface DraftingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -115,6 +159,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     passQualityScores?: Record<string, number>; // Quality scores per pass
     qualityWarning?: string | null; // Warning for quality regressions
     auditDetails?: { algorithmicResults?: Array<{ ruleName: string; isPassing: boolean; details: string }> }; // Audit results from Pass 9
+    imagePlaceholders?: ImagePlaceholder[]; // Generated image URLs from database
   } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
@@ -180,12 +225,53 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   // Report generation hook
   const reportHook = useArticleDraftReport(minimalJob, brief);
 
-  // Parse image placeholders from draft content
+  // Parse image placeholders from draft content and merge with database URLs
   // Pass brief title to pre-fill HERO image text overlay
   const imagePlaceholders = useMemo(() => {
     if (!draftContent) return [];
-    return extractPlaceholdersFromDraft(draftContent, { heroTitle: brief?.title });
-  }, [draftContent, brief?.title]);
+
+    // Parse placeholders from current draft content
+    const parsed = extractPlaceholdersFromDraft(draftContent, { heroTitle: brief?.title });
+
+    // Merge with database-stored URLs (from generated images)
+    const dbPlaceholders = databaseJobInfo?.imagePlaceholders || [];
+    if (dbPlaceholders.length === 0) return parsed;
+
+    // Create a map for quick lookup by ID and by description prefix
+    const dbUrlMap = new Map<string, ImagePlaceholder>();
+    const dbDescMap = new Map<string, ImagePlaceholder>();
+    for (const dbp of dbPlaceholders) {
+      if (dbp.generatedUrl || dbp.userUploadUrl) {
+        dbUrlMap.set(dbp.id, dbp);
+        // Also index by first 50 chars of description for fuzzy matching
+        if (dbp.description) {
+          dbDescMap.set(dbp.description.slice(0, 50).toLowerCase(), dbp);
+        }
+      }
+    }
+
+    // Merge URLs into parsed placeholders
+    return parsed.map(p => {
+      // Try exact ID match first
+      let dbMatch = dbUrlMap.get(p.id);
+
+      // Fallback to description prefix match
+      if (!dbMatch && p.description) {
+        dbMatch = dbDescMap.get(p.description.slice(0, 50).toLowerCase());
+      }
+
+      if (dbMatch) {
+        return {
+          ...p,
+          generatedUrl: dbMatch.generatedUrl || p.generatedUrl,
+          userUploadUrl: dbMatch.userUploadUrl || p.userUploadUrl,
+          status: (dbMatch.generatedUrl || dbMatch.userUploadUrl) ? 'generated' as const : p.status,
+          metadata: dbMatch.metadata || p.metadata,
+        };
+      }
+      return p;
+    });
+  }, [draftContent, brief?.title, databaseJobInfo?.imagePlaceholders]);
 
   // Build source data for social media transformation
   const socialTransformSource: ArticleTransformationSource | null = useMemo(() => {
@@ -523,7 +609,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         // Get the latest job for this brief (any status - to detect incomplete jobs that can be resumed)
         const { data: jobData, error: jobError } = await supabase
           .from('content_generation_jobs')
-          .select('id, draft_content, updated_at, final_audit_score, passes_status, status, current_pass, schema_data, structural_snapshots, pass_quality_scores, quality_warning, audit_details')
+          .select('id, draft_content, updated_at, final_audit_score, passes_status, status, current_pass, schema_data, structural_snapshots, pass_quality_scores, quality_warning, audit_details, image_placeholders')
           .eq('brief_id', brief.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -649,6 +735,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
           passQualityScores: (jobData as any).pass_quality_scores || {}, // Quality scores per pass
           qualityWarning: (jobData as any).quality_warning || null, // Quality regression warning
           auditDetails: (jobData as any).audit_details || undefined, // Audit results from Pass 9
+          imagePlaceholders: (jobData as any).image_placeholders || [], // Generated image URLs
         });
 
         // If no newer/longer content found, don't show sync option
@@ -1490,7 +1577,7 @@ ${JSON.stringify(schemaData, null, 2)}
       </div>
     </header>
     <div itemprop="articleBody">
-    ${convertMarkdownToBasicHtml(draftContent)}
+    ${convertMarkdownToBasicHtml(replaceImagePlaceholdersWithUrls(draftContent, imagePlaceholders))}
     </div>
   </article>
 </body>
@@ -1779,7 +1866,8 @@ Image ${i + 1}: ${img.type}
     }
 
     // Clean content before export (fix H1 duplicates, excessive whitespace)
-    const cleanedContent = cleanForExport(draftContent);
+    // Also replace IMAGE placeholders with actual images if they've been generated
+    const cleanedContent = replaceImagePlaceholdersWithUrls(cleanForExport(draftContent), imagePlaceholders);
 
     dispatch({ type: 'SET_NOTIFICATION', payload: 'Preparing HTML with embedded images...' });
 
@@ -1989,7 +2077,8 @@ ${convertMarkdownToSemanticHtml(cleanedContent, { imageUrlMap, ogImageUrl })}
     }
 
     // Clean content before copy
-    const cleanedContent = cleanForExport(draftContent);
+    // Also replace IMAGE placeholders with actual images if they've been generated
+    const cleanedContent = replaceImagePlaceholdersWithUrls(cleanForExport(draftContent), imagePlaceholders);
 
     dispatch({ type: 'SET_NOTIFICATION', payload: 'Preparing optimized HTML with schema markup...' });
 
@@ -2771,8 +2860,12 @@ ${schemaScript}`;
                                     })()}
 
                                     {/* Main Content - strip leading H1 since we render title separately */}
+                                    {/* Also replace IMAGE placeholders with actual images if they've been generated */}
                                     <div className="prose prose-invert max-w-none">
-                                        <SimpleMarkdown content={safeString(draftContent).replace(/^#\s+[^\n]+\n*/m, '')} />
+                                        <SimpleMarkdown content={replaceImagePlaceholdersWithUrls(
+                                          safeString(draftContent).replace(/^#\s+[^\n]+\n*/m, ''),
+                                          imagePlaceholders
+                                        )} />
                                     </div>
 
                                     {/* All Image Placeholders Summary */}
