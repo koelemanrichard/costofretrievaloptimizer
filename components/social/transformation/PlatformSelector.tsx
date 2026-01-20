@@ -108,6 +108,29 @@ export const PlatformSelector: React.FC<PlatformSelectorProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Hub-Spoke Strategy Explainer */}
+      <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-blue-300 mb-1">Hub & Spoke Strategy</h4>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              <strong className="text-blue-400">Hub post:</strong> Your main announcement on your primary platform - typically the longest, most comprehensive version that links to your article.
+              <br />
+              <strong className="text-blue-400">Spoke posts:</strong> Supporting posts on other platforms that highlight specific aspects (key takeaways, stats, questions) and link back to the hub or article.
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              This strategy maximizes reach while maintaining semantic consistency across platforms.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-300">Select Platforms</h3>
         <span className="text-xs text-gray-500">
@@ -172,13 +195,21 @@ export const PlatformSelector: React.FC<PlatformSelectorProps> = ({
                     type="button"
                     onClick={() => handleSetAsHub(platform)}
                     disabled={isHub}
-                    className={`w-full text-left text-xs px-2 py-1.5 rounded ${
+                    title={isHub
+                      ? 'This is your hub platform - the primary post that other posts link to'
+                      : 'Make this your hub platform - best for your largest audience or where you want to drive discussion'
+                    }
+                    className={`w-full text-left text-xs px-2 py-1.5 rounded flex items-center gap-1.5 ${
                       isHub
                         ? 'bg-blue-600 text-white cursor-default'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
-                    {isHub ? '★ Hub Platform' : 'Set as Hub'}
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3" />
+                      {isHub && <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />}
+                    </svg>
+                    {isHub ? 'Hub Platform (Primary)' : 'Set as Hub'}
                   </button>
 
                   {/* Post count (only for non-hub platforms) */}

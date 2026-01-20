@@ -20,42 +20,51 @@ interface TemplateSelectorProps {
   hubPlatform: SocialMediaPlatform;
 }
 
-const TEMPLATE_DESCRIPTIONS: Record<SocialTemplateType, { name: string; description: string }> = {
+const TEMPLATE_DESCRIPTIONS: Record<SocialTemplateType, { name: string; description: string; bestFor: string }> = {
   hub_announcement: {
     name: 'Hub Announcement',
-    description: 'Main article announcement with key takeaways'
+    description: 'Your main post that announces the article with a compelling hook, key benefits, and clear call-to-action. This is typically the longest and most comprehensive post.',
+    bestFor: 'Primary platform, first post of your campaign'
   },
   key_takeaway: {
     name: 'Key Takeaway',
-    description: 'Single insight from the article'
+    description: 'Highlights one specific insight or lesson from your article. Each takeaway post should focus on a single point to maximize clarity and engagement.',
+    bestFor: 'Creating multiple posts from one article'
   },
   entity_spotlight: {
     name: 'Entity Spotlight',
-    description: 'Focus on one entity from the content'
+    description: 'Focuses on a specific entity (person, concept, tool, method) mentioned in your article. Great for semantic SEO as it reinforces entity associations.',
+    bestFor: 'Building topical authority around key concepts'
   },
   question_hook: {
     name: 'Question Hook',
-    description: 'Engagement question to drive discussion'
+    description: 'Opens with an engaging question that your article answers. Questions drive comments and shares by inviting audience participation.',
+    bestFor: 'Maximizing engagement and comments'
   },
   stat_highlight: {
     name: 'Stat Highlight',
-    description: 'Statistical fact or data point'
+    description: 'Features a specific statistic, data point, or metric from your content. Numbers catch attention and add credibility to your posts.',
+    bestFor: 'Data-driven content, research articles'
   },
   tip_series: {
     name: 'Tip Series',
-    description: 'Actionable tips in list format'
+    description: 'Presents actionable advice in a numbered or bulleted format. Easy to consume and highly shareable for how-to content.',
+    bestFor: 'Tutorials, how-to guides, process articles'
   },
   quote_card: {
     name: 'Quote Card',
-    description: 'Notable quote from the article'
+    description: 'Showcases a notable quote or statement from your article. Works well with visual quote cards for platforms like Instagram.',
+    bestFor: 'Expert quotes, memorable statements'
   },
   listicle: {
     name: 'Listicle',
-    description: 'Quick numbered list format'
+    description: 'Quick numbered list that summarizes key points. The format is scannable and performs well on fast-scrolling platforms.',
+    bestFor: 'Twitter/X, quick-consumption content'
   },
   spoke_teaser: {
     name: 'Spoke Teaser',
-    description: 'Short teaser linking to hub content'
+    description: 'A short, intriguing teaser that creates curiosity and drives traffic to your hub post or article. Links back to the main content.',
+    bestFor: 'Cross-platform linking, secondary platforms'
   }
 };
 
@@ -87,6 +96,27 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Template Types Explainer */}
+      <div className="bg-purple-900/30 border border-purple-700/50 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M9 21V9" />
+            </svg>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-purple-300 mb-1">Post Templates</h4>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Each template structures your content differently to maximize impact. <strong className="text-purple-400">Hub templates</strong> are comprehensive announcements. <strong className="text-purple-400">Spoke templates</strong> are shorter, focused posts that highlight specific aspects and link back to your hub or article.
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Tip: Use different templates across platforms to avoid duplicate content while maintaining semantic consistency.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-300">Configure Templates</h3>
         <span className="text-xs text-gray-500">
@@ -141,7 +171,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                       const isSelected = selection.template_type === template.template_type;
                       const info = TEMPLATE_DESCRIPTIONS[template.template_type] || {
                         name: template.template_name,
-                        description: ''
+                        description: '',
+                        bestFor: ''
                       };
 
                       return (
@@ -149,6 +180,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                           key={template.id}
                           type="button"
                           onClick={() => handleTemplateChange(platform, template.template_type)}
+                          title={info.bestFor ? `Best for: ${info.bestFor}` : undefined}
                           className={`text-left p-3 rounded-lg border transition-all ${
                             isSelected
                               ? 'border-blue-500 bg-blue-500/10'
@@ -174,6 +206,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                                 {info.description}
                               </p>
+                              {info.bestFor && (
+                                <p className="text-xs text-purple-400/70 mt-1">
+                                  Best for: {info.bestFor}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </button>
@@ -194,6 +231,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                           key={type}
                           type="button"
                           onClick={() => handleTemplateChange(platform, type)}
+                          title={info.bestFor ? `Best for: ${info.bestFor}` : undefined}
                           className={`text-left p-3 rounded-lg border transition-all ${
                             isSelected
                               ? 'border-blue-500 bg-blue-500/10'
@@ -219,6 +257,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                                 {info.description}
                               </p>
+                              {info.bestFor && (
+                                <p className="text-xs text-purple-400/70 mt-1">
+                                  Best for: {info.bestFor}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </button>

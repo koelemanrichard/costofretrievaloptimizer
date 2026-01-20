@@ -107,7 +107,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({
 
           <PostPreviewCard
             post={hubPost}
-            complianceReport={complianceReport?.post_reports.find(r => r.post_id === hubPost.id)}
+            complianceReport={complianceReport?.post_reports?.find(r => r.post_id === hubPost.id)}
             onEdit={onEditPost ? () => onEditPost(hubPost) : undefined}
             isHub
           />
@@ -151,7 +151,7 @@ export const CampaignPreview: React.FC<CampaignPreviewProps> = ({
                     <PostPreviewCard
                       key={post.id}
                       post={post}
-                      complianceReport={complianceReport?.post_reports.find(r => r.post_id === post.id)}
+                      complianceReport={complianceReport?.post_reports?.find(r => r.post_id === post.id)}
                       onEdit={onEditPost ? () => onEditPost(post) : undefined}
                     />
                   ))}
