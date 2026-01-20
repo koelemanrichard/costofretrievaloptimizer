@@ -17,6 +17,7 @@
 // - types/siteAnalysis.ts - Site analysis V2 types (SiteAnalysisProject, SitePageRecord, JinaExtraction)
 // - types/contentGeneration.ts - Content generation V2 types
 // - types/contentTemplates.ts - Content template routing types
+// - types/social.ts - Social media publishing types (campaigns, posts, compliance)
 
 // FIX: Corrected import path for database types to be a relative path, fixing module resolution error.
 import { Json } from './database.types';
@@ -41,6 +42,8 @@ export * from './types/contentTemplates';
 export * from './types/competitiveIntelligence';
 export * from './types/wordpress';
 export * from './types/organization';
+export * from './types/social';
+export * from './types/contextualEditor';
 
 export enum AppStep {
   AUTH,
@@ -3285,6 +3288,10 @@ export interface SectionDefinition {
   order: number;
   subordinateTextHint?: string;
   methodologyNote?: string;
+  /** Section type - intro/conclusion headings can be AI-generated */
+  section_type?: 'introduction' | 'conclusion' | 'body';
+  /** When true, AI should generate appropriate heading (not use pre-defined) */
+  generateHeading?: boolean;
 }
 
 export const PASS_NAMES: Record<number, string> = {
