@@ -8,3 +8,4 @@
 export { analyzeContext, extractServicesFromBusinessInfo, findContradictions, checkSeoViolations } from './contextAnalyzer';
 export { rewriteText, buildRewritePrompt, detectOptimalScope, shouldUseInlineDiff } from './textRewriter';
 export { generateImagePrompt, suggestImageStyle, suggestAspectRatio, generateAltText, determinePlacement } from './imagePromptGenerator';
+export { analyzeForConfirmation, buildConfirmedRewritePrompt, buildServiceDetectionPrompt, buildFactDetectionPrompt } from './analysisForConfirmation';
