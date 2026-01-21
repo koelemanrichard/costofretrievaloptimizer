@@ -19,10 +19,13 @@ import {
   ContextualEditorState,
   ContentEditorSettings,
   DEFAULT_EDITOR_SETTINGS,
+  ACTIONS_REQUIRING_CONFIRMATION,
+  AnalysisForConfirmation,
+  DetectedItem,
 } from '../types/contextualEditor';
 import { useTextSelection } from './useTextSelection';
 import { useEditSession } from './useEditSession';
-import { analyzeContext, rewriteText, generateImagePrompt } from '../services/ai/contextualEditing';
+import { analyzeContext, rewriteText, generateImagePrompt, analyzeForConfirmation, buildConfirmedRewritePrompt } from '../services/ai/contextualEditing';
 
 interface UseContextualEditorOptions {
   containerRef: React.RefObject<HTMLElement>;
@@ -56,6 +59,11 @@ interface UseContextualEditorReturn {
   canRedo: boolean;
   editCount: number;
   setActiveTab: (tab: PanelTab) => void;
+  // Analysis confirmation flow
+  executeConfirmedRewrite: () => Promise<void>;
+  setCustomInstruction: (instruction: string) => void;
+  updateItemDecision: (itemId: string, decision: DetectedItem['userDecision'], correction?: string) => void;
+  cancelAnalysis: () => void;
 }
 
 export function useContextualEditor(options: UseContextualEditorOptions): UseContextualEditorReturn {
@@ -82,6 +90,8 @@ export function useContextualEditor(options: UseContextualEditorOptions): UseCon
     activeTab: 'corrections',
     isProcessing: false,
     error: null,
+    analysisForConfirmation: null,
+    customInstruction: '',
   });
 
   const lastActionRef = useRef<{ action: QuickAction; instruction?: string } | null>(null);
@@ -145,6 +155,33 @@ export function useContextualEditor(options: UseContextualEditorOptions): UseCon
     setState(prev => ({ ...prev, isProcessing: true, error: null }));
     lastActionRef.current = { action, instruction: customInstruction };
 
+    // Check if this action requires user confirmation before rewriting
+    if (ACTIONS_REQUIRING_CONFIRMATION.includes(action)) {
+      try {
+        const analysis = await analyzeForConfirmation(
+          selection.text,
+          businessInfo,
+          eavs
+        );
+
+        setState(prev => ({
+          ...prev,
+          analysisForConfirmation: analysis,
+          mode: 'analysis',
+          isProcessing: false,
+          customInstruction: customInstruction || '',
+        }));
+      } catch (error) {
+        setState(prev => ({
+          ...prev,
+          error: error instanceof Error ? error.message : 'Analysis failed',
+          isProcessing: false,
+        }));
+      }
+      return;
+    }
+
+    // Normal rewrite flow for actions that don't require confirmation
     try {
       const result = await rewriteText({
         request: {
@@ -213,6 +250,113 @@ export function useContextualEditor(options: UseContextualEditorOptions): UseCon
     if (!lastActionRef.current) return;
     await executeQuickAction(lastActionRef.current.action, lastActionRef.current.instruction);
   }, [executeQuickAction]);
+
+  // ============================================================================
+  // ANALYSIS CONFIRMATION FLOW FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Execute rewrite after user has confirmed their decisions on detected items
+   * Called when user clicks "Apply" in the analysis panel
+   */
+  const executeConfirmedRewrite = useCallback(async () => {
+    if (!selection || !state.analysisForConfirmation) return;
+
+    setState(prev => ({ ...prev, isProcessing: true, error: null }));
+
+    try {
+      // Build the prompt using user's decisions on detected items
+      const customPrompt = buildConfirmedRewritePrompt(
+        selection.text,
+        state.analysisForConfirmation.detectedItems,
+        state.customInstruction || undefined
+      );
+
+      // Use the 'custom' action with our built prompt
+      const result = await rewriteText({
+        request: {
+          selectedText: selection.text,
+          surroundingContext: '',
+          sectionKey: selection.sectionKey,
+          action: 'custom',
+          customInstruction: customPrompt,
+        },
+        fullArticle,
+        businessInfo,
+        brief,
+        eavs,
+        dispatch,
+      });
+
+      setState(prev => ({
+        ...prev,
+        rewriteResult: result,
+        mode: 'preview',
+        isProcessing: false,
+        // Keep analysisForConfirmation in case user wants to go back
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Rewrite failed',
+        isProcessing: false,
+      }));
+    }
+  }, [selection, state.analysisForConfirmation, state.customInstruction, fullArticle, businessInfo, brief, eavs, dispatch]);
+
+  /**
+   * Update the custom instruction for the confirmed rewrite
+   */
+  const setCustomInstruction = useCallback((instruction: string) => {
+    setState(prev => ({ ...prev, customInstruction: instruction }));
+  }, []);
+
+  /**
+   * Update a detected item's user decision
+   * @param itemId - The ID of the item to update
+   * @param decision - The user's decision: 'keep', 'fix', 'remove', or null
+   * @param correction - Optional correction text when decision is 'fix'
+   */
+  const updateItemDecision = useCallback((
+    itemId: string,
+    decision: DetectedItem['userDecision'],
+    correction?: string
+  ) => {
+    setState(prev => {
+      if (!prev.analysisForConfirmation) return prev;
+
+      const updatedItems = prev.analysisForConfirmation.detectedItems.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            userDecision: decision,
+            userCorrection: correction,
+          };
+        }
+        return item;
+      });
+
+      return {
+        ...prev,
+        analysisForConfirmation: {
+          ...prev.analysisForConfirmation,
+          detectedItems: updatedItems,
+        },
+      };
+    });
+  }, []);
+
+  /**
+   * Cancel the analysis flow and return to menu/idle mode
+   */
+  const cancelAnalysis = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      mode: selection ? 'menu' : 'idle',
+      analysisForConfirmation: null,
+      customInstruction: '',
+    }));
+  }, [selection]);
 
   const generateImage = useCallback(async () => {
     if (!selection) return;
@@ -302,5 +446,10 @@ export function useContextualEditor(options: UseContextualEditorOptions): UseCon
     canRedo: editSession.canRedo,
     editCount: editSession.getEditCount(),
     setActiveTab,
+    // Analysis confirmation flow
+    executeConfirmedRewrite,
+    setCustomInstruction,
+    updateItemDecision,
+    cancelAnalysis,
   };
 }

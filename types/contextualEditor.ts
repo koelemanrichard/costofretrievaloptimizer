@@ -181,6 +181,9 @@ export interface ContextualEditorState {
   activeTab: PanelTab;
   isProcessing: boolean;
   error: string | null;
+  // Analysis confirmation flow state
+  analysisForConfirmation: AnalysisForConfirmation | null;
+  customInstruction: string;
 }
 
 // ============================================================================
