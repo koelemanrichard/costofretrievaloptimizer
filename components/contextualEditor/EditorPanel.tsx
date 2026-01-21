@@ -3,7 +3,7 @@
  * Expanded side panel for full editing capabilities.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   TextSelection,
   ContextAnalysis,
@@ -12,6 +12,8 @@ import {
   QuickAction,
   PanelTab,
 } from '../../types/contextualEditor';
+import { BusinessInfo } from '../../types';
+import { QuickInstructionInput } from './QuickInstructionInput';
 
 interface EditorPanelProps {
   selection: TextSelection;
@@ -20,6 +22,9 @@ interface EditorPanelProps {
   imagePromptResult: ImagePromptResult | null;
   activeTab: PanelTab;
   isProcessing: boolean;
+  businessInfo: BusinessInfo;
+  customInstruction: string;
+  onInstructionChange: (instruction: string) => void;
   onTabChange: (tab: PanelTab) => void;
   onQuickAction: (action: QuickAction, customInstruction?: string) => void;
   onAcceptRewrite: () => void;
@@ -59,6 +64,9 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
   imagePromptResult,
   activeTab,
   isProcessing,
+  businessInfo,
+  customInstruction,
+  onInstructionChange,
   onTabChange,
   onQuickAction,
   onAcceptRewrite,
@@ -66,8 +74,6 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
   onRetryRewrite,
   onClose,
 }) => {
-  const [customInstruction, setCustomInstruction] = useState('');
-
   const handleCustomSubmit = () => {
     if (customInstruction.trim()) {
       onQuickAction('custom', customInstruction);
@@ -117,7 +123,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
           </div>
           {analysis.suggestions.length > 0 && (
             <button
-              onClick={() => onQuickAction(analysis.suggestions[0].action as QuickAction)}
+              onClick={() => onQuickAction(analysis.suggestions[0].action as QuickAction, customInstruction || undefined)}
               disabled={isProcessing}
               className="mt-2 text-xs text-blue-400 hover:text-blue-300 font-medium disabled:opacity-50"
             >
@@ -147,23 +153,33 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab !== 'custom' ? (
-          <div className="space-y-2">
-            {TAB_ACTIONS[activeTab].map(({ action, label }) => (
-              <button
-                key={action}
-                onClick={() => onQuickAction(action)}
-                disabled={isProcessing}
-                className="w-full px-4 py-2 text-left text-sm bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors disabled:opacity-50"
-              >
-                {label}
-              </button>
-            ))}
+          <div className="space-y-4">
+            {/* Action buttons */}
+            <div className="space-y-2">
+              {TAB_ACTIONS[activeTab].map(({ action, label }) => (
+                <button
+                  key={action}
+                  onClick={() => onQuickAction(action, customInstruction || undefined)}
+                  disabled={isProcessing}
+                  className="w-full px-4 py-2 text-left text-sm bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors disabled:opacity-50"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick instruction input */}
+            <QuickInstructionInput
+              businessInfo={businessInfo}
+              instruction={customInstruction}
+              onInstructionChange={onInstructionChange}
+            />
           </div>
         ) : (
           <div className="space-y-3">
             <textarea
               value={customInstruction}
-              onChange={(e) => setCustomInstruction(e.target.value)}
+              onChange={(e) => onInstructionChange(e.target.value)}
               placeholder="Describe how you want the text changed..."
               className="w-full h-32 bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded p-2 resize-none focus:outline-none focus:border-blue-500"
             />

@@ -187,6 +187,9 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const [contextualImageUrl, setContextualImageUrl] = useState<string | undefined>(undefined);
   const [isGeneratingContextualImage, setIsGeneratingContextualImage] = useState(false);
 
+  // Contextual Editor Custom Instruction State
+  const [editorCustomInstruction, setEditorCustomInstruction] = useState('');
+
   // Re-run Passes State
   const [showPassesModal, setShowPassesModal] = useState(false);
   const [selectedPasses, setSelectedPasses] = useState<number[]>([]);
@@ -3136,6 +3139,9 @@ ${schemaScript}`;
                                         imagePromptResult={contextualEditor.state.imagePromptResult}
                                         activeTab={contextualEditor.state.activeTab}
                                         isProcessing={contextualEditor.state.isProcessing}
+                                        businessInfo={businessInfo}
+                                        customInstruction={editorCustomInstruction}
+                                        onInstructionChange={setEditorCustomInstruction}
                                         onTabChange={contextualEditor.setActiveTab}
                                         onQuickAction={contextualEditor.executeQuickAction}
                                         onAcceptRewrite={contextualEditor.acceptRewrite}
