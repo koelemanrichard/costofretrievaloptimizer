@@ -56,6 +56,24 @@ export type QuickAction =
   | 'seo_optimize'
   | 'custom';
 
+export const ACTIONS_REQUIRING_CONFIRMATION: QuickAction[] = ['fix_accuracy'];
+
+export interface DetectedItem {
+  id: string;
+  textFragment: string;
+  itemType: 'service_mention' | 'factual_claim' | 'unverified_statement';
+  aiAssessment: 'potentially_incorrect' | 'unverified' | 'needs_review';
+  userDecision: 'keep' | 'fix' | 'remove' | null;
+  userCorrection?: string;
+  reason: string;
+}
+
+export interface AnalysisForConfirmation {
+  action: QuickAction;
+  detectedItems: DetectedItem[];
+  summary: string;
+}
+
 export interface RewriteRequest {
   selectedText: string;
   surroundingContext: string;
@@ -151,7 +169,7 @@ export interface TextSelection {
 // EDITOR STATE TYPES
 // ============================================================================
 
-export type EditorMode = 'idle' | 'menu' | 'panel_text' | 'panel_image' | 'preview';
+export type EditorMode = 'idle' | 'menu' | 'panel_text' | 'panel_image' | 'analysis' | 'preview';
 export type PanelTab = 'corrections' | 'rewrites' | 'seo' | 'custom';
 
 export interface ContextualEditorState {
