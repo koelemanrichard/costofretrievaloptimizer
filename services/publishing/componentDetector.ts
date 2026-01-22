@@ -24,59 +24,63 @@ import type {
 /**
  * Patterns for detecting components in HTML/Markdown content
  */
+// Maximum content size to analyze (prevent catastrophic backtracking on huge content)
+const MAX_CONTENT_SIZE = 50000;
+
 const componentPatterns = {
   // Key Takeaways detection
+  // NOTE: All patterns use [^\n]+ instead of .+ to prevent catastrophic backtracking
   keyTakeaways: [
-    // HTML patterns
-    /<(?:div|section|aside)[^>]*class="[^"]*(?:key-?takeaways?|takeaways|highlights|summary-box|tldr)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|section|aside)>/gi,
-    // Markdown patterns (heading-based)
-    /(?:^|\n)#{1,3}\s*(?:Key\s+Takeaways?|TL;?DR|Summary|Highlights)\s*\n([\s\S]*?)(?=\n#{1,3}\s|\n---|\n$)/gi,
-    // Bullet list after specific headings
-    /(?:^|\n)(?:\*\*|##?\s*)(?:Key\s+Takeaways?|What\s+You['']ll\s+Learn)[:\s]*\n((?:\s*[-*]\s+.+\n?)+)/gi,
+    // HTML patterns (limited capture)
+    /<(?:div|section|aside)[^>]*class="[^"]*(?:key-?takeaways?|takeaways|highlights|summary-box|tldr)[^"]*"[^>]*>[\s\S]{1,3000}?<\/(?:div|section|aside)>/gi,
+    // Markdown patterns (heading-based) - simplified
+    /(?:^|\n)#{1,3}\s*(?:Key\s+Takeaways?|TL;?DR|Summary|Highlights)[^\n]*\n/gi,
+    // Bullet list after specific headings - simplified
+    /(?:^|\n)(?:\*\*|##?\s*)(?:Key\s+Takeaways?|What\s+You['']ll\s+Learn)[:\s]*\n/gi,
   ],
 
   // FAQ detection
   faq: [
-    // HTML FAQ schema or class
-    /<(?:div|section)[^>]*(?:itemtype="[^"]*FAQPage[^"]*"|class="[^"]*faq[^"]*")[^>]*>([\s\S]*?)<\/(?:div|section)>/gi,
-    // Markdown FAQ section
-    /(?:^|\n)#{1,3}\s*(?:FAQ|Frequently\s+Asked\s+Questions?|Common\s+Questions?)\s*\n([\s\S]*?)(?=\n#{1,2}\s[^#]|\n---|\n$)/gi,
-    // Q&A pattern (Question: Answer:)
-    /(?:^|\n)(?:\*\*Q[:\.]?\s*|Q[:\.]?\s*)(.+?)\n(?:\*\*A[:\.]?\s*|A[:\.]?\s*)(.+?)(?=\n(?:\*\*Q|Q[:\.])|$)/gi,
+    // HTML FAQ schema or class (limited capture)
+    /<(?:div|section)[^>]*(?:itemtype="[^"]*FAQPage[^"]*"|class="[^"]*faq[^"]*")[^>]*>[\s\S]{1,5000}?<\/(?:div|section)>/gi,
+    // Markdown FAQ section - simplified to just detect heading
+    /(?:^|\n)#{1,3}\s*(?:FAQ|Frequently\s+Asked\s+Questions?|Common\s+Questions?)[^\n]*\n/gi,
+    // Q&A pattern - simplified
+    /(?:^|\n)(?:\*\*)?Q[:\.]?\s*[^\n]+/gi,
   ],
 
   // Table of Contents detection
   toc: [
-    // HTML ToC
-    /<(?:nav|div)[^>]*class="[^"]*(?:toc|table-of-contents|contents)[^"]*"[^>]*>([\s\S]*?)<\/(?:nav|div)>/gi,
-    // Markdown ToC
-    /(?:^|\n)#{1,3}\s*(?:Table\s+of\s+Contents?|Contents?|In\s+This\s+Article)\s*\n((?:\s*[-*]\s+\[.+?\]\(.+?\)\n?)+)/gi,
+    // HTML ToC (limited capture)
+    /<(?:nav|div)[^>]*class="[^"]*(?:toc|table-of-contents|contents)[^"]*"[^>]*>[\s\S]{1,3000}?<\/(?:nav|div)>/gi,
+    // Markdown ToC - simplified to just detect heading
+    /(?:^|\n)#{1,3}\s*(?:Table\s+of\s+Contents?|Contents?|In\s+This\s+Article)[^\n]*\n/gi,
   ],
 
   // CTA detection
   cta: [
-    // HTML CTA buttons/boxes
-    /<(?:div|section|a)[^>]*class="[^"]*(?:cta|call-to-action|signup|subscribe|get-started)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|section|a)>/gi,
-    // Button patterns
-    /<(?:button|a)[^>]*(?:class="[^"]*(?:btn|button)[^"]*"|href="[^"]*(?:signup|register|subscribe|contact))[^>]*>([\s\S]*?)<\/(?:button|a)>/gi,
+    // HTML CTA buttons/boxes (limited capture)
+    /<(?:div|section|a)[^>]*class="[^"]*(?:cta|call-to-action|signup|subscribe|get-started)[^"]*"[^>]*>[\s\S]{1,1000}?<\/(?:div|section|a)>/gi,
+    // Button patterns (limited capture)
+    /<(?:button|a)[^>]*(?:class="[^"]*(?:btn|button)[^"]*"|href="[^"]*(?:signup|register|subscribe|contact))[^>]*>[^<]{0,200}<\/(?:button|a)>/gi,
     // Markdown CTA patterns
     /\[(?:Get\s+Started|Sign\s+Up|Subscribe|Contact\s+Us|Book\s+(?:a\s+)?(?:Call|Demo)|Start\s+Free\s+Trial)[^\]]*\]\([^)]+\)/gi,
   ],
 
   // Author box detection
   authorBox: [
-    // HTML author box
-    /<(?:div|section|aside)[^>]*class="[^"]*(?:author|byline|bio|about-author)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|section|aside)>/gi,
-    // Schema.org Author
-    /<[^>]*itemtype="[^"]*Person[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/gi,
+    // HTML author box (limited capture)
+    /<(?:div|section|aside)[^>]*class="[^"]*(?:author|byline|bio|about-author)[^"]*"[^>]*>[\s\S]{1,2000}?<\/(?:div|section|aside)>/gi,
+    // Schema.org Author (limited capture)
+    /<[^>]*itemtype="[^"]*Person[^"]*"[^>]*>[\s\S]{1,2000}?<\/[^>]+>/gi,
   ],
 
   // Hero section detection
   hero: [
-    // HTML hero
-    /<(?:div|section|header)[^>]*class="[^"]*(?:hero|banner|jumbotron|masthead)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|section|header)>/gi,
-    // First h1 with following paragraph
-    /^(#{1}\s+.+\n+(?:[^#\n].+\n)*)/m,
+    // HTML hero (limited capture)
+    /<(?:div|section|header)[^>]*class="[^"]*(?:hero|banner|jumbotron|masthead)[^"]*"[^>]*>[\s\S]{1,5000}?<\/(?:div|section|header)>/gi,
+    // First h1 - simplified
+    /^#{1}\s+[^\n]+/m,
   ],
 
   // Image detection
@@ -89,28 +93,29 @@ const componentPatterns = {
 
   // Table detection
   table: [
-    // HTML tables
-    /<table[^>]*>([\s\S]*?)<\/table>/gi,
-    // Markdown tables
-    /(?:^|\n)\|.+\|\n\|[\s:-]+\|\n(?:\|.+\|\n)+/gm,
+    // HTML tables (limited capture)
+    /<table[^>]*>[\s\S]{1,10000}?<\/table>/gi,
+    // Markdown tables - simplified to detect header row
+    /(?:^|\n)\|[^\n]+\|\n\|[\s:-]+\|/gm,
   ],
 
   // List detection (ordered and unordered)
+  // NOTE: Using [^\n]+ instead of .+ to prevent catastrophic backtracking
   list: [
     // HTML lists
-    /<(?:ul|ol)[^>]*>([\s\S]*?)<\/(?:ul|ol)>/gi,
-    // Markdown unordered lists
-    /(?:^|\n)((?:\s*[-*+]\s+.+\n?)+)/gm,
-    // Markdown ordered lists
-    /(?:^|\n)((?:\s*\d+\.\s+.+\n?)+)/gm,
+    /<(?:ul|ol)[^>]*>[\s\S]{1,5000}?<\/(?:ul|ol)>/gi,
+    // Markdown unordered lists (simplified - just detect start)
+    /(?:^|\n)\s*[-*+]\s+[^\n]+/gm,
+    // Markdown ordered lists (simplified - just detect start)
+    /(?:^|\n)\s*\d+\.\s+[^\n]+/gm,
   ],
 
   // Content section detection
   contentSection: [
-    // HTML sections with headings
-    /<(?:section|div)[^>]*>([\s\S]*?<h[2-4][^>]*>[\s\S]*?)<\/(?:section|div)>/gi,
-    // Markdown sections (h2-h4)
-    /(?:^|\n)(#{2,4}\s+.+\n[\s\S]*?)(?=\n#{1,4}\s|\n$)/gm,
+    // HTML sections with headings (limited capture to prevent backtracking)
+    /<(?:section|div)[^>]*>[\s\S]{1,10000}?<\/(?:section|div)>/gi,
+    // Markdown sections (h2-h4) - simplified pattern
+    /(?:^|\n)#{2,4}\s+[^\n]+/gm,
   ],
 };
 
@@ -120,8 +125,14 @@ const componentPatterns = {
 
 /**
  * Detect all components in content
+ * NOTE: Limited to first MAX_CONTENT_SIZE characters to prevent performance issues
  */
 export function detectComponents(content: string): DetectedComponent[] {
+  // Limit content size to prevent catastrophic backtracking
+  const limitedContent = content.length > MAX_CONTENT_SIZE
+    ? content.slice(0, MAX_CONTENT_SIZE)
+    : content;
+
   const components: DetectedComponent[] = [];
   const usedRanges: Array<{ start: number; end: number }> = [];
 
@@ -174,8 +185,11 @@ export function detectComponents(content: string): DetectedComponent[] {
       // Reset regex lastIndex
       pattern.lastIndex = 0;
       let match: RegExpExecArray | null;
-      while ((match = pattern.exec(content)) !== null) {
+      // Use limited content to prevent performance issues
+      while ((match = pattern.exec(limitedContent)) !== null) {
         addComponent(type, match);
+        // Safety: break if we've found many components of this type
+        if (components.filter(c => c.type === type).length >= 50) break;
       }
     }
   }
