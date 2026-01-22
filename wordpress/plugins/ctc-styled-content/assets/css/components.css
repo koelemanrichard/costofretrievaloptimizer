@@ -1,0 +1,597 @@
+/**
+ * CTC Styled Content - Component Styles
+ *
+ * Scoped CSS styles for content published from the CTC SEO platform.
+ * Uses low-specificity selectors (:where()) to avoid conflicts with themes.
+ *
+ * @package ctc-styled-content
+ * @version 1.0.0
+ */
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+
+:where(.ctc-styled) {
+  font-family: var(--ctc-font-body);
+  color: var(--ctc-text);
+  line-height: 1.7;
+  max-width: var(--ctc-content-width);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* ============================================================================
+   TYPOGRAPHY
+   ============================================================================ */
+
+:where(.ctc-title) {
+  font-family: var(--ctc-font-heading);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  color: var(--ctc-text);
+}
+
+:where(.ctc-heading) {
+  font-family: var(--ctc-font-heading);
+  color: var(--ctc-text);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+:where(.ctc-h2) {
+  font-size: 1.875rem;
+  font-weight: 600;
+}
+
+:where(.ctc-h3) {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+:where(.ctc-h4) {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+:where(.ctc-paragraph) {
+  margin-bottom: 1.25rem;
+  color: var(--ctc-text);
+}
+
+:where(.ctc-link) {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease;
+}
+
+:where(.ctc-link:hover) {
+  color: var(--ctc-secondary);
+}
+
+/* ============================================================================
+   LAYOUT
+   ============================================================================ */
+
+:where(.ctc-layout--with-sidebar) {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+  :where(.ctc-layout--with-sidebar) {
+    grid-template-columns: 1fr;
+  }
+}
+
+:where(.ctc-main) {
+  min-width: 0;
+}
+
+:where(.ctc-section) {
+  margin-bottom: var(--ctc-section-gap);
+}
+
+/* ============================================================================
+   HERO
+   ============================================================================ */
+
+:where(.ctc-hero) {
+  padding: 3rem 1rem;
+  margin-bottom: 2rem;
+  background: var(--ctc-surface);
+  border-radius: var(--ctc-radius);
+}
+
+:where(.ctc-hero--full-width) {
+  padding: 4rem 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-secondary));
+  color: white;
+}
+
+:where(.ctc-hero--full-width .ctc-hero-title) {
+  color: white;
+}
+
+:where(.ctc-hero--minimal) {
+  background: transparent;
+  padding: 2rem 0;
+}
+
+:where(.ctc-hero--split) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+:where(.ctc-hero-meta) {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--ctc-text-muted);
+}
+
+/* ============================================================================
+   KEY TAKEAWAYS
+   ============================================================================ */
+
+:where(.ctc-takeaways) {
+  background: var(--ctc-surface);
+  border-left: 4px solid var(--ctc-primary);
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: var(--ctc-radius);
+}
+
+:where(.ctc-takeaways-title) {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--ctc-primary);
+}
+
+:where(.ctc-takeaways-list) {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+:where(.ctc-takeaways-item) {
+  margin-bottom: 0.5rem;
+}
+
+:where(.ctc-takeaways--icon-list .ctc-takeaways-list) {
+  list-style: none;
+  padding-left: 0;
+}
+
+:where(.ctc-takeaways-icon) {
+  color: var(--ctc-primary);
+  margin-right: 0.5rem;
+}
+
+:where(.ctc-takeaways-number) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--ctc-primary);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 0.75rem;
+}
+
+/* ============================================================================
+   TABLE OF CONTENTS
+   ============================================================================ */
+
+:where(.ctc-toc) {
+  background: var(--ctc-surface);
+  padding: 1.5rem;
+  border-radius: var(--ctc-radius);
+}
+
+:where(.ctc-toc--sidebar) {
+  position: sticky;
+  top: 2rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+:where(.ctc-toc-title) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--ctc-text);
+}
+
+:where(.ctc-toc-list) {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: none;
+}
+
+:where(.ctc-toc-list--collapsed) {
+  display: none;
+}
+
+:where(.ctc-toc-item) {
+  margin-bottom: 0.5rem;
+}
+
+:where(.ctc-toc-item--level-3) {
+  margin-left: 1rem;
+}
+
+:where(.ctc-toc-item--level-4) {
+  margin-left: 2rem;
+}
+
+:where(.ctc-toc-link) {
+  color: var(--ctc-text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+:where(.ctc-toc-link:hover) {
+  color: var(--ctc-primary);
+}
+
+:where(.ctc-toc-toggle) {
+  background: none;
+  border: none;
+  color: var(--ctc-text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================================================
+   AUTHOR BOX
+   ============================================================================ */
+
+:where(.ctc-author-box) {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--ctc-surface);
+  border-radius: var(--ctc-radius);
+  margin: 2rem 0;
+}
+
+:where(.ctc-author-image) {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+:where(.ctc-author-label) {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ctc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+:where(.ctc-author-name) {
+  display: block;
+  font-weight: 600;
+  color: var(--ctc-text);
+}
+
+:where(.ctc-author-bio) {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ctc-text-muted);
+}
+
+/* ============================================================================
+   FAQ
+   ============================================================================ */
+
+:where(.ctc-faq) {
+  margin: 3rem 0;
+}
+
+:where(.ctc-faq-title) {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+:where(.ctc-faq-item) {
+  border-bottom: 1px solid var(--ctc-border);
+  padding: 1rem 0;
+}
+
+:where(.ctc-faq--accordion .ctc-faq-question) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ctc-text);
+  cursor: pointer;
+  padding: 0;
+}
+
+:where(.ctc-faq-icon)::after {
+  content: '+';
+  font-size: 1.25rem;
+}
+
+:where(.ctc-faq-question[aria-expanded="true"] .ctc-faq-icon)::after {
+  content: '−';
+}
+
+:where(.ctc-faq-answer) {
+  padding-top: 0.75rem;
+  color: var(--ctc-text-muted);
+}
+
+:where(.ctc-faq--accordion .ctc-faq-answer) {
+  display: none;
+}
+
+:where(.ctc-faq--accordion .ctc-faq-question[aria-expanded="true"] + .ctc-faq-answer) {
+  display: block;
+}
+
+/* ============================================================================
+   CTA BANNERS
+   ============================================================================ */
+
+:where(.ctc-cta) {
+  padding: 2rem;
+  background: var(--ctc-surface);
+  border-radius: var(--ctc-radius);
+  text-align: center;
+  margin: 2rem 0;
+}
+
+:where(.ctc-cta--full-width) {
+  background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-secondary));
+  color: white;
+  padding: 3rem 2rem;
+}
+
+:where(.ctc-cta--full-width .ctc-cta-text) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+:where(.ctc-cta-text) {
+  margin-bottom: 1rem;
+  color: var(--ctc-text-muted);
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+:where(.ctc-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: var(--ctc-radius);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+:where(.ctc-button--primary) {
+  background: var(--ctc-primary);
+  color: white;
+}
+
+:where(.ctc-button--primary:hover) {
+  background: var(--ctc-secondary);
+}
+
+:where(.ctc-button--secondary) {
+  background: var(--ctc-surface);
+  color: var(--ctc-text);
+  border: 1px solid var(--ctc-border);
+}
+
+:where(.ctc-button--secondary:hover) {
+  background: var(--ctc-border);
+}
+
+/* ============================================================================
+   TABLES
+   ============================================================================ */
+
+:where(.ctc-table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.875rem;
+}
+
+:where(.ctc-table-header) {
+  background: var(--ctc-surface);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid var(--ctc-border);
+}
+
+:where(.ctc-table-cell) {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ctc-border);
+}
+
+:where(.ctc-table-row:hover .ctc-table-cell) {
+  background: var(--ctc-surface);
+}
+
+/* ============================================================================
+   LISTS
+   ============================================================================ */
+
+:where(.ctc-list) {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+:where(.ctc-list-item) {
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================================================
+   BLOCKQUOTES
+   ============================================================================ */
+
+:where(.ctc-blockquote) {
+  border-left: 4px solid var(--ctc-primary);
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--ctc-text-muted);
+}
+
+/* ============================================================================
+   CODE
+   ============================================================================ */
+
+:where(.ctc-code) {
+  font-family: var(--ctc-font-mono);
+  background: var(--ctc-surface);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+:where(.ctc-code-block) {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1rem;
+  border-radius: var(--ctc-radius);
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+:where(.ctc-code-block .ctc-code) {
+  background: none;
+  padding: 0;
+}
+
+/* ============================================================================
+   IMAGES
+   ============================================================================ */
+
+:where(.ctc-image) {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--ctc-radius);
+}
+
+:where(.ctc-figure) {
+  margin: 1.5rem 0;
+}
+
+:where(.ctc-figcaption) {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ctc-text-muted);
+  text-align: center;
+}
+
+/* ============================================================================
+   PROGRESS BAR
+   ============================================================================ */
+
+:where(.ctc-progress-bar) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ctc-border);
+  z-index: 1000;
+}
+
+:where(.ctc-progress-fill) {
+  height: 100%;
+  background: var(--ctc-primary);
+  width: 0%;
+  transition: width 0.1s ease;
+}
+
+/* ============================================================================
+   DIVIDERS
+   ============================================================================ */
+
+:where(.ctc-divider) {
+  border: none;
+  border-top: 1px solid var(--ctc-border);
+  margin: 2rem 0;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  :where(.ctc-title) {
+    font-size: 2rem;
+  }
+
+  :where(.ctc-hero--split) {
+    grid-template-columns: 1fr;
+  }
+
+  :where(.ctc-hero) {
+    padding: 2rem 1rem;
+  }
+
+  :where(.ctc-author-box) {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  :where(.ctc-toc--sidebar) {
+    position: static;
+    max-height: none;
+  }
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  :where(.ctc-progress-bar),
+  :where(.ctc-toc-toggle),
+  :where(.ctc-cta) {
+    display: none !important;
+  }
+
+  :where(.ctc-styled) {
+    max-width: 100%;
+  }
+
+  :where(.ctc-toc--sidebar) {
+    position: static;
+  }
+}

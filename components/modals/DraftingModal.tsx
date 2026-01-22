@@ -26,6 +26,7 @@ import { useArticleDraftReport } from '../../hooks/useReportGeneration';
 import { ContentGenerationJob } from '../../types';
 import JSZip from 'jszip';
 import { PublishToWordPressModal } from '../wordpress';
+import { StylePublishModal } from '../publishing';
 import { AuditIssuesPanel } from '../drafting/AuditIssuesPanel';
 import { AuditIssue } from '../../types';
 import { runAlgorithmicAudit, convertToAuditIssues } from '../../services/ai/contentGeneration/passes/auditChecks';
@@ -196,6 +197,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
 
   // WordPress Publish State
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showStylePublishModal, setShowStylePublishModal] = useState(false);
 
   // Social Media Posts State
   const [showSocialModal, setShowSocialModal] = useState(false);
@@ -3753,6 +3755,13 @@ ${schemaScript}`;
                         }}
                         items={[
                             {
+                                id: 'style-publish',
+                                label: 'Style & Publish',
+                                icon: '🎨',
+                                onClick: () => setShowStylePublishModal(true),
+                                divider: true
+                            },
+                            {
                                 id: 'publish-wp',
                                 label: 'Publish to WordPress',
                                 icon: '📝',
@@ -4052,6 +4061,25 @@ ${schemaScript}`;
           onPublishSuccess={() => {
             setShowPublishModal(false);
             // Could refresh publication status here if needed
+          }}
+        />
+      )}
+
+      {/* Style & Publish Modal */}
+      {activeBriefTopic && draftContent && (
+        <StylePublishModal
+          isOpen={showStylePublishModal}
+          onClose={() => setShowStylePublishModal(false)}
+          topic={activeBriefTopic}
+          articleDraft={draftContent}
+          brief={brief}
+          brandKit={businessInfo?.brandKit}
+          onPublishSuccess={() => {
+            setShowStylePublishModal(false);
+            dispatch({
+              type: 'SET_NOTIFICATION',
+              payload: 'Content published successfully with styled formatting'
+            });
           }}
         />
       )}

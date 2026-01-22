@@ -179,6 +179,78 @@ function generateSlug(title: string): string {
     .substring(0, 60);
 }
 
+/**
+ * Format styled content from Style & Publish modal for WordPress
+ * Wraps the content with appropriate markers and includes CSS/scripts based on injection method
+ */
+function formatStyledContentForWordPress(styledContent: {
+  html: string;
+  css: string;
+  injection_method: 'scoped-css' | 'inline-styles' | 'theme-override';
+  include_scripts: boolean;
+}): string {
+  let output = '';
+
+  // Add CTC styled content marker for plugin detection
+  output += '<!-- ctc-styled-content -->\n';
+
+  // Handle CSS injection based on method
+  if (styledContent.injection_method === 'scoped-css') {
+    // Include CSS as inline style tag for plugin to process
+    output += `<style class="ctc-inline-styles">\n${styledContent.css}\n</style>\n`;
+  } else if (styledContent.injection_method === 'inline-styles') {
+    // Embed CSS directly at the top
+    output += `<style>\n${styledContent.css}\n</style>\n`;
+  }
+  // theme-override method relies on the WordPress plugin to inject CSS globally
+
+  // Add the main HTML content
+  output += styledContent.html;
+
+  // Add scripts if enabled
+  if (styledContent.include_scripts) {
+    output += `
+<script>
+// CTC Reading Enhancements
+(function() {
+  // Reading progress bar
+  const progressBar = document.querySelector('.ctc-progress-fill');
+  if (progressBar) {
+    window.addEventListener('scroll', function() {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPos = window.scrollY;
+      const progress = docHeight > 0 ? (scrollPos / docHeight) * 100 : 0;
+      progressBar.style.width = Math.min(progress, 100) + '%';
+    }, { passive: true });
+  }
+
+  // FAQ accordion
+  document.querySelectorAll('.ctc-faq--accordion .ctc-faq-question').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', !expanded);
+    });
+  });
+
+  // ToC toggle
+  var tocToggle = document.querySelector('.ctc-toc-toggle');
+  if (tocToggle) {
+    tocToggle.addEventListener('click', function() {
+      var list = document.querySelector('.ctc-toc-list');
+      list.classList.toggle('ctc-toc-list--collapsed');
+      tocToggle.setAttribute('aria-expanded', !list.classList.contains('ctc-toc-list--collapsed'));
+    });
+  }
+})();
+</script>`;
+  }
+
+  // Close CTC marker
+  output += '\n<!-- /ctc-styled-content -->';
+
+  return output;
+}
+
 // ============================================================================
 // Publication Functions
 // ============================================================================
@@ -219,8 +291,14 @@ export async function publishTopic(
       );
     }
 
-    // Format content
-    const content = formatContentForWordPress(articleDraft, brief);
+    // Format content - use styled content if provided, otherwise format normally
+    let content: string;
+    if (options.styled_content) {
+      // Use pre-styled HTML from Style & Publish modal
+      content = formatStyledContentForWordPress(options.styled_content);
+    } else {
+      content = formatContentForWordPress(articleDraft, brief);
+    }
     const contentHash = await generateContentHash(content);
 
     // Prepare post data
@@ -274,7 +352,7 @@ export async function publishTopic(
     else if (wpPost.status === 'pending') pubStatus = 'pending_review';
 
     // Save publication record
-    const publicationData = {
+    const publicationData: Record<string, unknown> = {
       connection_id: connectionId,
       topic_id: topic.id,
       brief_id: brief?.id || null,
@@ -289,7 +367,10 @@ export async function publishTopic(
       wp_version_hash: contentHash,
       has_wp_changes: false,
       last_pushed_at: new Date().toISOString(),
-      last_sync_status: 'success'
+      last_sync_status: 'success',
+      // Store styled content configuration if provided
+      ...(options.style_config && { style_config: options.style_config }),
+      ...(options.layout_config && { layout_config: options.layout_config }),
     };
 
     const insertResult = await verifiedInsert(

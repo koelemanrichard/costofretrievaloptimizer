@@ -100,6 +100,16 @@ export interface PublishOptions {
     focus_keyword?: string;
     meta_description?: string;
   };
+
+  // Styled content options (from Style & Publish modal)
+  styled_content?: {
+    html: string;              // Pre-styled HTML content
+    css: string;               // Scoped CSS to include
+    injection_method: 'scoped-css' | 'inline-styles' | 'theme-override';
+    include_scripts: boolean;  // Include progress bar/ToC scripts
+  };
+  style_config?: unknown;      // PublishingStyle from types/publishing
+  layout_config?: unknown;     // LayoutConfiguration from types/publishing
 }
 
 // ============================================================================
