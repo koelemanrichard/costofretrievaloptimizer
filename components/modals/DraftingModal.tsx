@@ -4074,6 +4074,8 @@ ${schemaScript}`;
           articleDraft={draftContent}
           brief={brief}
           brandKit={businessInfo?.brandKit}
+          supabaseUrl={businessInfo.supabaseUrl}
+          supabaseAnonKey={businessInfo.supabaseAnonKey}
           onPublishSuccess={() => {
             setShowStylePublishModal(false);
             dispatch({

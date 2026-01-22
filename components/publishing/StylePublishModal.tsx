@@ -51,6 +51,8 @@ export interface StylePublishModalProps {
   articleDraft: string;
   brief?: ContentBrief;
   brandKit?: BrandKit;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
   onPublishSuccess?: () => void;
 }
 
@@ -82,6 +84,8 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   articleDraft,
   brief,
   brandKit,
+  supabaseUrl,
+  supabaseAnonKey,
   onPublishSuccess,
 }) => {
   // State
@@ -284,6 +288,8 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             style={style}
             layout={layout}
             styledContent={preview}
+            supabaseUrl={supabaseUrl}
+            supabaseAnonKey={supabaseAnonKey}
             onSuccess={handlePublishSuccess}
           />
         ) : null;

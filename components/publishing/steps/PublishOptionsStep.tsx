@@ -24,7 +24,7 @@ import type { WordPressConnection, PublishOptions } from '../../../types/wordpre
 import { useAppState } from '../../../state/appState';
 import { getConnectionsForUser } from '../../../services/wordpress/connectionService';
 import { publishTopic } from '../../../services/wordpress/publicationService';
-import { supabase } from '../../../lib/supabaseClient';
+import { getSupabaseClient } from '../../../services/supabaseClient';
 
 // ============================================================================
 // Types
@@ -36,6 +36,8 @@ interface PublishOptionsStepProps {
   style: PublishingStyle;
   layout: LayoutConfiguration;
   styledContent: StyledContentOutput;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
   onSuccess: () => void;
 }
 
@@ -62,9 +64,14 @@ export const PublishOptionsStep: React.FC<PublishOptionsStepProps> = ({
   style,
   layout,
   styledContent,
+  supabaseUrl,
+  supabaseAnonKey,
   onSuccess,
 }) => {
   const { state } = useAppState();
+
+  // Get supabase client
+  const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
 
   // Form state
   const [form, setForm] = useState<FormState>({
