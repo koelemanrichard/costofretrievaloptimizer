@@ -192,3 +192,220 @@ export {
   type SeoIssue,
   type AssemblyMetadata,
 } from './pageAssembler';
+
+// ============================================================================
+// AI LAYOUT ARCHITECT (v3.0)
+// ============================================================================
+
+// Blueprint Types
+export {
+  type ComponentType as BlueprintComponentType,
+  VisualStyle,
+  ContentPacing,
+  ColorIntensity,
+  SectionEmphasis,
+  SectionSpacing,
+  PageStrategy,
+  SectionDesign,
+  LayoutBlueprint,
+  ArchitectInput,
+  BusinessContext,
+  MarketContext,
+  CompetitorContext,
+  SiteContext,
+  ContentSignals,
+  UserPreferences,
+  ProjectBlueprint,
+  TopicalMapBlueprint,
+  ArticleBlueprintOverrides,
+  SectionRefinementRequest,
+  BulkRefinementRequest,
+  BlueprintValidation,
+  CompactBlueprint,
+} from './architect';
+
+export { toCompactBlueprint } from './architect';
+
+// Architect Service
+export {
+  generateBlueprint,
+  generateBlueprintHeuristic,
+  refineSection,
+  generateProjectBlueprint,
+  generateTopicalMapBlueprint,
+  ensureProjectBlueprint,
+  ensureTopicalMapBlueprint,
+  // v2.0 Enhanced Generation
+  generateBlueprintV2,
+  generateBlueprintHeuristicV2,
+  analyzeBlueprintQuality,
+  // Style Preferences
+  applyLearnedPreferences,
+  getStylePreferenceSummary,
+} from './architect';
+
+// v2.0 Context & Coherence Types
+export type {
+  RichArchitectContext,
+  ParsedSection,
+  CoherenceAnalysis,
+} from './architect';
+
+// Architect Prompts (for debugging/inspection)
+export {
+  buildSystemPrompt as buildArchitectSystemPrompt,
+  buildUserPrompt as buildArchitectUserPrompt,
+  COMPONENT_DESCRIPTIONS,
+  VISUAL_STYLE_DESCRIPTIONS,
+} from './architect';
+
+// Blueprint Storage
+export {
+  getProjectBlueprint,
+  upsertProjectBlueprint,
+  deleteProjectBlueprint,
+  getTopicalMapBlueprint,
+  upsertTopicalMapBlueprint,
+  deleteTopicalMapBlueprint,
+  getArticleBlueprint,
+  getArticleBlueprintsForMap,
+  saveArticleBlueprint,
+  updateArticleBlueprintOverrides,
+  deleteArticleBlueprint,
+  getBlueprintHistory,
+  revertToHistory,
+  getEffectiveSettings,
+  bulkUpdateComponent,
+} from './architect';
+
+export type {
+  ProjectBlueprintRow,
+  TopicalMapBlueprintRow,
+  ArticleBlueprintRow,
+} from './architect';
+
+export { initSupabaseClient as initBlueprintSupabase } from './architect';
+
+// Blueprint Resolver (Hierarchy Merging)
+export {
+  resolveBlueprintSettings,
+  applyOverrides,
+  mergeBlueprints,
+  needsRegeneration,
+  summarizeSettings,
+  validateBlueprint,
+  DEFAULT_SETTINGS as BLUEPRINT_DEFAULT_SETTINGS,
+} from './architect';
+
+export type {
+  ResolvedBlueprintSettings,
+  BlueprintHierarchy,
+} from './architect';
+
+// Blueprint Renderer
+export {
+  renderBlueprint,
+  mapVisualStyleToPersonality,
+} from './renderer';
+
+export type {
+  BlueprintRenderOptions,
+  BlueprintRenderOutput,
+} from './renderer';
+
+// Component Library (Renderer)
+export {
+  getComponentRenderer,
+  hasRenderer,
+  getAvailableComponents,
+} from './renderer';
+
+export type {
+  RenderContext,
+  RenderedComponent,
+  ComponentRenderer,
+} from './renderer';
+
+// ============================================================================
+// REFINEMENT & LEARNING (v4.0)
+// ============================================================================
+
+// Section Refinement
+export {
+  refineSingleSection,
+  refineMultipleSections,
+  swapComponent,
+  swapAllComponents,
+  changeEmphasis,
+  toggleBackground,
+  changeSpacing,
+  applyComponentToAllArticles,
+  applyEmphasisToAllArticles,
+  toUserOverrides,
+  saveRefinements,
+  suggestAlternativeComponents,
+  getComponentCompatibility,
+} from './refinement';
+
+export type {
+  SectionRefinement,
+  RefinementResult,
+  ApplyToAllResult,
+  RefinementHistory,
+} from './refinement';
+
+// Pattern Learning
+export {
+  initPatternLearningClient,
+  recordComponentSwap,
+  recordEmphasisChange,
+  recordComponentAvoidance,
+  getLearnedPreferences,
+  getSwapSuggestions,
+  getRefinementAnalytics,
+  getSmartSuggestions,
+  shouldAutoApplyPattern,
+} from './refinement';
+
+export type {
+  RefinementPattern,
+  ComponentSwapStats,
+  LearnedPreferences,
+  SuggestionContext,
+} from './refinement';
+
+// Competitor Analysis
+export {
+  initCompetitorAnalysisClient,
+  extractDesignFeatures,
+  inferVisualStyle,
+  inferComponentUsage,
+  storeCompetitorAnalysis,
+  getCompetitorAnalyses,
+  deleteCompetitorAnalysis,
+  generateCompetitorInsights,
+  analyzeCompetitorUrl,
+  getDesignRecommendations,
+} from './refinement';
+
+export type {
+  CompetitorDesignAnalysis,
+  CompetitorInsights,
+  ExtractedDesignFeatures,
+} from './refinement';
+
+// Enhanced Suggestions
+export {
+  getSectionSuggestions,
+  getBlueprintSuggestions,
+  applyAutoSuggestions,
+  calculateSuggestionQuality,
+  DEFAULT_SUGGESTION_CONFIG,
+} from './refinement';
+
+export type {
+  EnhancedSuggestion,
+  SectionSuggestions,
+  BlueprintSuggestions,
+  SuggestionConfig,
+} from './refinement';

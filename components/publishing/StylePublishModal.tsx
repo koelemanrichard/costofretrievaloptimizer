@@ -15,6 +15,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { BrandStyleStep } from './steps/BrandStyleStep';
 import { LayoutConfigStep } from './steps/LayoutConfigStep';
+import { BlueprintStep } from './steps/BlueprintStep';
 import { PreviewStep } from './steps/PreviewStep';
 import { PublishOptionsStep } from './steps/PublishOptionsStep';
 import type {
@@ -40,6 +41,18 @@ import {
 import { suggestTemplate } from '../../config/publishingTemplates';
 import { assemblePage, type PageTemplate } from '../../services/publishing/pageAssembler';
 import type { DesignPersonalityId } from '../../config/designTokens/personalities';
+import {
+  generateBlueprintHeuristicV2,
+  analyzeBlueprintQuality,
+  applyLearnedPreferences,
+  getStylePreferenceSummary,
+  getLearnedPreferences,
+  initPatternLearningClient,
+  type LayoutBlueprint,
+  type ProjectBlueprint,
+  type TopicalMapBlueprint,
+  type LearnedPreferences,
+} from '../../services/publishing';
 
 // Map ContentTypeTemplate to PageTemplate
 function mapTemplateToPageTemplate(template: ContentTypeTemplate): PageTemplate {
@@ -82,6 +95,7 @@ interface StepInfo {
 const STEPS: StepInfo[] = [
   { id: 'brand-style', label: 'Brand Style', icon: '🎨' },
   { id: 'layout-config', label: 'Layout', icon: '📐' },
+  { id: 'blueprint', label: 'Blueprint', icon: '🏗️' },
   { id: 'preview', label: 'Preview', icon: '👁️' },
   { id: 'publish-options', label: 'Publish', icon: '🚀' },
 ];
@@ -105,8 +119,33 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [currentStep, setCurrentStep] = useState<StylePublishStep>('brand-style');
   const [style, setStyle] = useState<PublishingStyle | null>(null);
   const [layout, setLayout] = useState<LayoutConfiguration | null>(null);
+  const [blueprint, setBlueprint] = useState<LayoutBlueprint | null>(null);
   const [preview, setPreview] = useState<StyledContentOutput | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isBlueprintGenerating, setIsBlueprintGenerating] = useState(false);
+  const [blueprintQuality, setBlueprintQuality] = useState<{
+    coherence: {
+      score: number;
+      issues: {
+        type: 'spacing' | 'background' | 'emphasis' | 'weight' | 'divider';
+        severity: 'warning' | 'error';
+        message: string;
+        sectionIndex: number;
+      }[];
+      suggestions: {
+        sectionIndex: number;
+        property: string;
+        currentValue: unknown;
+        suggestedValue: unknown;
+        reason: string;
+      }[];
+    };
+    report: string;
+    overallScore: number;
+  } | null>(null);
+  const [learnedPreferences, setLearnedPreferences] = useState<LearnedPreferences | null>(null);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [isApplyingStyle, setIsApplyingStyle] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [personalityId, setPersonalityId] = useState<DesignPersonalityId>('corporate-professional');
 
@@ -138,6 +177,121 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     STEPS.findIndex(s => s.id === currentStep),
     [currentStep]
   );
+
+  // Generate blueprint using the heuristic approach
+  const generateBlueprint = useCallback(async () => {
+    if (!articleDraft) return;
+
+    setIsBlueprintGenerating(true);
+    setErrors([]);
+
+    try {
+      // Create minimal BusinessInfo for the heuristic generator
+      // The generator only uses: industry, valueProp, expertise
+      const minimalBusinessInfo = {
+        domain: '',
+        projectName: topic.title,
+        industry: 'general',
+        model: 'content',
+        valueProp: '',
+        audience: '',
+        expertise: '',
+        seedKeyword: topic.title,
+        language: 'en',
+        targetMarket: '',
+        aiProvider: 'gemini' as const,
+        aiModel: '',
+        supabaseUrl: supabaseUrl,
+        supabaseAnonKey: supabaseAnonKey,
+      };
+
+      const generatedBlueprint = generateBlueprintHeuristicV2(
+        articleDraft,
+        topic.title,
+        topic.id,
+        minimalBusinessInfo,
+        {
+          brief,
+          preferences: {
+            styleLeaning: 'auto',
+          },
+        }
+      );
+
+      // Analyze blueprint quality
+      const quality = analyzeBlueprintQuality(generatedBlueprint);
+      setBlueprintQuality(quality);
+
+      setBlueprint(generatedBlueprint);
+
+      // Fetch learned preferences in the background
+      fetchLearnedPreferences();
+    } catch (error) {
+      console.error('Error generating blueprint:', error);
+      setErrors(['Failed to generate layout blueprint. Please try again.']);
+    } finally {
+      setIsBlueprintGenerating(false);
+    }
+  }, [articleDraft, topic.title, topic.id, brief, supabaseUrl, supabaseAnonKey]);
+
+  // Fetch learned preferences for this project
+  const fetchLearnedPreferences = useCallback(async () => {
+    // Use map_id as the project scope for now since EnrichedTopic doesn't have project_id
+    const projectScope = topic.map_id;
+    if (!projectScope) return;
+
+    setIsLoadingPreferences(true);
+    try {
+      // Initialize the pattern learning client
+      initPatternLearningClient(supabaseUrl, supabaseAnonKey);
+
+      const preferences = await getLearnedPreferences(projectScope, topic.map_id);
+      setLearnedPreferences(preferences);
+    } catch (error) {
+      console.error('Error fetching learned preferences:', error);
+      // Don't show error - this is optional feature
+    } finally {
+      setIsLoadingPreferences(false);
+    }
+  }, [topic.map_id, supabaseUrl, supabaseAnonKey]);
+
+  // Apply learned style preferences to the blueprint
+  const handleApplyMyStyle = useCallback(() => {
+    if (!blueprint || !learnedPreferences) return;
+
+    setIsApplyingStyle(true);
+    try {
+      const updatedBlueprint = applyLearnedPreferences(blueprint, {
+        preferredComponents: learnedPreferences.preferredComponents,
+        avoidedComponents: learnedPreferences.avoidedComponents,
+        preferredVisualStyle: learnedPreferences.preferredVisualStyle,
+        emphasisPatterns: learnedPreferences.emphasisPatterns,
+        componentSwaps: learnedPreferences.componentSwaps,
+      });
+
+      setBlueprint(updatedBlueprint);
+
+      // Re-analyze quality after applying preferences
+      const quality = analyzeBlueprintQuality(updatedBlueprint);
+      setBlueprintQuality(quality);
+    } catch (error) {
+      console.error('Error applying style preferences:', error);
+      setErrors(['Failed to apply style preferences.']);
+    } finally {
+      setIsApplyingStyle(false);
+    }
+  }, [blueprint, learnedPreferences]);
+
+  // Get style preference summary for UI
+  const stylePreferenceSummary = useMemo(() => {
+    if (!learnedPreferences) return null;
+    return getStylePreferenceSummary({
+      preferredComponents: learnedPreferences.preferredComponents,
+      avoidedComponents: learnedPreferences.avoidedComponents,
+      preferredVisualStyle: learnedPreferences.preferredVisualStyle,
+      componentSwaps: learnedPreferences.componentSwaps,
+    });
+  }, [learnedPreferences]);
 
   // Generate preview when entering preview step
   const generatePreview = useCallback(async () => {
@@ -225,6 +379,11 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     if (nextIndex < STEPS.length) {
       const nextStep = STEPS[nextIndex].id;
 
+      // Generate blueprint when entering blueprint step
+      if (nextStep === 'blueprint' && !blueprint) {
+        await generateBlueprint();
+      }
+
       // Generate preview when entering preview step
       if (nextStep === 'preview') {
         await generatePreview();
@@ -232,7 +391,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
 
       setCurrentStep(nextStep);
     }
-  }, [currentStepIndex, generatePreview]);
+  }, [currentStepIndex, generatePreview, generateBlueprint, blueprint]);
 
   const handleBack = useCallback(() => {
     const prevIndex = currentStepIndex - 1;
@@ -318,6 +477,23 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             onTemplateChange={handleTemplateChange}
           />
         ) : null;
+
+      case 'blueprint':
+        return (
+          <BlueprintStep
+            blueprint={blueprint}
+            isGenerating={isBlueprintGenerating}
+            onGenerate={generateBlueprint}
+            onBlueprintChange={setBlueprint}
+            topicalMapId={topic.map_id}
+            qualityAnalysis={blueprintQuality}
+            learnedPreferences={learnedPreferences}
+            stylePreferenceSummary={stylePreferenceSummary}
+            isLoadingPreferences={isLoadingPreferences}
+            isApplyingStyle={isApplyingStyle}
+            onApplyMyStyle={handleApplyMyStyle}
+          />
+        );
 
       case 'preview':
         return (

@@ -377,7 +377,7 @@ export interface SeoWarning {
 /**
  * Style publish modal step
  */
-export type StylePublishStep = 'brand-style' | 'layout-config' | 'preview' | 'publish-options';
+export type StylePublishStep = 'brand-style' | 'layout-config' | 'blueprint' | 'preview' | 'publish-options';
 
 /**
  * Device preview mode
