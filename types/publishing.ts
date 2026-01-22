@@ -502,3 +502,105 @@ export type StylePresetId =
   | 'bold-creative'
   | 'warm-friendly'
   | 'tech-clean';
+
+// ============================================================================
+// DESIGN SYSTEM v2.0 RE-EXPORTS
+// ============================================================================
+
+// These types are re-exported from the new design system modules for convenience.
+// For full implementations, import directly from the respective modules.
+
+/**
+ * Re-export semantic extractor types
+ */
+export type {
+  SemanticContentData,
+  ExtractedEntity,
+  ExtractedKeywords,
+  TopicalContext,
+  AuthorshipData,
+  SourceCitation,
+} from '../services/publishing/semanticExtractor';
+
+/**
+ * Re-export JSON-LD generator types
+ */
+export type { JsonLdOptions } from '../services/publishing/jsonLdGenerator';
+
+/**
+ * Re-export token resolver types
+ */
+export type { ResolvedTokens } from '../services/publishing/tokenResolver';
+
+/**
+ * Re-export component registry types
+ */
+export type {
+  ComponentDefinition,
+  ComponentVariants,
+  ComponentName,
+} from '../services/publishing/components/registry';
+
+/**
+ * Re-export class generator types
+ */
+export type {
+  VariantSelection,
+  GeneratedComponent,
+} from '../services/publishing/components/classGenerator';
+
+/**
+ * Re-export HTML builder types
+ */
+export type {
+  ArticleSection,
+  FaqItem,
+  TimelineStep,
+  TestimonialItem,
+  BenefitItem,
+  CtaConfig,
+  HeadingItem,
+} from '../services/publishing/htmlBuilder';
+
+/**
+ * Re-export content analyzer types
+ */
+export type {
+  ContentAnalysisResult,
+  CtaPlacement,
+} from '../services/publishing/contentAnalyzer';
+
+/**
+ * Re-export CSS generator types
+ */
+export type {
+  CssGenerationOptions,
+  GeneratedCss,
+} from '../services/publishing/cssGenerator';
+
+/**
+ * Re-export page assembler types
+ */
+export type {
+  PageTemplate,
+  PageAssemblyOptions,
+  SeoConfiguration,
+  CtaConfiguration,
+  StyledContentOutput as AssembledPageOutput,
+  DetectedComponent as AssembledDetectedComponent,
+  SeoValidationResult as AssembledSeoValidation,
+  SeoIssue,
+  AssemblyMetadata,
+} from '../services/publishing/pageAssembler';
+
+/**
+ * Re-export design personality types
+ */
+export type {
+  DesignPersonality,
+  TypographyPersonality,
+  ColorPersonality,
+  LayoutPersonality,
+  MotionPersonality,
+  DesignPersonalityId,
+} from '../config/designTokens/personalities';
