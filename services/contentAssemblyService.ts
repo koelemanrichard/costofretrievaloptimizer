@@ -61,49 +61,162 @@ export interface FullHtmlOptions extends AssemblyOptions {
 /**
  * Convert markdown to basic HTML using regex replacements.
  * Use this for simple previews where semantic structure isn't needed.
+ * Note: For SEO-optimized output with proper sections, use convertMarkdownToSemanticHtml instead.
  */
 export function convertMarkdownToBasicHtml(md: string): string {
-  let html = md
-    // Headers
-    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold and italic
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Images with alt text - wrap in figure with figcaption
-    .replace(/!\[([^\]]+)\]\(([^)]+)\)/g, (match, alt, src) => {
-      if (alt && alt.length > 5) {
-        return `<figure><img src="${src}" alt="${alt}" loading="lazy" /><figcaption>${alt}</figcaption></figure>`;
+  const lines = md.split('\n');
+  const result: string[] = [];
+  let inTable = false;
+  let tableHeaders: string[] = [];
+  let tableBody: string[][] = [];
+
+  // Helper: process inline markdown (bold, italic, code, links)
+  const processInline = (text: string): string => {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  };
+
+  // Helper: parse table row into cells
+  const parseTableRow = (line: string): string[] => {
+    return line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
+  };
+
+  // Helper: check if line is a table separator (e.g., |---|---|)
+  const isTableSeparator = (line: string): boolean => {
+    return /^\|?[\s:-]+\|[\s|:-]+\|?$/.test(line.trim());
+  };
+
+  // Helper: flush accumulated table to result
+  const flushTable = () => {
+    if (tableHeaders.length > 0 || tableBody.length > 0) {
+      let tableHtml = '<table>\n';
+      if (tableHeaders.length > 0) {
+        tableHtml += '<thead><tr>' + tableHeaders.map(h => `<th>${processInline(h)}</th>`).join('') + '</tr></thead>\n';
       }
-      return `<img src="${src}" alt="${alt || ''}" loading="lazy" />`;
-    })
-    // Images without alt text
-    .replace(/!\[\]\(([^)]+)\)/g, '<img src="$1" alt="" loading="lazy" />')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    // Code blocks
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
+      if (tableBody.length > 0) {
+        tableHtml += '<tbody>' + tableBody.map(row => '<tr>' + row.map(c => `<td>${processInline(c)}</td>`).join('') + '</tr>').join('\n') + '</tbody>\n';
+      }
+      tableHtml += '</table>';
+      result.push(tableHtml);
+    }
+    tableHeaders = [];
+    tableBody = [];
+    inTable = false;
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Check if this is a table line
+    const isTableLine = trimmed.startsWith('|') && trimmed.includes('|') && trimmed.split('|').length > 2;
+
+    // Handle table parsing
+    if (isTableLine) {
+      if (!inTable) {
+        inTable = true;
+        tableHeaders = parseTableRow(line);
+      } else if (isTableSeparator(line)) {
+        // Skip separator line
+        continue;
+      } else {
+        tableBody.push(parseTableRow(line));
+      }
+      continue;
+    } else if (inTable) {
+      flushTable();
+    }
+
+    // Headers
+    if (trimmed.startsWith('#### ')) {
+      result.push(`<h4>${processInline(trimmed.slice(5))}</h4>`);
+      continue;
+    }
+    if (trimmed.startsWith('### ')) {
+      result.push(`<h3>${processInline(trimmed.slice(4))}</h3>`);
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      result.push(`<h2>${processInline(trimmed.slice(3))}</h2>`);
+      continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      result.push(`<h1>${processInline(trimmed.slice(2))}</h1>`);
+      continue;
+    }
+
     // Horizontal rules
-    .replace(/^---$/gm, '<hr />')
+    if (trimmed === '---') {
+      result.push('<hr />');
+      continue;
+    }
+
     // Blockquotes
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    // Unordered lists - use temporary marker
-    .replace(/^- (.+)$/gm, '<uli>$1</uli>')
-    // Ordered lists - use temporary marker
-    .replace(/^\d+\. (.+)$/gm, '<oli>$1</oli>')
-    // Paragraphs
-    .split('\n')
-    .map(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return '';
-      if (trimmed.startsWith('<')) return line;
-      return `<p>${line}</p>`;
-    })
-    .join('\n');
+    if (trimmed.startsWith('> ')) {
+      result.push(`<blockquote>${processInline(trimmed.slice(2))}</blockquote>`);
+      continue;
+    }
+
+    // Images with alt text - wrap in figure with figcaption
+    const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      const [, alt, src] = imgMatch;
+      if (alt && alt.length > 5) {
+        result.push(`<figure><img src="${src}" alt="${alt}" loading="lazy" /><figcaption>${alt}</figcaption></figure>`);
+      } else {
+        result.push(`<img src="${src}" alt="${alt || ''}" loading="lazy" />`);
+      }
+      continue;
+    }
+
+    // Unordered lists
+    if (trimmed.startsWith('- ')) {
+      result.push(`<uli>${processInline(trimmed.slice(2))}</uli>`);
+      continue;
+    }
+
+    // Ordered lists
+    const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (olMatch) {
+      result.push(`<oli>${processInline(olMatch[1])}</oli>`);
+      continue;
+    }
+
+    // Code blocks (simple handling - multi-line blocks handled separately)
+    if (trimmed.startsWith('```')) {
+      // Note: Multi-line code blocks should be handled by a more sophisticated parser
+      // For basic HTML, we just pass through
+      result.push(line);
+      continue;
+    }
+
+    // Empty lines
+    if (!trimmed) {
+      result.push('');
+      continue;
+    }
+
+    // Lines that already start with HTML tags
+    if (trimmed.startsWith('<')) {
+      result.push(line);
+      continue;
+    }
+
+    // Regular paragraphs - process inline markdown
+    result.push(`<p>${processInline(line)}</p>`);
+  }
+
+  // Flush any remaining table
+  if (inTable) {
+    flushTable();
+  }
+
+  let html = result.join('\n');
+
+  // Handle code blocks (multi-line)
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
 
   // Wrap consecutive unordered list items in <ul>
   html = html.replace(/(<uli>[\s\S]*?<\/uli>\n?)+/g, (match) => {
@@ -122,6 +235,9 @@ export function convertMarkdownToBasicHtml(md: string): string {
     const content = match.replace(/<\/?blockquote>/g, '').trim().split('\n').join('<br/>');
     return `<blockquote>${content}</blockquote>`;
   });
+
+  // Convert IMAGE placeholders to styled figure elements
+  html = convertImagePlaceholders(html);
 
   return html;
 }

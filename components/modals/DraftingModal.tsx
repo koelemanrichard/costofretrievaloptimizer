@@ -199,6 +199,9 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
 
+  // HTML Download Dropdown State
+  const [showHtmlDownloadMenu, setShowHtmlDownloadMenu] = useState(false);
+
   // Audit Panel State
   const [showAuditPanel, setShowAuditPanel] = useState(false);
   const [auditIssues, setAuditIssues] = useState<AuditIssue[]>([]);
@@ -1847,6 +1850,82 @@ Image ${i + 1}: ${img.type}
       zip.file(`${slug}-schema.json`, JSON.stringify(schemaData, null, 2));
     }
 
+    // 5. Create separate Header/SEO Metadata file (HTML head elements)
+    const headerDoc = `<!--
+═══════════════════════════════════════════════════════════════════════════════
+                         SEO HEADER ELEMENTS
+═══════════════════════════════════════════════════════════════════════════════
+Article: ${brief.title}
+Copy these elements into your CMS or HTML <head> section
+═══════════════════════════════════════════════════════════════════════════════
+-->
+
+<!-- Essential Meta Tags -->
+<title>${brief.title}</title>
+<meta name="description" content="${(brief.metaDescription || '').replace(/"/g, '&quot;')}">
+<meta name="keywords" content="${brief.targetKeyword || ''}">
+<meta name="robots" content="index, follow">
+${businessInfo.authorName ? `<meta name="author" content="${businessInfo.authorName.replace(/"/g, '&quot;')}">` : ''}
+
+<!-- Canonical URL -->
+${businessInfo.domain ? `<link rel="canonical" href="https://${businessInfo.domain.replace(/^https?:\/\//, '').replace(/\/$/, '')}/${slug}/">` : '<!-- Add canonical URL: <link rel="canonical" href="YOUR_URL"> -->'}
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="${brief.title.replace(/"/g, '&quot;')}">
+<meta property="og:description" content="${(brief.metaDescription || '').replace(/"/g, '&quot;')}">
+${ogImage ? `<meta property="og:image" content="${ogImage}">` : '<!-- Add og:image URL -->'}
+${businessInfo.domain ? `<meta property="og:url" content="https://${businessInfo.domain.replace(/^https?:\/\//, '').replace(/\/$/, '')}/${slug}/">` : ''}
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${brief.title.replace(/"/g, '&quot;')}">
+<meta name="twitter:description" content="${(brief.metaDescription || '').replace(/"/g, '&quot;')}">
+${ogImage ? `<meta name="twitter:image" content="${ogImage}">` : '<!-- Add twitter:image URL -->'}
+
+<!-- Article Specific -->
+<meta property="article:published_time" content="${new Date().toISOString()}">
+${businessInfo.authorName ? `<meta property="article:author" content="${businessInfo.authorName.replace(/"/g, '&quot;')}">` : ''}
+
+<!-- JSON-LD Schema (also included in schema.json) -->
+${schemaData ? `<script type="application/ld+json">
+${JSON.stringify(schemaData, null, 2)}
+</script>` : '<!-- Schema not yet generated -->'}
+`;
+    zip.file(`${slug}-header.html`, headerDoc);
+
+    // 6. Create Social Posts file if campaigns exist
+    if (socialCampaigns.campaigns.length > 0) {
+      const socialDoc = `
+═══════════════════════════════════════════════════════════════════════════════
+                         SOCIAL MEDIA POSTS
+═══════════════════════════════════════════════════════════════════════════════
+Article: ${brief.title}
+Total Campaigns: ${socialCampaigns.campaigns.length}
+═══════════════════════════════════════════════════════════════════════════════
+
+${socialCampaigns.campaigns.map((campaign, ci) => `
+───────────────────────────────────────────────────────────────────────────────
+CAMPAIGN ${ci + 1}: ${campaign.name || 'Untitled Campaign'}
+Created: ${campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : 'Unknown'}
+Posts: ${campaign.posts?.length || 0}
+───────────────────────────────────────────────────────────────────────────────
+
+${campaign.posts?.map((post, pi) => `
+[${post.platform?.toUpperCase() || 'UNKNOWN'}] Post ${pi + 1}
+${'─'.repeat(40)}
+${post.content || 'No content'}
+
+${post.hashtags?.length ? `Hashtags: ${post.hashtags.join(' ')}` : ''}
+${post.media_urls?.length ? `Media: ${post.media_urls.join(', ')}` : ''}
+`).join('\n') || 'No posts in this campaign.'}
+`).join('\n\n')}
+
+═══════════════════════════════════════════════════════════════════════════════
+`.trim();
+      zip.file(`${slug}-social-posts.txt`, socialDoc);
+    }
+
     // Create images folder and add images
     let imageCount = 0;
     const imagesFolder = zip.folder('images');
@@ -1928,8 +2007,9 @@ Image ${i + 1}: ${img.type}
 
       downloadFile(zipBlob, `${slug}-article-package.zip`);
 
-      const totalFiles = 5 + (schemaData ? 1 : 0) + imageCount;
-      dispatch({ type: 'SET_NOTIFICATION', payload: `ZIP package downloaded: ${slug}-article-package.zip (${totalFiles} files${imageCount > 0 ? `, ${imageCount} images` : ''})` });
+      // Count files: HTML + MD + Brief + Links + Quality + Header = 6, plus optional schema, social posts, and images
+      const totalFiles = 6 + (schemaData ? 1 : 0) + (socialCampaigns.campaigns.length > 0 ? 1 : 0) + imageCount;
+      dispatch({ type: 'SET_NOTIFICATION', payload: `ZIP package downloaded: ${slug}-article-package.zip (${totalFiles} files${imageCount > 0 ? `, ${imageCount} images` : ''}${socialCampaigns.campaigns.length > 0 ? ', includes social posts' : ''})` });
     } catch (err) {
       console.error('Failed to create ZIP:', err);
       dispatch({ type: 'SET_ERROR', payload: 'Failed to create ZIP package. Please try again.' });
@@ -1951,8 +2031,8 @@ Image ${i + 1}: ${img.type}
 
   // Download only the HTML file (quick download for publishing)
   // Follows HTML Writing Best Practices for SEO: semantic tags, centerpiece annotation, CLS prevention, proper schema nesting
-  // Images are embedded as base64 data URLs for self-contained offline viewing
-  const handleDownloadHtml = async () => {
+  // Images can be embedded as base64 data URLs for self-contained offline viewing or kept as URLs
+  const handleDownloadHtml = async (embedImages: boolean = true) => {
     if (!brief || !draftContent) return;
 
     // Validate content before export
@@ -1974,7 +2054,7 @@ Image ${i + 1}: ${img.type}
     // Also replace IMAGE placeholders with actual images if they've been generated
     const cleanedContent = replaceImagePlaceholdersWithUrls(cleanForExport(draftContent), imagePlaceholders);
 
-    dispatch({ type: 'SET_NOTIFICATION', payload: 'Preparing HTML with embedded images...' });
+    dispatch({ type: 'SET_NOTIFICATION', payload: embedImages ? 'Preparing HTML with embedded images...' : 'Preparing HTML...' });
 
     const slug = brief.slug || 'article';
     const wordCount = draftContent.split(/\s+/).length;
@@ -2011,39 +2091,42 @@ Image ${i + 1}: ${img.type}
       }
     };
 
-    // Build map of image URLs to their base64 data URLs
+    // Build map of image URLs to their base64 data URLs (only if embedding images)
     const imageUrlMap = new Map<string, string>();
-    const imageUrls: string[] = [];
 
-    // Collect all image URLs from placeholders
-    for (const placeholder of imagePlaceholders) {
-      const url = placeholder.generatedUrl || placeholder.userUploadUrl;
-      if (url && !url.startsWith('blob:')) {
-        imageUrls.push(url);
+    if (embedImages) {
+      const imageUrls: string[] = [];
+
+      // Collect all image URLs from placeholders
+      for (const placeholder of imagePlaceholders) {
+        const url = placeholder.generatedUrl || placeholder.userUploadUrl;
+        if (url && !url.startsWith('blob:')) {
+          imageUrls.push(url);
+        }
       }
-    }
 
-    // Also extract image URLs from markdown content (use cleaned content)
-    const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
-    let match;
-    while ((match = markdownImageRegex.exec(cleanedContent)) !== null) {
-      const url = match[1];
-      if (url && !url.startsWith('blob:') && !url.startsWith('data:') && !imageUrls.includes(url)) {
-        imageUrls.push(url);
+      // Also extract image URLs from markdown content (use cleaned content)
+      const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+      let match;
+      while ((match = markdownImageRegex.exec(cleanedContent)) !== null) {
+        const url = match[1];
+        if (url && !url.startsWith('blob:') && !url.startsWith('data:') && !imageUrls.includes(url)) {
+          imageUrls.push(url);
+        }
       }
-    }
 
-    // Convert all images to base64 (in parallel for speed)
-    const conversions = await Promise.all(
-      imageUrls.map(async (url) => {
-        const dataUrl = await imageUrlToDataUrl(url);
-        return { url, dataUrl };
-      })
-    );
+      // Convert all images to base64 (in parallel for speed)
+      const conversions = await Promise.all(
+        imageUrls.map(async (url) => {
+          const dataUrl = await imageUrlToDataUrl(url);
+          return { url, dataUrl };
+        })
+      );
 
-    for (const { url, dataUrl } of conversions) {
-      if (dataUrl) {
-        imageUrlMap.set(url, dataUrl);
+      for (const { url, dataUrl } of conversions) {
+        if (dataUrl) {
+          imageUrlMap.set(url, dataUrl);
+        }
       }
     }
 
@@ -2160,7 +2243,10 @@ ${convertMarkdownToSemanticHtml(cleanedContent, { imageUrlMap, ogImageUrl })}
 
     downloadFile(new Blob([articleHtml], { type: 'text/html' }), `${slug}.html`);
     const embeddedCount = imageUrlMap.size;
-    dispatch({ type: 'SET_NOTIFICATION', payload: `HTML file downloaded: ${slug}.html (SEO-optimized${embeddedCount > 0 ? `, ${embeddedCount} images embedded` : ''})` });
+    const imageInfo = embedImages
+      ? (embeddedCount > 0 ? `, ${embeddedCount} images embedded` : '')
+      : ', images linked (not embedded)';
+    dispatch({ type: 'SET_NOTIFICATION', payload: `HTML file downloaded: ${slug}.html (SEO-optimized${imageInfo})` });
   };
 
   // Copy HTML to clipboard for WordPress
@@ -3528,15 +3614,38 @@ ${schemaScript}`;
                     >
                         📋 Copy HTML
                     </Button>
-                    <Button
-                        onClick={handleDownloadHtml}
-                        disabled={!draftContent}
-                        variant="secondary"
-                        className="text-xs py-0.5 px-2 bg-emerald-600/20 !text-emerald-400 hover:bg-emerald-600/40 hover:!text-emerald-300 border border-emerald-500/30"
-                        title="Download complete HTML document with schema markup, Open Graph tags, and all formatting"
-                    >
-                        ⬇ HTML
-                    </Button>
+                    <div className="relative">
+                        <Button
+                            onClick={() => setShowHtmlDownloadMenu(!showHtmlDownloadMenu)}
+                            disabled={!draftContent}
+                            variant="secondary"
+                            className="text-xs py-0.5 px-2 bg-emerald-600/20 !text-emerald-400 hover:bg-emerald-600/40 hover:!text-emerald-300 border border-emerald-500/30"
+                            title="Download complete HTML document with schema markup, Open Graph tags, and all formatting"
+                        >
+                            ⬇ HTML ▾
+                        </Button>
+                        {showHtmlDownloadMenu && (
+                            <div
+                                className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg z-50 min-w-[180px]"
+                                onMouseLeave={() => setShowHtmlDownloadMenu(false)}
+                            >
+                                <button
+                                    onClick={() => { handleDownloadHtml(true); setShowHtmlDownloadMenu(false); }}
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-200 hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                    <span>📦</span>
+                                    <span>With embedded images</span>
+                                </button>
+                                <button
+                                    onClick={() => { handleDownloadHtml(false); setShowHtmlDownloadMenu(false); }}
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-200 hover:bg-gray-700 flex items-center gap-2 border-t border-gray-700"
+                                >
+                                    <span>🔗</span>
+                                    <span>With image URLs only</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <Button
                         onClick={handleDownloadPackage}
                         disabled={!draftContent}
