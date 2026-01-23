@@ -155,7 +155,8 @@ function markdownToHtml(markdown: string, imageUrlMap?: Map<string, string>): st
   // Custom image placeholders: [IMAGE: description | alt="alt text"]
   // If imageUrlMap has a URL for this description, render the actual image
   // Otherwise, render a styled placeholder
-  html = html.replace(/\[IMAGE:\s*([^\]|]+)(?:\s*\|\s*alt="([^"]*)")?\]/g, (match, description, altText) => {
+  // Use non-greedy matching (.+?) to properly capture the description
+  html = html.replace(/\[IMAGE:\s*(.+?)\s*\|\s*alt="([^"]*)"\s*\]/g, (match, description, altText) => {
     const cleanDescription = description.trim();
     const alt = altText?.trim() || cleanDescription;
 
@@ -172,7 +173,30 @@ function markdownToHtml(markdown: string, imageUrlMap?: Map<string, string>): st
     return `<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
       <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
       <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">${escapeHtml(cleanDescription)}</p>
-      ${altText ? `<p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: ${escapeHtml(alt)}</p>` : ''}
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: ${escapeHtml(alt)}</p>
+    </figure>`;
+  });
+
+  // Also handle simpler format without alt: [IMAGE: description]
+  html = html.replace(/\[IMAGE:\s*([^\]]+)\]/g, (match, description) => {
+    const cleanDescription = description.trim();
+
+    // Skip if already processed (has alt attribute pattern inside)
+    if (cleanDescription.includes('| alt=')) return match;
+
+    // Check if we have an actual URL for this image
+    if (imageUrlMap && imageUrlMap.has(cleanDescription)) {
+      const imageUrl = imageUrlMap.get(cleanDescription)!;
+      return `<figure class="ctc-figure ctc-image-figure" style="margin: 2rem 0">
+        <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(cleanDescription)}" loading="lazy" style="width: 100%; max-width: 800px; height: auto; border-radius: var(--ctc-radius-lg); box-shadow: 0 4px 16px -4px rgba(0,0,0,0.1)">
+        <figcaption style="text-align: center; color: var(--ctc-text-muted); font-size: 0.875rem; margin-top: 0.5rem">${escapeHtml(cleanDescription)}</figcaption>
+      </figure>`;
+    }
+
+    // Render as a styled placeholder
+    return `<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">${escapeHtml(cleanDescription)}</p>
     </figure>`;
   });
 

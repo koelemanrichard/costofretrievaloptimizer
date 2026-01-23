@@ -114,8 +114,10 @@ export const landingPageComponents: ComponentConfig = {
     intensity: 'high',
     positions: ['after-intro', 'mid-content', 'end'],
     style: 'full-width',
-    primaryText: 'Start Nu',
-    secondaryText: 'Meer Weten',
+    // Note: These values should ideally come from localized defaults based on project language
+    // For now using Dutch as the application default
+    primaryText: 'Offerte Aanvragen',
+    secondaryText: 'Meer Informatie',
   },
   faq: {
     enabled: true,
