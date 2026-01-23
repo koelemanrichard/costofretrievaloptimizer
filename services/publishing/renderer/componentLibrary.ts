@@ -147,8 +147,8 @@ function markdownToHtml(markdown: string): string {
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="ctc-link text-[var(--ctc-primary)] hover:underline">$1</a>');
 
-  // Images
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<figure class="ctc-figure my-6"><img src="$2" alt="$1" class="ctc-image rounded-lg max-w-full" loading="lazy"></figure>');
+  // Images with proper figure structure
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<figure class="ctc-figure"><img src="$2" alt="$1" loading="lazy"><figcaption>$1</figcaption></figure>');
 
   // Code blocks
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="ctc-pre bg-[var(--ctc-surface)] p-4 rounded-lg overflow-x-auto my-4"><code class="ctc-code language-$1">$2</code></pre>');
@@ -367,18 +367,17 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   'highlight-box': (ctx) => {
     const htmlContent = markdownToHtml(ctx.content);
     const variant = ctx.variant || 'info';
-    const variantStyles: Record<string, { bg: string; border: string; icon: string; iconBg: string }> = {
-      'info': { bg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '#3B82F6', icon: 'ℹ️', iconBg: '#3B82F6' },
-      'warning': { bg: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '#F59E0B', icon: '⚠️', iconBg: '#F59E0B' },
-      'success': { bg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '#10B981', icon: '✓', iconBg: '#10B981' },
-      'tip': { bg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)', border: '#8B5CF6', icon: '💡', iconBg: '#8B5CF6' },
+    const variantStyles: Record<string, { variantClass: string; icon: string; iconBg: string }> = {
+      'info': { variantClass: 'ctc-highlight-box--info', icon: 'ℹ️', iconBg: '#3B82F6' },
+      'warning': { variantClass: 'ctc-highlight-box--warning', icon: '⚠️', iconBg: '#F59E0B' },
+      'success': { variantClass: 'ctc-highlight-box--success', icon: '✓', iconBg: '#10B981' },
+      'tip': { variantClass: 'ctc-highlight-box--tip', icon: '💡', iconBg: '#8B5CF6' },
     };
     const style = variantStyles[variant] || variantStyles.info;
 
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-highlight-box ${spacingClasses(ctx.spacing)}" style="background: ${style.bg}; border-left: 4px solid ${style.border}; border-radius: 0 var(--ctc-radius-lg) var(--ctc-radius-lg) 0; padding: var(--ctc-space-6) var(--ctc-space-8); position: relative; overflow: hidden">
-  <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: ${style.border}; opacity: 0.05; border-radius: 50%; pointer-events: none"></div>
+<aside id="${ctx.sectionId}" class="ctc-highlight-box ${style.variantClass} ${spacingClasses(ctx.spacing)}">
   <div style="display: flex; gap: var(--ctc-space-4); align-items: flex-start; position: relative; z-index: 1">
     <span style="width: 32px; height: 32px; min-width: 32px; border-radius: var(--ctc-radius-md); background: ${style.iconBg}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700">${style.icon}</span>
     <div style="flex: 1">
@@ -395,14 +394,12 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   'callout': (ctx) => {
     const htmlContent = markdownToHtml(ctx.content);
     const icon = ctx.styleHints?.icon || '💡';
-    const emphasisStyle = emphasisStyles(ctx.emphasis);
 
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-callout ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" style="${emphasisStyle || 'background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); padding: var(--ctc-space-8); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border)'};  position: relative; overflow: hidden">
-  <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: var(--ctc-primary); opacity: 0.04; border-radius: 50%; pointer-events: none"></div>
-  <div style="display: flex; gap: var(--ctc-space-5); align-items: flex-start; position: relative; z-index: 1">
-    <div style="width: 56px; height: 56px; min-width: 56px; border-radius: var(--ctc-radius-xl); background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--ctc-primary) 30%, transparent)" aria-hidden="true">${icon}</div>
+<aside id="${ctx.sectionId}" class="ctc-callout ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-callout-content">
+    <div class="ctc-callout-icon" aria-hidden="true">${icon}</div>
     <div style="flex: 1">
       ${ctx.heading ? `<h${ctx.headingLevel} style="font-weight: 600; font-size: 1.125rem; margin-bottom: var(--ctc-space-3); color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'}">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
       <div style="color: ${ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.9)' : 'var(--ctc-text-secondary)'}; line-height: 1.7">${htmlContent}</div>
@@ -517,6 +514,9 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     const emphasisStyle = emphasisStyles(ctx.emphasis);
 
+    // Determine card variant based on emphasis
+    const cardClass = ctx.emphasis === 'hero-moment' ? 'ctc-card--glass' : 'ctc-card--raised';
+
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-card-grid ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" ${emphasisStyle ? `style="${emphasisStyle}"` : ''}>
@@ -526,14 +526,12 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
       const parts = item.split(/[:\-–]/).map(p => p.trim());
       const title = parts[0];
       const desc = parts[1] || '';
-      const cardBg = ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.12)' : 'var(--ctc-surface)';
-      const cardBorder = ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.2)' : 'var(--ctc-border-subtle)';
       const textColor = ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)';
       const descColor = ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.85)' : 'var(--ctc-text-secondary)';
+      const glassBg = ctx.emphasis === 'hero-moment' ? 'background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2);' : '';
       return `
-    <div class="ctc-card" style="padding: var(--ctc-space-8); border-radius: var(--ctc-radius-xl); background: ${cardBg}; backdrop-filter: blur(10px); box-shadow: 0 8px 32px -8px rgba(0,0,0,0.1), 0 4px 12px -4px rgba(0,0,0,0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid ${cardBorder}; position: relative; overflow: hidden">
-      <div style="position: absolute; top: 0; right: 0; width: 80px; height: 80px; background: linear-gradient(135deg, transparent 40%, ${ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.05)' : 'var(--ctc-primary)'} 200%); opacity: 0.1; pointer-events: none"></div>
-      <div style="width: 52px; height: 52px; border-radius: var(--ctc-radius-lg); background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); display: flex; align-items: center; justify-content: center; margin-bottom: var(--ctc-space-5); font-size: 1.5rem; box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--ctc-primary) 40%, transparent)">${icons[i % icons.length]}</div>
+    <div class="ctc-card ${cardClass}" style="padding: var(--ctc-space-8); ${glassBg}">
+      <div class="ctc-card-icon" aria-hidden="true">${icons[i % icons.length]}</div>
       <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: ${textColor}; line-height: 1.3">${markdownToHtml(title)}</h3>
       ${desc ? `<p style="font-size: var(--ctc-text-sm); color: ${descColor}; line-height: 1.7">${markdownToHtml(desc)}</p>` : ''}
     </div>`;
@@ -623,17 +621,17 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-timeline-vertical ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-6); color: var(--ctc-text)" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-section-heading" style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-6); color: var(--ctc-text)" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
   ${introHtml}
-  <div style="position: relative; padding-left: var(--ctc-space-12); max-width: 700px; margin: 0 auto">
-    <div style="position: absolute; left: 16px; top: 8px; bottom: 8px; width: 3px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px"></div>
+  <div class="ctc-timeline-track" style="position: relative; padding-left: var(--ctc-space-12); max-width: 700px; margin: 0 auto">
+    <div class="ctc-timeline-line" style="position: absolute; left: 16px; top: 8px; bottom: 8px; width: 3px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px"></div>
     ${steps.map((step, i) => `
-    <div style="position: relative; padding-bottom: var(--ctc-space-8)${i === steps.length - 1 ? '; padding-bottom: 0' : ''}" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+    <div class="ctc-timeline-step" style="${i === steps.length - 1 ? 'padding-bottom: 0' : ''}" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
       <meta itemprop="position" content="${i + 1}">
-      <div style="position: absolute; left: calc(-1 * var(--ctc-space-12) + 4px); width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15)">${i + 1}</div>
-      <div style="background: var(--ctc-surface); padding: var(--ctc-space-5); border-radius: var(--ctc-radius-lg); border: 1px solid var(--ctc-border-subtle)">
-        <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-2); color: var(--ctc-text)" itemprop="name">${markdownToHtml(step.title)}</h3>
-        <p style="color: var(--ctc-text-secondary); line-height: 1.6; margin: 0" itemprop="text">${markdownToHtml(step.description)}</p>
+      <span class="ctc-timeline-step-number">${i + 1}</span>
+      <div class="ctc-timeline-step-content">
+        <h3 class="ctc-timeline-step-title" itemprop="name">${markdownToHtml(step.title)}</h3>
+        <p class="ctc-timeline-step-desc" itemprop="text">${markdownToHtml(step.description)}</p>
       </div>
     </div>`).join('')}
   </div>
