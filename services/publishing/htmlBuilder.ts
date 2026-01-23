@@ -712,8 +712,31 @@ export class SemanticHtmlBuilder {
     // Links (before images to avoid conflicts)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="ctc-link text-[var(--ctc-primary)] hover:underline">$1</a>');
 
-    // Images
+    // Images (standard markdown)
     html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<figure class="ctc-figure my-6"><img src="$2" alt="$1" class="ctc-image rounded-lg max-w-full" loading="lazy"><figcaption class="ctc-figcaption text-sm text-[var(--ctc-text-muted)] mt-2 text-center">$1</figcaption></figure>');
+
+    // Custom image placeholders: [IMAGE: description | alt="alt text"]
+    // Render as styled placeholders (htmlBuilder doesn't have imageUrlMap)
+    html = html.replace(/\[IMAGE:\s*(.+?)\s*\|\s*alt="([^"]*)"\s*\]/g, (_, description, altText) => {
+      const cleanDescription = description.trim();
+      const alt = altText?.trim() || cleanDescription;
+      return `<figure class="ctc-image-placeholder my-6" style="padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+        <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">${this.escape(cleanDescription)}</p>
+        <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: ${this.escape(alt)}</p>
+      </figure>`;
+    });
+
+    // Also handle simpler format: [IMAGE: description]
+    html = html.replace(/\[IMAGE:\s*([^\]]+)\]/g, (match, description) => {
+      const cleanDescription = description.trim();
+      // Skip if already processed (has alt attribute pattern inside)
+      if (cleanDescription.includes('| alt=')) return match;
+      return `<figure class="ctc-image-placeholder my-6" style="padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+        <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">${this.escape(cleanDescription)}</p>
+      </figure>`;
+    });
 
     // Code blocks (before inline code)
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="ctc-pre bg-[var(--ctc-surface)] p-4 rounded-lg overflow-x-auto my-4"><code class="ctc-code language-$1">$2</code></pre>');
