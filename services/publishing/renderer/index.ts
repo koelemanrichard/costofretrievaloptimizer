@@ -10,6 +10,7 @@
 export {
   renderBlueprint,
   mapVisualStyleToPersonality,
+  generateStandaloneBlueprintHtml,
 } from './blueprintRenderer';
 
 export type {

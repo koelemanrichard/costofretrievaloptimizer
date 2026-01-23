@@ -306,6 +306,7 @@ export type {
 export {
   renderBlueprint,
   mapVisualStyleToPersonality,
+  generateStandaloneBlueprintHtml,
 } from './renderer';
 
 export type {

@@ -703,6 +703,115 @@ function escapeHtml(str: string): string {
 }
 
 // ============================================================================
+// STANDALONE HTML GENERATION
+// ============================================================================
+
+/**
+ * Generate a complete standalone HTML document from blueprint render output
+ * This embeds CSS, JSON-LD, and interactive scripts in a single file
+ */
+export function generateStandaloneBlueprintHtml(
+  output: BlueprintRenderOutput,
+  title: string,
+  options: {
+    language?: string;
+    includeScripts?: boolean;
+    minify?: boolean;
+  } = {}
+): string {
+  const {
+    language = 'nl',
+    includeScripts = true,
+    minify = false,
+  } = options;
+
+  // Interactive scripts for FAQ accordion, TOC smooth scroll, hover effects
+  const interactiveScripts = includeScripts ? `
+<script>
+(function() {
+  // FAQ Accordion Toggle
+  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+      var icon = trigger.querySelector('.ctc-faq-icon');
+      var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+      trigger.setAttribute('aria-expanded', !isExpanded);
+      if (answer) {
+        answer.hidden = isExpanded;
+      }
+      if (icon) {
+        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      }
+    });
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Add hover effects for TOC items
+  document.querySelectorAll('.ctc-toc a').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+      this.style.background = 'var(--ctc-surface)';
+      this.style.color = 'var(--ctc-primary)';
+    });
+    link.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+      this.style.color = 'var(--ctc-text-secondary)';
+    });
+  });
+
+  // Reading progress bar
+  var progressFill = document.querySelector('.ctc-progress-fill');
+  if (progressFill) {
+    window.addEventListener('scroll', function() {
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var scrollPos = window.scrollY;
+      var progress = docHeight > 0 ? (scrollPos / docHeight) * 100 : 0;
+      progressFill.style.width = progress + '%';
+    });
+  }
+})();
+</script>
+` : '';
+
+  const htmlContent = `<!DOCTYPE html>
+<html lang="${language}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+  <style>
+${output.css}
+  </style>
+</head>
+<body>
+${output.html}
+${output.jsonLd ? `\n${output.jsonLd}` : ''}
+${interactiveScripts}
+</body>
+</html>`;
+
+  if (minify) {
+    // Basic minification: remove excessive whitespace
+    return htmlContent
+      .replace(/\n\s+/g, '\n')
+      .replace(/\n{2,}/g, '\n')
+      .trim();
+  }
+
+  return htmlContent;
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 

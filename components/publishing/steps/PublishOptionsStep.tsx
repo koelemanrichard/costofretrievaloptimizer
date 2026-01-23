@@ -393,15 +393,67 @@ export const PublishOptionsStep: React.FC<PublishOptionsStepProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-700">
-        {/* Copy HTML button */}
-        <Button
-          variant="secondary"
-          onClick={() => {
-            navigator.clipboard.writeText(styledContent.html);
-          }}
-        >
-          Copy HTML
-        </Button>
+        {/* Copy/Download buttons */}
+        <div className="flex items-center gap-2">
+          {/* Copy Styled HTML button - complete with CSS */}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              // Generate complete standalone HTML with embedded CSS
+              const completeHtml = `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${topic.title}</title>
+  <style>
+${styledContent.css}
+  </style>
+</head>
+<body>
+${styledContent.html}
+</body>
+</html>`;
+              navigator.clipboard.writeText(completeHtml);
+            }}
+          >
+            📋 Copy Complete HTML
+          </Button>
+
+          {/* Download HTML button */}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Generate complete standalone HTML with embedded CSS
+              const completeHtml = `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${topic.title}</title>
+  <style>
+${styledContent.css}
+  </style>
+</head>
+<body>
+${styledContent.html}
+</body>
+</html>`;
+              // Create blob and download
+              const blob = new Blob([completeHtml], { type: 'text/html' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `${topic.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.html`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }}
+          >
+            ⬇️ Download HTML
+          </Button>
+        </div>
 
         {/* Publish button */}
         <Button
