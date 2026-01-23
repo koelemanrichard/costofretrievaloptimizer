@@ -6,8 +6,13 @@ import { splitSentences } from '../../../../../utils/sentenceTokenizer';
 
 /**
  * PERFORMANCE: Yield to main thread to prevent browser freeze
+ * In test environments (vitest/jest), yields are skipped to avoid timer issues.
  */
+const isTestEnvironment = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 function yieldToMainThread(): Promise<void> {
+  if (isTestEnvironment) {
+    return Promise.resolve();
+  }
   return new Promise(resolve => setTimeout(resolve, 0));
 }
 

@@ -45,8 +45,14 @@ const STOP_WORDS_FULL = getAuditPatterns('en').stopWordsFull;
 /**
  * Yield to main thread to prevent browser freeze during long-running operations.
  * Uses setTimeout(0) which works reliably in both foreground and background tabs.
+ * In test environments (vitest/jest), yields are skipped to avoid timer issues.
  */
+const isTestEnvironment = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 const yieldToMainThread = (): Promise<void> => {
+  // Skip yielding in test environment where setTimeout can cause issues
+  if (isTestEnvironment) {
+    return Promise.resolve();
+  }
   return new Promise(resolve => setTimeout(resolve, 0));
 };
 

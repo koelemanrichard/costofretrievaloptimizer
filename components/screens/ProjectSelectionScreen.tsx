@@ -337,7 +337,7 @@ const ProjectSelectionScreen: React.FC<ProjectSelectionScreenProps> = ({ onCreat
                           className="!py-1.5 !px-4 text-sm"
                           disabled={isLoading.loadProject}
                         >
-                          {isLoading.loadProject === project.id ? (
+                          {isLoading.loadProject ? (
                             <SmartLoader context="loading" size="sm" showText={false} />
                           ) : (
                             'Open'

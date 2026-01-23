@@ -14,6 +14,11 @@ import BatchSuggestionReviewModal from './BatchSuggestionReviewModal';
 import { SEOAuditReportModal } from './report';
 import { useSemanticAnalysis } from '../../hooks/useSemanticAnalysis';
 import { SemanticAnalysisPanel } from '../ui/SemanticAnalysisPanel';
+import { AuditHeader } from './page-audit/AuditHeader';
+import { AuditScoreGrid } from './page-audit/AuditScoreGrid';
+import { AuditTaskSummary } from './page-audit/AuditTaskSummary';
+import { AuditTaskList } from './page-audit/AuditTaskList';
+import { AuditCheckItem } from './page-audit/AuditCheckItem';
 
 interface PageAuditDetailV2Props {
   projectId: string;
@@ -215,6 +220,8 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
     }
   };
 
+
+
   // Get tasks filtered by phase
   const getTasksByPhase = (phase: string): AuditTask[] => {
     return tasks.filter(t => t.phase?.toLowerCase() === phase.toLowerCase());
@@ -229,253 +236,12 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
     'schema': 'VisualSchema',
   };
 
-  // Render task status summary for a phase
-  const renderTaskStatusSummary = (phase: string) => {
-    const phaseTasks = getTasksByPhase(phase);
-    if (phaseTasks.length === 0) return null;
-
-    const pending = phaseTasks.filter(t => t.status === 'pending').length;
-    const inProgress = phaseTasks.filter(t => t.status === 'in_progress').length;
-    const completed = phaseTasks.filter(t => t.status === 'completed').length;
-    const dismissed = phaseTasks.filter(t => t.status === 'dismissed').length;
-
-    return (
-      <div className="mb-4 p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-300">Task Status</span>
-          <div className="flex items-center gap-3 text-xs">
-            {pending > 0 && (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                <span className="text-yellow-400">{pending} pending</span>
-              </span>
-            )}
-            {inProgress > 0 && (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span className="text-blue-400">{inProgress} in progress</span>
-              </span>
-            )}
-            {completed > 0 && (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                <span className="text-green-400">{completed} completed</span>
-              </span>
-            )}
-            {dismissed > 0 && (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-gray-500"></span>
-                <span className="text-gray-400">{dismissed} dismissed</span>
-              </span>
-            )}
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden flex">
-          {completed > 0 && (
-            <div className="bg-green-500 h-full" style={{ width: `${(completed / phaseTasks.length) * 100}%` }}></div>
-          )}
-          {inProgress > 0 && (
-            <div className="bg-blue-500 h-full" style={{ width: `${(inProgress / phaseTasks.length) * 100}%` }}></div>
-          )}
-          {pending > 0 && (
-            <div className="bg-yellow-500 h-full" style={{ width: `${(pending / phaseTasks.length) * 100}%` }}></div>
-          )}
-          {dismissed > 0 && (
-            <div className="bg-gray-500 h-full" style={{ width: `${(dismissed / phaseTasks.length) * 100}%` }}></div>
-          )}
-        </div>
-      </div>
-    );
+  const handleSuggestionClick = (task: AuditTask) => {
+    setSelectedTaskForSuggestion(task);
+    setShowSuggestionModal(true);
   };
 
-  // Render compact task list for a phase
-  const renderPhaseTasks = (phase: string) => {
-    const phaseTasks = getTasksByPhase(phase);
-    const pendingTasks = phaseTasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
 
-    if (pendingTasks.length === 0) return null;
-
-    return (
-      <div className="mt-6 pt-6 border-t border-gray-700">
-        <h4 className="text-md font-semibold text-white mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>Open Tasks</span>
-            <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
-              {pendingTasks.length}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setExpandedTaskIds(prev => {
-                const next = new Set(prev);
-                pendingTasks.forEach(t => next.add(t.id));
-                return next;
-              })}
-              className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600"
-            >
-              Expand All
-            </button>
-            <button
-              onClick={() => setExpandedTaskIds(prev => {
-                const next = new Set(prev);
-                pendingTasks.forEach(t => next.delete(t.id));
-                return next;
-              })}
-              className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600"
-            >
-              Collapse All
-            </button>
-          </div>
-        </h4>
-        <div className="space-y-2">
-          {pendingTasks.map(task => {
-            const isExpanded = expandedTaskIds.has(task.id);
-            const hasRemediation = task.remediation && task.remediation.trim().length > 0;
-            const remediationPreview = hasRemediation
-              ? task.remediation.replace(/[#*_`\[\]]/g, '').substring(0, 80) + (task.remediation.length > 80 ? '...' : '')
-              : '';
-
-            return (
-              <div
-                key={task.id}
-                className={`rounded-lg border ${
-                  task.priority === 'critical' ? 'border-red-500/30 bg-red-500/5' :
-                  task.priority === 'high' ? 'border-orange-500/30 bg-orange-500/5' :
-                  'border-gray-700 bg-gray-800/50'
-                }`}
-              >
-                {/* Collapsible Header */}
-                <div
-                  className="p-3 cursor-pointer hover:bg-white/5 transition-colors"
-                  onClick={() => toggleTaskExpanded(task.id)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-gray-500 text-xs flex-shrink-0">
-                        {isExpanded ? '▼' : '▶'}
-                      </span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded uppercase flex-shrink-0 ${
-                        task.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
-                        task.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                        task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {task.priority}
-                      </span>
-                      <span className="text-sm font-medium text-white truncate">{task.title}</span>
-                      {!isExpanded && hasRemediation && (
-                        <span className="text-xs text-purple-400/70 truncate ml-1 hidden sm:inline">
-                          — {remediationPreview}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {hasRemediation && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400" title="AI suggestion applied">
-                          🤖
-                        </span>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'completed'); }}
-                        disabled={isUpdatingTask === task.id}
-                        className="px-2 py-1 text-xs rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50"
-                      >
-                        Done
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTaskForSuggestion(task);
-                          setShowSuggestionModal(true);
-                        }}
-                        className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
-                      >
-                        🤖
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded Content */}
-                {isExpanded && hasRemediation && (
-                  <div className="px-3 pb-3 border-t border-gray-700/50">
-                    <div className="pt-2 text-xs text-purple-400 prose prose-xs max-w-none">
-                      <ReactMarkdown>{task.remediation}</ReactMarkdown>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const getScoreColor = (score: number): string => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    if (score >= 40) return 'text-orange-400';
-    return 'text-red-400';
-  };
-
-  const getScoreBgColor = (score: number): string => {
-    if (score >= 80) return 'bg-green-500/20';
-    if (score >= 60) return 'bg-yellow-500/20';
-    if (score >= 40) return 'bg-orange-500/20';
-    return 'bg-red-500/20';
-  };
-
-  const renderPhaseScore = (name: string, score: number, checks: AuditCheck[]) => {
-    const passed = checks.filter(c => c.passed).length;
-    return (
-      <div className={`p-4 rounded-lg ${getScoreBgColor(score)}`}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-300">{name}</span>
-          <span className={`text-xl font-bold ${getScoreColor(score)}`}>{score}</span>
-        </div>
-        <div className="text-xs text-gray-500">
-          {passed}/{checks.length} checks passed
-        </div>
-      </div>
-    );
-  };
-
-  const renderCheckItem = (check: AuditCheck) => (
-    <div
-      key={check.ruleId}
-      className={`p-3 rounded-lg border ${
-        check.passed ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'
-      }`}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          {check.passed ? (
-            <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          )}
-          <span className={`font-medium ${check.passed ? 'text-green-300' : 'text-red-300'}`}>
-            {check.ruleName}
-          </span>
-        </div>
-        <span className={`text-sm font-bold ${getScoreColor(check.score)}`}>
-          {check.score}
-        </span>
-      </div>
-      <p className="text-sm text-gray-400 mt-2 ml-7">{check.details}</p>
-      {!check.passed && check.suggestion && (
-        <p className="text-sm text-purple-400 mt-2 ml-7">
-          <span className="font-medium">Fix:</span> {check.suggestion}
-        </p>
-      )}
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -500,102 +266,18 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <button
-              onClick={onBack}
-              className="text-gray-400 hover:text-white text-sm mb-2 flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </button>
-            <h2 className="text-xl font-bold text-white">{page.title || page.url}</h2>
-            <a
-              href={page.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 text-sm"
-            >
-              {page.url} ↗
-            </a>
-          </div>
-          <div className="flex items-start gap-4">
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              {onReextract && (
-                <button
-                  onClick={() => onReextract(pageId)}
-                  disabled={isProcessing}
-                  className="px-3 py-1.5 text-sm rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50"
-                >
-                  {isProcessing ? 'Processing...' : 'Re-extract'}
-                </button>
-              )}
-              {onReaudit && (
-                <button
-                  onClick={() => onReaudit(pageId)}
-                  disabled={isProcessing}
-                  className="px-3 py-1.5 text-sm rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50"
-                >
-                  {isProcessing ? 'Processing...' : 'Re-audit'}
-                </button>
-              )}
-              <button
-                onClick={() => setShowReportModal(true)}
-                className="px-3 py-1.5 text-sm rounded bg-green-500/20 text-green-400 hover:bg-green-500/30"
-              >
-                Page Report
-              </button>
-            </div>
-            {audit && (
-              <div className="text-right">
-                <div className={`text-4xl font-bold ${getScoreColor(audit.overallScore)}`}>
-                  {audit.overallScore}
-                </div>
-                <p className="text-sm text-gray-400">Overall Score</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-4 gap-4 mt-6">
-          <div className="p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-xs text-gray-500">Status Code</p>
-            <p className={`text-lg font-bold ${page.statusCode === 200 ? 'text-green-400' : 'text-red-400'}`}>
-              {page.statusCode || '-'}
-            </p>
-          </div>
-          <div className="p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-xs text-gray-500">Word Count</p>
-            <p className="text-lg font-bold text-white">{page.wordCount || '-'}</p>
-          </div>
-          <div className="p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-xs text-gray-500">TTFB</p>
-            <p className={`text-lg font-bold ${(page.ttfbMs || 0) < 800 ? 'text-green-400' : 'text-yellow-400'}`}>
-              {page.ttfbMs ? `${page.ttfbMs}ms` : '-'}
-            </p>
-          </div>
-          <div className="p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-xs text-gray-500">Schema Types</p>
-            <p className="text-lg font-bold text-white">{page.schemaTypes?.length || 0}</p>
-          </div>
-        </div>
-      </Card>
+      <AuditHeader
+        page={page}
+        audit={audit}
+        onBack={onBack}
+        onReextract={onReextract}
+        onReaudit={onReaudit}
+        onShowReport={() => setShowReportModal(true)}
+        isProcessing={isProcessing || false}
+      />
 
       {/* Phase Scores */}
-      {audit && (
-        <div className="grid grid-cols-5 gap-4">
-          {renderPhaseScore('Technical', audit.technicalScore, audit.technicalChecks)}
-          {renderPhaseScore('Semantic', audit.semanticScore, audit.semanticChecks)}
-          {renderPhaseScore('Link Structure', audit.linkStructureScore, audit.linkStructureChecks)}
-          {renderPhaseScore('Content', audit.contentQualityScore, audit.contentQualityChecks)}
-          {renderPhaseScore('Schema', audit.visualSchemaScore, audit.visualSchemaChecks)}
-        </div>
-      )}
+      {audit && <AuditScoreGrid audit={audit} />}
 
       {/* Tabs */}
       <div className="border-b border-gray-700">
@@ -611,11 +293,10 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as typeof activeTab)}
-                className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab
-                    ? 'border-purple-500 text-purple-400'
-                    : 'border-transparent text-gray-400 hover:text-white'
-                }`}
+                className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === tab
+                  ? 'border-purple-500 text-purple-400'
+                  : 'border-transparent text-gray-400 hover:text-white'
+                  }`}
               >
                 {getTabLabel(tab)}
                 {tab === 'tasks' && tasks.length > 0 && (
@@ -660,26 +341,44 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
         {activeTab === 'technical' && audit && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white mb-4">Technical Checks</h3>
-            {renderTaskStatusSummary('Technical')}
-            {audit.technicalChecks.map(renderCheckItem)}
-            {renderPhaseTasks('Technical')}
+            <AuditTaskSummary tasks={getTasksByPhase('Technical')} />
+            {audit.technicalChecks.map(check => <AuditCheckItem key={check.ruleId} check={check} />)}
+            <AuditTaskList
+              tasks={getTasksByPhase('Technical')}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpand={toggleTaskExpanded}
+              onExpandAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; })}
+              onCollapseAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.delete(id)); return next; })}
+              onUpdateStatus={updateTaskStatus}
+              onSuggestionClick={handleSuggestionClick}
+              isUpdatingTask={isUpdatingTask}
+            />
           </div>
         )}
 
         {activeTab === 'semantic' && audit && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white mb-4">Semantic Checks</h3>
-            {renderTaskStatusSummary('Semantic')}
-            {audit.semanticChecks.map(renderCheckItem)}
-            {renderPhaseTasks('Semantic')}
+            <AuditTaskSummary tasks={getTasksByPhase('Semantic')} />
+            {audit.semanticChecks.map(check => <AuditCheckItem key={check.ruleId} check={check} />)}
+            <AuditTaskList
+              tasks={getTasksByPhase('Semantic')}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpand={toggleTaskExpanded}
+              onExpandAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; })}
+              onCollapseAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.delete(id)); return next; })}
+              onUpdateStatus={updateTaskStatus}
+              onSuggestionClick={handleSuggestionClick}
+              isUpdatingTask={isUpdatingTask}
+            />
           </div>
         )}
 
         {activeTab === 'links' && audit && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white mb-4">Link Structure Checks</h3>
-            {renderTaskStatusSummary('LinkStructure')}
-            {audit.linkStructureChecks.map(renderCheckItem)}
+            <AuditTaskSummary tasks={getTasksByPhase('LinkStructure')} />
+            {audit.linkStructureChecks.map(check => <AuditCheckItem key={check.ruleId} check={check} />)}
 
             {/* Link Details */}
             {page.links && page.links.length > 0 && (
@@ -690,9 +389,8 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                 <div className="max-h-60 overflow-y-auto space-y-2">
                   {page.links.slice(0, 20).map((link, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm">
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        link.isInternal ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-xs ${link.isInternal ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
+                        }`}>
                         {link.isInternal ? 'Internal' : 'External'}
                       </span>
                       <span className="text-gray-400 truncate flex-1">{link.text || '(no text)'}</span>
@@ -708,14 +406,24 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
               </div>
             )}
             {renderPhaseTasks('LinkStructure')}
+            <AuditTaskList
+              tasks={getTasksByPhase('LinkStructure')}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpand={toggleTaskExpanded}
+              onExpandAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; })}
+              onCollapseAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.delete(id)); return next; })}
+              onUpdateStatus={updateTaskStatus}
+              onSuggestionClick={handleSuggestionClick}
+              isUpdatingTask={isUpdatingTask}
+            />
           </div>
         )}
 
         {activeTab === 'content' && audit && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white mb-4">Content Quality Checks</h3>
-            {renderTaskStatusSummary('ContentQuality')}
-            {audit.contentQualityChecks.map(renderCheckItem)}
+            <AuditTaskSummary tasks={getTasksByPhase('ContentQuality')} />
+            {audit.contentQualityChecks.map(check => <AuditCheckItem key={check.ruleId} check={check} />)}
 
             {/* Headings */}
             {page.headings && page.headings.length > 0 && (
@@ -735,14 +443,24 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
               </div>
             )}
             {renderPhaseTasks('ContentQuality')}
+            <AuditTaskList
+              tasks={getTasksByPhase('ContentQuality')}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpand={toggleTaskExpanded}
+              onExpandAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; })}
+              onCollapseAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.delete(id)); return next; })}
+              onUpdateStatus={updateTaskStatus}
+              onSuggestionClick={handleSuggestionClick}
+              isUpdatingTask={isUpdatingTask}
+            />
           </div>
         )}
 
         {activeTab === 'schema' && audit && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white mb-4">Schema & Visual Checks</h3>
-            {renderTaskStatusSummary('VisualSchema')}
-            {audit.visualSchemaChecks.map(renderCheckItem)}
+            <AuditTaskSummary tasks={getTasksByPhase('VisualSchema')} />
+            {audit.visualSchemaChecks.map(check => <AuditCheckItem key={check.ruleId} check={check} />)}
 
             {/* Schema Details */}
             {page.schemaTypes && page.schemaTypes.length > 0 && (
@@ -767,9 +485,8 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                 <div className="space-y-2">
                   {page.images.slice(0, 10).map((img, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm">
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        img.alt ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-xs ${img.alt ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}>
                         {img.alt ? 'Has Alt' : 'No Alt'}
                       </span>
                       <span className="text-gray-400 truncate flex-1">
@@ -784,6 +501,16 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
               </div>
             )}
             {renderPhaseTasks('VisualSchema')}
+            <AuditTaskList
+              tasks={getTasksByPhase('VisualSchema')}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpand={toggleTaskExpanded}
+              onExpandAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.add(id)); return next; })}
+              onCollapseAll={(ids) => setExpandedTaskIds(prev => { const next = new Set(prev); ids.forEach(id => next.delete(id)); return next; })}
+              onUpdateStatus={updateTaskStatus}
+              onSuggestionClick={handleSuggestionClick}
+              isUpdatingTask={isUpdatingTask}
+            />
           </div>
         )}
 
@@ -862,7 +589,7 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                   <input
                     type="checkbox"
                     checked={tasks.some(t => t.status === 'completed' || t.status === 'dismissed')}
-                    onChange={() => {}}
+                    onChange={() => { }}
                     className="rounded border-gray-600 bg-gray-800"
                   />
                   Show completed
@@ -910,15 +637,14 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                 return (
                   <div
                     key={task.id}
-                    className={`rounded-lg border ${
-                      task.status === 'completed'
-                        ? 'border-green-500/30 bg-green-500/5'
-                        : task.priority === 'critical'
-                          ? 'border-red-500/30 bg-red-500/5'
-                          : task.priority === 'high'
-                            ? 'border-orange-500/30 bg-orange-500/5'
-                            : 'border-gray-700 bg-gray-800/50'
-                    }`}
+                    className={`rounded-lg border ${task.status === 'completed'
+                      ? 'border-green-500/30 bg-green-500/5'
+                      : task.priority === 'critical'
+                        ? 'border-red-500/30 bg-red-500/5'
+                        : task.priority === 'high'
+                          ? 'border-orange-500/30 bg-orange-500/5'
+                          : 'border-gray-700 bg-gray-800/50'
+                      }`}
                   >
                     {/* Collapsible Header - Always visible */}
                     <div
@@ -931,12 +657,11 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                           <span className="text-gray-500 text-sm flex-shrink-0">
                             {isExpanded ? '▼' : '▶'}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full uppercase font-medium flex-shrink-0 ${
-                            task.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
+                          <span className={`text-xs px-2 py-0.5 rounded-full uppercase font-medium flex-shrink-0 ${task.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
                             task.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                            task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
+                              task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-gray-500/20 text-gray-400'
+                            }`}>
                             {task.priority}
                           </span>
                           <span className="font-medium text-white truncate">{task.title}</span>
@@ -954,12 +679,11 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                               🤖 Processed
                             </span>
                           )}
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            task.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                          <span className={`text-xs px-2 py-1 rounded ${task.status === 'completed' ? 'bg-green-500/20 text-green-400' :
                             task.status === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
-                            task.status === 'dismissed' ? 'bg-gray-600/20 text-gray-500' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
+                              task.status === 'dismissed' ? 'bg-gray-600/20 text-gray-500' :
+                                'bg-gray-500/20 text-gray-400'
+                            }`}>
                             {task.status}
                           </span>
                         </div>
@@ -1235,9 +959,8 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                       {page.links.slice(0, 50).map((link, i) => (
                         <tr key={i} className="border-t border-gray-700">
                           <td className="py-1">
-                            <span className={`text-xs px-1.5 py-0.5 rounded ${
-                              link.isInternal ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
-                            }`}>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${link.isInternal ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
+                              }`}>
                               {link.isInternal ? 'INT' : 'EXT'}
                             </span>
                           </td>

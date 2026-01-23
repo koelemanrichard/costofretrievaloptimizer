@@ -74,6 +74,12 @@ export async function executePass1(
   let effectiveMaxSections: number | undefined;
   let decisionReason: string;
 
+  // Get the baseline preset sections for SMART logic capping
+  const presetMaxSections = LENGTH_PRESETS[lengthSettings.preset].maxSections;
+  // SMART logic cap: max 50% deviation from preset to prevent doubling/tripling content
+  const SMART_MAX_DEVIATION = 0.5;
+  const smartCap = Math.ceil(presetMaxSections * (1 + SMART_MAX_DEVIATION));
+
   if (lengthSettings.maxSections !== undefined) {
     // User override takes absolute precedence
     effectiveMaxSections = lengthSettings.maxSections;
@@ -93,12 +99,20 @@ export async function executePass1(
     decisionReason = `User selected core topic - generating comprehensive article`;
   } else if (isComprehensiveBrief) {
     // SMART: Brief has detailed structure AND user didn't specify a topic type preference
-    effectiveMaxSections = briefSectionCount > 0 ? briefSectionCount + 2 : undefined; // +2 for intro/conclusion
-    decisionReason = `Brief defines ${briefSectionCount} sections with ${briefImageCount} images - generating all content`;
-    log.info(`[SMART] Brief complexity detected, using full brief structure`);
+    // Apply the SMART cap to prevent excessive deviation from preset
+    const briefWants = briefSectionCount > 0 ? briefSectionCount + 2 : presetMaxSections; // +2 for intro/conclusion
+    effectiveMaxSections = Math.min(briefWants, smartCap);
+
+    if (briefWants > smartCap) {
+      decisionReason = `Brief wants ${briefWants} sections, capped to ${smartCap} (50% max deviation from ${lengthSettings.preset} preset)`;
+      log.info(`[SMART CAP] Brief has ${briefSectionCount} sections but capping to ${smartCap} to prevent content bloat`);
+    } else {
+      decisionReason = `Brief defines ${briefSectionCount} sections with ${briefImageCount} images - generating all content`;
+      log.info(`[SMART] Brief complexity detected, using full brief structure`);
+    }
   } else {
     // Use preset default
-    effectiveMaxSections = LENGTH_PRESETS[lengthSettings.preset].maxSections;
+    effectiveMaxSections = presetMaxSections;
     decisionReason = `Using ${lengthSettings.preset} preset default`;
   }
 
@@ -247,7 +261,7 @@ export async function executePass1(
 
     // Generate with retry and validation
     const validationMode = options?.settings?.validationMode ?? 'hard';
-    const content = await generateSectionWithRetry(
+    let content = await generateSectionWithRetry(
       section,
       brief,
       businessInfo,
@@ -259,11 +273,31 @@ export async function executePass1(
       validationMode
     );
 
+    // Parse generated heading if AI was asked to generate one
+    let finalHeading = section.heading;
+    if (section.generateHeading && content) {
+      const headingMatch = content.match(/^(#{2,3})\s+(.+?)(?:\n|$)/);
+      if (headingMatch) {
+        finalHeading = headingMatch[2].trim();
+        log.info(`[Pass1] AI-generated heading for ${section.key}: "${finalHeading}"`);
+        // Keep the heading in content - assembleDraft will detect and use it
+      } else {
+        log.warn(`[Pass1] AI didn't generate heading for ${section.key}, using fallback`);
+        // Fallback: create a minimal heading from topic
+        const topic = brief.targetKeyword || brief.title || 'Section';
+        finalHeading = section.section_type === 'introduction'
+          ? topic
+          : section.section_type === 'conclusion'
+            ? `${topic}: Key Takeaways`
+            : section.heading;
+      }
+    }
+
     // Save to sections table
     await orchestrator.upsertSection({
       job_id: job.id,
       section_key: section.key,
-      section_heading: section.heading,
+      section_heading: finalHeading,
       section_order: Math.round(section.order * 10), // Convert to integer
       section_level: section.level,
       pass_1_content: content,
@@ -281,8 +315,8 @@ export async function executePass1(
       completed_sections: completedCount
     });
 
-    // Callback
-    onSectionComplete(section.key, section.heading, completedCount, sections.length);
+    // Callback with final heading (AI-generated or original)
+    onSectionComplete(section.key, finalHeading, completedCount, sections.length);
 
     // Small delay between sections to avoid rate limiting
     await delay(500);

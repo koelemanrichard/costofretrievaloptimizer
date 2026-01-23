@@ -129,59 +129,46 @@ function generateRelatedTopicsSection(
   // Limit to 5 links for the Related Topics section
   const topLinks = links.slice(0, 5);
 
-  // Language-aware section headers and bridge text
-  // Per Semantic SEO: heading should follow "Why [Micro] Matters for [Macro]" or "Continue Exploring [Entity]"
-  const i18n: Record<string, { headerPrefix: string; bridge: string; learnMore: string }> = {
-    'nl': {
-      headerPrefix: 'Ontdek Meer over',
-      bridge: 'Deze onderwerpen bouwen voort op de concepten die in dit artikel worden besproken en bieden aanvullende inzichten:',
-      learnMore: 'Lees meer over'
-    },
-    'de': {
-      headerPrefix: 'Entdecken Sie Mehr über',
-      bridge: 'Diese Themen bauen auf den in diesem Artikel besprochenen Konzepten auf und bieten zusätzliche Einblicke:',
-      learnMore: 'Erfahren Sie mehr über'
-    },
-    'fr': {
-      headerPrefix: 'Découvrez Plus sur',
-      bridge: 'Ces sujets complètent les concepts abordés dans cet article et offrent des perspectives supplémentaires:',
-      learnMore: 'En savoir plus sur'
-    },
-    'es': {
-      headerPrefix: 'Descubra Más sobre',
-      bridge: 'Estos temas complementan los conceptos discutidos en este artículo y ofrecen perspectivas adicionales:',
-      learnMore: 'Más información sobre'
-    },
-    'it': {
-      headerPrefix: 'Scopri di Più su',
-      bridge: 'Questi argomenti completano i concetti discussi in questo articolo e offrono approfondimenti aggiuntivi:',
-      learnMore: 'Per saperne di più su'
-    },
-    'pt': {
-      headerPrefix: 'Descubra Mais sobre',
-      bridge: 'Estes tópicos complementam os conceitos discutidos neste artigo e oferecem perspectivas adicionais:',
-      learnMore: 'Saiba mais sobre'
-    },
-    'en': {
-      headerPrefix: 'Continue Exploring',
-      bridge: 'These topics build on the concepts discussed in this article and provide additional context:',
-      learnMore: 'Read more about'
-    }
-  };
+  const entity = centralEntity || brief.title || 'topic';
 
-  const lang = i18n[language || 'en'] || i18n['en'];
-  const articleTitle = brief.title || 'this topic';
-  const entity = centralEntity || articleTitle;
+  // Check if brief has a custom contextual bridge content defined
+  // This allows AI-generated bridge content from brief generation to be used
+  let sectionHeading: string | null = null;
+  let bridgeText: string | null = null;
+
+  if (brief.contextualBridge && typeof brief.contextualBridge === 'object' && !Array.isArray(brief.contextualBridge)) {
+    const bridgeSection = brief.contextualBridge as ContextualBridgeSection;
+    // Use the content field as bridge text if available
+    if (bridgeSection.content && bridgeSection.content.trim()) {
+      bridgeText = bridgeSection.content;
+    }
+    // Check for extended properties that may be added dynamically
+    const extendedBridge = bridgeSection as ContextualBridgeSection & { heading?: string };
+    if (extendedBridge.heading) {
+      sectionHeading = extendedBridge.heading;
+    }
+  }
+
+  // If no custom heading, use the entity itself as heading (most semantic approach)
+  // The entity IS the topic - no need for template prefixes like "Continue Exploring"
+  // This follows Semantic SEO: the heading should BE the entity or directly relate to it
+  if (!sectionHeading) {
+    // Use the entity directly - the simplest, most semantic heading
+    // The list of links provides the "related topics" context
+    sectionHeading = entity;
+  }
 
   // Build Contextual Bridge section per Semantic SEO requirements:
   // 1. Section heading that signals relationship to central entity
-  // 2. Bridge paragraph that justifies the transition (annotation text)
+  // 2. Bridge paragraph that justifies the transition (annotation text) - if available
   // 3. Links with proper context
-  // Header follows pattern: "[Prefix] [Central Entity]" to tie back to macro context
-  let section = `\n\n## ${lang.headerPrefix} ${entity}\n\n`;
+  let section = `\n\n## ${sectionHeading}\n\n`;
 
-  // Add contextual bridge paragraph (required per semantic SEO)
-  section += `${lang.bridge}\n\n`;
+  // Add contextual bridge paragraph only if we have a custom one
+  // Avoid generic boilerplate bridge text - it's not semantically valuable
+  if (bridgeText) {
+    section += `${bridgeText}\n\n`;
+  }
 
   for (const link of topLinks) {
     // Generate a URL-safe slug for the topic
@@ -196,11 +183,13 @@ function generateRelatedTopicsSection(
 
     if (hasReasoning || annotationHint) {
       // Use the provided reasoning/annotation as contextual bridge
+      // Format: **Topic**: Context with [anchor text](url)
+      // No template-like "Learn more about" - just use the anchor directly
       const context = annotationHint || link.reasoning;
-      section += `- **${link.targetTopic}**: ${context} [${lang.learnMore} ${link.anchorText}](${url}).\n`;
+      section += `- **${link.targetTopic}**: ${context} — [${link.anchorText}](${url})\n`;
     } else {
       // No annotation available - use clean link format without boilerplate
-      // The bridge paragraph provides context; fake annotation text hurts SEO
+      // The entity heading provides context; fake annotation text hurts SEO
       section += `- [${link.targetTopic}](${url})\n`;
     }
   }
@@ -665,33 +654,85 @@ export class ContentGenerationOrchestrator {
   ): SectionDefinition[] {
     const sections: SectionDefinition[] = [];
 
-    // Add introduction with topic-aware heading (avoid generic "Introduction")
-    // Priority: targetKeyword > title > fallback
-    const introHeading = brief.targetKeyword
-      ? `Wat is ${brief.targetKeyword}`
-      : brief.title
-        ? `${brief.title}: Een Overzicht`
-        : 'Introductie';
+    // Patterns to detect intro/conclusion sections in structured_outline
+    // These patterns match common headings in multiple languages
+    const introPatterns = /^(introduction|intro|what\s+is|overview|getting\s+started|inleiding|wat\s+is|overzicht|einleitung|was\s+ist|überblick|introduction|qu'est-ce|aperçu|introducción|qué\s+es|resumen)/i;
+    const conclusionPatterns = /^(conclusion|summary|next\s+steps|final\s+thoughts|key\s+takeaways|wrap\s+up|conclusie|samenvatting|volgende\s+stappen|schlussfolgerung|zusammenfassung|nächste\s+schritte|conclusion|résumé|prochaines\s+étapes|conclusión|resumen|próximos\s+pasos)/i;
 
-    sections.push({
-      key: 'intro',
-      heading: introHeading,
-      level: 2,
-      order: 0,
-      subordinateTextHint: brief.metaDescription
-    });
+    // Check if structured_outline has intro/conclusion sections
+    let hasIntroInOutline = false;
+    let hasConclusionInOutline = false;
+    let introFromOutline: SectionDefinition | null = null;
+    let conclusionFromOutline: SectionDefinition | null = null;
 
-    // Parse structured_outline if available
+    if (brief.structured_outline && brief.structured_outline.length > 0) {
+      const firstSection = brief.structured_outline[0];
+      const lastSection = brief.structured_outline[brief.structured_outline.length - 1];
+
+      // Check if first section is an introduction
+      if (firstSection && introPatterns.test(firstSection.heading || '')) {
+        hasIntroInOutline = true;
+        introFromOutline = {
+          key: 'intro',
+          heading: firstSection.heading,
+          level: firstSection.level || 2,
+          order: 0,
+          subordinateTextHint: firstSection.subordinate_text_hint || brief.metaDescription,
+          methodologyNote: firstSection.methodology_note,
+          section_type: 'introduction'
+        };
+      }
+
+      // Check if last section is a conclusion (only if different from first)
+      if (lastSection && brief.structured_outline.length > 1 && conclusionPatterns.test(lastSection.heading || '')) {
+        hasConclusionInOutline = true;
+        conclusionFromOutline = {
+          key: 'conclusion',
+          heading: lastSection.heading,
+          level: lastSection.level || 2,
+          order: 999,
+          subordinateTextHint: lastSection.subordinate_text_hint,
+          methodologyNote: lastSection.methodology_note,
+          section_type: 'conclusion'
+        };
+      }
+    }
+
+    // Add introduction section
+    // If outline has intro, use it; otherwise let AI generate heading
+    if (introFromOutline) {
+      sections.push(introFromOutline);
+    } else {
+      // NO HARDCODED HEADINGS - let AI generate contextually appropriate heading
+      // The placeholder tells the prompt builder to instruct AI to generate heading
+      const topic = brief.targetKeyword || brief.title || 'topic';
+      sections.push({
+        key: 'intro',
+        heading: `[GENERATE_HEADING:introduction:${topic}]`, // Placeholder for AI-generated heading
+        level: 2,
+        order: 0,
+        subordinateTextHint: brief.metaDescription,
+        section_type: 'introduction',
+        generateHeading: true
+      });
+    }
+
+    // Parse body sections from structured_outline
     const bodySections: SectionDefinition[] = [];
     if (brief.structured_outline && brief.structured_outline.length > 0) {
       brief.structured_outline.forEach((section, idx) => {
+        // Skip if this section was already added as intro or conclusion
+        if (hasIntroInOutline && idx === 0) return;
+        if (hasConclusionInOutline && idx === brief.structured_outline!.length - 1) return;
+
         bodySections.push({
           key: `section_${idx + 1}`,
           heading: section.heading,
           level: section.level || 2,
           order: idx + 1,
           subordinateTextHint: section.subordinate_text_hint,
-          methodologyNote: section.methodology_note
+          methodologyNote: section.methodology_note,
+          section_type: 'body'
         });
 
         // Add subsections if present
@@ -702,7 +743,8 @@ export class ContentGenerationOrchestrator {
               heading: sub.heading,
               level: 3,
               order: idx + 1 + (subIdx + 1) * 0.1,
-              subordinateTextHint: sub.subordinate_text_hint
+              subordinateTextHint: sub.subordinate_text_hint,
+              section_type: 'body'
             });
           });
         }
@@ -717,7 +759,8 @@ export class ContentGenerationOrchestrator {
             key: `section_${idx + 1}`,
             heading: match[2].trim(),
             level: match[1].length,
-            order: idx + 1
+            order: idx + 1,
+            section_type: 'body'
           });
         }
       });
@@ -736,37 +779,22 @@ export class ContentGenerationOrchestrator {
     // Add limited body sections
     sections.push(...bodySections);
 
-    // Add conclusion with action-oriented heading (avoid "Samenvatting" which repeats title)
-    // Priority: Create short, actionable heading that doesn't duplicate the title
-    // Extract core topic from targetKeyword or first few words of title
-    const coreTopic = brief.targetKeyword
-      || (brief.title?.split(/[:|–-]/)[0]?.trim().substring(0, 50))
-      || 'this topic';
-
-    // Language-aware conclusion heading prefixes
-    const conclusionI18n: Record<string, { prefix: string; fallbackTopic: string }> = {
-      'nl': { prefix: 'Volgende Stappen voor', fallbackTopic: 'dit onderwerp' },
-      'de': { prefix: 'Nächste Schritte für', fallbackTopic: 'dieses Thema' },
-      'fr': { prefix: 'Prochaines Étapes pour', fallbackTopic: 'ce sujet' },
-      'es': { prefix: 'Próximos Pasos para', fallbackTopic: 'este tema' },
-      'it': { prefix: 'Prossimi Passi per', fallbackTopic: 'questo argomento' },
-      'pt': { prefix: 'Próximos Passos para', fallbackTopic: 'este tema' },
-      'en': { prefix: 'Next Steps for', fallbackTopic: 'this topic' }
-    };
-
-    const lang = options?.language || 'en';
-    const conclusionLang = conclusionI18n[lang] || conclusionI18n['en'];
-    const displayTopic = coreTopic || conclusionLang.fallbackTopic;
-
-    // Create action-oriented heading, NOT a summary heading
-    const conclusionHeading = `${conclusionLang.prefix} ${displayTopic}`;
-
-    sections.push({
-      key: 'conclusion',
-      heading: conclusionHeading,
-      level: 2,
-      order: 999
-    });
+    // Add conclusion section
+    // If outline has conclusion, use it; otherwise let AI generate heading
+    if (conclusionFromOutline) {
+      sections.push(conclusionFromOutline);
+    } else {
+      // NO HARDCODED HEADINGS - let AI generate contextually appropriate heading
+      const topic = brief.targetKeyword || brief.title || 'topic';
+      sections.push({
+        key: 'conclusion',
+        heading: `[GENERATE_HEADING:conclusion:${topic}]`, // Placeholder for AI-generated heading
+        level: 2,
+        order: 999,
+        section_type: 'conclusion',
+        generateHeading: true
+      });
+    }
 
     return sections.sort((a, b) => a.order - b.order);
   }

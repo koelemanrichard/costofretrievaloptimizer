@@ -459,6 +459,10 @@ export interface SectionDefinition {
   order: number;                    // Position in article
   subordinateTextHint?: string;
   methodologyNote?: string;
+  /** Section type - intro/conclusion headings can be AI-generated */
+  section_type?: 'introduction' | 'conclusion' | 'body';
+  /** When true, AI should generate appropriate heading (not use pre-defined) */
+  generateHeading?: boolean;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SectionPromptBuilder } from '../sectionPromptBuilder';
-import { FormatCode, ContentZone } from '../../../../../../types';
+import { FormatCode, ContentZone } from '../../../../../../types/content';
 
 describe('SectionPromptBuilder template integration', () => {
   // Helper to create minimal context

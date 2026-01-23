@@ -217,14 +217,27 @@ Secondary focus: ${secondary.label} (${secondary.value}%)
     const parsedCodes = BriefCodeParser.parseFormatCodes(section.methodology_note || '');
     const formatConstraints = BriefCodeParser.getFormatConstraints(parsedCodes.formatCode);
 
+    // Check if we need to generate the heading dynamically
+    const needsGeneratedHeading = (section as any).generateHeading === true;
+    const sectionType = (section as any).section_type || 'body';
+
     let prompt = `You are an expert content writer following the Koray Tuğberk GÜBÜR Semantic Content Framework.
 
 ${getLanguageAndRegionInstruction(businessInfo.language, businessInfo.region)}
 Target market: ${businessInfo.targetMarket || 'Global'}.
 
 ## Section to Generate
-Heading: ${section.heading}
+${needsGeneratedHeading ? `**GENERATE HEADING**: Create an appropriate H${section.level} heading for this ${sectionType} section.
+The heading should be:
+- SEO-optimized and keyword-rich
+- Written in the same language as the content
+- Contextually relevant to "${brief.title}"
+- NOT generic (avoid "Introduction", "Conclusion", "Summary")
+- Action-oriented or question-based when appropriate
+
+Topic context: ${brief.targetKeyword || brief.title}` : `Heading: ${section.heading}`}
 Level: H${section.level}
+${sectionType !== 'body' ? `Section Type: ${sectionType}` : ''}
 
 ## Format Requirements
 ${formatConstraints}
@@ -359,7 +372,17 @@ ${fixInstructions}
 `;
     }
 
-    prompt += `Write the section content now. Output ONLY prose content, no heading or metadata.`;
+    // Final output instruction - different for generated headings
+    if (needsGeneratedHeading) {
+      prompt += `Write the section now. Start with your generated H${section.level} heading on a new line using markdown format (## for H2, ### for H3), then write the prose content.
+
+Output format:
+## [Your Generated Heading Here]
+
+[Prose content...]`;
+    } else {
+      prompt += `Write the section content now. Output ONLY prose content, no heading or metadata.`;
+    }
 
     return prompt;
   }

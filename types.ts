@@ -330,6 +330,7 @@ export interface BusinessInfo {
 
   // Business conversion fields
   conversionGoal?: string; // Primary conversion goal (e.g., "sign up", "purchase", "contact")
+  offerings?: string[]; // List of services/products offered by the business
 
   dataforseoLogin?: string;
   dataforseoPassword?: string;
