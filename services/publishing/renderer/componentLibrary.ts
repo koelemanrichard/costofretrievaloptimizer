@@ -214,12 +214,46 @@ function extractFaqItems(content: string): Array<{ question: string; answer: str
 }
 
 /**
- * Extract process steps from content
+ * Result of extracting steps from content
  */
-function extractSteps(content: string): Array<{ title: string; description: string }> {
-  const steps: Array<{ title: string; description: string }> = [];
+interface ExtractedSteps {
+  /** Intro prose that appears before the steps (provides semantic context) */
+  introProse: string;
+  /** The extracted steps */
+  steps: Array<{ title: string; description: string }>;
+}
 
-  // Try numbered steps with descriptions
+/**
+ * Extract process steps from content, preserving intro prose
+ *
+ * The intro prose often contains important semantic context like
+ * "This process consists of 5 phases" which must be preserved for SEO.
+ */
+function extractSteps(content: string): ExtractedSteps {
+  const steps: Array<{ title: string; description: string }> = [];
+  let introProse = '';
+
+  // Find where the numbered list starts
+  const firstNumberedMatch = content.match(/^\d+\.\s+/m);
+  const firstStepMatch = content.match(/(?:stap|step)\s*\d+[:\.]?/im);
+
+  // Determine where the list starts
+  let listStartIndex = content.length;
+  if (firstNumberedMatch && firstNumberedMatch.index !== undefined) {
+    listStartIndex = Math.min(listStartIndex, firstNumberedMatch.index);
+  }
+  if (firstStepMatch && firstStepMatch.index !== undefined) {
+    listStartIndex = Math.min(listStartIndex, firstStepMatch.index);
+  }
+
+  // Extract intro prose (content before the list)
+  if (listStartIndex > 0 && listStartIndex < content.length) {
+    introProse = content.substring(0, listStartIndex).trim();
+    // Remove heading patterns from intro prose (they're handled separately)
+    introProse = introProse.replace(/^#+\s+[^\n]+\n*/gm, '').trim();
+  }
+
+  // Try numbered steps with descriptions (e.g., "Stap 1: Title - Description")
   const stepPattern = /(?:stap|step)\s*(\d+)[:\.]?\s*\*?\*?([^*\n]+)\*?\*?\s*[-–:]?\s*([^\n]+)?/gi;
   let match;
   while ((match = stepPattern.exec(content)) !== null) {
@@ -229,7 +263,7 @@ function extractSteps(content: string): Array<{ title: string; description: stri
     });
   }
 
-  // Fall back to numbered list
+  // Fall back to numbered list (e.g., "1. Title - Description")
   if (steps.length === 0) {
     const numberedMatches = content.matchAll(/^\d+\.\s+(.+)$/gm);
     for (const m of numberedMatches) {
@@ -241,7 +275,7 @@ function extractSteps(content: string): Array<{ title: string; description: stri
     }
   }
 
-  return steps;
+  return { introProse, steps };
 }
 
 // ============================================================================
@@ -576,15 +610,21 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   // ---------------------------------------------------------------------------
 
   'timeline-vertical': (ctx) => {
-    const steps = extractSteps(ctx.content);
+    const { introProse, steps } = extractSteps(ctx.content);
     if (steps.length === 0) {
       return componentRenderers['prose']!(ctx);
     }
 
+    // Render intro prose if present (provides semantic context like "5 phases")
+    const introHtml = introProse
+      ? `<div class="ctc-timeline-intro" style="max-width: 700px; margin: 0 auto var(--ctc-space-8) auto; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">${markdownToHtml(introProse)}</div>`
+      : '';
+
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-timeline-vertical ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-10); color: var(--ctc-text)" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-6); color: var(--ctc-text)" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${introHtml}
   <div style="position: relative; padding-left: var(--ctc-space-12); max-width: 700px; margin: 0 auto">
     <div style="position: absolute; left: 16px; top: 8px; bottom: 8px; width: 3px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px"></div>
     ${steps.map((step, i) => `
@@ -613,15 +653,21 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   },
 
   'timeline-zigzag': (ctx) => {
-    const steps = extractSteps(ctx.content);
+    const { introProse, steps } = extractSteps(ctx.content);
     if (steps.length === 0) {
       return componentRenderers['prose']!(ctx);
     }
 
+    // Render intro prose if present (provides semantic context like "5 phases")
+    const introHtml = introProse
+      ? `<div class="ctc-timeline-intro" style="max-width: 700px; margin: 0 auto 2.5rem auto; text-align: center; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">${markdownToHtml(introProse)}</div>`
+      : '';
+
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-timeline-zigzag ${emphasisClasses(ctx.emphasis)} ${spacingClasses('breathe')}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} class="text-3xl font-bold text-center mb-12" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} class="text-3xl font-bold text-center mb-6" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${introHtml}
   <div class="ctc-timeline-zigzag-track relative before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-1 before:bg-gradient-to-b before:from-[var(--ctc-primary)] before:to-[var(--ctc-primary-light)] before:-translate-x-1/2">
     ${steps.map((step, i) => {
       const isLeft = i % 2 === 0;
@@ -657,15 +703,21 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   },
 
   'steps-numbered': (ctx) => {
-    const steps = extractSteps(ctx.content);
+    const { introProse, steps } = extractSteps(ctx.content);
     if (steps.length === 0) {
       return componentRenderers['numbered-list']!(ctx);
     }
 
+    // Render intro prose if present (provides semantic context like "5 phases")
+    const introHtml = introProse
+      ? `<div class="ctc-steps-intro" style="color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem; margin-bottom: var(--ctc-space-6)">${markdownToHtml(introProse)}</div>`
+      : '';
+
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-steps-numbered ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} class="text-xl font-semibold mb-6" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} class="text-xl font-semibold mb-4" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${introHtml}
   <ol class="ctc-steps-list space-y-4">
     ${steps.map((step, i) => `
     <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
