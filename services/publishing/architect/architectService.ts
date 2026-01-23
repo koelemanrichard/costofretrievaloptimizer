@@ -966,6 +966,11 @@ function determineCtaPositions(
 
 /**
  * Generate enhanced heuristic sections with visual rhythm
+ * Enhanced to detect more component opportunities:
+ * - Key takeaways at start
+ * - Scenario/use-case grids
+ * - Callout boxes for tips
+ * - Better heading pattern matching
  */
 function generateEnhancedHeuristicSections(
   analysis: ContentAnalysisResult,
@@ -975,9 +980,33 @@ function generateEnhancedHeuristicSections(
   const sections: SectionDesign[] = [];
   let lastWeight: 'light' | 'medium' | 'heavy' = 'light';
   let lastComponent: ComponentType | null = null;
+  let hasUsedCardGrid = false;
+
+  // First: Generate Key Takeaways from first 2-3 sections
+  const keyTakeaways = extractKeyTakeawaysFromContent(analysis);
+  if (keyTakeaways.length >= 2) {
+    sections.push({
+      id: 'key-takeaways',
+      sourceContent: keyTakeaways.join('\n'),
+      heading: 'Belangrijkste Punten',
+      headingLevel: 2,
+      presentation: {
+        component: 'key-takeaways',
+        variant: 'gradient',
+        emphasis: 'hero-moment',
+        spacing: 'breathe',
+        hasBackground: true,
+        hasDivider: false,
+      },
+      reasoning: 'Key takeaways extracted from intro content for scannable overview.',
+    });
+    lastComponent = 'key-takeaways';
+    lastWeight = 'heavy';
+  }
 
   analysis.structure.sections.forEach((section, index) => {
     const sectionContent = section.content.toLowerCase();
+    const headingLower = (section.heading || '').toLowerCase();
 
     // Determine component based on content patterns (enhanced)
     let component: ComponentType = 'prose';
@@ -990,31 +1019,61 @@ function generateEnhancedHeuristicSections(
     const hasNumberedList = /\d+\.\s/.test(sectionContent);
     const listItemCount = (sectionContent.match(/(?:^|\n)[-*]\s/g) || []).length;
 
-    // Intro section
+    // Check for scenario/use-case patterns (expanded detection)
+    const isScenarioSection = detectScenarioSection(headingLower, sectionContent);
+    const hasMultipleH3 = (section.content.match(/^###\s/gm) || []).length >= 3;
+
+    // Intro section - becomes lead-paragraph
     if (index === 0 && section.level === 0) {
       component = 'lead-paragraph';
-      reasoning = 'Introduction receives lead paragraph treatment.';
+      reasoning = 'Introduction receives lead paragraph treatment with accent border.';
+    }
+    // Scenario/Use-case sections → Card Grid with icons
+    else if (isScenarioSection && !hasUsedCardGrid) {
+      component = 'card-grid';
+      variant = 'icon';
+      reasoning = 'Use-case scenarios as icon card grid for visual impact.';
+      emphasis = 'featured';
+      hasUsedCardGrid = true;
+    }
+    // H3 subsections → Card Grid (when content has multiple sub-items)
+    else if (hasMultipleH3 && !hasUsedCardGrid) {
+      component = 'card-grid';
+      variant = 'default';
+      reasoning = 'Multiple sub-sections presented as card grid.';
+      emphasis = 'featured';
+      hasUsedCardGrid = true;
     }
     // Benefits section (enhanced component selection based on style)
-    else if (section.heading?.toLowerCase().includes('voordel') ||
-             section.heading?.toLowerCase().includes('benefit') ||
-             section.heading?.toLowerCase().includes('kenmer')) {
-      // Style-appropriate component selection
+    else if (headingLower.includes('voordel') ||
+             headingLower.includes('benefit') ||
+             headingLower.includes('kenmer') ||
+             headingLower.includes('waarom')) {
       if (visualStyle === 'minimal') {
         component = 'bullet-list';
-      } else if (visualStyle === 'marketing' || visualStyle === 'bold') {
-        component = listItemCount > 4 ? 'card-grid' : 'icon-list';
+      } else if (!hasUsedCardGrid && listItemCount >= 3) {
+        component = 'card-grid';
+        variant = 'icon';
+        hasUsedCardGrid = true;
       } else {
-        component = listItemCount > 4 ? 'card-grid' : 'icon-list';
+        component = 'icon-list';
       }
       reasoning = `Benefits presented as ${component} (${visualStyle} style).`;
       emphasis = 'featured';
     }
+    // Important tip/highlight detection → Callout box
+    else if (detectHighlightContent(sectionContent)) {
+      component = 'highlight-box';
+      variant = 'tip';
+      reasoning = 'Important tip/highlight detected, using callout box.';
+      emphasis = 'featured';
+    }
     // Process/how-to section (varied timeline components)
-    else if (section.heading?.toLowerCase().includes('hoe') ||
-             section.heading?.toLowerCase().includes('stap') ||
-             section.heading?.toLowerCase().includes('proces') ||
-             section.heading?.toLowerCase().includes('how')) {
+    else if (headingLower.includes('hoe') ||
+             headingLower.includes('stap') ||
+             headingLower.includes('proces') ||
+             headingLower.includes('how') ||
+             headingLower.includes('werkwijze')) {
       // Avoid repeating timeline if used recently
       if (lastComponent?.includes('timeline')) {
         component = 'steps-numbered';
@@ -1025,11 +1084,19 @@ function generateEnhancedHeuristicSections(
       emphasis = 'featured';
     }
     // FAQ section
-    else if (section.heading?.toLowerCase().includes('faq') ||
-             section.heading?.toLowerCase().includes('vraag') ||
-             section.heading?.toLowerCase().includes('question')) {
+    else if (headingLower.includes('faq') ||
+             headingLower.includes('vraag') ||
+             headingLower.includes('question') ||
+             headingLower.includes('veelgesteld')) {
       component = visualStyle === 'marketing' ? 'faq-cards' : 'faq-accordion';
       reasoning = `FAQ as ${component} (${visualStyle} style).`;
+    }
+    // Important callout detection (inline tips, warnings)
+    else if (detectCalloutContent(sectionContent)) {
+      component = 'callout';
+      variant = detectCalloutType(sectionContent);
+      reasoning = `Important callout detected (${variant}).`;
+      emphasis = 'normal';
     }
     // List-heavy content (avoid repetition)
     else if (listItemCount > 3) {
@@ -1047,13 +1114,17 @@ function generateEnhancedHeuristicSections(
     const currentWeight = getWeightForComponent(component);
     if (lastWeight === 'heavy' && currentWeight === 'heavy' && component !== 'prose') {
       // Try to find a lighter alternative
-      if (component === 'card-grid') component = 'icon-list';
+      if (component === 'card-grid') {
+        component = 'icon-list';
+        hasUsedCardGrid = false; // Allow card-grid later
+      }
       if (component === 'timeline-zigzag') component = 'steps-numbered';
     }
 
     // Determine background based on emphasis and position
     const hasBackground = emphasis === 'featured' ||
-      (index % 3 === 1 && visualStyle !== 'minimal');
+      emphasis === 'hero-moment' ||
+      (index % 4 === 2 && visualStyle !== 'minimal');
 
     sections.push({
       id: `section-${index}`,
@@ -1076,6 +1147,133 @@ function generateEnhancedHeuristicSections(
   });
 
   return sections;
+}
+
+/**
+ * Extract key takeaways from article content
+ */
+function extractKeyTakeawaysFromContent(analysis: ContentAnalysisResult): string[] {
+  const takeaways: string[] = [];
+
+  // Look for explicit key takeaways or summary patterns
+  for (const section of analysis.structure.sections.slice(0, 4)) {
+    const content = section.content;
+
+    // Check for bullet points that could be takeaways
+    const bullets = content.match(/^[-*]\s+(.+)$/gm) || [];
+    for (const bullet of bullets.slice(0, 2)) {
+      const text = bullet.replace(/^[-*]\s+/, '').trim();
+      if (text.length > 30 && text.length < 200 && takeaways.length < 4) {
+        takeaways.push(text);
+      }
+    }
+
+    // Check for strong/bold text that represents key points
+    const strongPoints = content.match(/\*\*([^*]+)\*\*/g) || [];
+    for (const point of strongPoints.slice(0, 2)) {
+      const text = point.replace(/\*\*/g, '').trim();
+      if (text.length > 20 && text.length < 150 && takeaways.length < 4) {
+        // Avoid duplicates
+        if (!takeaways.some(t => t.includes(text.substring(0, 20)))) {
+          takeaways.push(text);
+        }
+      }
+    }
+  }
+
+  // If no explicit takeaways found, extract from first sentences
+  if (takeaways.length < 2) {
+    for (const section of analysis.structure.sections.slice(0, 3)) {
+      const sentences = section.content.split(/[.!?]+/).filter(s => s.trim().length > 40);
+      for (const sentence of sentences.slice(0, 1)) {
+        const text = sentence.trim();
+        if (text.length > 40 && text.length < 200 && takeaways.length < 4) {
+          if (!takeaways.some(t => t.includes(text.substring(0, 20)))) {
+            takeaways.push(text);
+          }
+        }
+      }
+    }
+  }
+
+  return takeaways.slice(0, 4);
+}
+
+/**
+ * Detect if section is about scenarios/use-cases
+ */
+function detectScenarioSection(headingLower: string, contentLower: string): boolean {
+  // Heading patterns for scenarios
+  const scenarioHeadingPatterns = [
+    'wanneer', 'when', 'situatie', 'scenario', 'geval',
+    'nodig', 'need', 'types', 'soorten', 'verschillende',
+    'moment', 'redenen', 'reason', 'cause', 'oorzaak'
+  ];
+
+  if (scenarioHeadingPatterns.some(p => headingLower.includes(p))) {
+    return true;
+  }
+
+  // Content patterns: multiple similar items (erfenissen, verhuizingen, etc.)
+  const categoryPatterns = [
+    /erfenis|overlijden|nalatenschap/i,
+    /verhui[sz]/i,
+    /scheiding|echtscheiding/i,
+    /bedrijf|kantoor|zakelijk/i,
+    /sloop|renovatie/i,
+    /senior|ouder/i,
+  ];
+
+  let matchCount = 0;
+  for (const pattern of categoryPatterns) {
+    if (pattern.test(contentLower)) matchCount++;
+  }
+
+  return matchCount >= 3;
+}
+
+/**
+ * Detect if content should be a highlight box
+ */
+function detectHighlightContent(contentLower: string): boolean {
+  const highlightPatterns = [
+    'bespaart', 'saves', 'voordeel van', 'advantage',
+    'belangrijk om te weten', 'important to know',
+    'let op', 'note that', 'onthoud', 'remember',
+    'professionele aanpak', 'professional approach'
+  ];
+
+  return highlightPatterns.some(p => contentLower.includes(p)) &&
+         contentLower.length < 500; // Short enough to be a highlight
+}
+
+/**
+ * Detect if content should be a callout
+ */
+function detectCalloutContent(contentLower: string): boolean {
+  const calloutPatterns = [
+    'gevoelig', 'sensitive', 'speciale aandacht', 'special attention',
+    'tip:', 'let op:', 'waarschuwing', 'warning',
+    'belangrijk:', 'important:', 'advies:', 'advice:'
+  ];
+
+  return calloutPatterns.some(p => contentLower.includes(p));
+}
+
+/**
+ * Determine callout type based on content
+ */
+function detectCalloutType(contentLower: string): string {
+  if (contentLower.includes('waarschuwing') || contentLower.includes('warning') || contentLower.includes('let op')) {
+    return 'warning';
+  }
+  if (contentLower.includes('tip') || contentLower.includes('advies')) {
+    return 'tip';
+  }
+  if (contentLower.includes('belangrijk') || contentLower.includes('important')) {
+    return 'important';
+  }
+  return 'info';
 }
 
 /**
