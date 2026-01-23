@@ -44,6 +44,37 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
   const [activeTab, setActiveTab] = useState<'design-style' | 'colors' | 'typography' | 'spacing'>('design-style');
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
+  // Handle personality change - sync colors to designTokens
+  const handlePersonalityChange = useCallback((id: DesignPersonalityId) => {
+    const personality = designPersonalities[id];
+    if (personality) {
+      // Update the personality ID
+      onPersonalityChange(id);
+      // Also sync the personality's colors to the style's designTokens
+      onChange({
+        designTokens: {
+          ...style.designTokens,
+          colors: {
+            ...style.designTokens.colors,
+            primary: personality.colors.primary,
+            secondary: personality.colors.secondary,
+            accent: personality.colors.accent,
+            background: personality.colors.background,
+            surface: personality.colors.surface,
+            text: personality.colors.text,
+            textMuted: personality.colors.textMuted,
+            border: personality.colors.border,
+          },
+          fonts: {
+            ...style.designTokens.fonts,
+            heading: personality.typography.displayFont,
+            body: personality.typography.bodyFont,
+          },
+        },
+      });
+    }
+  }, [onPersonalityChange, onChange, style.designTokens]);
+
   // Update design tokens
   const updateTokens = useCallback((tokenUpdates: Partial<DesignTokens>) => {
     onChange({
@@ -140,7 +171,7 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
               <button
                 key={personality.id}
                 type="button"
-                onClick={() => onPersonalityChange(personality.id as DesignPersonalityId)}
+                onClick={() => handlePersonalityChange(personality.id as DesignPersonalityId)}
                 className={`
                   p-4 rounded-xl border text-left transition-all
                   ${personalityId === personality.id

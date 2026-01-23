@@ -35,15 +35,15 @@ interface DeviceFrameProps {
 // Device Frame Component
 // ============================================================================
 
-const DEVICE_SIZES: Record<DevicePreview, { width: number; height: number; label: string }> = {
-  desktop: { width: 1200, height: 800, label: 'Desktop' },
-  tablet: { width: 768, height: 1024, label: 'Tablet' },
-  mobile: { width: 375, height: 667, label: 'Mobile' },
+const DEVICE_SIZES: Record<DevicePreview, { width: number; height: number; label: string; scale: number }> = {
+  desktop: { width: 1200, height: 900, label: 'Desktop', scale: 0.85 },
+  tablet: { width: 768, height: 1024, label: 'Tablet', scale: 0.65 },
+  mobile: { width: 375, height: 700, label: 'Mobile', scale: 0.85 },
 };
 
 const DeviceFrame: React.FC<DeviceFrameProps> = ({ device, children }) => {
   const size = DEVICE_SIZES[device];
-  const scale = device === 'desktop' ? 0.6 : device === 'tablet' ? 0.5 : 0.7;
+  const scale = size.scale;
 
   return (
     <div
@@ -56,19 +56,19 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ device, children }) => {
       {/* Device frame */}
       <div
         className={`
-          absolute inset-0 rounded-lg border-4 border-gray-700 bg-gray-900 overflow-hidden
-          ${device === 'mobile' ? 'rounded-3xl' : ''}
+          absolute inset-0 rounded-xl border-2 border-gray-600 bg-gray-900 overflow-hidden shadow-2xl
+          ${device === 'mobile' ? 'rounded-3xl border-4 border-gray-700' : ''}
         `}
       >
         {/* Browser chrome for desktop/tablet */}
         {device !== 'mobile' && (
-          <div className="h-6 bg-gray-800 border-b border-gray-700 flex items-center px-2 gap-1">
-            <div className="w-2 h-2 rounded-full bg-red-500" />
-            <div className="w-2 h-2 rounded-full bg-yellow-500" />
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <div className="flex-1 mx-2">
-              <div className="h-3 bg-gray-700 rounded text-[8px] text-gray-500 flex items-center justify-center">
-                preview.example.com
+          <div className="h-8 bg-gradient-to-b from-gray-750 to-gray-800 border-b border-gray-700 flex items-center px-3 gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm" />
+            <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm" />
+            <div className="flex-1 mx-4">
+              <div className="h-5 bg-gray-700/80 rounded-md text-xs text-gray-400 flex items-center justify-center px-4">
+                preview.yoursite.com
               </div>
             </div>
           </div>
@@ -87,8 +87,8 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ device, children }) => {
           style={{
             height: device === 'mobile'
               ? size.height * scale - 20 - 16
-              : size.height * scale - 24 - 8,
-            backgroundColor: '#fafafa',
+              : size.height * scale - 32 - 8,
+            backgroundColor: '#ffffff',
           }}
         >
           <div
@@ -96,7 +96,7 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ device, children }) => {
               transform: `scale(${scale})`,
               transformOrigin: 'top left',
               width: size.width,
-              minHeight: size.height - (device === 'mobile' ? 36 : 32),
+              minHeight: size.height - (device === 'mobile' ? 36 : 40),
             }}
           >
             {children}
@@ -244,7 +244,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
       )}
 
       {/* Preview / HTML View */}
-      <div className="bg-gray-900 rounded-lg p-4 overflow-auto" style={{ minHeight: '500px', maxHeight: '70vh' }}>
+      <div className="bg-gray-900 rounded-xl p-6 overflow-auto shadow-2xl" style={{ minHeight: '650px', maxHeight: '80vh' }}>
         {showRawHtml ? (
           <div className="space-y-4">
             {/* HTML Code */}

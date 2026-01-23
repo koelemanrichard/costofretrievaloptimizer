@@ -453,6 +453,22 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             brief,
             topic,
             personalityId: personalityId,
+            designTokens: style?.designTokens ? {
+              colors: {
+                primary: style.designTokens.colors.primary,
+                secondary: style.designTokens.colors.secondary,
+                accent: style.designTokens.colors.accent,
+                background: style.designTokens.colors.background,
+                surface: style.designTokens.colors.surface,
+                text: style.designTokens.colors.text,
+                textMuted: style.designTokens.colors.textMuted,
+                border: style.designTokens.colors.border,
+              },
+              fonts: {
+                heading: style.designTokens.fonts.heading,
+                body: style.designTokens.fonts.body,
+              },
+            } : undefined,
             darkMode: false,
             minifyCss: false,
             ctaConfig: {

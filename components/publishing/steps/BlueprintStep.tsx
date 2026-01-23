@@ -507,6 +507,7 @@ export function BlueprintStep({
         <BlueprintEditorPanel
           level="topical_map"
           topicalMapBlueprint={topicalMapBlueprint}
+          projectBlueprint={projectBlueprint}
           onTopicalMapChange={onTopicalMapChange}
           onSave={handleSaveHierarchy}
           onRegenerate={handleRegenerateHierarchy}

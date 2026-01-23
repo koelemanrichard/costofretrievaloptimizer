@@ -29,6 +29,23 @@ export interface BlueprintRenderOptions {
   topicalMap?: TopicalMap;
   /** Design personality override */
   personalityId?: string;
+  /** Custom design tokens (colors, fonts, etc.) from BrandStyleStep */
+  designTokens?: {
+    colors?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+      background?: string;
+      surface?: string;
+      text?: string;
+      textMuted?: string;
+      border?: string;
+    };
+    fonts?: {
+      heading?: string;
+      body?: string;
+    };
+  };
   /** Include dark mode CSS */
   darkMode?: boolean;
   /** Minify CSS output */
@@ -69,6 +86,79 @@ export interface BlueprintRenderOutput {
     componentsUsed: string[];
     renderDurationMs: number;
   };
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Convert custom design tokens to CSS variable overrides
+ */
+function convertDesignTokensToOverrides(tokens: BlueprintRenderOptions['designTokens']): Record<string, string> {
+  const overrides: Record<string, string> = {};
+
+  if (tokens?.colors) {
+    if (tokens.colors.primary) {
+      overrides['--ctc-primary'] = tokens.colors.primary;
+      // Generate light/dark variants
+      overrides['--ctc-primary-light'] = adjustColorBrightness(tokens.colors.primary, 20);
+      overrides['--ctc-primary-dark'] = adjustColorBrightness(tokens.colors.primary, -20);
+    }
+    if (tokens.colors.secondary) {
+      overrides['--ctc-secondary'] = tokens.colors.secondary;
+    }
+    if (tokens.colors.accent) {
+      overrides['--ctc-accent'] = tokens.colors.accent;
+    }
+    if (tokens.colors.background) {
+      overrides['--ctc-background'] = tokens.colors.background;
+    }
+    if (tokens.colors.surface) {
+      overrides['--ctc-surface'] = tokens.colors.surface;
+      overrides['--ctc-surface-elevated'] = adjustColorBrightness(tokens.colors.surface, 5);
+    }
+    if (tokens.colors.text) {
+      overrides['--ctc-text'] = tokens.colors.text;
+      overrides['--ctc-text-secondary'] = adjustColorBrightness(tokens.colors.text, 30);
+    }
+    if (tokens.colors.textMuted) {
+      overrides['--ctc-text-muted'] = tokens.colors.textMuted;
+    }
+    if (tokens.colors.border) {
+      overrides['--ctc-border'] = tokens.colors.border;
+      overrides['--ctc-border-subtle'] = adjustColorBrightness(tokens.colors.border, 20);
+    }
+  }
+
+  if (tokens?.fonts) {
+    if (tokens.fonts.heading) {
+      overrides['--ctc-font-display'] = tokens.fonts.heading;
+    }
+    if (tokens.fonts.body) {
+      overrides['--ctc-font-body'] = tokens.fonts.body;
+    }
+  }
+
+  return overrides;
+}
+
+/**
+ * Adjust color brightness (simple hex color adjustment)
+ */
+function adjustColorBrightness(hex: string, percent: number): string {
+  // Handle both 3 and 6 character hex codes
+  let h = hex.replace('#', '');
+  if (h.length === 3) {
+    h = h.split('').map(c => c + c).join('');
+  }
+
+  const num = parseInt(h, 16);
+  const r = Math.min(255, Math.max(0, (num >> 16) + Math.round(255 * percent / 100)));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + Math.round(255 * percent / 100)));
+  const b = Math.min(255, Math.max(0, (num & 0x0000FF) + Math.round(255 * percent / 100)));
+
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
 // ============================================================================
@@ -181,6 +271,9 @@ export function renderBlueprint(
   // Wrap everything
   const html = wrapWithRoot(htmlParts.join('\n'), personalityId);
 
+  // Convert custom design tokens to CSS overrides
+  const customOverrides = options.designTokens ? convertDesignTokensToOverrides(options.designTokens) : undefined;
+
   // Generate CSS
   const cssResult = generateDesignSystemCss({
     personalityId,
@@ -188,6 +281,7 @@ export function renderBlueprint(
     minify: options.minifyCss ?? false,
     includeReset: true,
     includeAnimations: true,
+    customOverrides,
   });
 
   // Generate JSON-LD
