@@ -46,10 +46,10 @@ interface BlueprintInspectorProps {
 
 function InheritanceBadge({ from }: { from: string }) {
   const colors: Record<string, string> = {
-    project: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    topical_map: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    article: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    default: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+    project: 'bg-purple-900/30 text-purple-400',
+    topical_map: 'bg-blue-900/30 text-blue-400',
+    article: 'bg-green-900/30 text-green-400',
+    default: 'bg-gray-700 text-gray-400',
   };
 
   const labels: Record<string, string> = {
@@ -126,23 +126,23 @@ export function BlueprintInspector({
   }, {} as Record<string, number>);
 
   return (
-    <div className="blueprint-inspector bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="blueprint-inspector bg-gray-800 rounded-lg shadow-sm border border-gray-700 overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="p-4 border-b border-gray-700 bg-gray-900">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               Layout Blueprint
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               AI-generated layout decisions for your content
             </p>
           </div>
           {inheritanceInfo && (
-            <div className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="text-xs text-gray-400">
               <span className="flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -155,69 +155,69 @@ export function BlueprintInspector({
       </div>
 
       {/* Page Strategy */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Page Strategy</h4>
+      <div className="p-4 border-b border-gray-700">
+        <h4 className="text-sm font-medium text-gray-300 mb-3">Page Strategy</h4>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+          <div className="bg-gray-900 p-3 rounded-lg">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-gray-500 dark:text-gray-400 text-xs">Visual Style</span>
+              <span className="text-gray-400 text-xs">Visual Style</span>
               {inheritanceInfo && <InheritanceBadge from={inheritanceInfo.visualStyleFrom} />}
             </div>
-            <span className="font-medium text-gray-900 dark:text-white capitalize">
+            <span className="font-medium text-white capitalize">
               {blueprint.pageStrategy.visualStyle}
             </span>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+          <div className="bg-gray-900 p-3 rounded-lg">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-gray-500 dark:text-gray-400 text-xs">Pacing</span>
+              <span className="text-gray-400 text-xs">Pacing</span>
               {inheritanceInfo && <InheritanceBadge from={inheritanceInfo.pacingFrom} />}
             </div>
-            <span className="font-medium text-gray-900 dark:text-white capitalize">
+            <span className="font-medium text-white capitalize">
               {blueprint.pageStrategy.pacing}
             </span>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+          <div className="bg-gray-900 p-3 rounded-lg">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-gray-500 dark:text-gray-400 text-xs">Color Intensity</span>
+              <span className="text-gray-400 text-xs">Color Intensity</span>
               {inheritanceInfo && <InheritanceBadge from={inheritanceInfo.colorIntensityFrom} />}
             </div>
-            <span className="font-medium text-gray-900 dark:text-white capitalize">
+            <span className="font-medium text-white capitalize">
               {blueprint.pageStrategy.colorIntensity}
             </span>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+          <div className="bg-gray-900 p-3 rounded-lg">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-gray-500 dark:text-gray-400 text-xs">Journey Stage</span>
+              <span className="text-gray-400 text-xs">Journey Stage</span>
             </div>
-            <span className="font-medium text-gray-900 dark:text-white capitalize">
+            <span className="font-medium text-white capitalize">
               {blueprint.pageStrategy.buyerJourneyStage}
             </span>
           </div>
         </div>
         {blueprint.pageStrategy.reasoning && (
-          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1 mb-1">
+          <div className="mt-3 p-3 bg-blue-900/20 rounded-lg">
+            <span className="text-xs text-blue-400 font-medium flex items-center gap-1 mb-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
               AI Reasoning
             </span>
-            <p className="text-sm text-blue-700 dark:text-blue-300">{blueprint.pageStrategy.reasoning}</p>
+            <p className="text-sm text-blue-300">{blueprint.pageStrategy.reasoning}</p>
           </div>
         )}
       </div>
 
       {/* Global Elements */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Global Elements</h4>
+      <div className="p-4 border-b border-gray-700">
+        <h4 className="text-sm font-medium text-gray-300 mb-3">Global Elements</h4>
         <div className="flex flex-wrap gap-2">
-          <span className={`px-2 py-1 rounded text-xs ${blueprint.globalElements.showToc ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+          <span className={`px-2 py-1 rounded text-xs ${blueprint.globalElements.showToc ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
             ToC: {blueprint.globalElements.showToc ? blueprint.globalElements.tocPosition : 'Off'}
           </span>
-          <span className={`px-2 py-1 rounded text-xs ${blueprint.globalElements.showAuthorBox ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+          <span className={`px-2 py-1 rounded text-xs ${blueprint.globalElements.showAuthorBox ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
             Author: {blueprint.globalElements.showAuthorBox ? blueprint.globalElements.authorBoxPosition : 'Off'}
           </span>
-          <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+          <span className="px-2 py-1 rounded text-xs bg-blue-900/30 text-blue-400">
             CTA: {blueprint.globalElements.ctaStrategy.intensity}
             {inheritanceInfo && (
               <span className="ml-1">
@@ -225,20 +225,20 @@ export function BlueprintInspector({
               </span>
             )}
           </span>
-          <span className={`px-2 py-1 rounded text-xs ${blueprint.globalElements.showSources ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+          <span className={`px-2 py-1 rounded text-xs ${blueprint.globalElements.showSources ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
             Sources: {blueprint.globalElements.showSources ? 'On' : 'Off'}
           </span>
         </div>
       </div>
 
       {/* Component Summary */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Components Used</h4>
+      <div className="p-4 border-b border-gray-700">
+        <h4 className="text-sm font-medium text-gray-300 mb-3">Components Used</h4>
         <div className="flex flex-wrap gap-2">
           {Object.entries(componentCounts).map(([comp, count]) => (
             <span
               key={comp}
-              className="px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300"
             >
               {comp} <span className="font-medium">({count})</span>
             </span>
@@ -248,13 +248,13 @@ export function BlueprintInspector({
 
       {/* Apply to All Dialog */}
       {applyToAllComponent && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
+        <div className="p-4 border-b border-gray-700 bg-yellow-900/20">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+              <h4 className="text-sm font-medium text-yellow-300">
                 Apply change to all articles?
               </h4>
-              <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+              <p className="text-xs text-yellow-400 mt-1">
                 Change all <strong>{applyToAllComponent.from}</strong> components to{' '}
                 <strong>{applyToAllComponent.to}</strong> across this topical map.
               </p>
@@ -262,7 +262,7 @@ export function BlueprintInspector({
             <div className="flex gap-2">
               <button
                 onClick={() => setApplyToAllComponent(null)}
-                className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="px-3 py-1.5 text-xs border border-gray-600 rounded hover:bg-gray-700 text-gray-300"
               >
                 Cancel
               </button>
@@ -280,7 +280,7 @@ export function BlueprintInspector({
 
       {/* Sections */}
       <div className="p-4">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h4 className="text-sm font-medium text-gray-300 mb-3">
           Sections ({blueprint.sections.length})
         </h4>
         <div className="space-y-2">
@@ -314,8 +314,8 @@ export function BlueprintInspector({
       </div>
 
       {/* Metadata */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+      <div className="p-4 bg-gray-900 border-t border-gray-700">
+        <div className="flex flex-wrap gap-4 text-xs text-gray-400">
           <span>Generated: {new Date(blueprint.metadata.generatedAt).toLocaleString()}</span>
           <span>Model: {blueprint.metadata.modelUsed}</span>
           <span>Duration: {blueprint.metadata.generationDurationMs}ms</span>
@@ -364,10 +364,10 @@ function SectionCard({
   onRefine,
 }: SectionCardProps) {
   const emphasisColors: Record<string, string> = {
-    background: 'border-gray-300 bg-gray-50',
-    normal: 'border-gray-200 bg-white',
-    featured: 'border-blue-300 bg-blue-50',
-    'hero-moment': 'border-purple-300 bg-purple-50',
+    background: 'border-gray-600 bg-gray-800/50',
+    normal: 'border-gray-600 bg-gray-800',
+    featured: 'border-blue-500/50 bg-blue-900/20',
+    'hero-moment': 'border-purple-500/50 bg-purple-900/20',
   };
 
   const componentOptions: BlueprintComponentType[] = [
@@ -385,7 +385,7 @@ function SectionCard({
 
   return (
     <div
-      className={`rounded-lg border-2 transition-all ${emphasisColors[section.presentation.emphasis] || emphasisColors.normal} ${isSelected ? 'ring-2 ring-blue-500' : ''} dark:bg-gray-800 dark:border-gray-600`}
+      className={`rounded-lg border-2 transition-all ${emphasisColors[section.presentation.emphasis] || emphasisColors.normal} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
     >
       {/* Section Header */}
       <button
@@ -393,17 +393,17 @@ function SectionCard({
         className="w-full p-3 flex items-center justify-between text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs flex items-center justify-center font-medium">
+          <span className="w-6 h-6 rounded-full bg-gray-700 text-gray-300 text-xs flex items-center justify-center font-medium">
             {index + 1}
           </span>
           <div>
-            <span className="font-medium text-gray-900 dark:text-white text-sm">
+            <span className="font-medium text-white text-sm">
               {section.heading || '(No heading)'}
             </span>
-            <span className="ml-2 px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <span className="ml-2 px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-300">
               {section.presentation.component}
             </span>
-            <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500">
+            <span className="ml-1 text-[10px] text-gray-500">
               {compatibility.category}
             </span>
           </div>
@@ -423,13 +423,13 @@ function SectionCard({
         <div className="px-3 pb-3 space-y-3">
           {/* Presentation Details */}
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className="bg-white dark:bg-gray-900 p-2 rounded">
-              <span className="text-gray-500 dark:text-gray-400 block">Emphasis</span>
+            <div className="bg-gray-900 p-2 rounded">
+              <span className="text-gray-400 block">Emphasis</span>
               {!isReadOnly && onEmphasisChange ? (
                 <select
                   value={section.presentation.emphasis}
                   onChange={(e) => onEmphasisChange(e.target.value as any)}
-                  className="mt-1 w-full text-xs border-0 bg-transparent text-gray-900 dark:text-white focus:ring-0"
+                  className="mt-1 w-full text-xs border-0 bg-transparent text-white focus:ring-0"
                 >
                   <option value="background">Background</option>
                   <option value="normal">Normal</option>
@@ -437,62 +437,62 @@ function SectionCard({
                   <option value="hero-moment">Hero Moment</option>
                 </select>
               ) : (
-                <span className="text-gray-900 dark:text-white capitalize">{section.presentation.emphasis}</span>
+                <span className="text-white capitalize">{section.presentation.emphasis}</span>
               )}
             </div>
-            <div className="bg-white dark:bg-gray-900 p-2 rounded">
-              <span className="text-gray-500 dark:text-gray-400 block">Spacing</span>
+            <div className="bg-gray-900 p-2 rounded">
+              <span className="text-gray-400 block">Spacing</span>
               {!isReadOnly && onSpacingChange ? (
                 <select
                   value={section.presentation.spacing}
                   onChange={(e) => onSpacingChange(e.target.value as any)}
-                  className="mt-1 w-full text-xs border-0 bg-transparent text-gray-900 dark:text-white focus:ring-0"
+                  className="mt-1 w-full text-xs border-0 bg-transparent text-white focus:ring-0"
                 >
                   <option value="tight">Tight</option>
                   <option value="normal">Normal</option>
                   <option value="breathe">Breathe</option>
                 </select>
               ) : (
-                <span className="text-gray-900 dark:text-white capitalize">{section.presentation.spacing}</span>
+                <span className="text-white capitalize">{section.presentation.spacing}</span>
               )}
             </div>
-            <div className="bg-white dark:bg-gray-900 p-2 rounded">
-              <span className="text-gray-500 dark:text-gray-400 block">Background</span>
+            <div className="bg-gray-900 p-2 rounded">
+              <span className="text-gray-400 block">Background</span>
               {!isReadOnly && onToggleBackground ? (
                 <button
                   onClick={onToggleBackground}
                   className={`mt-1 text-xs px-2 py-0.5 rounded ${
                     section.presentation.hasBackground
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      ? 'bg-green-900/30 text-green-400'
+                      : 'bg-gray-700 text-gray-400'
                   }`}
                 >
                   {section.presentation.hasBackground ? 'On' : 'Off'}
                 </button>
               ) : (
-                <span className="text-gray-900 dark:text-white">{section.presentation.hasBackground ? 'Yes' : 'No'}</span>
+                <span className="text-white">{section.presentation.hasBackground ? 'Yes' : 'No'}</span>
               )}
             </div>
           </div>
 
           {/* Reasoning */}
           {section.reasoning && (
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-              <span className="text-blue-600 dark:text-blue-400 font-medium">Why this component:</span>
-              <p className="text-blue-700 dark:text-blue-300 mt-1">{section.reasoning}</p>
+            <div className="p-2 bg-blue-900/20 rounded text-xs">
+              <span className="text-blue-400 font-medium">Why this component:</span>
+              <p className="text-blue-300 mt-1">{section.reasoning}</p>
             </div>
           )}
 
           {/* Suggested Alternatives */}
           {!isReadOnly && suggestions.length > 0 && (
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-xs">
-              <span className="text-amber-600 dark:text-amber-400 font-medium">Suggested alternatives:</span>
+            <div className="p-2 bg-amber-900/20 rounded text-xs">
+              <span className="text-amber-400 font-medium">Suggested alternatives:</span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {suggestions.slice(0, 4).map(alt => (
                   <button
                     key={alt}
                     onClick={() => onComponentChange(alt)}
-                    className="px-2 py-0.5 bg-amber-100 dark:bg-amber-800/30 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 dark:hover:bg-amber-800/50"
+                    className="px-2 py-0.5 bg-amber-800/30 text-amber-300 rounded hover:bg-amber-800/50"
                   >
                     {alt}
                   </button>
@@ -504,11 +504,11 @@ function SectionCard({
           {/* Component Selector */}
           {!isReadOnly && (
             <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Change Component:</label>
+              <label className="text-xs text-gray-400 block mb-1">Change Component:</label>
               <select
                 value={section.presentation.component}
                 onChange={(e) => onComponentChange(e.target.value as BlueprintComponentType)}
-                className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                className="w-full text-sm border border-gray-600 rounded px-2 py-1.5 bg-gray-900 text-white"
               >
                 {componentOptions.map(comp => (
                   <option key={comp} value={comp}>{comp}</option>
@@ -520,14 +520,14 @@ function SectionCard({
           {/* Refine Input */}
           {!isReadOnly && (
             <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Refine with AI instruction:</label>
+              <label className="text-xs text-gray-400 block mb-1">Refine with AI instruction:</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={refineInput}
                   onChange={(e) => onRefineInputChange(e.target.value)}
                   placeholder="e.g., Make it more compact, add icons..."
-                  className="flex-1 text-sm border border-gray-200 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400"
+                  className="flex-1 text-sm border border-gray-600 rounded px-2 py-1.5 bg-gray-900 text-white placeholder-gray-500"
                 />
                 <button
                   onClick={onRefine}
@@ -542,8 +542,8 @@ function SectionCard({
 
           {/* Content Preview */}
           <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Content Preview:</span>
-            <p className="text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 p-2 rounded max-h-20 overflow-y-auto">
+            <span className="text-xs text-gray-400 block mb-1">Content Preview:</span>
+            <p className="text-xs text-gray-300 bg-gray-900 p-2 rounded max-h-20 overflow-y-auto">
               {section.sourceContent?.slice(0, 200) || '(No content)'}...
             </p>
           </div>

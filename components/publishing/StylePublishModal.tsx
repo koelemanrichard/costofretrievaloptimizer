@@ -48,6 +48,7 @@ import {
   getStylePreferenceSummary,
   getLearnedPreferences,
   initPatternLearningClient,
+  renderBlueprint,
   type LayoutBlueprint,
   type ProjectBlueprint,
   type TopicalMapBlueprint,
@@ -146,6 +147,9 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [learnedPreferences, setLearnedPreferences] = useState<LearnedPreferences | null>(null);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [isApplyingStyle, setIsApplyingStyle] = useState(false);
+  const [projectBlueprint, setProjectBlueprint] = useState<ProjectBlueprint | null>(null);
+  const [topicalMapBlueprint, setTopicalMapBlueprint] = useState<TopicalMapBlueprint | null>(null);
+  const [isRegeneratingHierarchy, setIsRegeneratingHierarchy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [personalityId, setPersonalityId] = useState<DesignPersonalityId>('corporate-professional');
 
@@ -282,6 +286,100 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     }
   }, [blueprint, learnedPreferences]);
 
+  // Generate blueprint for project or topical map level
+  const handleRegenerateHierarchy = useCallback(async (level: 'project' | 'topical_map') => {
+    setIsRegeneratingHierarchy(true);
+    setErrors([]);
+
+    try {
+      // Create minimal BusinessInfo for the heuristic generator
+      const minimalBusinessInfo = {
+        domain: '',
+        projectName: topic.title,
+        industry: 'general',
+        model: 'content',
+        valueProp: '',
+        audience: '',
+        expertise: '',
+        seedKeyword: topic.title,
+        language: 'en',
+        targetMarket: '',
+        aiProvider: 'gemini' as const,
+        aiModel: '',
+        supabaseUrl: supabaseUrl,
+        supabaseAnonKey: supabaseAnonKey,
+      };
+
+      if (level === 'project') {
+        // Generate project-level blueprint defaults
+        const projectBp: ProjectBlueprint = {
+          projectId: topic.map_id || 'default-project',
+          defaults: {
+            visualStyle: 'editorial',
+            pacing: 'balanced',
+            colorIntensity: 'moderate',
+            ctaStrategy: {
+              intensity: 'moderate',
+              positions: ['end'],
+              style: 'banner',
+            },
+          },
+          componentPreferences: {
+            preferredListStyle: 'icon-list',
+            preferredTimelineStyle: 'steps-numbered',
+            preferredFaqStyle: 'faq-accordion',
+          },
+          avoidComponents: [],
+          reasoning: 'Default project blueprint generated for styling consistency',
+          generatedAt: new Date().toISOString(),
+        };
+        setProjectBlueprint(projectBp);
+      } else {
+        // Generate topical map-level blueprint defaults
+        const topicalMapBp: TopicalMapBlueprint = {
+          topicalMapId: topic.map_id || 'default-map',
+          projectId: topic.map_id || 'default-project',
+          defaults: {
+            visualStyle: 'editorial',
+            pacing: 'balanced',
+            colorIntensity: 'moderate',
+          },
+          componentPreferences: {},
+          reasoning: 'Default topical map blueprint generated for styling consistency',
+          generatedAt: new Date().toISOString(),
+        };
+        setTopicalMapBlueprint(topicalMapBp);
+      }
+    } catch (error) {
+      console.error(`Error generating ${level} blueprint:`, error);
+      setErrors([`Failed to generate ${level} blueprint. Please try again.`]);
+    } finally {
+      setIsRegeneratingHierarchy(false);
+    }
+  }, [topic.map_id, topic.title, supabaseUrl, supabaseAnonKey]);
+
+  // Handle project blueprint changes
+  const handleProjectChange = useCallback((updates: Partial<ProjectBlueprint>) => {
+    if (projectBlueprint) {
+      setProjectBlueprint({
+        ...projectBlueprint,
+        ...updates,
+        generatedAt: new Date().toISOString(),
+      });
+    }
+  }, [projectBlueprint]);
+
+  // Handle topical map blueprint changes
+  const handleTopicalMapChange = useCallback((updates: Partial<TopicalMapBlueprint>) => {
+    if (topicalMapBlueprint) {
+      setTopicalMapBlueprint({
+        ...topicalMapBlueprint,
+        ...updates,
+        generatedAt: new Date().toISOString(),
+      });
+    }
+  }, [topicalMapBlueprint]);
+
   // Get style preference summary for UI
   const stylePreferenceSummary = useMemo(() => {
     if (!learnedPreferences) return null;
@@ -304,65 +402,117 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     setErrors([]);
 
     try {
-      // Use the new assemblePage from pageAssembler with design personalities
-      const output = assemblePage({
-        template: mapTemplateToPageTemplate(layout.template),
-        personalityId: personalityId,
-        content: articleDraft,
-        title: topic.title,
-        seoConfig: {
-          title: topic.title,
-          metaDescription: brief?.metaDescription || '',
-          primaryKeyword: brief?.targetKeyword || topic.title,
-          secondaryKeywords: [],
-        },
-        ctaConfig: {
-          primaryCta: {
-            text: layout.components.ctaBanners.primaryText || 'Learn More',
-            url: '#contact',
-          },
-          secondaryCta: layout.components.ctaBanners.secondaryText ? {
-            text: layout.components.ctaBanners.secondaryText,
-            url: '#',
-          } : undefined,
-        },
-        brief,
-        topic,
-        darkMode: false,
-        minifyCss: false,
-      });
+      // If we have a blueprint, use the new blueprint renderer
+      if (blueprint) {
+        const output = renderBlueprint(
+          blueprint,
+          topic.title,
+          {
+            brief,
+            topic,
+            personalityId: personalityId,
+            darkMode: false,
+            minifyCss: false,
+            ctaConfig: {
+              primaryText: layout.components.ctaBanners.primaryText || 'Learn More',
+              primaryUrl: '#contact',
+              secondaryText: layout.components.ctaBanners.secondaryText,
+              secondaryUrl: '#',
+              bannerTitle: 'Ready to Get Started?',
+              bannerText: '',
+            },
+          }
+        );
 
-      // Map the output to the expected StyledContentOutput format for the preview
-      setPreview({
-        html: output.html,
-        css: output.css,
-        cssVariables: {} as any, // Not used in new system
-        components: output.components as any,
-        seoValidation: {
-          isValid: output.seoValidation.isValid,
-          warnings: output.seoValidation.issues.map(i => ({
-            type: i.type === 'error' ? 'heading' : i.type === 'warning' ? 'schema' : 'meta',
-            severity: i.type,
-            message: i.message,
+        // Map the output to the expected StyledContentOutput format for the preview
+        setPreview({
+          html: output.html,
+          css: output.css,
+          cssVariables: {} as any, // Not used in new system
+          components: output.metadata.componentsUsed.map(c => ({
+            type: c,
+            detected: true,
           })) as any,
-          headingStructure: {
-            hasH1: output.html.includes('<h1'),
-            hierarchy: [],
-            issues: [],
+          seoValidation: {
+            isValid: true,
+            warnings: [],
+            headingStructure: {
+              hasH1: output.html.includes('<h1'),
+              hierarchy: [],
+              issues: [],
+            },
+            schemaPreserved: output.jsonLd.length > 0,
+            metaPreserved: true,
           },
-          schemaPreserved: output.jsonLd.length > 0,
-          metaPreserved: true,
-        },
-        template: layout.template,
-      });
+          template: layout.template,
+        });
 
-      // Check for SEO warnings
-      if (!output.seoValidation.isValid) {
-        const seoErrors = output.seoValidation.issues
-          .filter(i => i.type === 'error')
-          .map(i => i.message);
-        if (seoErrors.length > 0) {
-          setErrors(seoErrors);
+        console.log('[Style & Publish] Preview generated using blueprint renderer:', {
+          sectionsRendered: output.metadata.sectionsRendered,
+          componentsUsed: output.metadata.componentsUsed,
+          visualStyle: output.metadata.blueprint.visualStyle,
+        });
+      } else {
+        // Fallback to old assemblePage if no blueprint (shouldn't happen normally)
+        const output = assemblePage({
+          template: mapTemplateToPageTemplate(layout.template),
+          personalityId: personalityId,
+          content: articleDraft,
+          title: topic.title,
+          seoConfig: {
+            title: topic.title,
+            metaDescription: brief?.metaDescription || '',
+            primaryKeyword: brief?.targetKeyword || topic.title,
+            secondaryKeywords: [],
+          },
+          ctaConfig: {
+            primaryCta: {
+              text: layout.components.ctaBanners.primaryText || 'Learn More',
+              url: '#contact',
+            },
+            secondaryCta: layout.components.ctaBanners.secondaryText ? {
+              text: layout.components.ctaBanners.secondaryText,
+              url: '#',
+            } : undefined,
+          },
+          brief,
+          topic,
+          darkMode: false,
+          minifyCss: false,
+        });
+
+        // Map the output to the expected StyledContentOutput format for the preview
+        setPreview({
+          html: output.html,
+          css: output.css,
+          cssVariables: {} as any, // Not used in new system
+          components: output.components as any,
+          seoValidation: {
+            isValid: output.seoValidation.isValid,
+            warnings: output.seoValidation.issues.map(i => ({
+              type: i.type === 'error' ? 'heading' : i.type === 'warning' ? 'schema' : 'meta',
+              severity: i.type,
+              message: i.message,
+            })) as any,
+            headingStructure: {
+              hasH1: output.html.includes('<h1'),
+              hierarchy: [],
+              issues: [],
+            },
+            schemaPreserved: output.jsonLd.length > 0,
+            metaPreserved: true,
+          },
+          template: layout.template,
+        });
+
+        // Check for SEO warnings
+        if (!output.seoValidation.isValid) {
+          const seoErrors = output.seoValidation.issues
+            .filter(i => i.type === 'error')
+            .map(i => i.message);
+          if (seoErrors.length > 0) {
+            setErrors(seoErrors);
+          }
         }
       }
     } catch (error) {
@@ -371,7 +521,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [style, layout, articleDraft, topic, brief, personalityId]);
+  }, [style, layout, articleDraft, topic, brief, personalityId, blueprint]);
 
   // Navigation handlers
   const handleNext = useCallback(async () => {
@@ -482,10 +632,15 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
         return (
           <BlueprintStep
             blueprint={blueprint}
-            isGenerating={isBlueprintGenerating}
+            isGenerating={isBlueprintGenerating || isRegeneratingHierarchy}
             onGenerate={generateBlueprint}
             onBlueprintChange={setBlueprint}
             topicalMapId={topic.map_id}
+            projectBlueprint={projectBlueprint || undefined}
+            topicalMapBlueprint={topicalMapBlueprint || undefined}
+            onProjectChange={handleProjectChange}
+            onTopicalMapChange={handleTopicalMapChange}
+            onRegenerateHierarchy={handleRegenerateHierarchy}
             qualityAnalysis={blueprintQuality}
             learnedPreferences={learnedPreferences}
             stylePreferenceSummary={stylePreferenceSummary}

@@ -269,17 +269,17 @@ export function BlueprintStep({
     <div className="blueprint-step">
       {/* Success Message */}
       {successMessage && (
-        <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
+        <div className="mb-4 p-3 bg-green-900/20 border border-green-800 rounded-lg flex items-center gap-2">
           <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
-          <span className="text-green-700 dark:text-green-300 text-sm">{successMessage}</span>
+          <span className="text-green-300 text-sm">{successMessage}</span>
         </div>
       )}
 
       {/* View Mode Tabs */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="flex border border-gray-700 rounded-lg overflow-hidden">
           {[
             { id: 'article', label: 'This Article', icon: '📄' },
             { id: 'topical_map', label: 'Topical Map', icon: '🗺️' },
@@ -292,7 +292,7 @@ export function BlueprintStep({
                 px-4 py-2 text-sm font-medium transition-colors
                 ${viewMode === tab.id
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }
               `}
             >
@@ -308,7 +308,7 @@ export function BlueprintStep({
             <button
               onClick={onGenerate}
               disabled={isGenerating}
-              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex items-center gap-1"
+              className="px-3 py-1.5 text-sm border border-gray-600 rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center gap-1 text-gray-300"
             >
               <svg className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -321,27 +321,27 @@ export function BlueprintStep({
 
       {/* Apply My Style Card */}
       {viewMode === 'article' && blueprint && onApplyMyStyle && (
-        <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+        <div className="mb-4 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-800/30 flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 rounded-full bg-purple-800/30 flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                 </svg>
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <h4 className="font-medium text-white flex items-center gap-2">
                   Apply My Style
                   {isLoadingPreferences && (
-                    <span className="text-xs text-gray-500 animate-pulse">Loading preferences...</span>
+                    <span className="text-xs text-gray-400 animate-pulse">Loading preferences...</span>
                   )}
                 </h4>
                 {stylePreferenceSummary?.hasPreferences ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-400">
                     {stylePreferenceSummary.summary.slice(0, 2).join(' • ')}
                   </p>
                 ) : !isLoadingPreferences && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-gray-400">
                     No learned preferences yet. Your style choices will be learned as you make changes.
                   </p>
                 )}
@@ -381,7 +381,7 @@ export function BlueprintStep({
 
           {/* Stats row */}
           {stylePreferenceSummary?.hasPreferences && (
-            <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800/50 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-3 pt-3 border-t border-purple-800/50 flex items-center gap-4 text-xs text-gray-400">
               <span className="flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -411,22 +411,22 @@ export function BlueprintStep({
 
       {/* Quality Score Card (v2.0) */}
       {viewMode === 'article' && qualityAnalysis && (
-        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="mb-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className={`
                 w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
                 ${qualityAnalysis.overallScore >= 80
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  ? 'bg-green-900/30 text-green-400'
                   : qualityAnalysis.overallScore >= 60
-                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}
+                    ? 'bg-yellow-900/30 text-yellow-400'
+                    : 'bg-red-900/30 text-red-400'}
               `}>
                 {qualityAnalysis.overallScore}
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white">Layout Quality Score</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <h4 className="font-medium text-white">Layout Quality Score</h4>
+                <p className="text-sm text-gray-400">
                   {qualityAnalysis.overallScore >= 80
                     ? 'Excellent layout coherence'
                     : qualityAnalysis.overallScore >= 60
@@ -438,8 +438,8 @@ export function BlueprintStep({
 
             {/* Coherence breakdown */}
             <div className="text-right">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Coherence: </span>
-              <span className="font-medium text-gray-900 dark:text-white">{qualityAnalysis.coherence.score}%</span>
+              <span className="text-sm text-gray-400">Coherence: </span>
+              <span className="font-medium text-white">{qualityAnalysis.coherence.score}%</span>
             </div>
           </div>
 
@@ -448,13 +448,13 @@ export function BlueprintStep({
             <div className="grid grid-cols-2 gap-4 text-sm">
               {qualityAnalysis.coherence.issues.length > 0 && (
                 <div>
-                  <h5 className="text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
+                  <h5 className="text-gray-400 mb-1 flex items-center gap-1">
                     <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     Issues ({qualityAnalysis.coherence.issues.length})
                   </h5>
-                  <ul className="space-y-1 text-gray-600 dark:text-gray-300">
+                  <ul className="space-y-1 text-gray-300">
                     {qualityAnalysis.coherence.issues.slice(0, 3).map((issue, i) => (
                       <li key={i} className="flex items-start gap-1">
                         <span className={issue.severity === 'error' ? 'text-red-500 mt-0.5' : 'text-amber-500 mt-0.5'}>•</span>
@@ -466,13 +466,13 @@ export function BlueprintStep({
               )}
               {qualityAnalysis.coherence.suggestions.length > 0 && (
                 <div>
-                  <h5 className="text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
+                  <h5 className="text-gray-400 mb-1 flex items-center gap-1">
                     <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
                     Suggestions ({qualityAnalysis.coherence.suggestions.length})
                   </h5>
-                  <ul className="space-y-1 text-gray-600 dark:text-gray-300">
+                  <ul className="space-y-1 text-gray-300">
                     {qualityAnalysis.coherence.suggestions.slice(0, 3).map((suggestion, i) => (
                       <li key={i} className="flex items-start gap-1">
                         <span className="text-blue-500 mt-0.5">•</span>
