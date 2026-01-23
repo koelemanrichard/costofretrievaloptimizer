@@ -4076,6 +4076,7 @@ ${schemaScript}`;
           brandKit={businessInfo?.brandKit}
           supabaseUrl={businessInfo.supabaseUrl}
           supabaseAnonKey={businessInfo.supabaseAnonKey}
+          projectId={activeMap?.project_id}
           onPublishSuccess={() => {
             setShowStylePublishModal(false);
             dispatch({

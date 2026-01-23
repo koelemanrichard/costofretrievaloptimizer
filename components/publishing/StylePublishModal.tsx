@@ -87,6 +87,7 @@ export interface StylePublishModalProps {
   brandKit?: BrandKit;
   supabaseUrl: string;
   supabaseAnonKey: string;
+  projectId?: string;
   onPublishSuccess?: () => void;
 }
 
@@ -121,6 +122,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   brandKit,
   supabaseUrl,
   supabaseAnonKey,
+  projectId,
   onPublishSuccess,
 }) => {
   // State
@@ -193,8 +195,9 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
         initBlueprintSupabase(supabaseUrl, supabaseAnonKey);
 
         // Fetch existing blueprints in parallel
+        // Note: projectId is required for project blueprints, map_id for topical map blueprints
         const [projectBpRow, topicalMapBpRow] = await Promise.all([
-          fetchProjectBlueprint(topic.map_id!).catch(() => null),
+          projectId ? fetchProjectBlueprint(projectId).catch(() => null) : Promise.resolve(null),
           fetchTopicalMapBlueprint(topic.map_id!).catch(() => null),
         ]);
 
@@ -251,7 +254,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     };
 
     initAndFetch();
-  }, [isOpen, topic.map_id, supabaseUrl, supabaseAnonKey]);
+  }, [isOpen, topic.map_id, projectId, supabaseUrl, supabaseAnonKey]);
 
   // Get current step index
   const currentStepIndex = useMemo(() =>
@@ -401,15 +404,20 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           generatedAt: new Date().toISOString(),
         };
 
-        // Save to database
-        await upsertProjectBlueprint(topic.map_id, projectBp);
-        setProjectBlueprint(projectBp);
-        console.log('[Style & Publish] Project blueprint generated and saved');
+        // Save to database (only if we have a project ID)
+        if (projectId) {
+          await upsertProjectBlueprint(projectId, projectBp);
+          setProjectBlueprint(projectBp);
+          console.log('[Style & Publish] Project blueprint generated and saved');
+        } else {
+          console.warn('[Style & Publish] Cannot save project blueprint: no projectId available');
+          setProjectBlueprint(projectBp);
+        }
       } else {
         // Generate topical map-level blueprint defaults
         const topicalMapBp: TopicalMapBlueprint = {
           topicalMapId: topic.map_id,
-          projectId: topic.map_id,
+          projectId: projectId || topic.map_id, // Use actual projectId if available
           defaults: {
             visualStyle: 'editorial',
             pacing: 'balanced',
@@ -420,10 +428,15 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           generatedAt: new Date().toISOString(),
         };
 
-        // Save to database
-        await upsertTopicalMapBlueprint(topic.map_id, topic.map_id, topicalMapBp);
-        setTopicalMapBlueprint(topicalMapBp);
-        console.log('[Style & Publish] Topical map blueprint generated and saved');
+        // Save to database (need projectId for RLS)
+        if (projectId) {
+          await upsertTopicalMapBlueprint(topic.map_id, projectId, topicalMapBp);
+          setTopicalMapBlueprint(topicalMapBp);
+          console.log('[Style & Publish] Topical map blueprint generated and saved');
+        } else {
+          console.warn('[Style & Publish] Cannot save topical map blueprint: no projectId available');
+          setTopicalMapBlueprint(topicalMapBp);
+        }
       }
     } catch (error) {
       console.error(`Error generating ${level} blueprint:`, error);
@@ -431,7 +444,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     } finally {
       setIsRegeneratingHierarchy(false);
     }
-  }, [topic.map_id, supabaseUrl, supabaseAnonKey]);
+  }, [topic.map_id, projectId, supabaseUrl, supabaseAnonKey]);
 
   // Handle project blueprint changes
   const handleProjectChange = useCallback((updates: Partial<ProjectBlueprint>) => {
@@ -462,7 +475,14 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       return;
     }
 
+    if (!projectId) {
+      console.warn('[Style & Publish] Cannot save blueprints to database: no projectId available');
+      return;
+    }
+
     console.log('[Style & Publish] Saving hierarchy blueprints to database:', {
+      projectId,
+      mapId: topic.map_id,
       projectBlueprint: projectBlueprint ? 'present' : 'none',
       topicalMapBlueprint: topicalMapBlueprint ? 'present' : 'none',
     });
@@ -473,13 +493,13 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
 
       // Save project blueprint if it exists
       if (projectBlueprint) {
-        await upsertProjectBlueprint(topic.map_id, projectBlueprint);
+        await upsertProjectBlueprint(projectId, projectBlueprint);
         console.log('[Style & Publish] Project blueprint saved');
       }
 
       // Save topical map blueprint if it exists
       if (topicalMapBlueprint) {
-        await upsertTopicalMapBlueprint(topic.map_id, topic.map_id, topicalMapBlueprint);
+        await upsertTopicalMapBlueprint(topic.map_id, projectId, topicalMapBlueprint);
         console.log('[Style & Publish] Topical map blueprint saved');
       }
 
@@ -513,7 +533,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       console.error('[Style & Publish] Error saving blueprints:', error);
       throw error; // Re-throw so the UI can show an error
     }
-  }, [projectBlueprint, topicalMapBlueprint, blueprint, topic.map_id, supabaseUrl, supabaseAnonKey]);
+  }, [projectBlueprint, topicalMapBlueprint, blueprint, topic.map_id, projectId, supabaseUrl, supabaseAnonKey]);
 
   // Get style preference summary for UI
   const stylePreferenceSummary = useMemo(() => {
