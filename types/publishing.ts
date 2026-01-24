@@ -84,6 +84,64 @@ export interface DesignTokens {
   };
 }
 
+// ===========================================
+// BRAND DISCOVERY TYPES (Phase 1 Redesign)
+// ===========================================
+
+/** Confidence level for extracted design values */
+export type ExtractionConfidence = 'found' | 'guessed' | 'defaulted';
+
+/** Individual design finding with provenance */
+export interface DesignFinding {
+  value: string;
+  confidence: ExtractionConfidence;
+  source: string; // e.g., "primary button", "h1 element", "most frequent"
+}
+
+/** Complete Brand Discovery Report */
+export interface BrandDiscoveryReport {
+  id: string;
+  targetUrl: string;
+  screenshotBase64?: string;
+  analyzedAt: string;
+
+  // Extracted findings with confidence
+  findings: {
+    primaryColor: DesignFinding;
+    secondaryColor: DesignFinding;
+    accentColor: DesignFinding;
+    backgroundColor: DesignFinding;
+    headingFont: DesignFinding;
+    bodyFont: DesignFinding;
+    borderRadius: DesignFinding;
+    shadowStyle: DesignFinding;
+  };
+
+  // Overall quality metrics
+  overallConfidence: number; // 0-100
+  aiValidation?: {
+    matches: boolean;
+    score: number;
+    issues: string[];
+    suggestions: string[];
+  };
+
+  // Derived design tokens (ready to use)
+  derivedTokens: DesignTokens;
+}
+
+/** Design Profile stored at project level */
+export interface DesignProfile {
+  id: string;
+  projectId: string;
+  name: string;
+  brandDiscovery: BrandDiscoveryReport;
+  userOverrides: Partial<DesignTokens>;
+  finalTokens: DesignTokens;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Publishing style configuration
  * Extends BrandKit concept with full design tokens for publishing
