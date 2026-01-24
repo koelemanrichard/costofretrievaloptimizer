@@ -31,6 +31,7 @@ interface BrandStyleStepProps {
   onAutoDetect: (url: string) => Promise<void>;
   isAnalyzing?: boolean;
   analysisError?: string | null;
+  detectionSuccess?: string | null;
   defaultDomain?: string;
 }
 
@@ -47,6 +48,7 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
   onAutoDetect,
   isAnalyzing,
   analysisError,
+  detectionSuccess,
   defaultDomain,
 }) => {
   const [activeTab, setActiveTab] = useState<'design-style' | 'colors' | 'typography' | 'spacing'>('design-style');
@@ -200,6 +202,11 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
             {analysisError && (
               <p className="text-[10px] text-red-400 mt-2 bg-red-900/20 p-2 rounded border border-red-500/20">
                 ⚠️ {analysisError}
+              </p>
+            )}
+            {detectionSuccess && (
+              <p className="text-[10px] text-green-400 mt-2 bg-green-900/20 p-2 rounded border border-green-500/20 flex items-center gap-2">
+                <span className="text-sm">✅</span> {detectionSuccess}
               </p>
             )}
           </div>

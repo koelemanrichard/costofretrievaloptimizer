@@ -116,9 +116,9 @@ ${tokensToCSS(tokens, '.ctc-root, .ctc-styled')}
 
 :root {
   ${Object.entries(tokens)
-    .filter(([key]) => key.startsWith('--ctc-'))
-    .map(([key, value]) => `${key}: ${value};`)
-    .join('\n  ')}
+      .filter(([key]) => key.startsWith('--ctc-'))
+      .map(([key, value]) => `${key}: ${value};`)
+      .join('\n  ')}
 }`;
 }
 
@@ -744,8 +744,8 @@ function generateComponentStyles(): string {
 }
 
 .ctc-highlight-box--info {
-  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-  border-left-color: #3B82F6;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ctc-primary) 5%, var(--ctc-surface)) 0%, color-mix(in srgb, var(--ctc-primary) 10%, var(--ctc-surface)) 100%);
+  border-left-color: var(--ctc-primary);
 }
 
 .ctc-highlight-box--warning {

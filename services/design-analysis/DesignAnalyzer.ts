@@ -128,7 +128,9 @@ export const DesignAnalyzer = {
           colors: {
              background: bodyStyle.backgroundColor || '#ffffff',
              text: bodyStyle.color || '#000000',
-             primary: linkColor || '#0000FF',
+             primary: (buttonStyle.backgroundColor && buttonStyle.backgroundColor !== 'transparent' && buttonStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') 
+               ? buttonStyle.backgroundColor 
+               : (linkColor || '#3b82f6'),
              secondary: h1Style.color || '#000000',
           },
           typography: {

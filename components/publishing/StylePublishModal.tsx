@@ -139,6 +139,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [preview, setPreview] = useState<StyledContentOutput | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBlueprintGenerating, setIsBlueprintGenerating] = useState(false);
+  const [detectionSuccess, setDetectionSuccess] = useState<string | null>(null);
   const [blueprintQuality, setBlueprintQuality] = useState<{
     coherence: {
       score: number;
@@ -199,7 +200,15 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       // 3. Update local style state immediately with full palette
       if (style) {
         const isDark = processed.colors.background.startsWith('#1') || processed.colors.background.startsWith('#0');
-        const suggestedPersonality: DesignPersonalityId = isDark ? 'bold-creative' : 'modern-minimal';
+
+        // Smarter personality suggestion
+        let suggestedPersonality: DesignPersonalityId = isDark ? 'bold-creative' : 'modern-minimal';
+
+        // If it's a WordPress-style domain or has rich headings, editorial is often better
+        const isWordPress = url.includes('wordpress') || url.includes('.cloudwaysapps.com');
+        if (!isDark && isWordPress) {
+          suggestedPersonality = 'bold-editorial';
+        }
 
         const newTokens = brandKitToDesignTokens({
           colors: {
@@ -239,6 +248,10 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
         generateBlueprint(newTokens, suggestedPersonality);
 
         setPreview(null);
+        setDetectionSuccess('Branding detected successfully! The layout has been updated.');
+
+        // Clear success message after 5 seconds
+        setTimeout(() => setDetectionSuccess(null), 5000);
       }
 
       // 5. Persist to database (Topical Map's business_info)
@@ -927,6 +940,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             onAutoDetect={handleAutoDetectBranding}
             isAnalyzing={isAnalyzing}
             analysisError={analysisError}
+            detectionSuccess={detectionSuccess}
             defaultDomain={topicalMap?.business_info?.domain}
           />
         ) : null;
