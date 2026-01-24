@@ -1107,33 +1107,29 @@ function generateEnhancedHeuristicSections(
       reasoning = `Important callout detected (${variant}).`;
       emphasis = 'normal';
     }
-    // List-heavy content (avoid repetition)
-    else if (listItemCount > 3) {
-      if (lastComponent === 'bullet-list' || lastComponent === 'numbered-list') {
-        // Switch to visual list to avoid repetition
-        component = 'icon-list';
-        reasoning = 'Varied list presentation to maintain visual interest.';
+    // List-heavy content - UPGRADED for beauty
+    else if (listItemCount >= 3) {
+      if (!hasUsedCardGrid) {
+        component = 'card-grid';
+        variant = 'icon';
+        reasoning = 'Content items presented as visual cards for premium feel.';
+        emphasis = 'featured';
+        hasUsedCardGrid = true;
       } else {
-        component = hasNumberedList ? 'numbered-list' : 'bullet-list';
-        reasoning = 'List content preserved as structured list.';
+        component = 'icon-list';
+        reasoning = 'Structured list with icons for better scanning.';
       }
     }
 
     // Apply visual weight rhythm
     const currentWeight = getWeightForComponent(component);
-    if (lastWeight === 'heavy' && currentWeight === 'heavy' && component !== 'prose') {
-      // Try to find a lighter alternative
-      if (component === 'card-grid') {
-        component = 'icon-list';
-        hasUsedCardGrid = false; // Allow card-grid later
-      }
-      if (component === 'timeline-zigzag') component = 'steps-numbered';
-    }
 
-    // Determine background based on emphasis and position
+    // Determine background based on rhythm (The "Z-Pattern" logic)
+    // 1. Featured sections always get background
+    // 2. Otherwise rotate background every ~3 sections to break monotony
     const hasBackground = emphasis === 'featured' ||
       emphasis === ('hero-moment' as SectionEmphasis) ||
-      (index % 4 === 2 && visualStyle !== 'minimal');
+      (index % 3 === 2 && visualStyle !== 'minimal');
 
     sections.push({
       id: `section-${index}`,
@@ -1144,9 +1140,9 @@ function generateEnhancedHeuristicSections(
         component,
         variant,
         emphasis,
-        spacing: currentWeight === 'heavy' ? 'breathe' : 'normal',
+        spacing: currentWeight === 'heavy' || hasBackground ? 'breathe' : 'normal',
         hasBackground,
-        hasDivider: false,
+        hasDivider: !hasBackground && index > 0,
       },
       reasoning,
     });

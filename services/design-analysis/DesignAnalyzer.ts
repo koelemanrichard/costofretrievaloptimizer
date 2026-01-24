@@ -47,99 +47,81 @@ export const DesignAnalyzer = {
         const pageFunction = `
       async function pageFunction(context) {
         const { request, page, log } = context;
-        
-        // Wait for fonts and styles to settle
         await page.waitForLoadState('networkidle');
         
-        // Helper to get computed style
-        const getStyle = (selector, prop) => {
-          const el = document.querySelector(selector);
-          if (!el) return '';
-          return window.getComputedStyle(el).getPropertyValue(prop);
-        };
-
-        // Helper to get all computed styles
-        const getFullStyle = (selector) => {
-          const el = document.querySelector(selector);
-          if (!el) return null;
+        // 1. GLOBAL COLOR SAMPLER (The "Histogram" Approach)
+        // We look for colors that are actually used in the design, not just CSS variables
+        const elements = Array.from(document.querySelectorAll('h1, h2, h3, button, a, span, div'))
+          .slice(0, 100);
+        
+        const colorCounts = {};
+        const bgCounts = {};
+        
+        elements.forEach(el => {
           const style = window.getComputedStyle(el);
-          return {
-            backgroundColor: style.backgroundColor,
-            color: style.color,
-            fontFamily: style.fontFamily,
-            fontSize: style.fontSize,
-            borderRadius: style.borderRadius,
-            boxShadow: style.boxShadow,
-            fontWeight: style.fontWeight
-          };
+          const color = style.color;
+          const bg = style.backgroundColor;
+          
+          if (color && !color.includes('rgba(0, 0, 0, 0)') && color !== 'rgb(255, 255, 255)' && color !== 'rgb(0, 0, 0)') {
+            colorCounts[color] = (colorCounts[color] || 0) + 1;
+          }
+          if (bg && !bg.includes('rgba(0, 0, 0, 0)') && bg !== 'rgb(255, 255, 255)' && bg !== 'rgb(0, 0, 0)') {
+            bgCounts[bg] = (bgCounts[bg] || 0) + 1;
+          }
+        });
+
+        const getMostFrequent = (counts) => {
+          return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
         };
 
-        // Identify primary action button (heuristic)
-        // Look for buttons with specific classes or roles
+        // 2. ELEMENT SPECIFIC DETECTORS
         const findPrimaryButton = () => {
-            const selectors = [
-                'button[class*="primary"]', 
-                'a[class*="button"][class*="primary"]',
-                '.btn-primary',
-                'button', 
-                'a.button',
-                'a.btn'
-            ];
-            
-            for (const sel of selectors) {
-                const el = document.querySelector(sel);
-                if (el) return el;
-            }
-            return null;
+          const btnSelectors = ['button[class*="primary"]', '.wp-block-button__link', '.btn-primary', 'button', 'a.button'];
+          for (const sel of btnSelectors) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+          }
+          return null;
         };
 
-        // Extract Body Styles
-        const bodyStyle = getFullStyle('body') || {};
-        
-        // Extract Heading Styles
-        const h1Style = getFullStyle('h1') || {};
-        const h2Style = getFullStyle('h2') || {};
-        
-        // Extract Link Color (often primary brand color)
-        const linkColor = getStyle('a', 'color');
-        
-        // Extract Button Styles
-        let buttonStyle = {};
+        const bodyStyle = window.getComputedStyle(document.body);
+        const h1 = document.querySelector('h1');
+        const h1Style = h1 ? window.getComputedStyle(h1) : bodyStyle;
         const primBtn = findPrimaryButton();
-        if (primBtn) {
-            const style = window.getComputedStyle(primBtn);
-            buttonStyle = {
-                backgroundColor: style.backgroundColor,
-                color: style.color,
-                borderRadius: style.borderRadius,
-                fontFamily: style.fontFamily
-            };
+        const btnStyle = primBtn ? window.getComputedStyle(primBtn) : null;
+
+        // 3. RESOLVE BRAND COLOR (The "Orange" Fix)
+        // Hierarchy: Button BG -> Most frequent BG -> H1 Color -> Link Color
+        let brandColor = btnStyle?.backgroundColor;
+        if (!brandColor || brandColor.includes('rgba(0, 0, 0, 0)') || brandColor === 'rgb(255, 255, 255)') {
+          brandColor = getMostFrequent(bgCounts) || h1Style.color || getMostFrequent(colorCounts) || 'rgb(59, 130, 246)';
         }
 
-        // Identify "Card" style (heuristic: look for white bg on non-white body, or shadow)
-        // This is tricky, maybe skip for now or use a simple heuristic
-        const cardStyle = {
-            backgroundColor: '#ffffff',
-            borderRadius: '0px',
-            boxShadow: 'none'
-        };
+        // 4. THEME DETECTION
+        const rgb = bodyStyle.backgroundColor.match(/\\d+/g);
+        const luma = rgb ? (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) : 255;
+        const isDark = luma < 128;
 
         return {
           colors: {
-             background: bodyStyle.backgroundColor || '#ffffff',
-             text: bodyStyle.color || '#000000',
-             primary: (buttonStyle.backgroundColor && buttonStyle.backgroundColor !== 'transparent' && buttonStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') 
-               ? buttonStyle.backgroundColor 
-               : (linkColor || '#3b82f6'),
-             secondary: h1Style.color || '#000000',
+            background: bodyStyle.backgroundColor || '#ffffff',
+            text: bodyStyle.color || '#000000',
+            primary: brandColor,
+            secondary: h1Style.color || '#000000',
+            isDark
           },
           typography: {
-             bodyFont: bodyStyle.fontFamily || 'sans-serif',
-             headingFont: h1Style.fontFamily || 'sans-serif',
-             baseFontSize: bodyStyle.fontSize || '16px'
+            bodyFont: bodyStyle.fontFamily || 'sans-serif',
+            headingFont: h1Style.fontFamily || 'sans-serif',
+            baseFontSize: bodyStyle.fontSize || '16px'
           },
           components: {
-             button: buttonStyle
+            button: btnStyle ? {
+              backgroundColor: btnStyle.backgroundColor,
+              color: btnStyle.color,
+              borderRadius: btnStyle.borderRadius,
+              fontFamily: btnStyle.fontFamily
+            } : null
           }
         };
       }

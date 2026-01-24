@@ -417,81 +417,76 @@ function renderHero(
   ctaIntensity?: string,
   language?: string
 ): string {
-  const isBoldGradient = strategy.visualStyle === 'marketing' || strategy.visualStyle === 'bold' || strategy.visualStyle === 'warm-modern';
+  const isEditorial = strategy.visualStyle === 'editorial' || strategy.visualStyle === 'minimal';
   const hasHeroImage = !!heroImage;
 
   // Get localized defaults
   const localizedDefaults = getLocalizedCtaDefaults(language);
 
-  // Determine hero style based on visual style and whether we have an image
-  let heroStyle: string;
-  let heroOrbs: string;
-  let textColor: string;
-  let subtitleColor: string;
-  let btnPrimaryStyle: string;
-  let btnSecondaryStyle: string;
+  // AIRY LUXURY: White background with branded accents
+  // This matches modern WordPress/Premium service aesthetics
+  let heroStyle = 'background: #ffffff; border-bottom: 1px solid var(--ctc-border-subtle)';
+  let textColor = 'color: var(--ctc-text)';
+  let subtitleColor = 'color: var(--ctc-text-secondary)';
+  let btnPrimaryStyle = 'background: var(--ctc-primary); color: white; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent)';
+  let btnSecondaryStyle = 'background: transparent; color: var(--ctc-primary); border: 2px solid var(--ctc-primary)';
 
-  if (hasHeroImage) {
-    // Hero with background image
-    heroStyle = `background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.7) 100%), url('${heroImage}'); background-size: cover; background-position: center`;
-    heroOrbs = '';
-    textColor = 'color: white';
-    subtitleColor = 'color: rgba(255, 255, 255, 0.9)';
-    btnPrimaryStyle = 'background: white; color: var(--ctc-primary); box-shadow: 0 8px 24px -4px rgba(0,0,0,0.2)';
-    btnSecondaryStyle = 'background: transparent; color: white; border: 2px solid rgba(255,255,255,0.8)';
-  } else if (isBoldGradient) {
-    // Bold gradient hero
-    heroStyle = 'background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%)';
-    heroOrbs = `
-    <div class="ctc-hero-bg-effects" style="position: absolute; inset: 0; pointer-events: none; overflow: hidden">
-      <div style="position: absolute; width: 500px; height: 500px; background: white; opacity: 0.1; border-radius: 50%; filter: blur(80px); top: -150px; left: 5%"></div>
-      <div style="position: absolute; width: 350px; height: 350px; background: white; opacity: 0.08; border-radius: 50%; filter: blur(60px); bottom: -100px; right: 15%"></div>
-      <div style="position: absolute; width: 200px; height: 200px; background: white; opacity: 0.06; border-radius: 50%; filter: blur(40px); top: 40%; right: 5%"></div>
-    </div>`;
-    textColor = 'color: white';
-    subtitleColor = 'color: rgba(255, 255, 255, 0.9)';
-    btnPrimaryStyle = 'background: white; color: var(--ctc-primary); box-shadow: 0 8px 24px -4px rgba(0,0,0,0.2)';
-    btnSecondaryStyle = 'background: transparent; color: white; border: 2px solid rgba(255,255,255,0.8)';
-  } else {
-    // Editorial/minimal: elegant sophisticated hero with subtle gradient
-    heroStyle = 'background: linear-gradient(180deg, var(--ctc-surface) 0%, var(--ctc-background) 100%); border-bottom: 1px solid var(--ctc-border)';
-    heroOrbs = `
-    <div class="ctc-hero-bg-effects" style="position: absolute; inset: 0; pointer-events: none; overflow: hidden">
-      <div style="position: absolute; width: 600px; height: 600px; background: var(--ctc-primary); opacity: 0.03; border-radius: 50%; filter: blur(100px); top: -200px; left: -100px"></div>
-      <div style="position: absolute; width: 400px; height: 400px; background: var(--ctc-primary); opacity: 0.02; border-radius: 50%; filter: blur(80px); bottom: -150px; right: -50px"></div>
-    </div>`;
-    textColor = 'color: var(--ctc-text)';
-    subtitleColor = 'color: var(--ctc-text-secondary)';
-    btnPrimaryStyle = 'background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--ctc-primary) 40%, transparent)';
-    btnSecondaryStyle = 'background: transparent; color: var(--ctc-primary); border: 2px solid var(--ctc-primary)';
+  if (strategy.visualStyle === 'bold' || strategy.visualStyle === 'marketing') {
+    heroStyle = 'background: linear-gradient(135deg, var(--ctc-surface) 0%, #ffffff 100%)';
   }
 
   const showCta = ctaIntensity === 'prominent' || ctaIntensity === 'moderate' || strategy.primaryGoal === 'convert' || ctaConfig?.primaryText;
-
-  // Use localized defaults if ctaConfig values not provided
   const primaryText = ctaConfig?.primaryText || localizedDefaults.primaryText;
   const secondaryText = ctaConfig?.secondaryText || localizedDefaults.secondaryText;
 
+  // Render Split Layout for Images (Modern Service Vibe)
+  if (hasHeroImage && isEditorial) {
+    return `
+<header class="ctc-hero" role="banner" style="${heroStyle}; padding: 4rem 0; overflow: hidden">
+  <div class="ctc-container">
+    <div class="ctc-grid ctc-grid-2 items-center gap-12 text-left">
+      <div class="ctc-hero-content">
+        <h1 class="ctc-hero-title" style="${textColor}; font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.5rem, 5vw, 4rem); line-height: 1; margin-bottom: 2rem">
+          ${escapeHtml(title).replace(/(&quot;[a-z ]+&quot;|&#39;[a-z ]+&#39;)/gi, '<span style="color: var(--ctc-primary)">$1</span>')}
+        </h1>
+        <p class="ctc-hero-subtitle" style="${subtitleColor}; font-size: 1.25rem; line-height: 1.7; margin-bottom: 2.5rem">
+          ${extractFirstParagraph(introContent)}
+        </p>
+        ${showCta ? `
+        <div class="ctc-hero-actions" style="display: flex; gap: 1rem; align-items: center">
+          <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="${btnPrimaryStyle}; padding: 1rem 2.5rem; border-radius: var(--ctc-radius-full); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem">
+            ${escapeHtml(primaryText)} <span style="font-size: 1.25rem">→</span>
+          </a>
+        </div>` : ''}
+      </div>
+      <div class="ctc-hero-visual" style="position: relative">
+        <div style="position: absolute; inset: -20px; background: var(--ctc-primary); opacity: 0.1; filter: blur(40px); border-radius: 50%"></div>
+        <img src="${escapeHtml(heroImage)}" alt="${escapeHtml(title)}" style="position: relative; z-index: 1; border-radius: var(--ctc-radius-2xl); box-shadow: var(--ctc-shadow-2xl); width: 100%; height: 450px; object-fit: cover">
+      </div>
+    </div>
+  </div>
+</header>`;
+  }
+
+  // Classic Centered (Fallthrough)
   return `
-<header class="ctc-hero" role="banner" style="${heroStyle}; position: relative; overflow: hidden; min-height: ${hasHeroImage ? '400px' : 'auto'}">
-  ${heroOrbs}
-  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 56rem; margin: 0 auto; text-align: center; padding: 5rem 1.5rem 5.5rem">
-    <h1 class="ctc-hero-title" style="${textColor}; font-weight: var(--ctc-heading-weight); font-family: var(--ctc-font-display); font-size: clamp(2.25rem, 5vw, 3.75rem); line-height: 1.1; letter-spacing: var(--ctc-heading-letter-spacing); margin-bottom: 1.5rem">
+<header class="ctc-hero ctc-hero--solid" role="banner" style="${heroStyle}; position: relative; padding: 6rem 1.5rem 7rem; text-align: center">
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden">
+    <div style="position: absolute; top: -100px; right: -50px; width: 400px; height: 400px; background: var(--ctc-primary); opacity: 0.05; border-radius: 50%; filter: blur(80px)"></div>
+    <div style="position: absolute; bottom: -50px; left: -50px; width: 300px; height: 300px; background: var(--ctc-secondary, var(--ctc-primary)); opacity: 0.03; border-radius: 50%; filter: blur(60px)"></div>
+  </div>
+  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 52rem; margin: 0 auto">
+    <h1 class="ctc-hero-title" style="${textColor}; font-weight: 900; font-family: var(--ctc-font-display); font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1; margin-bottom: 1.5rem">
       ${escapeHtml(title)}
     </h1>
-    <p class="ctc-hero-subtitle" style="${subtitleColor}; font-size: 1.25rem; max-width: 42rem; margin: 0 auto; line-height: 1.7">
+    <p class="ctc-hero-subtitle" style="${subtitleColor}; font-size: 1.35rem; max-width: 38rem; margin: 0 auto 3rem; line-height: 1.6">
       ${extractFirstParagraph(introContent)}
     </p>
     ${showCta ? `
-    <div class="ctc-hero-actions" style="margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap">
-      <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="${btnPrimaryStyle}; display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+    <div class="ctc-hero-actions" style="display: flex; gap: 1rem; justify-content: center">
+      <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="${btnPrimaryStyle}; padding: 1rem 2.5rem; border-radius: var(--ctc-radius-full); font-weight: 700; text-decoration: none; transition: transform 0.2s ease">
         ${escapeHtml(primaryText)}
-        <span style="font-size: 1.25rem">→</span>
       </a>
-      ${secondaryText ? `
-      <a href="${escapeHtml(ctaConfig?.secondaryUrl || '#')}" style="${btnSecondaryStyle}; display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
-        ${escapeHtml(secondaryText)}
-      </a>` : ''}
     </div>` : ''}
   </div>
 </header>`;
@@ -518,27 +513,27 @@ function renderToc(
   const isFloating = position === 'floating';
 
   // Base styles for all TOC positions
-  let wrapperStyle = 'background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border-subtle); padding: 1.5rem;';
+  let wrapperStyle = 'background: var(--ctc-surface); border-radius: var(--ctc-radius-2xl); border: 1px solid var(--ctc-border-subtle); padding: 2rem;';
 
   if (isSidebar) {
     wrapperStyle += ' position: sticky; top: 1rem;';
   } else if (isFloating) {
-    wrapperStyle += ' position: fixed; bottom: 1rem; right: 1rem; z-index: 50; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.25);';
+    wrapperStyle += ' position: fixed; bottom: 1rem; right: 1rem; z-index: 50; box-shadow: var(--ctc-shadow-2xl);';
   } else {
-    wrapperStyle += ' margin: 2rem 0;';
+    wrapperStyle += ' margin: 3rem 0;';
   }
 
   return `
 <nav class="ctc-toc ctc-toc--${position}" style="${wrapperStyle}" aria-label="Inhoudsopgave">
-  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--ctc-border-subtle)">
-    <span style="width: 32px; height: 32px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); display: flex; align-items: center; justify-content: center; font-size: 0.875rem; color: white">📋</span>
-    <h2 style="font-weight: 600; font-size: 1rem; color: var(--ctc-text); margin: 0">Inhoudsopgave</h2>
+  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--ctc-border-subtle)">
+    <span style="width: 36px; height: 36px; border-radius: var(--ctc-radius-lg); background: var(--ctc-primary); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white">📋</span>
+    <h2 style="font-weight: 800; font-size: 1.125rem; color: var(--ctc-text); margin: 0; letter-spacing: -0.02em">Inhoudsopgave</h2>
   </div>
-  <ol style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem">
+  <ol style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem">
     ${headings.map((h, i) => `
-    <li style="margin-left: ${(h.level - 2) * 1}rem">
-      <a href="#${h.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--ctc-radius-md); color: var(--ctc-text-secondary); text-decoration: none; font-size: 0.875rem; transition: all 0.15s ease; line-height: 1.4">
-        <span style="min-width: 1.5rem; height: 1.5rem; border-radius: var(--ctc-radius-sm); background: var(--ctc-background); border: 1px solid var(--ctc-border); display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 600; color: var(--ctc-text-muted)">${i + 1}</span>
+    <li style="margin-left: ${(h.level - 2) * 1.5}rem">
+      <a href="#${h.id}" style="display: flex; align-items: center; gap: 1rem; padding: 0.625rem 0.875rem; border-radius: var(--ctc-radius-lg); color: var(--ctc-text-secondary); text-decoration: none; font-size: 0.9375rem; transition: all 0.2s ease; line-height: 1.4; font-weight: 500">
+        <span style="min-width: 2rem; height: 2rem; border-radius: 50%; background: color-mix(in srgb, var(--ctc-primary) 10%, transparent); color: var(--ctc-primary); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700">${i + 1}</span>
         <span>${escapeHtml(h.text)}</span>
       </a>
     </li>`).join('')}
@@ -562,15 +557,15 @@ function renderInlineCta(
   const primaryText = ctaConfig?.primaryText || localizedDefaults.secondaryText;
 
   return `
-<aside class="ctc-cta-inline" style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1.5rem 2rem; border-radius: var(--ctc-radius-xl); background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 1px solid var(--ctc-border); margin: 2rem 0; position: relative; overflow: hidden">
-  <div style="position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; background: var(--ctc-primary); opacity: 0.04; border-radius: 50%; pointer-events: none"></div>
+<aside class="ctc-cta-inline" style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 2rem 2.5rem; border-radius: var(--ctc-radius-2xl); background: var(--ctc-surface); border: 1px solid var(--ctc-border); margin: 3rem 0; position: relative; overflow: hidden">
+  <div style="position: absolute; top: -30px; left: -30px; width: 120px; height: 120px; background: var(--ctc-primary); opacity: 0.03; border-radius: 50%; pointer-events: none"></div>
   <div style="position: relative; z-index: 1; flex: 1">
-    <strong style="display: block; margin-bottom: 0.25rem; font-weight: 600; color: var(--ctc-text); font-size: 1.0625rem">${escapeHtml(title)}</strong>
-    ${text ? `<span style="color: var(--ctc-text-secondary); font-size: 0.9375rem; line-height: 1.5">${escapeHtml(text)}</span>` : ''}
+    <strong style="display: block; margin-bottom: 0.5rem; font-weight: 800; color: var(--ctc-text); font-size: 1.25rem; letter-spacing: -0.02em">${escapeHtml(title)}</strong>
+    ${text ? `<span style="color: var(--ctc-text-secondary); font-size: 1rem; line-height: 1.6">${escapeHtml(text)}</span>` : ''}
   </div>
-  <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; padding: 0.75rem 1.5rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; flex-shrink: 0; font-size: 0.9375rem; display: inline-flex; align-items: center; gap: 0.375rem; box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--ctc-primary) 30%, transparent)">
+  <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="background: var(--ctc-primary); color: white; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 700; text-decoration: none; transition: all 0.2s ease; flex-shrink: 0; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 25%, transparent)">
     ${escapeHtml(primaryText)}
-    <span style="font-size: 1rem">→</span>
+    <span style="font-size: 1.25rem">→</span>
   </a>
 </aside>`;
 }

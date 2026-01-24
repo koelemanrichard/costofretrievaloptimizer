@@ -32,13 +32,26 @@ function getVisualVibeDescriptor(personalityId?: string): string {
     case 'tech-clean':
       return 'vibrant high-contrast style, futuristic elements, glassmorphism, dynamic lighting, sharp edges, professional digital art';
     case 'warm-friendly':
-      return 'approachable organic style, soft focus, warm color palette, natural textures, inviting composition';
+      return 'approachable organic style, soft focus, natural textures, inviting composition';
     case 'corporate-professional':
     case 'bold-editorial':
       return 'premium editorial photography style, high-end magazine aesthetic, sophisticated composition, balanced lighting';
     default:
       return '';
   }
+}
+
+/**
+ * Convert hex color to simple color name for AI prompts
+ */
+function getColorKeyword(hex?: string): string {
+  if (!hex) return '';
+  // Very basic mapping for major brand colors
+  if (hex.startsWith('#f') || hex.startsWith('#F')) return 'vibrant orange and warm tones';
+  if (hex.startsWith('#e') || hex.startsWith('#E')) return 'energetic red and warm accents';
+  if (hex.startsWith('#3') || hex.startsWith('#2')) return 'professional blue and cool tones';
+  if (hex.startsWith('#0') || hex.startsWith('#1')) return 'sleek dark and moody tones';
+  return 'branded color accents';
 }
 
 /**
@@ -162,6 +175,7 @@ async function buildImagePrompt(params: {
   const { contextText, sectionHeading, articleTitle, style, businessInfo, dispatch, personalityId } = params;
 
   const vibeDescriptor = getVisualVibeDescriptor(personalityId);
+  const colorHint = getColorKeyword((businessInfo as any)?.branding?.colors?.primary);
 
   const systemPrompt = `You are an expert at creating image generation prompts for SEO content.
 
@@ -169,8 +183,9 @@ Your task is to create a detailed, specific prompt for generating a ${style} tha
 1. Directly relates to the content context
 2. Adds visual value without being generic
 3. Matches the brand's visual identity: ${vibeDescriptor || 'professional and clean'}
-4. Avoids copyrighted characters, logos, or trademarked content
-5. Is appropriate for professional/business content
+4. Incorporates brand colors: ${colorHint || 'natural lighting'}
+5. Avoids copyrighted characters, logos, or trademarked content
+6. Is appropriate for professional/business content
 
 Context from the article:
 "${contextText}"
@@ -182,6 +197,7 @@ ${(businessInfo as any)?.targetMarket ? `Location: ${(businessInfo as any).targe
 
 Generate a single, detailed prompt (50-100 words) for creating this ${style}. 
 Include keywords for composition, lighting, and "vibe": ${vibeDescriptor || 'standard professional'}.
+Emphasize these tones: ${colorHint || 'balanced lighting'}.
 Do not include any explanations, just the prompt.`;
 
   // Use the user's preferred AI provider with fallback support
