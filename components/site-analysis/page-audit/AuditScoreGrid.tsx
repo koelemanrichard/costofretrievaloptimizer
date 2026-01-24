@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageAudit } from '../../../../types';
+import { PageAudit } from '../../../types';
 import { AuditScoreCard } from './AuditScoreCard';
 
 interface AuditScoreGridProps {

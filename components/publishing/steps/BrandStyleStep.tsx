@@ -28,6 +28,10 @@ interface BrandStyleStepProps {
   onChange: (updates: Partial<PublishingStyle>) => void;
   personalityId: DesignPersonalityId;
   onPersonalityChange: (id: DesignPersonalityId) => void;
+  onAutoDetect: (url: string) => Promise<void>;
+  isAnalyzing?: boolean;
+  analysisError?: string | null;
+  defaultDomain?: string;
 }
 
 // ============================================================================
@@ -40,9 +44,14 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
   onChange,
   personalityId,
   onPersonalityChange,
+  onAutoDetect,
+  isAnalyzing,
+  analysisError,
+  defaultDomain,
 }) => {
   const [activeTab, setActiveTab] = useState<'design-style' | 'colors' | 'typography' | 'spacing'>('design-style');
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [targetUrl, setTargetUrl] = useState(defaultDomain || '');
 
   // Handle personality change - sync colors to designTokens
   const handlePersonalityChange = useCallback((id: DesignPersonalityId) => {
@@ -161,6 +170,46 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
       {/* Design Style Tab - NEW Design Personalities */}
       {activeTab === 'design-style' && (
         <div className="space-y-4">
+          {/* AI Stylist / Auto-detect Section */}
+          <div className="p-4 bg-blue-900/20 rounded-xl border border-blue-500/30 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">✨</span>
+              <h3 className="text-sm font-semibold text-blue-300">AI Stylist: Auto-detect Branding</h3>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              Enter a website URL to automatically extract its color palette, typography, and design tokens.
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input
+                  placeholder="https://example.com"
+                  value={targetUrl}
+                  onChange={(e) => setTargetUrl(e.target.value)}
+                  className="bg-gray-900/50 border-gray-700 h-9 text-xs"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => onAutoDetect(targetUrl)}
+                disabled={isAnalyzing || !targetUrl}
+                className="bg-blue-600 hover:bg-blue-500 min-w-[120px]"
+              >
+                {isAnalyzing ? 'Analyzing...' : 'Detect Design'}
+              </Button>
+            </div>
+            {analysisError && (
+              <p className="text-[10px] text-red-400 mt-2 bg-red-900/20 p-2 rounded border border-red-500/20">
+                ⚠️ {analysisError}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-px flex-1 bg-gray-700/50" />
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Or select a personality</span>
+            <div className="h-px flex-1 bg-gray-700/50" />
+          </div>
+
           <p className="text-sm text-gray-400">
             Choose a design personality that matches your brand. Each style includes unique typography, colors, spacing, and component variants.
           </p>
@@ -204,11 +253,11 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
                 <div className="flex flex-wrap gap-1 mt-3">
                   <span className="px-2 py-0.5 bg-gray-700 rounded text-[10px] text-gray-300">
                     {personality.typography.scaleRatio === 1.125 ? 'Subtle Scale' :
-                     personality.typography.scaleRatio === 1.333 ? 'Dramatic Scale' : 'Balanced Scale'}
+                      personality.typography.scaleRatio === 1.333 ? 'Dramatic Scale' : 'Balanced Scale'}
                   </span>
                   <span className="px-2 py-0.5 bg-gray-700 rounded text-[10px] text-gray-300">
                     {personality.layout.radiusScale.lg === '0' ? 'Sharp' :
-                     personality.layout.radiusScale.lg.includes('16') ? 'Rounded' : 'Subtle'}
+                      personality.layout.radiusScale.lg.includes('16') ? 'Rounded' : 'Subtle'}
                   </span>
                 </div>
 
@@ -492,7 +541,7 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
                 fontFamily: style.designTokens.fonts.heading,
                 fontWeight: style.designTokens.typography.headingWeight === 'bold' ? 700
                   : style.designTokens.typography.headingWeight === 'semibold' ? 600
-                  : style.designTokens.typography.headingWeight === 'medium' ? 500 : 400,
+                    : style.designTokens.typography.headingWeight === 'medium' ? 500 : 400,
               }}
             >
               Heading Preview
@@ -589,11 +638,11 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
                 style={{
                   borderRadius: style.designTokens.borderRadius === 'none' ? 0
                     : style.designTokens.borderRadius === 'subtle' ? '0.25rem'
-                    : style.designTokens.borderRadius === 'pill' ? '9999px' : '0.5rem',
+                      : style.designTokens.borderRadius === 'pill' ? '9999px' : '0.5rem',
                   boxShadow: style.designTokens.shadows === 'none' ? 'none'
                     : style.designTokens.shadows === 'subtle' ? '0 1px 2px rgba(0,0,0,0.1)'
-                    : style.designTokens.shadows === 'dramatic' ? '0 10px 25px rgba(0,0,0,0.3)'
-                    : '0 4px 6px rgba(0,0,0,0.15)',
+                      : style.designTokens.shadows === 'dramatic' ? '0 10px 25px rgba(0,0,0,0.3)'
+                        : '0 4px 6px rgba(0,0,0,0.15)',
                 }}
               >
                 Card

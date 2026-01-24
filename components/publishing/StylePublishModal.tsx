@@ -13,6 +13,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { getSupabaseClient } from '../../services/supabaseClient';
+import { DesignAnalyzer } from '../../services/design-analysis/DesignAnalyzer';
+import { StyleExtractor } from '../../services/design-analysis/StyleExtractor';
 import { BrandStyleStep } from './steps/BrandStyleStep';
 import { LayoutConfigStep } from './steps/LayoutConfigStep';
 import { BlueprintStep } from './steps/BlueprintStep';
@@ -163,6 +166,106 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [isRegeneratingHierarchy, setIsRegeneratingHierarchy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [personalityId, setPersonalityId] = useState<DesignPersonalityId>('corporate-professional');
+
+  // AI Stylist / Auto-detect state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // Auto-detect branding handler
+  const handleAutoDetectBranding = useCallback(async (url: string) => {
+    if (!url) return;
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+
+    try {
+      // 1. Visit URL and extract raw tokens using DesignAnalyzer
+      // apifyToken is usually in businessInfo (global) or topicalMap (which might have its own copy)
+      // Check topicalMap.business_info first, then fallback
+      const apifyToken = (topicalMap?.business_info as any)?.apifyToken;
+      if (!apifyToken) {
+        throw new Error('Apify API token is required for design analysis. Please add it to Settings.');
+      }
+
+      console.log('[Style & Publish] Starting auto-detect for:', url);
+      const rawTokens = await DesignAnalyzer.analyzeUrl(url, apifyToken);
+      if (!rawTokens) {
+        throw new Error('Failed to extract branding from the provided URL.');
+      }
+
+      // 2. Process tokens into BrandKit format
+      const processed = StyleExtractor.processTokens(rawTokens, url);
+
+      // 3. Update local style state immediately
+      if (style) {
+        const newTokens = brandKitToDesignTokens({
+          colors: {
+            primary: processed.colors.primary,
+            secondary: processed.colors.secondary,
+            textOnImage: '#ffffff',
+            overlayGradient: `linear-gradient(135deg, ${processed.colors.primary}, ${processed.colors.secondary})`
+          },
+          fonts: {
+            heading: processed.typography.headingFont,
+            body: processed.typography.bodyFont
+          },
+          logoPlacement: 'top-left',
+          logoOpacity: 1,
+          copyright: { holder: url.replace(/https?:\/\//, '').split('/')[0] },
+          heroTemplates: []
+        });
+
+        setStyle({
+          ...style,
+          designTokens: {
+            ...style.designTokens,
+            ...newTokens,
+          },
+          updatedAt: new Date().toISOString()
+        });
+        setPreview(null);
+      }
+
+      // 4. Persist to database (Topical Map's business_info)
+      if (topic.map_id && topicalMap) {
+        const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+        const updatedBusinessInfo = {
+          ...topicalMap.business_info,
+          brandKit: {
+            ...topicalMap.business_info?.brandKit, // Fixed: accessing brandKit via business_info
+            colors: {
+              primary: processed.colors.primary,
+              secondary: processed.colors.secondary,
+              textOnImage: '#ffffff',
+              overlayGradient: `linear-gradient(135deg, ${processed.colors.primary}, ${processed.colors.secondary})`
+            },
+            fonts: {
+              heading: processed.typography.headingFont,
+              body: processed.typography.bodyFont
+            }
+          }
+        };
+
+        const { error: saveError } = await supabase
+          .from('topical_maps')
+          .update({
+            business_info: updatedBusinessInfo as any
+          })
+          .eq('id', topic.map_id);
+
+        if (saveError) {
+          console.error('[Style & Publish] Failed to persist detected branding:', saveError);
+        } else {
+          console.log('[Style & Publish] Successfully persisted detected branding to BrandKit');
+        }
+      }
+
+    } catch (err) {
+      console.error('[Style & Publish] Auto-detect error:', err);
+      setAnalysisError(err instanceof Error ? err.message : 'Unknown error during analysis');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [style, topic.map_id, topicalMap, supabaseUrl, supabaseAnonKey, setPreview, setStyle]);
 
   // Initialize style and layout on open
   useEffect(() => {
@@ -796,6 +899,10 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             onChange={handleStyleChange}
             personalityId={personalityId}
             onPersonalityChange={setPersonalityId}
+            onAutoDetect={handleAutoDetectBranding}
+            isAnalyzing={isAnalyzing}
+            analysisError={analysisError}
+            defaultDomain={topicalMap?.business_info?.domain}
           />
         ) : null;
 

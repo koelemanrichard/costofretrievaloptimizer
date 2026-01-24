@@ -153,6 +153,10 @@ export interface ContentGenerationSettings {
   tone: ContentTone;
   audienceExpertise: AudienceExpertise;
 
+  // Style Intelligence
+  enableDesignAnalysis: boolean;
+  designReferenceUrl?: string;
+
   // Content length control
   contentLength: ContentLengthSettings;
 
@@ -196,6 +200,8 @@ export interface ContentGenerationSettingsRow {
     validation_mode?: 'soft' | 'hard' | 'checkpoint';
     store_pass_snapshots?: boolean;
     enable_debug_export?: boolean;
+    enable_design_analysis?: boolean;
+    design_reference_url?: string;
   };
   created_at: string;
   updated_at: string;
@@ -551,7 +557,8 @@ export const DEFAULT_CONTENT_GENERATION_SETTINGS: Omit<ContentGenerationSettings
   // Validation & Debug - default to hard mode for quality control
   validationMode: 'hard',
   storePassSnapshots: true,
-  enableDebugExport: true
+  enableDebugExport: true,
+  enableDesignAnalysis: false
 };
 
 // ============================================================================
@@ -621,6 +628,8 @@ export function settingsRowToInterface(row: ContentGenerationSettingsRow): Conte
     validationMode: row.pass_config.validation_mode ?? 'hard',
     storePassSnapshots: row.pass_config.store_pass_snapshots ?? true,
     enableDebugExport: row.pass_config.enable_debug_export ?? true,
+    enableDesignAnalysis: row.pass_config.enable_design_analysis ?? false,
+    designReferenceUrl: row.pass_config.design_reference_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -663,7 +672,9 @@ export function settingsToDbInsert(
       // Validation & Debug settings
       validation_mode: settings.validationMode,
       store_pass_snapshots: settings.storePassSnapshots,
-      enable_debug_export: settings.enableDebugExport
+      enable_debug_export: settings.enableDebugExport,
+      enable_design_analysis: settings.enableDesignAnalysis,
+      design_reference_url: settings.designReferenceUrl
     }
   };
 }
@@ -673,7 +684,7 @@ export function settingsToDbInsert(
  */
 export function normalizePriorities(priorities: ContentGenerationPriorities): ContentGenerationPriorities {
   const total = priorities.humanReadability + priorities.businessConversion +
-                priorities.machineOptimization + priorities.factualDensity;
+    priorities.machineOptimization + priorities.factualDensity;
 
   if (total === 0) return PRIORITY_PRESETS.balanced;
   if (total === 100) return priorities;

@@ -181,6 +181,7 @@ export class ReadabilityValidator {
     if (word.length <= 2) return 1;
 
     const config = getSyllableConfig(language);
+    const langName = getLanguageName(language);
 
     // Remove non-alpha characters (keeping accented chars for non-English)
     const alphaPattern = language && language !== 'en' && language !== 'English'
@@ -189,7 +190,74 @@ export class ReadabilityValidator {
     word = word.replace(alphaPattern, '');
     if (word.length === 0) return 0;
 
-    // Count vowel groups (basic approach works across languages)
+    // English-specific algorithm (heuristic based)
+    if (langName === 'English') {
+      let syllableCount = 0;
+      const vowels = config.vowels; // aeiouy
+
+      // Problem: "beautiful" -> "eau" is tripthong, "ea" is dipthong, etc.
+      // Standard algorithm:
+      // 1. Count vowel groups
+      // 2. Subtract silent endings
+
+      // Step 1: Count vowel groups (consecutive vowels count as 1)
+      let isPrevVowel = false;
+      for (let i = 0; i < word.length; i++) {
+        const isVowel = vowels.includes(word[i]);
+        if (isVowel && !isPrevVowel) {
+          syllableCount++;
+        }
+        isPrevVowel = isVowel;
+      }
+
+      // Step 2: Handle special cases
+
+      // Silent 'e' at end
+      if (word.endsWith('e')) {
+        // Check for pronounced endings like 'le' (table)
+        if (word.endsWith('le') && word.length > 2 && !vowels.includes(word[word.length - 3])) {
+          // 'table' -> 'le' is pronounced, keep count
+        } else {
+          // 'safe', 'rate' -> silent e, subtract
+          syllableCount--;
+        }
+      }
+
+      // 'ed' ending (often silent)
+      if (word.endsWith('ed')) {
+        // 'ted', 'ded' are pronounced
+        if (word.length > 3 && (word[word.length - 3] === 't' || word[word.length - 3] === 'd')) {
+          // keep count
+        } else {
+          // 'looked' -> silent 'ed'
+          syllableCount--;
+        }
+      }
+
+      // 'es' ending
+      if (word.endsWith('es')) {
+        if (word.length > 3 && !['s', 'z', 'x', 'ch', 'sh'].some(end => word.slice(0, -2).endsWith(end))) {
+          // 'rates' -> silent 'es' (actually silent e + s)
+          syllableCount--;
+        }
+      }
+
+      // Special corrections for some common patterns
+      // 'ia' usually 2 syllables (media, dial)
+      if (word.includes('ia')) syllableCount++;
+      // 'eo' usually 2 syllables (video)
+      if (word.includes('eo')) syllableCount++;
+      // 'ii' usually 2 syllables (radii)
+      if (word.includes('ii')) syllableCount++;
+      // 'ea' split in -eate endings (create, permeate, delineate)
+      if (word.endsWith('eate')) syllableCount++;
+
+      // Ensure at least 1
+      return Math.max(1, syllableCount);
+    }
+
+    // Default/Fallback algorithm for other languages
+    // Count vowel groups
     const vowels = config.vowels;
     let syllableCount = 0;
     let prevWasVowel = false;
@@ -203,57 +271,15 @@ export class ReadabilityValidator {
     }
 
     // Adjust for dipthongs (two vowels = one syllable)
-    for (const dipthong of config.dipthongs) {
-      if (word.includes(dipthong)) {
-        // Each dipthong may have been counted as 2 syllables, reduce by 1
-        const matches = word.match(new RegExp(dipthong, 'g'));
-        if (matches) {
-          syllableCount -= matches.length;
-        }
-      }
+    // NOTE: Simple counting of vowel groups already treats "ea" as 1 count
+    // So we don't need to subtract unless dipthong logic was additive
+
+    // Language specific silent endings
+    if (langName === 'French') {
+      if (word.endsWith('e') && syllableCount > 1) syllableCount--;
+      if (word.endsWith('ent') && word.length > 4 && syllableCount > 1) syllableCount--;
     }
 
-    // Language-specific adjustments
-    const langName = getLanguageName(language);
-
-    if (langName === 'English') {
-      // Silent 'e' at end
-      const pronouncedEEndings = ['le', 'ate', 'ite', 'ote', 'ute', 'ese', 'ize', 'ise'];
-      const hasPronouncedE = pronouncedEEndings.some(ending => word.endsWith(ending));
-      if (word.endsWith('e') && !hasPronouncedE && syllableCount > 1) {
-        syllableCount--;
-      }
-
-      // Handle -ed ending
-      if (word.endsWith('ed') && word.length > 2) {
-        const beforeEd = word[word.length - 3];
-        if (beforeEd !== 't' && beforeEd !== 'd' && syllableCount > 1) {
-          syllableCount--;
-        }
-      }
-
-      // Handle -es ending
-      if (word.endsWith('es') && word.length > 2 && !word.endsWith('eses')) {
-        const beforeEs = word[word.length - 3];
-        if (!['s', 'x', 'z', 'h'].includes(beforeEs) && !vowels.includes(beforeEs) && syllableCount > 1) {
-          syllableCount--;
-        }
-      }
-    } else if (langName === 'French') {
-      // French silent e at end
-      if (word.endsWith('e') && syllableCount > 1) {
-        syllableCount--;
-      }
-      // French -ent verb endings are often silent
-      if (word.endsWith('ent') && word.length > 4 && syllableCount > 1) {
-        syllableCount--;
-      }
-    } else if (langName === 'Dutch') {
-      // Dutch -en ending is one syllable, not two
-      // Already handled by dipthong logic
-    }
-
-    // Ensure at least 1 syllable per word
     return Math.max(1, syllableCount);
   }
 
@@ -328,7 +354,7 @@ export class ReadabilityValidator {
         // Brouwer formula for Dutch:
         // 195 - (2/3 * average_sentence_length) - (100 * syllables/words)
         // Convert to grade level (higher = harder)
-        const brouwerScore = 195 - (2/3 * (wordCount / sentenceCount)) - (100 * (syllableCount / wordCount));
+        const brouwerScore = 195 - (2 / 3 * (wordCount / sentenceCount)) - (100 * (syllableCount / wordCount));
         // Convert Brouwer (0-100 scale, higher=easier) to grade level
         gradeLevel = Math.max(0, (100 - brouwerScore) / 6);
         break;

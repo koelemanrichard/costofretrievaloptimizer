@@ -131,11 +131,10 @@ export const ContentGenerationSettingsPanel: React.FC<Props> = ({
             <button
               key={key}
               onClick={() => handlePresetSelect(key)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                activePreset === key
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activePreset === key
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+                }`}
             >
               {formatPresetName(key)}
             </button>
@@ -228,11 +227,10 @@ export const ContentGenerationSettingsPanel: React.FC<Props> = ({
               <button
                 key={preset}
                 onClick={() => handleLengthPresetSelect(preset)}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  contentLength.preset === preset
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${contentLength.preset === preset
                     ? 'bg-emerald-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                  }`}
                 title={config.description}
               >
                 {preset.charAt(0).toUpperCase() + preset.slice(1)}
@@ -331,6 +329,39 @@ export const ContentGenerationSettingsPanel: React.FC<Props> = ({
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Design Intelligence */}
+      <div className="border-t border-gray-700 pt-3 mb-3">
+        <label className="flex items-center gap-2 mb-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={settings.enableDesignAnalysis}
+            onChange={(e) => onChange({ ...settings, enableDesignAnalysis: e.target.checked })}
+            className="rounded bg-gray-700 border-gray-600 w-3.5 h-3.5"
+          />
+          <span className="text-xs font-medium text-gray-300">Enable AI Stylist (Design Analysis)</span>
+        </label>
+
+        {settings.enableDesignAnalysis && (
+          <div className="pl-5 space-y-2">
+            <div>
+              <label className="text-[10px] text-gray-400 block mb-1">
+                Design Reference URL
+              </label>
+              <input
+                type="url"
+                value={settings.designReferenceUrl || ''}
+                onChange={(e) => onChange({ ...settings, designReferenceUrl: e.target.value })}
+                placeholder="https://example.com"
+                className="w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500"
+              />
+              <p className="text-[9px] text-gray-500 mt-1">
+                Extract colors, fonts, and styles from this URL. If empty, uses improved defaults.
+              </p>
             </div>
           </div>
         )}

@@ -11,7 +11,8 @@ import {
   EnhancedSchemaResult,
   PASS_NAMES,
   QualityReport,
-  SectionGenerationContext
+  SectionGenerationContext,
+  BrandKit
 } from '../types';
 import {
   ContentGenerationOrchestrator,
@@ -26,6 +27,8 @@ import {
   executePass9,   // Final Audit
   executePass10   // Schema Generation
 } from '../services/ai/contentGeneration';
+import { DesignAnalyzer } from '../services/design-analysis/DesignAnalyzer';
+import { StyleExtractor } from '../services/design-analysis/StyleExtractor';
 import {
   createEmptyProgressiveData,
   collectFromPass,
@@ -607,6 +610,74 @@ export function useContentGeneration({
     let updatedJob = currentJob;
     const shouldAbort = () => abortRef.current;
 
+    // Ensure businessInfo has required fields with defaults
+    // Include generation priorities for prompt customization
+    const safeBusinessInfo: BusinessInfo & { generationPriorities?: ContentGenerationPriorities } = {
+      ...businessInfo,
+      language: businessInfo?.language || 'English',
+      targetMarket: businessInfo?.targetMarket || 'Global',
+      aiProvider: businessInfo?.aiProvider || 'gemini',
+      generationPriorities: generationSettings?.priorities,
+    };
+
+    // Design Intelligence: Auto-analyze branding if enabled
+    if (generationSettings?.enableDesignAnalysis && currentJob.current_pass === 0) {
+      onLog('AI Stylist: Analyzing target website design...', 'info');
+      try {
+        const analyzeUrl = generationSettings.designReferenceUrl || (businessInfo.domain.startsWith('http') ? businessInfo.domain : `https://${businessInfo.domain}`);
+
+        if (!businessInfo.apifyToken) {
+          onLog('Skipping Design Analysis: No Apify Token found in Business Info', 'warning');
+        } else {
+          const rawTokens = await DesignAnalyzer.analyzeUrl(analyzeUrl, businessInfo.apifyToken);
+
+          if (rawTokens) {
+            const processed = StyleExtractor.processTokens(rawTokens, analyzeUrl);
+
+            // Construct updated BrandKit
+            const newBrandKit: BrandKit = {
+              ...businessInfo.brandKit, // Keep existing logos etc
+              colors: {
+                primary: processed.colors.primary,
+                secondary: processed.colors.secondary,
+                textOnImage: businessInfo.brandKit?.colors?.textOnImage || '#ffffff',
+                overlayGradient: `linear-gradient(135deg, ${processed.colors.primary}, ${processed.colors.secondary})`
+              },
+              fonts: {
+                heading: processed.typography.headingFont,
+                body: processed.typography.bodyFont
+              },
+              // Ensure required fields exist if brandKit was null
+              logoPlacement: businessInfo.brandKit?.logoPlacement || 'top-left',
+              logoOpacity: businessInfo.brandKit?.logoOpacity || 1,
+              copyright: businessInfo.brandKit?.copyright || { holder: businessInfo.projectName },
+              heroTemplates: businessInfo.brandKit?.heroTemplates || []
+            };
+
+            // Save to Database (Topical Map)
+            const { error: saveError } = await supabase
+              .from('topical_maps')
+              .update({
+                business_info: { ...businessInfo, brandKit: newBrandKit } as any
+              })
+              .eq('id', mapId);
+
+            if (saveError) {
+              console.error('Failed to save extracted Brand Kit:', saveError);
+              onLog('Design extracted but failed to save to Project Settings', 'warning');
+            } else {
+              onLog(`AI Stylist: Extracted brand colors (${processed.colors.primary}) and fonts`, 'success');
+              // Update local context for this generation run
+              safeBusinessInfo.brandKit = newBrandKit;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Design Analysis Failed:', err);
+        onLog(`AI Stylist Error: ${err instanceof Error ? err.message : 'Unknown error'}`, 'warning');
+      }
+    }
+
     // CRITICAL FIX: Fetch fresh brief from database to ensure edits are used
     // The 'brief' from hook props may be stale if user edited it before clicking Generate
     // OPTIMIZATION: Use cached brief if available and matches current briefId
@@ -645,15 +716,6 @@ export function useContentGeneration({
       }
     }
 
-    // Ensure businessInfo has required fields with defaults
-    // Include generation priorities for prompt customization
-    const safeBusinessInfo: BusinessInfo & { generationPriorities?: ContentGenerationPriorities } = {
-      ...businessInfo,
-      language: businessInfo?.language || 'English',
-      targetMarket: businessInfo?.targetMarket || 'Global',
-      aiProvider: businessInfo?.aiProvider || 'gemini',
-      generationPriorities: generationSettings?.priorities,
-    };
 
     // Helper to refresh job state from database and update React state
     // This ensures UI stays in sync and pass transitions work correctly

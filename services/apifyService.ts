@@ -10,126 +10,126 @@ const GOOGLE_SEARCH_ACTOR_ID = 'apify/google-search-scraper';
 const WEBSITE_CONTENT_CRAWLER_ID = 'apify/website-content-crawler';
 
 interface ApifyRun {
-    id: string;
-    actorId: string;
-    status: 'READY' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'TIMED-OUT' | 'ABORTING' | 'ABORTED';
-    startedAt: string;
-    finishedAt?: string;
-    defaultDatasetId: string;
+  id: string;
+  actorId: string;
+  status: 'READY' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'TIMED-OUT' | 'ABORTING' | 'ABORTED';
+  startedAt: string;
+  finishedAt?: string;
+  defaultDatasetId: string;
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const runApifyActor = async (actorId: string, apiToken: string, runInput: any): Promise<any[]> => {
-    const startRunUrl = `${API_BASE_URL}/acts/${actorId.replace('/', '~')}/runs?token=${apiToken}`;
+export const runApifyActor = async (actorId: string, apiToken: string, runInput: any): Promise<any[]> => {
+  const startRunUrl = `${API_BASE_URL}/acts/${actorId.replace('/', '~')}/runs?token=${apiToken}`;
 
-    console.log('[Apify] Starting actor:', actorId, 'with', runInput.startUrls?.length || 0, 'URLs');
+  console.log('[Apify] Starting actor:', actorId, 'with', runInput.startUrls?.length || 0, 'URLs');
 
-    const startResponse = await fetch(startRunUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(runInput)
-    });
+  const startResponse = await fetch(startRunUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(runInput)
+  });
 
-    if (!startResponse.ok) {
-        const errorText = await startResponse.text();
-        console.error('[Apify] Start run failed:', startResponse.status, errorText);
-        throw new Error(`Apify start run failed (${startResponse.status}): ${errorText}`);
+  if (!startResponse.ok) {
+    const errorText = await startResponse.text();
+    console.error('[Apify] Start run failed:', startResponse.status, errorText);
+    throw new Error(`Apify start run failed (${startResponse.status}): ${errorText}`);
+  }
+
+  const { data: runDetails }: { data: ApifyRun } = await startResponse.json();
+
+  let run = runDetails;
+  const maxRetries = 40; // ~200 seconds max wait
+  for (let i = 0; i < maxRetries; i++) {
+    await sleep(5000);
+    const statusUrl = `${API_BASE_URL}/actor-runs/${run.id}?token=${apiToken}`;
+    const statusResponse = await fetch(statusUrl);
+    if (!statusResponse.ok) {
+      console.error('[Apify] Status check failed:', statusResponse.status);
+      throw new Error(`Apify status check failed (${statusResponse.status}): ${statusResponse.statusText}`);
     }
-    
-    const { data: runDetails }: { data: ApifyRun } = await startResponse.json();
+    const { data: currentRun }: { data: ApifyRun } = await statusResponse.json();
+    run = currentRun;
+    if (run.status === 'SUCCEEDED') break;
+    if (['FAILED', 'TIMED-OUT', 'ABORTED'].includes(run.status)) throw new Error(`Apify actor run failed with status: ${run.status}`);
+  }
 
-    let run = runDetails;
-    const maxRetries = 40; // ~200 seconds max wait
-    for (let i = 0; i < maxRetries; i++) {
-        await sleep(5000);
-        const statusUrl = `${API_BASE_URL}/actor-runs/${run.id}?token=${apiToken}`;
-        const statusResponse = await fetch(statusUrl);
-        if (!statusResponse.ok) {
-            console.error('[Apify] Status check failed:', statusResponse.status);
-            throw new Error(`Apify status check failed (${statusResponse.status}): ${statusResponse.statusText}`);
-        }
-        const { data: currentRun }: { data: ApifyRun } = await statusResponse.json();
-        run = currentRun;
-        if (run.status === 'SUCCEEDED') break;
-        if (['FAILED', 'TIMED-OUT', 'ABORTED'].includes(run.status)) throw new Error(`Apify actor run failed with status: ${run.status}`);
-    }
-    
-    if (run.status !== 'SUCCEEDED') throw new Error('Apify actor run timed out.');
+  if (run.status !== 'SUCCEEDED') throw new Error('Apify actor run timed out.');
 
-    const resultsUrl = `${API_BASE_URL}/datasets/${run.defaultDatasetId}/items?token=${apiToken}&format=json`;
-    const resultsResponse = await fetch(resultsUrl);
-    if (!resultsResponse.ok) throw new Error(`Apify fetch results failed: ${resultsResponse.statusText}`);
-    
-    return await resultsResponse.json();
+  const resultsUrl = `${API_BASE_URL}/datasets/${run.defaultDatasetId}/items?token=${apiToken}&format=json`;
+  const resultsResponse = await fetch(resultsUrl);
+  if (!resultsResponse.ok) throw new Error(`Apify fetch results failed: ${resultsResponse.statusText}`);
+
+  return await resultsResponse.json();
 };
 
 export const countryNameToCode = (name: string): string | undefined => {
-    const map: { [key: string]: string } = {
-        'united states': 'us', 'usa': 'us',
-        'netherlands': 'nl',
-        'united kingdom': 'gb', 'uk': 'gb', 'great britain': 'gb',
-        'germany': 'de',
-        'france': 'fr',
-        'canada': 'ca',
-        'australia': 'au',
-    };
-    return map[name.toLowerCase().trim()];
+  const map: { [key: string]: string } = {
+    'united states': 'us', 'usa': 'us',
+    'netherlands': 'nl',
+    'united kingdom': 'gb', 'uk': 'gb', 'great britain': 'gb',
+    'germany': 'de',
+    'france': 'fr',
+    'canada': 'ca',
+    'australia': 'au',
+  };
+  return map[name.toLowerCase().trim()];
 };
 
 export const collectSerpIntelligence = async (query: string, apiToken: string, targetMarket: string, languageCode: string): Promise<FullSerpData> => {
-    if (!apiToken) {
-        console.warn("Apify API token not configured. Skipping competitive intelligence gathering.");
-        return { organicResults: [], peopleAlsoAsk: [], relatedQueries: [] };
-    }
+  if (!apiToken) {
+    console.warn("Apify API token not configured. Skipping competitive intelligence gathering.");
+    return { organicResults: [], peopleAlsoAsk: [], relatedQueries: [] };
+  }
 
-    const runInput = {
-        queries: query,
-        maxPagesPerQuery: 1,
-        resultsPerPage: 10,
-        countryCode: countryNameToCode(targetMarket),
-        languageCode,
-        includeAds: false,
-        includePeopleAlsoAsk: true,
-        includeRelatedQueries: true,
-    };
+  const runInput = {
+    queries: query,
+    maxPagesPerQuery: 1,
+    resultsPerPage: 10,
+    countryCode: countryNameToCode(targetMarket),
+    languageCode,
+    includeAds: false,
+    includePeopleAlsoAsk: true,
+    includeRelatedQueries: true,
+  };
 
-    const results = await runApifyActor(GOOGLE_SEARCH_ACTOR_ID, apiToken, runInput);
-    if (!Array.isArray(results) || results.length === 0) {
-        return { organicResults: [], peopleAlsoAsk: [], relatedQueries: [] };
-    }
-    
-    const firstResult = results[0];
-    return {
-        organicResults: firstResult.organicResults?.map((item: any, index: number) => ({
-            position: item.position || index + 1,
-            title: item.title,
-            link: item.url,
-            snippet: item.description || ''
-        })) || [],
-        peopleAlsoAsk: firstResult.peopleAlsoAsk?.map((item: any) => item.question) || [],
-        relatedQueries: firstResult.relatedQueries?.map((item: any) => item.query) || [],
-    };
+  const results = await runApifyActor(GOOGLE_SEARCH_ACTOR_ID, apiToken, runInput);
+  if (!Array.isArray(results) || results.length === 0) {
+    return { organicResults: [], peopleAlsoAsk: [], relatedQueries: [] };
+  }
+
+  const firstResult = results[0];
+  return {
+    organicResults: firstResult.organicResults?.map((item: any, index: number) => ({
+      position: item.position || index + 1,
+      title: item.title,
+      link: item.url,
+      snippet: item.description || ''
+    })) || [],
+    peopleAlsoAsk: firstResult.peopleAlsoAsk?.map((item: any) => item.question) || [],
+    relatedQueries: firstResult.relatedQueries?.map((item: any) => item.query) || [],
+  };
 };
 
 export const scrapeCompetitorContent = async (urls: string[], apiToken: string): Promise<ScrapedContent[]> => {
-    if (!apiToken || urls.length === 0) {
-        return [];
-    }
-    
-    const runInput = {
-      startUrls: urls.map(url => ({ url })),
-      "crawlerType": "cheerio",
-      "includeUrlGlobs": [],
-      "excludeUrlGlobs": [],
-      "ignoreCanonicalUrl": false,
-      "maxCrawlDepth": 0,
-      "maxCrawlPages": urls.length,
-      "initialConcurrency": 5,
-      "maxConcurrency": 10,
-      "initialCookies": [],
-      "proxyConfiguration": { "useApifyProxy": true },
-      "customDataFunction": `async ({ $, request, log }) => {
+  if (!apiToken || urls.length === 0) {
+    return [];
+  }
+
+  const runInput = {
+    startUrls: urls.map(url => ({ url })),
+    "crawlerType": "cheerio",
+    "includeUrlGlobs": [],
+    "excludeUrlGlobs": [],
+    "ignoreCanonicalUrl": false,
+    "maxCrawlDepth": 0,
+    "maxCrawlPages": urls.length,
+    "initialConcurrency": 5,
+    "maxConcurrency": 10,
+    "initialCookies": [],
+    "proxyConfiguration": { "useApifyProxy": true },
+    "customDataFunction": `async ({ $, request, log }) => {
         const title = $('title').text().trim();
         const headings = [];
         $('h1, h2, h3, h4').each((index, el) => {
@@ -147,16 +147,16 @@ export const scrapeCompetitorContent = async (urls: string[], apiToken: string):
             rawText
         };
       };`
-    };
+  };
 
-    const results = await runApifyActor(WEBSITE_CONTENT_CRAWLER_ID, apiToken, runInput);
-    
-    return results.map(item => ({
-        url: item.url,
-        title: item.title,
-        headings: item.headings,
-        rawText: item.rawText
-    }));
+  const results = await runApifyActor(WEBSITE_CONTENT_CRAWLER_ID, apiToken, runInput);
+
+  return results.map(item => ({
+    url: item.url,
+    title: item.title,
+    headings: item.headings,
+    rawText: item.rawText
+  }));
 };
 
 // ============================================
