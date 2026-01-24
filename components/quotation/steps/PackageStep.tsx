@@ -8,6 +8,7 @@ import { Button } from '../../ui/Button';
 import { UrlAnalysisResult } from '../../../types/quotation';
 import { getActivePackages, getPackageById } from '../../../config/quotation/packages';
 import { getModuleById } from '../../../config/quotation/modules';
+import { useQuotationSettings } from '../../../hooks/useQuotationSettings';
 
 interface PackageStepProps {
   analysisResult?: UrlAnalysisResult;
@@ -29,16 +30,7 @@ export const PackageStep: React.FC<PackageStepProps> = ({
   onBack,
 }) => {
   const packages = getActivePackages();
-
-  // Format price for display
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+  const { formatPrice } = useQuotationSettings();
 
   return (
     <div className="space-y-6">

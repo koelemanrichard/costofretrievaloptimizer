@@ -15,6 +15,7 @@ import {
 import { QuoteTotalResult } from '../../../services/quotation';
 import { getPackageById } from '../../../config/quotation/packages';
 import { CATEGORY_INFO } from '../../../config/quotation/modules';
+import { useQuotationSettings } from '../../../hooks/useQuotationSettings';
 
 interface QuoteStepProps {
   wizardState: QuotationWizardState;
@@ -43,23 +44,11 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null);
+  const { formatPrice, formatPriceRange } = useQuotationSettings();
 
   const pkg = wizardState.selectedPackageId
     ? getPackageById(wizardState.selectedPackageId)
     : null;
-
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatPriceRange = (min: number, max: number) => {
-    if (min === max) return formatPrice(min);
-    return `${formatPrice(min)} - ${formatPrice(max)}`;
-  };
 
   // Group line items by category
   const itemsByCategory = lineItems.reduce((acc, item) => {

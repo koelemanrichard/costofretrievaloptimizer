@@ -21,6 +21,7 @@ import {
 } from '../../types/quotation';
 import { getActivePackages, getRecommendedPackage, getPackageById } from '../../config/quotation/packages';
 import { quickAnalyzeUrl } from '../../services/quotation';
+import { useQuotationSettings, QuotationSettingsProvider } from '../../hooks/useQuotationSettings';
 
 type CalculatorStep = 'url' | 'questionnaire' | 'result';
 
@@ -31,23 +32,16 @@ interface LeadInfo {
   phone: string;
 }
 
-export const PublicQuoteCalculator: React.FC = () => {
+const PublicQuoteCalculatorContent: React.FC = () => {
   const [step, setStep] = useState<CalculatorStep>('url');
   const [url, setUrl] = useState('');
   const [questionnaire, setQuestionnaire] = useState<Partial<QuestionnaireResponses>>({});
   const [siteSize, setSiteSize] = useState<SiteSize>('small');
   const [leadInfo, setLeadInfo] = useState<LeadInfo>({ name: '', email: '', company: '', phone: '' });
   const [showLeadCapture, setShowLeadCapture] = useState(false);
+  const { formatPrice: formatCurrency } = useQuotationSettings();
 
   const packages = getActivePackages().slice(0, 4); // Show first 4 packages
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,6 +341,15 @@ export const PublicQuoteCalculator: React.FC = () => {
         )}
       </div>
     </div>
+  );
+};
+
+// Wrapper component with provider
+export const PublicQuoteCalculator: React.FC = () => {
+  return (
+    <QuotationSettingsProvider>
+      <PublicQuoteCalculatorContent />
+    </QuotationSettingsProvider>
   );
 };
 

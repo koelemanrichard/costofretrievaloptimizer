@@ -10,25 +10,31 @@ import {
   KpiProjection,
   RoiCalculation,
   QuoteExportOptions,
+  CurrencyCode,
 } from '../../types/quotation';
 import { CATEGORY_INFO } from '../../config/quotation/modules';
+import {
+  formatCurrency as formatCurrencyUtil,
+  formatPriceRange as formatPriceRangeUtil,
+} from '../../utils/currencyFormatter';
 
 // =============================================================================
-// Formatting Helpers
+// Formatting Helpers (with currency support)
 // =============================================================================
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+// Default currency can be overridden via options
+let defaultCurrency: CurrencyCode = 'EUR';
+
+export function setExportCurrency(currency: CurrencyCode): void {
+  defaultCurrency = currency;
 }
 
-function formatPriceRange(min: number, max: number): string {
-  if (min === max) return formatCurrency(min);
-  return `${formatCurrency(min)} - ${formatCurrency(max)}`;
+function formatCurrency(amount: number, currency?: CurrencyCode): string {
+  return formatCurrencyUtil(amount, currency || defaultCurrency);
+}
+
+function formatPriceRange(min: number, max: number, currency?: CurrencyCode): string {
+  return formatPriceRangeUtil(min, max, currency || defaultCurrency);
 }
 
 function formatDate(dateString?: string): string {
@@ -44,7 +50,7 @@ function formatDate(dateString?: string): string {
 // HTML Template Generation
 // =============================================================================
 
-function generateLineItemsHtml(lineItems: QuoteLineItem[]): string {
+function generateLineItemsHtml(lineItems: QuoteLineItem[], currency?: CurrencyCode): string {
   // Group by category
   const byCategory = lineItems.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
@@ -64,7 +70,7 @@ function generateLineItemsHtml(lineItems: QuoteLineItem[]): string {
             ${item.isRecurring ? `<span style="font-size: 12px; color: #7c3aed;">${item.recurringInterval}</span>` : ''}
           </td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
-            ${formatPriceRange(item.totalMin, item.totalMax)}
+            ${formatPriceRange(item.totalMin, item.totalMax, currency)}
           </td>
         </tr>
       `
@@ -102,7 +108,7 @@ function generateKpiProjectionsHtml(projections: KpiProjection[]): string {
     .join('');
 }
 
-function generateRoiHtml(roi: RoiCalculation): string {
+function generateRoiHtml(roi: RoiCalculation, currency?: CurrencyCode): string {
   return `
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
       <div>
@@ -115,7 +121,7 @@ function generateRoiHtml(roi: RoiCalculation): string {
       <div>
         <div style="color: #6b7280; font-size: 14px;">Projected Revenue</div>
         <div style="font-size: 24px; font-weight: 600; color: #059669;">
-          ${formatPriceRange(roi.projectedRevenueMin, roi.projectedRevenueMax)}
+          ${formatPriceRange(roi.projectedRevenueMin, roi.projectedRevenueMax, currency)}
         </div>
         <div style="color: #9ca3af; font-size: 12px;">per year</div>
       </div>
@@ -149,8 +155,14 @@ export function generateQuoteHtml(
     includeTerms: true,
   }
 ): string {
+  // Set currency for this export if provided
+  const currency = options.currency || defaultCurrency;
   const primaryColor = options.brandingOptions?.primaryColor || '#2563eb';
   const companyName = options.brandingOptions?.companyName || 'SEO Services';
+
+  // Local formatters using the export currency
+  const fmtCurrency = (amount: number) => formatCurrency(amount, currency);
+  const fmtRange = (min: number, max: number) => formatPriceRange(min, max, currency);
 
   return `
 <!DOCTYPE html>
@@ -241,7 +253,7 @@ export function generateQuoteHtml(
           </tr>
         </thead>
         <tbody>
-          ${generateLineItemsHtml(quote.lineItems)}
+          ${generateLineItemsHtml(quote.lineItems, currency)}
         </tbody>
       </table>
     </div>
@@ -254,7 +266,7 @@ export function generateQuoteHtml(
             ? `
         <tr>
           <td style="padding: 8px 0; color: #059669;">Package Discount (${quote.discountPercent}%)</td>
-          <td style="padding: 8px 0; text-align: right; color: #059669;">-${formatCurrency(quote.subtotal * (quote.discountPercent / 100))}</td>
+          <td style="padding: 8px 0; text-align: right; color: #059669;">-${fmtCurrency(quote.subtotal * (quote.discountPercent / 100))}</td>
         </tr>
         `
             : ''
@@ -262,7 +274,7 @@ export function generateQuoteHtml(
         <tr class="total-row">
           <td style="padding: 16px 0; border-top: 2px solid #e5e7eb;">Total Investment</td>
           <td style="padding: 16px 0; border-top: 2px solid #e5e7eb; text-align: right; color: ${primaryColor};">
-            ${formatPriceRange(quote.totalMin, quote.totalMax)}
+            ${fmtRange(quote.totalMin, quote.totalMax)}
           </td>
         </tr>
       </table>
@@ -289,7 +301,7 @@ export function generateQuoteHtml(
     <div class="section">
       <h2 class="section-title">Return on Investment</h2>
       <div style="background: #ecfdf5; padding: 24px; border-radius: 8px; border: 1px solid #a7f3d0;">
-        ${generateRoiHtml(quote.roiCalculation)}
+        ${generateRoiHtml(quote.roiCalculation, currency)}
       </div>
     </div>
     `

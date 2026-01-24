@@ -12,6 +12,7 @@ import {
 } from '../../../types/quotation';
 import { CATEGORY_INFO } from '../../../config/quotation/modules';
 import { QuoteTotalResult } from '../../../services/quotation';
+import { useQuotationSettings } from '../../../hooks/useQuotationSettings';
 
 interface ModuleStepProps {
   availableModules: ServiceModule[];
@@ -33,6 +34,7 @@ export const ModuleStep: React.FC<ModuleStepProps> = ({
   onBack,
 }) => {
   const [expandedCategory, setExpandedCategory] = useState<ServiceCategory | null>('semantic_seo');
+  const { formatPriceRange: formatPrice } = useQuotationSettings();
 
   // Group modules by category
   const modulesByCategory = availableModules.reduce((acc, module) => {
@@ -47,16 +49,6 @@ export const ModuleStep: React.FC<ModuleStepProps> = ({
   const sortedCategories = Object.keys(modulesByCategory).sort(
     (a, b) => (CATEGORY_INFO[a as ServiceCategory]?.order || 99) - (CATEGORY_INFO[b as ServiceCategory]?.order || 99)
   ) as ServiceCategory[];
-
-  const formatPrice = (min: number, max: number) => {
-    const formatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    });
-    if (min === max) return formatter.format(min);
-    return `${formatter.format(min)} - ${formatter.format(max)}`;
-  };
 
   return (
     <div className="grid grid-cols-3 gap-6">

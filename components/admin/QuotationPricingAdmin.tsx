@@ -4,16 +4,30 @@
  * CRUD for service modules, package presets, and multiplier configuration.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import {
   ServiceModule,
   ServiceCategory,
   QuotationPackage,
+  CurrencyCode,
 } from '../../types/quotation';
 import { SERVICE_MODULES, CATEGORY_INFO } from '../../config/quotation/modules';
 import { QUOTATION_PACKAGES } from '../../config/quotation/packages';
+import { ModuleEditModal } from './ModuleEditModal';
+import { PackageEditModal } from './PackageEditModal';
+import {
+  useQuotationSettings,
+  QuotationSettingsProvider,
+  CURRENCY_INFO,
+} from '../../hooks/useQuotationSettings';
+import {
+  getModules,
+  updateModule,
+  getPackages,
+  updatePackage,
+} from '../../services/quotation';
 
 type AdminTab = 'modules' | 'packages' | 'multipliers' | 'analytics';
 
@@ -49,30 +63,81 @@ const DEFAULT_MULTIPLIERS: MultiplierConfig = {
 // Component
 // =============================================================================
 
-export const QuotationPricingAdmin: React.FC = () => {
+const QuotationPricingAdminContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('modules');
   const [multipliers, setMultipliers] = useState<MultiplierConfig>(DEFAULT_MULTIPLIERS);
   const [editingModule, setEditingModule] = useState<ServiceModule | null>(null);
   const [editingPackage, setEditingPackage] = useState<QuotationPackage | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // State for loaded data
+  const [modules, setModules] = useState<ServiceModule[]>(SERVICE_MODULES as ServiceModule[]);
+  const [packages, setPackages] = useState<QuotationPackage[]>(QUOTATION_PACKAGES as QuotationPackage[]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Currency settings
+  const { formatPrice, formatPriceRange, currency, setCurrency, availableCurrencies, currencyInfo } = useQuotationSettings();
+
+  // Load data from database
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [modulesResult, packagesResult] = await Promise.all([
+          getModules(),
+          getPackages(),
+        ]);
+        if (modulesResult.data) setModules(modulesResult.data);
+        if (packagesResult.data) setPackages(packagesResult.data);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // Group modules by category
   const modulesByCategory = useMemo(() => {
-    return SERVICE_MODULES.reduce((acc, module) => {
+    return modules.reduce((acc, module) => {
       if (!acc[module.category]) {
         acc[module.category] = [];
       }
-      acc[module.category].push(module as ServiceModule);
+      acc[module.category].push(module);
       return acc;
     }, {} as Record<ServiceCategory, ServiceModule[]>);
+  }, [modules]);
+
+  // Handle module save
+  const handleSaveModule = useCallback(async (module: ServiceModule) => {
+    setIsSaving(true);
+    try {
+      const result = await updateModule(module);
+      if (result.data) {
+        setModules((prev) =>
+          prev.map((m) => (m.id === module.id ? result.data! : m))
+        );
+      }
+      setEditingModule(null);
+    } finally {
+      setIsSaving(false);
+    }
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  // Handle package save
+  const handleSavePackage = useCallback(async (pkg: QuotationPackage) => {
+    setIsSaving(true);
+    try {
+      const result = await updatePackage(pkg);
+      if (result.data) {
+        setPackages((prev) =>
+          prev.map((p) => (p.id === pkg.id ? result.data! : p))
+        );
+      }
+      setEditingPackage(null);
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
 
   const tabs: { key: AdminTab; label: string; icon: string }[] = [
     {
@@ -99,10 +164,36 @@ export const QuotationPricingAdmin: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white">Quotation Pricing Management</h2>
-        <p className="text-gray-400 mt-1">Configure service modules, packages, and pricing multipliers</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-xl font-bold text-white">Quotation Pricing Management</h2>
+          <p className="text-gray-400 mt-1">Configure service modules, packages, and pricing multipliers</p>
+        </div>
+
+        {/* Currency Selector */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-400">Currency:</label>
+          <select
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {availableCurrencies.map((code) => (
+              <option key={code} value={code}>
+                {currencyInfo[code].symbol} {code}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center py-8">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2" />
+          <p className="text-gray-400">Loading pricing data...</p>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-700 pb-2">
@@ -131,7 +222,7 @@ export const QuotationPricingAdmin: React.FC = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <p className="text-gray-400">
-                {SERVICE_MODULES.length} modules across {Object.keys(modulesByCategory).length} categories
+                {modules.length} modules across {Object.keys(modulesByCategory).length} categories
               </p>
               <Button>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,13 +263,17 @@ export const QuotationPricingAdmin: React.FC = () => {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className="text-white">
-                            {formatCurrency(module.basePriceMin)} - {formatCurrency(module.basePriceMax)}
+                            {formatPriceRange(module.basePriceMin, module.basePriceMax)}
                           </div>
                           <div className="text-xs text-gray-500">{module.deliverables.length} deliverables</div>
                         </div>
                         <button
-                          onClick={() => setEditingModule(module)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingModule(module);
+                          }}
                           className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                          title="Edit module"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -197,7 +292,7 @@ export const QuotationPricingAdmin: React.FC = () => {
         {activeTab === 'packages' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <p className="text-gray-400">{QUOTATION_PACKAGES.length} active packages</p>
+              <p className="text-gray-400">{packages.filter(p => p.isActive).length} active packages</p>
               <Button>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -207,16 +302,27 @@ export const QuotationPricingAdmin: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {QUOTATION_PACKAGES.map((pkg) => (
-                <Card key={pkg.id} className="p-4">
+              {packages.map((pkg) => (
+                <Card key={pkg.id} className={`p-4 ${!pkg.isActive ? 'opacity-50' : ''}`}>
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="font-semibold text-white">{pkg.name}</h3>
+                      <h3 className="font-semibold text-white">
+                        {pkg.name}
+                        {!pkg.isActive && (
+                          <span className="ml-2 text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">
+                            Inactive
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-sm text-gray-400 mt-1">{pkg.description}</p>
                     </div>
                     <button
-                      onClick={() => setEditingPackage(pkg as QuotationPackage)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPackage(pkg);
+                      }}
                       className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                      title="Edit package"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -225,7 +331,7 @@ export const QuotationPricingAdmin: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between mb-3">
-                    <div className="text-2xl font-bold text-white">{formatCurrency(pkg.basePrice)}</div>
+                    <div className="text-2xl font-bold text-white">{formatPrice(pkg.basePrice)}</div>
                     {pkg.discountPercent > 0 && (
                       <span className="text-sm bg-green-500/20 text-green-400 px-2 py-1 rounded">
                         {pkg.discountPercent}% discount
@@ -367,7 +473,35 @@ export const QuotationPricingAdmin: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Module Edit Modal */}
+      <ModuleEditModal
+        isOpen={editingModule !== null}
+        onClose={() => setEditingModule(null)}
+        module={editingModule}
+        onSave={handleSaveModule}
+        isLoading={isSaving}
+      />
+
+      {/* Package Edit Modal */}
+      <PackageEditModal
+        isOpen={editingPackage !== null}
+        onClose={() => setEditingPackage(null)}
+        package={editingPackage}
+        onSave={handleSavePackage}
+        isLoading={isSaving}
+        availableModules={modules}
+      />
     </div>
+  );
+};
+
+// Wrapper component with provider
+export const QuotationPricingAdmin: React.FC = () => {
+  return (
+    <QuotationSettingsProvider>
+      <QuotationPricingAdminContent />
+    </QuotationSettingsProvider>
   );
 };
 

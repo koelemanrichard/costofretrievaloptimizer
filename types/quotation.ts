@@ -9,6 +9,13 @@
 
 export type QuoteStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired';
 
+export type CurrencyCode = 'EUR' | 'USD' | 'GBP' | 'CHF' | 'CAD' | 'AUD';
+
+export interface QuotationSettings {
+  currency: CurrencyCode;
+  locale?: string;
+}
+
 export type ServiceCategory =
   | 'semantic_seo'
   | 'traditional_seo'
@@ -345,6 +352,7 @@ export interface QuoteExportOptions {
   includeKpiProjections: boolean;
   includeRoi: boolean;
   includeTerms: boolean;
+  currency?: CurrencyCode;
   brandingOptions?: {
     logoUrl?: string;
     primaryColor?: string;

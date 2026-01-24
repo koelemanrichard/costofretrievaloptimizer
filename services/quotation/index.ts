@@ -38,4 +38,26 @@ export {
   generateQuotePdf,
   downloadQuoteHtml,
   openQuoteForPrint,
+  setExportCurrency,
 } from './quoteExportService';
+
+// Module Service
+export {
+  getModules,
+  getModuleById,
+  createModule,
+  updateModule,
+  deleteModule,
+  seedModulesFromConfig,
+} from './moduleService';
+
+// Package Service
+export {
+  getPackages,
+  getActivePackages as getActivePackagesFromDb,
+  getPackageById as getPackageByIdFromDb,
+  createPackage,
+  updatePackage,
+  deletePackage,
+  seedPackagesFromConfig,
+} from './packageService';
