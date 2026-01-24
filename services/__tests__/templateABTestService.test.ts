@@ -51,6 +51,10 @@ vi.mock('../supabaseClient', () => ({
             order: vi.fn(() => ({
               data: [],
               error: null,
+              eq: vi.fn(() => ({
+                data: [],
+                error: null,
+              })),
             })),
           })),
         };
