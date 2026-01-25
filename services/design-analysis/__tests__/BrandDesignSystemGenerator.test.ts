@@ -418,4 +418,142 @@ That's the result.`;
       expect(() => generator.parseAIResponse(response)).toThrow('Failed to extract JSON from AI response');
     });
   });
+
+  describe('defensive coding - edge cases', () => {
+    it('should handle minimal DesignDNA with only required color fields', () => {
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: 'test-key'
+      });
+
+      // Minimal DNA that might come from AI
+      const minimalDna = {
+        colors: {
+          primary: { hex: '#3b82f6', usage: 'buttons', confidence: 80 }
+        }
+      } as unknown as DesignDNA;
+
+      const tokens = generator.generateTokensFromDNA(minimalDna);
+
+      // Should use fallbacks for missing properties
+      expect(tokens.json['--ctc-primary']).toBe('#3b82f6');
+      expect(tokens.json['--ctc-primary-light']).toBe('#60a5fa'); // fallback
+      expect(tokens.json['--ctc-secondary']).toBe('#1f2937'); // fallback
+      expect(tokens.json['--ctc-neutral-darkest']).toBe('#111827'); // fallback
+      expect(tokens.json['--ctc-success']).toBe('#10b981'); // fallback
+    });
+
+    it('should handle DesignDNA with missing colors.neutrals', () => {
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: 'test-key'
+      });
+
+      const dnaMissingNeutrals = {
+        colors: {
+          primary: { hex: '#ff0000', usage: 'test', confidence: 90 },
+          // neutrals intentionally missing
+          semantic: {
+            success: '#00ff00',
+            warning: '#ffff00',
+            error: '#ff0000',
+            info: '#0000ff'
+          }
+        }
+      } as unknown as DesignDNA;
+
+      const tokens = generator.generateTokensFromDNA(dnaMissingNeutrals);
+
+      // neutrals should use fallbacks
+      expect(tokens.json['--ctc-neutral-darkest']).toBe('#111827');
+      expect(tokens.json['--ctc-neutral-light']).toBe('#d1d5db');
+      // semantic colors should be used
+      expect(tokens.json['--ctc-success']).toBe('#00ff00');
+    });
+
+    it('should handle DesignDNA with missing typography', () => {
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: 'test-key'
+      });
+
+      const dnaNoTypography = {
+        colors: {
+          primary: { hex: '#3b82f6', usage: 'test', confidence: 90 }
+        }
+        // typography intentionally missing
+      } as unknown as DesignDNA;
+
+      const tokens = generator.generateTokensFromDNA(dnaNoTypography);
+
+      // Should use fallback fonts
+      expect(tokens.json['--ctc-font-heading']).toBe('system-ui, sans-serif');
+      expect(tokens.json['--ctc-font-body']).toBe('system-ui, sans-serif');
+      expect(tokens.json['--ctc-font-size-base']).toBe('16px');
+    });
+
+    it('should handle DesignDNA with missing effects.shadows', () => {
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: 'test-key'
+      });
+
+      const dnaNoShadows = {
+        colors: {
+          primary: { hex: '#3b82f6', usage: 'test', confidence: 90 }
+        },
+        effects: {
+          // shadows intentionally missing
+          backgrounds: {
+            usesPatterns: false
+          }
+        }
+      } as unknown as DesignDNA;
+
+      const tokens = generator.generateTokensFromDNA(dnaNoShadows);
+
+      // Should use fallback shadows
+      expect(tokens.json['--ctc-shadow-card']).toBe('0 1px 3px rgba(0,0,0,0.1)');
+      expect(tokens.json['--ctc-shadow-button']).toBe('0 1px 2px rgba(0,0,0,0.05)');
+    });
+
+    it('should handle completely empty DesignDNA', () => {
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: 'test-key'
+      });
+
+      const emptyDna = {} as unknown as DesignDNA;
+
+      const tokens = generator.generateTokensFromDNA(emptyDna);
+
+      // All values should be fallbacks
+      expect(tokens.json['--ctc-primary']).toBe('#3b82f6');
+      expect(tokens.json['--ctc-secondary']).toBe('#1f2937');
+      expect(tokens.json['--ctc-font-heading']).toBe('system-ui, sans-serif');
+      expect(tokens.json['--ctc-spacing-unit']).toBe('16px');
+      expect(tokens.css).toContain(':root');
+    });
+
+    it('should handle DesignDNA where colors are strings instead of objects', () => {
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: 'test-key'
+      });
+
+      // AI might return colors as plain strings
+      const dnaWithStringColors = {
+        colors: {
+          primary: '#ff6600', // string instead of { hex, usage, confidence }
+          secondary: '#333333'
+        }
+      } as unknown as DesignDNA;
+
+      const tokens = generator.generateTokensFromDNA(dnaWithStringColors);
+
+      // Should handle string colors via getHex helper
+      expect(tokens.json['--ctc-primary']).toBe('#ff6600');
+      expect(tokens.json['--ctc-secondary']).toBe('#333333');
+    });
+  });
 });
