@@ -193,3 +193,119 @@ export interface DesignDNAExtractionResult {
   aiModel: string;
   processingTimeMs: number;
 }
+
+// ============================================================================
+// BRAND DESIGN SYSTEM (Generated from Design DNA)
+// ============================================================================
+
+export interface ComponentStyleDefinition {
+  baseCSS: string;
+  variants: Record<string, string>;
+  states: {
+    hover?: string;
+    active?: string;
+    focus?: string;
+    disabled?: string;
+  };
+  responsive?: {
+    mobile?: string;
+    tablet?: string;
+  };
+}
+
+export interface BrandDesignSystem {
+  id: string;
+  brandName: string;
+  sourceUrl: string;
+  generatedAt: string;
+  designDnaHash: string;
+
+  // CSS TOKENS
+  tokens: {
+    css: string;
+    json: Record<string, string>;
+  };
+
+  // COMPONENT STYLES
+  componentStyles: {
+    button: ComponentStyleDefinition;
+    card: ComponentStyleDefinition;
+    hero: ComponentStyleDefinition;
+    timeline: ComponentStyleDefinition;
+    testimonial: ComponentStyleDefinition;
+    faq: ComponentStyleDefinition;
+    cta: ComponentStyleDefinition;
+    keyTakeaways: ComponentStyleDefinition;
+    prose: ComponentStyleDefinition;
+    list: ComponentStyleDefinition;
+    table: ComponentStyleDefinition;
+    blockquote: ComponentStyleDefinition;
+  };
+
+  // DECORATIVE ELEMENTS
+  decorative: {
+    dividers: {
+      default: string;
+      subtle: string;
+      decorative: string;
+    };
+    sectionBackgrounds: {
+      default: string;
+      accent: string;
+      featured: string;
+    };
+    shapes?: {
+      topWave?: string;
+      bottomWave?: string;
+      cornerAccent?: string;
+      floatingOrb?: string;
+    };
+    patterns?: {
+      dots?: string;
+      grid?: string;
+      custom?: string;
+    };
+  };
+
+  // MICRO-INTERACTIONS
+  interactions: {
+    buttonHover: string;
+    buttonActive: string;
+    buttonFocus: string;
+    cardHover: string;
+    linkHover: string;
+    focusRing: string;
+    keyframes: Record<string, string>;
+  };
+
+  // TYPOGRAPHY TREATMENTS
+  typographyTreatments: {
+    headingDecoration: string;
+    dropCap: string;
+    pullQuote: string;
+    listMarker: string;
+    linkUnderline: string;
+    codeBlock: string;
+  };
+
+  // IMAGE TREATMENTS
+  imageTreatments: {
+    defaultFrame: string;
+    featured: string;
+    thumbnail: string;
+    gallery: string;
+    mask?: string;
+    overlay?: string;
+  };
+
+  // COMPLETE COMPILED CSS
+  compiledCss: string;
+
+  // VARIANT MAPPINGS
+  variantMappings: {
+    card: Record<string, string>;
+    hero: Record<string, string>;
+    button: Record<string, string>;
+    cta: Record<string, string>;
+  };
+}
