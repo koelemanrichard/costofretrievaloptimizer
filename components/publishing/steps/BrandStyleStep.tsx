@@ -29,10 +29,11 @@ interface BrandStyleStepProps {
   onChange: (updates: Partial<PublishingStyle>) => void;
   personalityId: DesignPersonalityId;
   onPersonalityChange: (id: DesignPersonalityId) => void;
-  onAutoDetect: (url: string) => Promise<void>;
-  isAnalyzing?: boolean;
-  analysisError?: string | null;
-  detectionSuccess?: string | null;
+  onAutoDetect: (url: string) => void;
+  isAnalyzing: boolean;
+  analysisError: string | null;
+  detectionSuccess: string | null;
+  lastDetectionResult: DesignTokens | null;
   defaultDomain?: string;
 }
 
@@ -50,6 +51,7 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
   isAnalyzing,
   analysisError,
   detectionSuccess,
+  lastDetectionResult,
   defaultDomain,
 }) => {
   const [activeTab, setActiveTab] = useState<'design-style' | 'colors' | 'typography' | 'spacing'>('design-style');
@@ -223,14 +225,15 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
               </p>
             )}
             {detectionSuccess && (
-              <div className="space-y-4">
-                <div className="text-xs text-green-300 mt-3 bg-green-900/30 p-2.5 rounded-lg border border-green-500/30 flex items-center gap-2 font-medium">
-                  <span className="text-base">✅</span> {detectionSuccess}
-                </div>
+              <div className="text-xs text-green-300 mt-3 bg-green-900/30 p-2.5 rounded-lg border border-green-500/30 flex items-center gap-2 font-medium">
+                <span className="text-base">✅</span> {detectionSuccess}
+              </div>
+            )}
 
-                {/* THE TRUST ANCHOR: Visualize what was actually found */}
+            {lastDetectionResult && (
+              <div className="mt-6">
                 <BrandDNASummary
-                  tokens={style.designTokens}
+                  tokens={lastDetectionResult}
                   confidence={98}
                   sourceUrl={targetUrl}
                 />

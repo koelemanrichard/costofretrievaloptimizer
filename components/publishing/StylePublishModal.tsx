@@ -172,6 +172,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   // AI Stylist / Auto-detect state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [lastDetectionResult, setLastDetectionResult] = useState<DesignTokens | null>(null);
 
   // Auto-detect branding handler
   const handleAutoDetectBranding = useCallback(async (url: string) => {
@@ -246,7 +247,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
         // This ensures the layout morphs to match the new vibe
         console.log('[Style & Publish] Triggering intelligent blueprint update...');
         generateBlueprint(newTokens, suggestedPersonality);
-
+        setLastDetectionResult(newTokens);
         setPreview(null);
         setDetectionSuccess('Branding detected successfully! The layout has been updated.');
 
@@ -941,6 +942,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             isAnalyzing={isAnalyzing}
             analysisError={analysisError}
             detectionSuccess={detectionSuccess}
+            lastDetectionResult={lastDetectionResult}
             defaultDomain={topicalMap?.business_info?.domain}
           />
         ) : null;
