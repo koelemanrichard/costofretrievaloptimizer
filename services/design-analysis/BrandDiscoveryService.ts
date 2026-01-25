@@ -299,10 +299,15 @@ export const BrandDiscoveryService = {
     const runInput = {
       startUrls: [{ url }],
       pageFunction,
+      // CRITICAL: Must use playwright crawler for screenshot capture
+      crawlerType: 'playwright:firefox',
       proxyConfiguration: { useApifyProxy: true },
       maxConcurrency: 1,
       maxRequestsPerCrawl: 1,
-      linkSelector: ''
+      linkSelector: '',
+      // Increase timeout for slow sites
+      pageLoadTimeoutSecs: 60,
+      pageFunctionTimeoutSecs: 60,
     };
 
     console.log('[BrandDiscovery] Starting Apify actor for URL:', url);
