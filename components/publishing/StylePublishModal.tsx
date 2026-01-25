@@ -373,13 +373,29 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     // Convert DesignDNA to DesignTokens for the style
     const dna = result.designDna;
 
+    // Safe accessors for nested properties
+    const getColorHex = (color: { hex?: string } | string | undefined, fallback: string): string => {
+      if (!color) return fallback;
+      if (typeof color === 'string') return color;
+      return color.hex || fallback;
+    };
+
+    const colors = dna?.colors || {} as typeof dna.colors;
+    const neutrals = colors?.neutrals || {} as Record<string, string>;
+    const typography = dna?.typography || {} as typeof dna.typography;
+    const effects = dna?.effects || {} as typeof dna.effects;
+
+    const primaryHex = getColorHex(colors?.primary, '#3b82f6');
+    const secondaryHex = getColorHex(colors?.secondary, '#1f2937');
+
     // Determine personality based on detected mood
     let suggestedPersonality: DesignPersonalityId = 'modern-minimal';
-    if (dna.colors.dominantMood === 'corporate') {
+    const dominantMood = colors?.dominantMood;
+    if (dominantMood === 'corporate') {
       suggestedPersonality = 'corporate-professional';
-    } else if (dna.colors.dominantMood === 'creative' || dna.colors.dominantMood === 'bold') {
+    } else if (dominantMood === 'creative' || dominantMood === 'bold') {
       suggestedPersonality = 'bold-creative';
-    } else if (dna.colors.dominantMood === 'luxurious' || dna.colors.dominantMood === 'minimal') {
+    } else if (dominantMood === 'luxurious' || dominantMood === 'minimal') {
       suggestedPersonality = 'modern-minimal';
     }
 
@@ -390,19 +406,19 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     if (style) {
       const newTokens = brandKitToDesignTokens({
         colors: {
-          primary: dna.colors.primary.hex,
-          secondary: dna.colors.secondary.hex,
-          background: dna.colors.neutrals.lightest,
-          surface: dna.colors.neutrals.light,
-          text: dna.colors.neutrals.darkest,
-          textMuted: dna.colors.neutrals.medium,
-          border: dna.colors.neutrals.light,
+          primary: primaryHex,
+          secondary: secondaryHex,
+          background: neutrals?.lightest || '#f9fafb',
+          surface: neutrals?.light || '#f3f4f6',
+          text: neutrals?.darkest || '#111827',
+          textMuted: neutrals?.medium || '#6b7280',
+          border: neutrals?.light || '#e5e7eb',
           textOnImage: '#ffffff',
-          overlayGradient: dna.effects.gradients.primaryGradient || `linear-gradient(135deg, ${dna.colors.primary.hex}, ${dna.colors.secondary.hex})`
+          overlayGradient: effects?.gradients?.primaryGradient || `linear-gradient(135deg, ${primaryHex}, ${secondaryHex})`
         },
         fonts: {
-          heading: dna.typography.headingFont.family,
-          body: dna.typography.bodyFont.family
+          heading: typography?.headingFont?.family || 'system-ui',
+          body: typography?.bodyFont?.family || 'system-ui'
         },
         logoPlacement: 'top-left',
         logoOpacity: 1,
