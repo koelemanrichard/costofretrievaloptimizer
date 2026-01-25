@@ -3,17 +3,23 @@
  *
  * Step 3 of Style & Publish modal.
  * Live preview with device frames and SEO validation.
+ * Includes collapsible panels for layout and blueprint adjustments.
  *
  * @module components/publishing/steps/PreviewStep
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '../../ui/Button';
+import { LayoutPanel } from '../panels/LayoutPanel';
+import { BlueprintPanel } from '../panels/BlueprintPanel';
 import type {
   StyledContentOutput,
   DevicePreview,
   SeoWarning,
+  LayoutConfiguration,
+  ContentTypeTemplate,
 } from '../../../types/publishing';
+import type { LayoutBlueprint } from '../../../services/publishing';
 
 // ============================================================================
 // Types
@@ -26,6 +32,15 @@ interface PreviewStepProps {
   seoWarnings: SeoWarning[];
   onCopyHtml?: (html: string) => void;
   onCopyCss?: (css: string) => void;
+  // Layout configuration
+  layout?: LayoutConfiguration;
+  onLayoutChange?: (updates: Partial<LayoutConfiguration>) => void;
+  onTemplateChange?: (template: ContentTypeTemplate) => void;
+  // Blueprint configuration
+  blueprint?: LayoutBlueprint | null;
+  onBlueprintChange?: (blueprint: LayoutBlueprint) => void;
+  isBlueprintGenerating?: boolean;
+  onRegenerateBlueprint?: () => void;
 }
 
 interface DeviceFrameProps {
@@ -120,6 +135,15 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
   seoWarnings,
   onCopyHtml,
   onCopyCss,
+  // Layout props
+  layout,
+  onLayoutChange,
+  onTemplateChange,
+  // Blueprint props
+  blueprint,
+  onBlueprintChange,
+  isBlueprintGenerating,
+  onRegenerateBlueprint,
 }) => {
   const [device, setDevice] = useState<DevicePreview>('desktop');
   const [showRawHtml, setShowRawHtml] = useState(false);
@@ -295,6 +319,32 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
           </DeviceFrame>
         )}
       </div>
+
+      {/* Adjustment Panels - collapsed by default */}
+      {(layout || blueprint) && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500 italic">
+            Preview looks good? Click "Next" to publish. Want changes? Expand panels below.
+          </p>
+
+          {layout && onLayoutChange && onTemplateChange && (
+            <LayoutPanel
+              layout={layout}
+              onChange={onLayoutChange}
+              onTemplateChange={onTemplateChange}
+            />
+          )}
+
+          {blueprint && onBlueprintChange && (
+            <BlueprintPanel
+              blueprint={blueprint}
+              onBlueprintChange={onBlueprintChange}
+              isGenerating={isBlueprintGenerating}
+              onRegenerate={onRegenerateBlueprint}
+            />
+          )}
+        </div>
+      )}
 
       {/* Component Summary */}
       <div className="flex items-center justify-between text-xs text-gray-500">
