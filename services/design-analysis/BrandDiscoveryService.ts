@@ -37,13 +37,29 @@ export const BrandDiscoveryService = {
         // Helper: Check if color is neutral (white, black, gray)
         const isNeutral = (c) => {
           if (!c || c.includes('rgba(0, 0, 0, 0)')) return true;
-          const match = c.match(/\\d+/g);
-          if (!match) return true;
-          const [r, g, b] = match.map(Number);
+
+          let r, g, b;
+
+          // Handle hex colors
+          if (c.startsWith('#')) {
+            const hex = c.replace('#', '');
+            const fullHex = hex.length === 3
+              ? hex.split('').map(ch => ch + ch).join('')
+              : hex;
+            r = parseInt(fullHex.slice(0, 2), 16);
+            g = parseInt(fullHex.slice(2, 4), 16);
+            b = parseInt(fullHex.slice(4, 6), 16);
+          } else {
+            // Handle rgb/rgba
+            const match = c.match(/\\d+/g);
+            if (!match || match.length < 3) return true;
+            [r, g, b] = match.map(Number);
+          }
+
           if (r === 255 && g === 255 && b === 255) return true;
           if (r === 0 && g === 0 && b === 0) return true;
-          // Gray detection: all channels similar AND not vibrant
-          if (Math.abs(r-g) < 15 && Math.abs(g-b) < 15 && Math.abs(r-b) < 15) return true;
+          // Gray detection: all channels similar
+          if (Math.abs(r - g) < 15 && Math.abs(g - b) < 15 && Math.abs(r - b) < 15) return true;
           return false;
         };
 
