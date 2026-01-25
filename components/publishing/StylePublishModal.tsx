@@ -403,44 +403,73 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     setPersonalityId(suggestedPersonality);
 
     // Convert to DesignTokens and update style
-    if (style) {
-      const newTokens = brandKitToDesignTokens({
-        colors: {
-          primary: primaryHex,
-          secondary: secondaryHex,
-          background: neutrals?.lightest || '#f9fafb',
-          surface: neutrals?.light || '#f3f4f6',
-          text: neutrals?.darkest || '#111827',
-          textMuted: neutrals?.medium || '#6b7280',
-          border: neutrals?.light || '#e5e7eb',
-          textOnImage: '#ffffff',
-          overlayGradient: effects?.gradients?.primaryGradient || `linear-gradient(135deg, ${primaryHex}, ${secondaryHex})`
-        },
-        fonts: {
-          heading: typography?.headingFont?.family || 'system-ui',
-          body: typography?.bodyFont?.family || 'system-ui'
-        },
-        logoPlacement: 'top-left',
-        logoOpacity: 1,
-        copyright: { holder: '' },
-        heroTemplates: []
-      });
+    console.log('[Style & Publish] Detected brand colors:', {
+      primary: primaryHex,
+      secondary: secondaryHex,
+      neutrals: {
+        darkest: neutrals?.darkest,
+        dark: neutrals?.dark,
+        medium: neutrals?.medium,
+        light: neutrals?.light,
+        lightest: neutrals?.lightest,
+      },
+      fonts: {
+        heading: typography?.headingFont?.family,
+        body: typography?.bodyFont?.family,
+      }
+    });
 
-      setStyle({
-        ...style,
+    const newTokens = brandKitToDesignTokens({
+      colors: {
+        primary: primaryHex,
+        secondary: secondaryHex,
+        background: neutrals?.lightest || '#f9fafb',
+        surface: neutrals?.light || '#f3f4f6',
+        text: neutrals?.darkest || '#111827',
+        textMuted: neutrals?.medium || '#6b7280',
+        border: neutrals?.light || '#e5e7eb',
+        textOnImage: '#ffffff',
+        overlayGradient: effects?.gradients?.primaryGradient || `linear-gradient(135deg, ${primaryHex}, ${secondaryHex})`
+      },
+      fonts: {
+        heading: typography?.headingFont?.family || 'system-ui',
+        body: typography?.bodyFont?.family || 'system-ui'
+      },
+      logoPlacement: 'top-left',
+      logoOpacity: 1,
+      copyright: { holder: '' },
+      heroTemplates: []
+    });
+
+    console.log('[Style & Publish] New design tokens created:', {
+      primaryColor: newTokens.colors.primary,
+      secondaryColor: newTokens.colors.secondary,
+      backgroundColor: newTokens.colors.background,
+      textColor: newTokens.colors.text,
+      headingFont: newTokens.fonts.heading,
+      bodyFont: newTokens.fonts.body,
+    });
+
+    // Use functional setState to avoid stale closure issues
+    setStyle(prevStyle => {
+      if (!prevStyle) return prevStyle;
+      const updatedStyle = {
+        ...prevStyle,
         designTokens: {
-          ...style.designTokens,
+          ...prevStyle.designTokens,
           ...newTokens,
         },
         updatedAt: new Date().toISOString()
-      });
+      };
+      console.log('[Style & Publish] Updated style.designTokens:', updatedStyle.designTokens.colors);
+      return updatedStyle;
+    });
 
-      // Auto-generate blueprint with the new design tokens
-      console.log('[Style & Publish] Auto-generating blueprint...');
-      generateBlueprint(newTokens, suggestedPersonality);
-      setPreview(null);
-    }
-  }, [style, generateBlueprint]);
+    // Auto-generate blueprint with the new design tokens
+    console.log('[Style & Publish] Auto-generating blueprint with detected colors...');
+    generateBlueprint(newTokens, suggestedPersonality);
+    setPreview(null);
+  }, [generateBlueprint]);
 
   // Fetch learned preferences for this project
   const fetchLearnedPreferences = useCallback(async () => {
@@ -685,6 +714,18 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       if (blueprint) {
         // Extract language from topical map context
         const language = topicalMap?.business_info?.language || 'en';
+
+        // Log the design tokens being used for rendering
+        console.log('[Style & Publish] generatePreview - using designTokens:', {
+          hasTokens: !!style?.designTokens,
+          colors: style?.designTokens?.colors ? {
+            primary: style.designTokens.colors.primary,
+            secondary: style.designTokens.colors.secondary,
+            background: style.designTokens.colors.background,
+            text: style.designTokens.colors.text,
+          } : 'NO TOKENS',
+          fonts: style?.designTokens?.fonts,
+        });
 
         const output = renderBlueprint(
           blueprint,
