@@ -21,6 +21,9 @@ import { LayoutConfigStep } from './steps/LayoutConfigStep';
 import { BlueprintStep } from './steps/BlueprintStep';
 import { PreviewStep } from './steps/PreviewStep';
 import { PublishOptionsStep } from './steps/PublishOptionsStep';
+import { DesignGenerationStep } from './steps/DesignGenerationStep';
+import { useMultiPassDesign } from '../../hooks/useMultiPassDesign';
+import type { BrandDiscoveryReport } from '../../types/publishing';
 import type {
   StylePublishStep,
   PublishingStyle,
@@ -108,6 +111,7 @@ interface StepInfo {
 
 const STEPS: StepInfo[] = [
   { id: 'brand-style', label: 'Brand Style', icon: '🎨' },
+  { id: 'design-generation', label: 'Design', icon: '✨' },
   { id: 'layout-config', label: 'Layout', icon: '📐' },
   { id: 'blueprint', label: 'Blueprint', icon: '🏗️' },
   { id: 'preview', label: 'Preview', icon: '👁️' },
@@ -173,6 +177,22 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [lastDetectionResult, setLastDetectionResult] = useState<DesignTokens | null>(null);
+  const [brandDiscoveryReport, setBrandDiscoveryReport] = useState<BrandDiscoveryReport | null>(null);
+
+  // Multi-pass design generation
+  const geminiKey = (topicalMap?.business_info as any)?.geminiKey || '';
+  const multiPassDesign = useMultiPassDesign({
+    personality: personalityId,
+    aiProvider: 'gemini',
+    aiApiKey: geminiKey,
+    onComplete: (result) => {
+      console.log('[Style & Publish] Multi-pass design complete:', result);
+    },
+    onError: (error) => {
+      console.error('[Style & Publish] Multi-pass design error:', error);
+      setErrors([error.message]);
+    },
+  });
 
   // Auto-detect branding handler
   const handleAutoDetectBranding = useCallback(async (url: string) => {
@@ -301,6 +321,36 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       setIsAnalyzing(false);
     }
   }, [style, topic.map_id, topicalMap, supabaseUrl, supabaseAnonKey, setPreview, setStyle]);
+
+  // Start multi-pass design generation
+  const handleStartDesignGeneration = useCallback(async () => {
+    if (!style) return;
+
+    // Create a brand discovery report from current style
+    const report: BrandDiscoveryReport = {
+      id: `report-${Date.now()}`,
+      targetUrl: topicalMap?.business_info?.domain || '',
+      screenshotBase64: undefined,
+      analyzedAt: new Date().toISOString(),
+      findings: {
+        primaryColor: { value: style.designTokens.colors.primary, confidence: 'found', source: 'user-defined' },
+        secondaryColor: { value: style.designTokens.colors.secondary, confidence: 'found', source: 'user-defined' },
+        accentColor: { value: style.designTokens.colors.accent, confidence: 'found', source: 'user-defined' },
+        backgroundColor: { value: style.designTokens.colors.background, confidence: 'found', source: 'user-defined' },
+        headingFont: { value: style.designTokens.fonts.heading, confidence: 'found', source: 'user-defined' },
+        bodyFont: { value: style.designTokens.fonts.body, confidence: 'found', source: 'user-defined' },
+        borderRadius: { value: style.designTokens.borderRadius, confidence: 'found', source: 'user-defined' },
+        shadowStyle: { value: style.designTokens.shadows, confidence: 'found', source: 'user-defined' },
+      },
+      overallConfidence: 85,
+      derivedTokens: style.designTokens,
+    };
+
+    setBrandDiscoveryReport(report);
+
+    // Start multi-pass generation
+    await multiPassDesign.generate(articleDraft, report);
+  }, [style, articleDraft, topicalMap, multiPassDesign]);
 
   // Initialize style and layout on open
   useEffect(() => {
@@ -946,6 +996,23 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             defaultDomain={topicalMap?.business_info?.domain}
           />
         ) : null;
+
+      case 'design-generation':
+        return (
+          <DesignGenerationStep
+            isGenerating={multiPassDesign.state.isGenerating}
+            currentPass={multiPassDesign.state.currentPass}
+            progress={multiPassDesign.state.progress}
+            contentAnalysis={multiPassDesign.state.contentAnalysis}
+            componentSelections={multiPassDesign.state.componentSelections}
+            rhythmPlan={multiPassDesign.state.rhythmPlan}
+            designApplied={multiPassDesign.state.designApplied}
+            qualityValidation={multiPassDesign.state.qualityValidation}
+            error={multiPassDesign.state.error}
+            onGenerate={handleStartDesignGeneration}
+            onCancel={multiPassDesign.cancel}
+          />
+        );
 
       case 'layout-config':
         return layout ? (
