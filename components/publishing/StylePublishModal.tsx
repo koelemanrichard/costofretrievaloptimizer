@@ -23,6 +23,7 @@ import { PreviewStep } from './steps/PreviewStep';
 import { PublishOptionsStep } from './steps/PublishOptionsStep';
 import { DesignGenerationStep } from './steps/DesignGenerationStep';
 import { useMultiPassDesign } from '../../hooks/useMultiPassDesign';
+import { useDesignInheritance } from '../../hooks/useDesignInheritance';
 import type { BrandDiscoveryReport } from '../../types/publishing';
 import type {
   StylePublishStep,
@@ -193,6 +194,35 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       setErrors([error.message]);
     },
   });
+
+  // Design inheritance - load project/map level settings
+  const supabaseClient = useMemo(
+    () => getSupabaseClient(supabaseUrl, supabaseAnonKey),
+    [supabaseUrl, supabaseAnonKey]
+  );
+
+  const designInheritance = useDesignInheritance({
+    supabase: supabaseClient,
+    projectId: projectId || '',
+    topicalMapId: topic.map_id,
+    skipInitialLoad: !projectId, // Skip if no project ID
+  });
+
+  // Apply inherited tokens to style when loaded
+  useEffect(() => {
+    if (designInheritance.tokens && style && !designInheritance.isLoading) {
+      // Only apply if we don't already have custom tokens set
+      const hasCustomTokens = style.designTokens.colors.primary !== '#3B82F6';
+      if (!hasCustomTokens) {
+        console.log('[Style & Publish] Applying inherited design tokens');
+        setStyle({
+          ...style,
+          designTokens: designInheritance.tokens,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+  }, [designInheritance.tokens, designInheritance.isLoading]);
 
   // Auto-detect branding handler
   const handleAutoDetectBranding = useCallback(async (url: string) => {
