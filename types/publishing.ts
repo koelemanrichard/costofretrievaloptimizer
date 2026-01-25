@@ -155,7 +155,7 @@ export interface ContentAnalysis {
     index: number;
     heading: string;
     headingLevel: number;
-    contentType: 'comparison' | 'process' | 'definition' | 'narrative' | 'statistics' | 'list' | 'faq';
+    contentType: 'prose' | 'comparison' | 'process' | 'definition' | 'narrative' | 'statistics' | 'list' | 'faq';
     wordCount: number;
     hasTable: boolean;
     hasList: boolean;
