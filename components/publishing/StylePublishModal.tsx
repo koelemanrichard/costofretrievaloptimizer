@@ -915,6 +915,15 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             isGenerating={isGenerating}
             onRegenerate={generatePreview}
             seoWarnings={preview?.seoValidation.warnings || []}
+            // Layout configuration for collapsible panel
+            layout={layout || undefined}
+            onLayoutChange={handleLayoutChange}
+            onTemplateChange={handleTemplateChange}
+            // Blueprint configuration for collapsible panel
+            blueprint={blueprint}
+            onBlueprintChange={setBlueprint}
+            isBlueprintGenerating={isBlueprintGenerating}
+            onRegenerateBlueprint={() => generateBlueprint()}
           />
         );
 
