@@ -14,7 +14,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { getSupabaseClient } from '../../services/supabaseClient';
-import { DesignAnalyzer } from '../../services/design-analysis/DesignAnalyzer';
+import { BrandDiscoveryService } from '../../services/design-analysis/BrandDiscoveryService';
+import { DesignQualityValidator } from '../../services/design-analysis/DesignQualityValidator';
 import { StyleExtractor } from '../../services/design-analysis/StyleExtractor';
 import { BrandStyleStep } from './steps/BrandStyleStep';
 import { LayoutConfigStep } from './steps/LayoutConfigStep';
@@ -231,24 +232,98 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     setAnalysisError(null);
 
     try {
-      // 1. Visit URL and extract raw tokens using DesignAnalyzer
-      // apifyToken is usually in businessInfo (global) or topicalMap (which might have its own copy)
-      // Check topicalMap.business_info first, then fallback
+      // 1. Get API tokens
       const apifyToken = (topicalMap?.business_info as any)?.apifyToken;
       if (!apifyToken) {
         throw new Error('Apify API token is required for design analysis. Please add it to Settings.');
       }
 
+      // Get Gemini API key for AI vision validation
+      const geminiApiKey = (topicalMap?.business_info as any)?.geminiApiKey ||
+        localStorage.getItem('gemini_api_key') || '';
+
       console.log('[Style & Publish] Starting auto-detect for:', url);
-      const rawTokens = await DesignAnalyzer.analyzeUrl(url, apifyToken);
-      if (!rawTokens) {
+
+      // 2. Use BrandDiscoveryService to extract colors AND capture screenshot
+      const discoveryReport = await BrandDiscoveryService.analyze(url, apifyToken);
+      if (!discoveryReport) {
         throw new Error('Failed to extract branding from the provided URL.');
       }
 
-      // 2. Process tokens into BrandKit format
-      const processed = StyleExtractor.processTokens(rawTokens, url);
+      console.log('[Style & Publish] Initial extraction:', {
+        primary: discoveryReport.findings.primaryColor.value,
+        secondary: discoveryReport.findings.secondaryColor.value,
+        source: discoveryReport.findings.primaryColor.source
+      });
 
-      // 3. Update local style state immediately with full palette
+      // 3. VALIDATE extraction with AI vision if we have a screenshot and API key
+      let finalPrimary = discoveryReport.findings.primaryColor.value;
+      let finalSecondary = discoveryReport.findings.secondaryColor.value;
+      let finalAccent = discoveryReport.findings.accentColor.value;
+      let validationConfidence = discoveryReport.overallConfidence;
+
+      if (discoveryReport.screenshotBase64 && geminiApiKey) {
+        console.log('[Style & Publish] Validating extraction with AI vision...');
+
+        const validator = new DesignQualityValidator({
+          provider: 'gemini',
+          apiKey: geminiApiKey
+        });
+
+        const validation = await validator.validateExtraction(
+          discoveryReport.screenshotBase64,
+          {
+            primary: finalPrimary,
+            secondary: finalSecondary,
+            accent: finalAccent,
+            background: discoveryReport.findings.backgroundColor.value
+          }
+        );
+
+        console.log('[Style & Publish] AI Vision validation result:', validation);
+
+        if (!validation.isValid && Object.keys(validation.corrections).length > 0) {
+          console.log('[Style & Publish] Applying AI corrections:', validation.corrections);
+
+          // Apply corrections from AI vision
+          if (validation.corrections.primaryColor) {
+            finalPrimary = validation.corrections.primaryColor;
+          }
+          if (validation.corrections.secondaryColor) {
+            finalSecondary = validation.corrections.secondaryColor;
+          }
+          if (validation.corrections.accentColor) {
+            finalAccent = validation.corrections.accentColor;
+          }
+
+          validationConfidence = validation.confidence;
+          setDetectionSuccess(`AI corrected colors: ${validation.notes}`);
+        } else if (validation.isValid) {
+          validationConfidence = validation.confidence;
+          console.log('[Style & Publish] Extraction validated by AI vision');
+        }
+      } else {
+        console.log('[Style & Publish] Skipping AI validation (no screenshot or API key)');
+      }
+
+      // 4. Process tokens into BrandKit format with validated colors
+      const processed = {
+        colors: {
+          primary: finalPrimary,
+          secondary: finalSecondary,
+          background: discoveryReport.findings.backgroundColor.value,
+          surface: discoveryReport.derivedTokens.colors.surface,
+          text: discoveryReport.derivedTokens.colors.text,
+          textMuted: discoveryReport.derivedTokens.colors.textMuted,
+          border: discoveryReport.derivedTokens.colors.border,
+        },
+        typography: {
+          headingFont: discoveryReport.findings.headingFont.value,
+          bodyFont: discoveryReport.findings.bodyFont.value,
+        }
+      };
+
+      // 5. Update local style state immediately with full palette
       if (style) {
         const isDark = processed.colors.background.startsWith('#1') || processed.colors.background.startsWith('#0');
 
@@ -293,13 +368,16 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           updatedAt: new Date().toISOString()
         });
 
-        // 4. TRIGGER BLUEPRINT REGENERATION (The "Intelligence" Bridge)
+        // 6. TRIGGER BLUEPRINT REGENERATION (The "Intelligence" Bridge)
         // This ensures the layout morphs to match the new vibe
         console.log('[Style & Publish] Triggering intelligent blueprint update...');
         generateBlueprint(newTokens, suggestedPersonality);
         setLastDetectionResult(newTokens);
         setPreview(null);
-        setDetectionSuccess('Branding detected successfully! The layout has been updated.');
+
+        // Show success with validation confidence
+        const confidenceText = validationConfidence > 0 ? ` (${validationConfidence}% AI confidence)` : '';
+        setDetectionSuccess(`Branding detected successfully${confidenceText}! The layout has been updated.`);
 
         // Clear success message after 5 seconds
         setTimeout(() => setDetectionSuccess(null), 5000);
