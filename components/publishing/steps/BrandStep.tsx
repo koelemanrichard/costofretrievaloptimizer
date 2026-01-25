@@ -43,7 +43,6 @@ export const BrandStep: React.FC<BrandStepProps> = ({
 }) => {
   const [targetUrl, setTargetUrl] = useState(defaultDomain || '');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [editingSection, setEditingSection] = useState<string | null>(null);
 
   const detection = useBrandDetection({
     apifyToken,
@@ -69,11 +68,6 @@ export const BrandStep: React.FC<BrandStepProps> = ({
       });
     }
   }, [detection.result, onDetectionComplete]);
-
-  const handleEdit = useCallback((section: 'colors' | 'typography' | 'shapes' | 'personality') => {
-    setEditingSection(section);
-    // TODO: Open inline editor for the section
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -165,7 +159,7 @@ export const BrandStep: React.FC<BrandStepProps> = ({
             confidence={detection.result.confidence}
             isExpanded={isExpanded}
             onToggleExpand={() => setIsExpanded(!isExpanded)}
-            onEdit={handleEdit}
+            onDnaChange={onDesignDnaChange}
           />
         </div>
       )}

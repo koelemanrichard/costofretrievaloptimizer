@@ -1,13 +1,14 @@
 // components/publishing/DesignDNADisplay.tsx
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { DesignDNA } from '../../types/designDna';
+import { DesignDNAEditors, type EditSection } from './editors/DesignDNAEditors';
 
 interface DesignDNADisplayProps {
   dna: DesignDNA;
   screenshotBase64?: string;
   sourceUrl: string;
   confidence: number;
-  onEdit?: (section: 'colors' | 'typography' | 'shapes' | 'personality') => void;
+  onDnaChange?: (updatedDna: DesignDNA) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
 }
@@ -17,11 +18,25 @@ export const DesignDNADisplay: React.FC<DesignDNADisplayProps> = ({
   screenshotBase64,
   sourceUrl,
   confidence,
-  onEdit,
+  onDnaChange,
   isExpanded,
   onToggleExpand,
 }) => {
   const [showFullScreenshot, setShowFullScreenshot] = useState(false);
+  const [editingSection, setEditingSection] = useState<EditSection | null>(null);
+
+  const handleEdit = useCallback((section: EditSection) => {
+    setEditingSection(section);
+  }, []);
+
+  const handleSaveEdit = useCallback((updatedDna: DesignDNA) => {
+    onDnaChange?.(updatedDna);
+    setEditingSection(null);
+  }, [onDnaChange]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingSection(null);
+  }, []);
 
   // Extract domain for display
   const domain = sourceUrl.replace(/^https?:\/\//, '').split('/')[0];
@@ -104,9 +119,9 @@ export const DesignDNADisplay: React.FC<DesignDNADisplayProps> = ({
           <div className="p-4 bg-gray-800/30 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-white">Colors</h4>
-              {onEdit && (
+              {onDnaChange && (
                 <button
-                  onClick={() => onEdit('colors')}
+                  onClick={() => handleEdit('colors')}
                   className="text-xs text-blue-400 hover:text-blue-300"
                 >
                   Edit
@@ -155,9 +170,9 @@ export const DesignDNADisplay: React.FC<DesignDNADisplayProps> = ({
           <div className="p-4 bg-gray-800/30 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-white">Typography</h4>
-              {onEdit && (
+              {onDnaChange && (
                 <button
-                  onClick={() => onEdit('typography')}
+                  onClick={() => handleEdit('typography')}
                   className="text-xs text-blue-400 hover:text-blue-300"
                 >
                   Edit
@@ -192,9 +207,9 @@ export const DesignDNADisplay: React.FC<DesignDNADisplayProps> = ({
           <div className="p-4 bg-gray-800/30 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-white">Shapes & Effects</h4>
-              {onEdit && (
+              {onDnaChange && (
                 <button
-                  onClick={() => onEdit('shapes')}
+                  onClick={() => handleEdit('shapes')}
                   className="text-xs text-blue-400 hover:text-blue-300"
                 >
                   Edit
@@ -225,9 +240,9 @@ export const DesignDNADisplay: React.FC<DesignDNADisplayProps> = ({
           <div className="p-4 bg-gray-800/30 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-white">Brand Personality</h4>
-              {onEdit && (
+              {onDnaChange && (
                 <button
-                  onClick={() => onEdit('personality')}
+                  onClick={() => handleEdit('personality')}
                   className="text-xs text-blue-400 hover:text-blue-300"
                 >
                   Edit
@@ -274,6 +289,16 @@ export const DesignDNADisplay: React.FC<DesignDNADisplayProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Inline Editor */}
+      {editingSection && (
+        <DesignDNAEditors
+          dna={dna}
+          editingSection={editingSection}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+        />
       )}
 
       {/* Full screenshot modal */}
