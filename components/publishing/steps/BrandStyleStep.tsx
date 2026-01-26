@@ -18,6 +18,8 @@ import type { BrandKit } from '../../../types/business';
 import { stylePresets, applyPresetToTokens, defaultDesignTokens } from '../../../config/publishingTemplates';
 import { brandKitToDesignTokens } from '../../../services/publishing/styleConfigService';
 import { designPersonalities, type DesignPersonalityId } from '../../../config/designTokens/personalities';
+import { BrandUrlDiscovery, BrandExtractionProgress, BrandComponentPreview } from '../brand';
+import { useBrandExtraction } from '../../../hooks/useBrandExtraction';
 
 // ============================================================================
 // Types
@@ -35,6 +37,8 @@ interface BrandStyleStepProps {
   detectionSuccess: string | null;
   lastDetectionResult: DesignTokens | null;
   defaultDomain?: string;
+  projectId?: string;
+  aiApiKey?: string;
 }
 
 // ============================================================================
@@ -53,10 +57,20 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
   detectionSuccess,
   lastDetectionResult,
   defaultDomain,
+  projectId,
+  aiApiKey,
 }) => {
   const [activeTab, setActiveTab] = useState<'design-style' | 'colors' | 'typography' | 'spacing'>('design-style');
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState(defaultDomain || '');
+  const [extractionMode, setExtractionMode] = useState<'full' | 'quick'>('full');
+
+  // Full extraction hook
+  const brandExtraction = useBrandExtraction(
+    projectId || '',
+    'gemini',
+    aiApiKey || ''
+  );
 
   // Handle personality change - sync colors to designTokens
   // Handle personality change - sync ONLY vibe (fonts/layout) while preserving brand colors
@@ -180,66 +194,135 @@ export const BrandStyleStep: React.FC<BrandStyleStepProps> = ({
       {/* Design Style Tab - NEW Design Personalities */}
       {activeTab === 'design-style' && (
         <div className="space-y-4">
-          {/* AI Stylist / Auto-detect Section - THE HERO ACTION */}
-          <div className="p-5 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border-2 border-zinc-500/50 shadow-xl mb-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 px-3 py-1 bg-zinc-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-lg">
-              Recommended
-            </div>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl animate-pulse">✨</span>
-              <div>
-                <h3 className="text-base font-bold text-white">AI Brand Detection</h3>
-                <p className="text-xs text-zinc-300/70">Extract your site's DNA (Colors, Fonts, Layout) in one click</p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  placeholder="https://your-website.com"
-                  value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
-                  className="bg-gray-900/80 border-zinc-500/30 h-10 text-sm focus:border-zinc-400"
-                />
-              </div>
-              <Button
-                size="lg"
-                onClick={() => onAutoDetect(targetUrl)}
-                disabled={isAnalyzing || !targetUrl}
-                className="bg-zinc-800 hover:bg-zinc-700 shadow-lg shadow-black/20 min-w-[140px] font-bold"
-              >
-                {isAnalyzing ? 'Analyzing...' : 'Detect Design'}
-              </Button>
-            </div>
-
-            {!detectionSuccess && !analysisError && !isAnalyzing && (
-              <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-300/80 bg-zinc-500/10 p-2 rounded-lg border border-zinc-500/20">
-                <span>💡</span>
-                <span>Pro tip: Detecting your brand ensures your exported articles match your site perfectly.</span>
-              </div>
-            )}
-
-            {analysisError && (
-              <p className="text-xs text-red-400 mt-3 bg-red-900/30 p-2.5 rounded-lg border border-red-500/30">
-                ⚠️ {analysisError}
-              </p>
-            )}
-            {detectionSuccess && (
-              <div className="text-xs text-green-300 mt-3 bg-green-900/30 p-2.5 rounded-lg border border-green-500/30 flex items-center gap-2 font-medium">
-                <span className="text-base">✅</span> {detectionSuccess}
-              </div>
-            )}
-
-            {lastDetectionResult && (
-              <div className="mt-6">
-                <BrandDNASummary
-                  tokens={lastDetectionResult}
-                  confidence={98}
-                  sourceUrl={targetUrl}
-                />
-              </div>
-            )}
+          {/* Mode Toggle */}
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setExtractionMode('full')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                extractionMode === 'full'
+                  ? 'bg-zinc-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              Full Extraction (Recommended)
+            </button>
+            <button
+              type="button"
+              onClick={() => setExtractionMode('quick')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                extractionMode === 'quick'
+                  ? 'bg-zinc-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              Quick Detection
+            </button>
           </div>
+
+          {extractionMode === 'quick' ? (
+            /* Quick Detection UI (existing) */
+            <div className="p-5 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border-2 border-zinc-500/50 shadow-xl mb-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-zinc-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-lg">
+                Quick
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl animate-pulse">&#10024;</span>
+                <div>
+                  <h3 className="text-base font-bold text-white">AI Brand Detection</h3>
+                  <p className="text-xs text-zinc-300/70">Extract your site's DNA (Colors, Fonts, Layout) in one click</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder="https://your-website.com"
+                    value={targetUrl}
+                    onChange={(e) => setTargetUrl(e.target.value)}
+                    className="bg-gray-900/80 border-zinc-500/30 h-10 text-sm focus:border-zinc-400"
+                  />
+                </div>
+                <Button
+                  size="lg"
+                  onClick={() => onAutoDetect(targetUrl)}
+                  disabled={isAnalyzing || !targetUrl}
+                  className="bg-zinc-800 hover:bg-zinc-700 shadow-lg shadow-black/20 min-w-[140px] font-bold"
+                >
+                  {isAnalyzing ? 'Analyzing...' : 'Detect Design'}
+                </Button>
+              </div>
+
+              {!detectionSuccess && !analysisError && !isAnalyzing && (
+                <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-300/80 bg-zinc-500/10 p-2 rounded-lg border border-zinc-500/20">
+                  <span>&#128161;</span>
+                  <span>Pro tip: Detecting your brand ensures your exported articles match your site perfectly.</span>
+                </div>
+              )}
+
+              {analysisError && (
+                <p className="text-xs text-red-400 mt-3 bg-red-900/30 p-2.5 rounded-lg border border-red-500/30">
+                  &#9888;&#65039; {analysisError}
+                </p>
+              )}
+              {detectionSuccess && (
+                <div className="text-xs text-green-300 mt-3 bg-green-900/30 p-2.5 rounded-lg border border-green-500/30 flex items-center gap-2 font-medium">
+                  <span className="text-base">&#9989;</span> {detectionSuccess}
+                </div>
+              )}
+
+              {lastDetectionResult && (
+                <div className="mt-6">
+                  <BrandDNASummary
+                    tokens={lastDetectionResult}
+                    confidence={98}
+                    sourceUrl={targetUrl}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Full Extraction UI (new) */
+            <div className="p-5 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border-2 border-zinc-500/50 shadow-xl mb-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-zinc-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-lg">
+                Recommended
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">&#127919;</span>
+                <div>
+                  <h3 className="text-base font-bold text-white">Full Brand Extraction</h3>
+                  <p className="text-xs text-zinc-300/70">Extract literal HTML/CSS from your site for pixel-perfect replication</p>
+                </div>
+              </div>
+
+              {/* Render based on phase */}
+              {brandExtraction.phase === 'idle' || brandExtraction.phase === 'discovering' || brandExtraction.phase === 'selecting' ? (
+                <BrandUrlDiscovery
+                  suggestions={brandExtraction.suggestions}
+                  selectedUrls={brandExtraction.selectedUrls}
+                  onToggleUrl={brandExtraction.toggleUrlSelection}
+                  onSelectAll={brandExtraction.selectAllUrls}
+                  onClearSelection={brandExtraction.clearSelection}
+                  onDiscover={brandExtraction.discoverUrls}
+                  onStartExtraction={brandExtraction.startExtraction}
+                  isDiscovering={brandExtraction.phase === 'discovering'}
+                />
+              ) : brandExtraction.phase === 'extracting' || brandExtraction.phase === 'analyzing' ? (
+                <BrandExtractionProgress progress={brandExtraction.progress} />
+              ) : brandExtraction.phase === 'complete' ? (
+                <div className="space-y-4">
+                  <BrandExtractionProgress progress={brandExtraction.progress} />
+                  <BrandComponentPreview components={brandExtraction.extractedComponents} />
+                </div>
+              ) : null}
+
+              {brandExtraction.error && (
+                <p className="text-xs text-red-400 mt-3 bg-red-900/30 p-2.5 rounded-lg border border-red-500/30">
+                  &#9888;&#65039; {brandExtraction.error}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-2 mb-2">
             <div className="h-px flex-1 bg-gray-700/50" />
