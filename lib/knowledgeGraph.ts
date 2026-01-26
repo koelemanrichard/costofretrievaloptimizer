@@ -43,6 +43,19 @@ export interface SemanticDistanceResult {
     linkingRecommendation: string;
 }
 
+/**
+ * Structural hole between topic clusters.
+ * Represents gaps where connection strength is below threshold,
+ * indicating opportunities for bridge content.
+ */
+export interface StructuralHole {
+    clusterA: string[];           // Node IDs in first cluster
+    clusterB: string[];           // Node IDs in second cluster
+    connectionStrength: number;   // 0-1 score (cross-edges / (|clusterA| * |clusterB|))
+    bridgeCandidates: string[];   // Entities that could bridge the gap
+    priority: 'critical' | 'high' | 'medium' | 'low';
+}
+
 // Position weights for context calculation
 const POSITION_WEIGHTS: Record<EntityPosition, number> = {
     h1: 1.0,
@@ -63,6 +76,9 @@ export class KnowledgeGraph {
 
     // New: Entity context tracking (position weights per entity per page)
     private entityContexts: Map<string, EntityContext[]> = new Map();
+
+    // Cached betweenness centrality scores (invalidated on graph changes)
+    private centralityCache: Map<string, number> | null = null;
 
     constructor() {
         this.queryEngine = new SparqlQueryEngine(this.nodes, this.edges);
@@ -381,10 +397,12 @@ export class KnowledgeGraph {
 
     addNode(node: KnowledgeNode) {
         this.nodes.set(node.id, node);
+        this.centralityCache = null; // Invalidate cache
     }
 
     addEdge(edge: KnowledgeEdge) {
         this.edges.set(edge.id, edge);
+        this.centralityCache = null; // Invalidate cache
     }
 
     getNode(termOrId: string): KnowledgeNode | undefined {
@@ -656,6 +674,578 @@ export class KnowledgeGraph {
         };
     }
 
+    // ==========================================================================
+    // BETWEENNESS CENTRALITY
+    // ==========================================================================
+
+    /**
+     * Build an undirected adjacency list from the graph edges.
+     * Both directions are added for each edge.
+     */
+    private buildAdjacencyList(): Map<string, string[]> {
+        const adjacency = new Map<string, string[]>();
+
+        // Initialize all nodes with empty arrays
+        for (const node of this.nodes.values()) {
+            adjacency.set(node.id, []);
+        }
+
+        // Add edges in both directions (undirected graph)
+        for (const edge of this.edges.values()) {
+            const sourceNeighbors = adjacency.get(edge.source);
+            const targetNeighbors = adjacency.get(edge.target);
+
+            if (sourceNeighbors && !sourceNeighbors.includes(edge.target)) {
+                sourceNeighbors.push(edge.target);
+            }
+            if (targetNeighbors && !targetNeighbors.includes(edge.source)) {
+                targetNeighbors.push(edge.source);
+            }
+        }
+
+        return adjacency;
+    }
+
+    /**
+     * Calculate betweenness centrality for all nodes using Brandes' algorithm.
+     * Measures how often a node lies on shortest paths between other nodes.
+     * Nodes with high betweenness are "bridge" concepts.
+     *
+     * Time complexity: O(VE) where V = nodes, E = edges
+     *
+     * @returns Map of node ID to normalized centrality score (0-1)
+     */
+    calculateBetweennessCentrality(): Map<string, number> {
+        // Return cached result if available
+        if (this.centralityCache) {
+            return new Map(this.centralityCache);
+        }
+
+        const centrality = new Map<string, number>();
+        const nodeIds = Array.from(this.nodes.keys());
+
+        // Initialize centrality scores to 0
+        for (const nodeId of nodeIds) {
+            centrality.set(nodeId, 0);
+        }
+
+        // Handle edge cases
+        if (nodeIds.length === 0) {
+            this.centralityCache = centrality;
+            return new Map(centrality);
+        }
+
+        const adjacency = this.buildAdjacencyList();
+
+        // Brandes' algorithm: For each source node, perform BFS and accumulate dependencies
+        for (const source of nodeIds) {
+            // Data structures for BFS
+            const stack: string[] = [];
+            const predecessors = new Map<string, string[]>();
+            const sigma = new Map<string, number>(); // Number of shortest paths
+            const distance = new Map<string, number>(); // Distance from source
+
+            // Initialize
+            for (const nodeId of nodeIds) {
+                predecessors.set(nodeId, []);
+                sigma.set(nodeId, 0);
+                distance.set(nodeId, -1);
+            }
+            sigma.set(source, 1);
+            distance.set(source, 0);
+
+            // BFS queue
+            const queue: string[] = [source];
+
+            while (queue.length > 0) {
+                const v = queue.shift()!;
+                stack.push(v);
+
+                const neighbors = adjacency.get(v) || [];
+                for (const w of neighbors) {
+                    // First time visiting w?
+                    if (distance.get(w)! < 0) {
+                        queue.push(w);
+                        distance.set(w, distance.get(v)! + 1);
+                    }
+                    // Shortest path to w via v?
+                    if (distance.get(w) === distance.get(v)! + 1) {
+                        sigma.set(w, sigma.get(w)! + sigma.get(v)!);
+                        predecessors.get(w)!.push(v);
+                    }
+                }
+            }
+
+            // Accumulate dependencies (back-propagation)
+            const delta = new Map<string, number>();
+            for (const nodeId of nodeIds) {
+                delta.set(nodeId, 0);
+            }
+
+            while (stack.length > 0) {
+                const w = stack.pop()!;
+                for (const v of predecessors.get(w)!) {
+                    const contribution = (sigma.get(v)! / sigma.get(w)!) * (1 + delta.get(w)!);
+                    delta.set(v, delta.get(v)! + contribution);
+                }
+                if (w !== source) {
+                    centrality.set(w, centrality.get(w)! + delta.get(w)!);
+                }
+            }
+        }
+
+        // Normalize scores to 0-1 range
+        let maxCentrality = 0;
+        for (const score of centrality.values()) {
+            if (score > maxCentrality) {
+                maxCentrality = score;
+            }
+        }
+
+        if (maxCentrality > 0) {
+            for (const [nodeId, score] of centrality) {
+                centrality.set(nodeId, score / maxCentrality);
+            }
+        }
+
+        // Cache the result
+        this.centralityCache = new Map(centrality);
+
+        return centrality;
+    }
+
+    /**
+     * Get centrality score for a specific entity.
+     *
+     * @param termOrId Entity term or node ID
+     * @returns Normalized centrality score (0-1), or 0 if entity not found
+     */
+    getCentralityScore(termOrId: string): number {
+        const node = this.getNode(termOrId);
+        if (!node) return 0;
+
+        const centrality = this.calculateBetweennessCentrality();
+        return centrality.get(node.id) ?? 0;
+    }
+
+    /**
+     * Find bridge entities (high betweenness centrality).
+     * Bridge entities are nodes that frequently appear on shortest paths
+     * between other nodes, making them important connectors in the graph.
+     *
+     * @param threshold Minimum centrality score (0-1) to be considered a bridge (default: 0.3)
+     * @returns Array of nodes that act as bridges, sorted by centrality descending
+     */
+    findBridgeEntities(threshold: number = 0.3): KnowledgeNode[] {
+        const centrality = this.calculateBetweennessCentrality();
+        const bridges: Array<{ node: KnowledgeNode; score: number }> = [];
+
+        for (const [nodeId, score] of centrality) {
+            if (score >= threshold) {
+                const node = this.nodes.get(nodeId);
+                if (node) {
+                    bridges.push({ node, score });
+                }
+            }
+        }
+
+        // Sort by centrality score descending
+        bridges.sort((a, b) => b.score - a.score);
+
+        return bridges.map(b => b.node);
+    }
+
+    // ==========================================================================
+    // STRUCTURAL HOLE DETECTION
+    // ==========================================================================
+
+    /**
+     * Find connected components (clusters) in the graph using BFS.
+     * Returns an array of clusters, where each cluster is an array of node IDs.
+     */
+    private findConnectedComponents(): string[][] {
+        const visited = new Set<string>();
+        const components: string[][] = [];
+        const adjacency = this.buildAdjacencyList();
+
+        for (const nodeId of this.nodes.keys()) {
+            if (visited.has(nodeId)) continue;
+
+            // BFS to find all nodes in this component
+            const component: string[] = [];
+            const queue: string[] = [nodeId];
+            visited.add(nodeId);
+
+            while (queue.length > 0) {
+                const current = queue.shift()!;
+                component.push(current);
+
+                const neighbors = adjacency.get(current) || [];
+                for (const neighbor of neighbors) {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        queue.push(neighbor);
+                    }
+                }
+            }
+
+            components.push(component);
+        }
+
+        return components;
+    }
+
+    /**
+     * Find connected components in a graph with specific edges excluded.
+     * Used to detect what sub-clusters would form if bridge edges are removed.
+     */
+    private findComponentsExcludingEdges(
+        nodeIds: string[],
+        excludedEdges: Set<string>
+    ): string[][] {
+        const visited = new Set<string>();
+        const components: string[][] = [];
+        const nodeSet = new Set(nodeIds);
+
+        // Build adjacency list excluding specific edges
+        const adjacency = new Map<string, string[]>();
+        for (const nodeId of nodeIds) {
+            adjacency.set(nodeId, []);
+        }
+
+        for (const edge of this.edges.values()) {
+            if (excludedEdges.has(edge.id)) continue;
+            if (!nodeSet.has(edge.source) || !nodeSet.has(edge.target)) continue;
+
+            adjacency.get(edge.source)?.push(edge.target);
+            adjacency.get(edge.target)?.push(edge.source);
+        }
+
+        for (const nodeId of nodeIds) {
+            if (visited.has(nodeId)) continue;
+
+            const component: string[] = [];
+            const queue: string[] = [nodeId];
+            visited.add(nodeId);
+
+            while (queue.length > 0) {
+                const current = queue.shift()!;
+                component.push(current);
+
+                const neighbors = adjacency.get(current) || [];
+                for (const neighbor of neighbors) {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        queue.push(neighbor);
+                    }
+                }
+            }
+
+            components.push(component);
+        }
+
+        return components;
+    }
+
+    /**
+     * Find bridge edges in a connected component.
+     * Bridge edges are edges whose removal would disconnect the component.
+     * Uses Tarjan's bridge-finding algorithm.
+     */
+    private findBridgeEdges(componentNodes: string[]): Array<{ edgeId: string; source: string; target: string }> {
+        const bridges: Array<{ edgeId: string; source: string; target: string }> = [];
+        const nodeSet = new Set(componentNodes);
+
+        if (componentNodes.length < 2) return bridges;
+
+        // Build adjacency list for this component
+        const adjacency = new Map<string, Array<{ neighbor: string; edgeId: string }>>();
+        for (const nodeId of componentNodes) {
+            adjacency.set(nodeId, []);
+        }
+
+        for (const edge of this.edges.values()) {
+            if (!nodeSet.has(edge.source) || !nodeSet.has(edge.target)) continue;
+
+            adjacency.get(edge.source)?.push({ neighbor: edge.target, edgeId: edge.id });
+            adjacency.get(edge.target)?.push({ neighbor: edge.source, edgeId: edge.id });
+        }
+
+        // Tarjan's algorithm for finding bridges
+        const visited = new Set<string>();
+        const disc = new Map<string, number>(); // Discovery times
+        const low = new Map<string, number>();  // Lowest reachable discovery time
+        const parent = new Map<string, string | null>();
+        let time = 0;
+
+        const dfs = (node: string) => {
+            visited.add(node);
+            disc.set(node, time);
+            low.set(node, time);
+            time++;
+
+            const neighbors = adjacency.get(node) || [];
+            for (const { neighbor, edgeId } of neighbors) {
+                if (!visited.has(neighbor)) {
+                    parent.set(neighbor, node);
+                    dfs(neighbor);
+
+                    // Update low value
+                    low.set(node, Math.min(low.get(node)!, low.get(neighbor)!));
+
+                    // If low value of neighbor > discovery time of node, it's a bridge
+                    if (low.get(neighbor)! > disc.get(node)!) {
+                        bridges.push({
+                            edgeId,
+                            source: node,
+                            target: neighbor
+                        });
+                    }
+                } else if (neighbor !== parent.get(node)) {
+                    // Back edge - update low value
+                    low.set(node, Math.min(low.get(node)!, disc.get(neighbor)!));
+                }
+            }
+        };
+
+        // Run DFS from first node
+        parent.set(componentNodes[0], null);
+        dfs(componentNodes[0]);
+
+        return bridges;
+    }
+
+    /**
+     * Find potential cluster pairs within a connected component by analyzing bridge edges.
+     * Returns pairs of sub-clusters that are weakly connected (by a single bridge edge).
+     */
+    private findWeaklyConnectedClusters(componentNodes: string[]): Array<{
+        clusterA: string[];
+        clusterB: string[];
+        bridgeEdgeId: string;
+    }> {
+        const results: Array<{ clusterA: string[]; clusterB: string[]; bridgeEdgeId: string }> = [];
+
+        if (componentNodes.length < 4) {
+            // Too small to have meaningful sub-clusters
+            return results;
+        }
+
+        const bridgeEdges = this.findBridgeEdges(componentNodes);
+
+        if (bridgeEdges.length === 0) {
+            // No bridge edges - the component is 2-edge-connected
+            return results;
+        }
+
+        // For each bridge edge, check if removing it creates two meaningful sub-clusters
+        for (const bridge of bridgeEdges) {
+            const excludedEdgeIds = new Set([bridge.edgeId]);
+            const subClusters = this.findComponentsExcludingEdges(componentNodes, excludedEdgeIds);
+
+            // Only consider if we get exactly 2 meaningful sub-clusters (each with at least 2 nodes)
+            const meaningfulClusters = subClusters.filter(c => c.length >= 2);
+
+            if (meaningfulClusters.length === 2) {
+                results.push({
+                    clusterA: meaningfulClusters[0],
+                    clusterB: meaningfulClusters[1],
+                    bridgeEdgeId: bridge.edgeId
+                });
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Count edges between two clusters.
+     */
+    private countCrossEdges(clusterA: string[], clusterB: string[]): number {
+        const setA = new Set(clusterA);
+        const setB = new Set(clusterB);
+        let count = 0;
+
+        for (const edge of this.edges.values()) {
+            const sourceInA = setA.has(edge.source);
+            const sourceInB = setB.has(edge.source);
+            const targetInA = setA.has(edge.target);
+            const targetInB = setB.has(edge.target);
+
+            // Edge crosses clusters if one endpoint is in A and other is in B
+            if ((sourceInA && targetInB) || (sourceInB && targetInA)) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /**
+     * Calculate connection strength between two clusters.
+     * Formula: cross-edges / (|clusterA| * |clusterB|)
+     */
+    private calculateConnectionStrength(clusterA: string[], clusterB: string[]): number {
+        const crossEdges = this.countCrossEdges(clusterA, clusterB);
+        const maxPossibleEdges = clusterA.length * clusterB.length;
+
+        if (maxPossibleEdges === 0) return 0;
+
+        return crossEdges / maxPossibleEdges;
+    }
+
+    /**
+     * Determine priority based on connection strength and cluster sizes.
+     * - critical: 0 connection strength (completely disconnected)
+     * - high: connection strength < 0.05
+     * - medium: connection strength < 0.1
+     * - low: connection strength < threshold (but >= 0.1)
+     */
+    private determinePriority(
+        connectionStrength: number,
+        clusterASize: number,
+        clusterBSize: number
+    ): 'critical' | 'high' | 'medium' | 'low' {
+        if (connectionStrength === 0) {
+            return 'critical';
+        }
+
+        // Larger clusters with weak connections are more important
+        const sizeMultiplier = Math.min((clusterASize + clusterBSize) / 10, 2);
+        const adjustedStrength = connectionStrength / sizeMultiplier;
+
+        if (adjustedStrength < 0.05) {
+            return 'high';
+        } else if (adjustedStrength < 0.1) {
+            return 'medium';
+        } else {
+            return 'low';
+        }
+    }
+
+    /**
+     * Find bridge candidates for a structural hole.
+     * Returns entities with high betweenness centrality from both clusters.
+     */
+    private findBridgeCandidates(
+        clusterA: string[],
+        clusterB: string[]
+    ): string[] {
+        const centrality = this.calculateBetweennessCentrality();
+        const candidates: Array<{ nodeId: string; score: number }> = [];
+
+        // Get top centrality nodes from each cluster
+        for (const nodeId of [...clusterA, ...clusterB]) {
+            const score = centrality.get(nodeId) || 0;
+            candidates.push({ nodeId, score });
+        }
+
+        // Sort by centrality descending and take top 5
+        candidates.sort((a, b) => b.score - a.score);
+
+        return candidates
+            .slice(0, 5)
+            .filter(c => c.score > 0) // Only include nodes with non-zero centrality
+            .map(c => c.nodeId);
+    }
+
+    /**
+     * Identify structural holes in the knowledge graph.
+     *
+     * Structural holes are gaps between topic clusters where connection
+     * strength is below the threshold. These represent opportunities for
+     * bridge content that can strengthen the semantic network.
+     *
+     * Algorithm:
+     * 1. Find all disconnected components (these are automatic structural holes with 0 strength)
+     * 2. For each connected component, identify weakly connected sub-clusters via bridge edges
+     * 3. For each pair of clusters, calculate connection strength
+     * 4. If connection strength < threshold, it's a structural hole
+     * 5. Identify bridge candidates based on betweenness centrality
+     *
+     * @param threshold Connection strength below which a gap is considered a hole (default: 0.15)
+     * @returns Array of structural holes, sorted by priority
+     */
+    identifyStructuralHoles(threshold: number = 0.15): StructuralHole[] {
+        const nodeCount = this.nodes.size;
+
+        // Edge cases: empty graph or single node
+        if (nodeCount === 0 || nodeCount === 1) {
+            return [];
+        }
+
+        const components = this.findConnectedComponents();
+        const holes: StructuralHole[] = [];
+
+        // First, check for disconnected components (structural holes with 0 connection strength)
+        if (components.length > 1) {
+            for (let i = 0; i < components.length; i++) {
+                for (let j = i + 1; j < components.length; j++) {
+                    const clusterA = components[i];
+                    const clusterB = components[j];
+
+                    // Connection strength is 0 for disconnected components
+                    const connectionStrength = 0;
+
+                    const priority = this.determinePriority(
+                        connectionStrength,
+                        clusterA.length,
+                        clusterB.length
+                    );
+
+                    const bridgeCandidates = this.findBridgeCandidates(clusterA, clusterB);
+
+                    holes.push({
+                        clusterA,
+                        clusterB,
+                        connectionStrength,
+                        bridgeCandidates,
+                        priority
+                    });
+                }
+            }
+        }
+
+        // Then, check for weakly connected clusters within each connected component
+        for (const component of components) {
+            const weaklyConnected = this.findWeaklyConnectedClusters(component);
+
+            for (const { clusterA, clusterB } of weaklyConnected) {
+                const connectionStrength = this.calculateConnectionStrength(clusterA, clusterB);
+
+                // It's a structural hole if connection strength is below threshold
+                if (connectionStrength < threshold) {
+                    const priority = this.determinePriority(
+                        connectionStrength,
+                        clusterA.length,
+                        clusterB.length
+                    );
+
+                    const bridgeCandidates = this.findBridgeCandidates(clusterA, clusterB);
+
+                    holes.push({
+                        clusterA,
+                        clusterB,
+                        connectionStrength,
+                        bridgeCandidates,
+                        priority
+                    });
+                }
+            }
+        }
+
+        // Sort by priority (critical first, then high, medium, low)
+        const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+        holes.sort((a, b) => {
+            const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+            if (priorityDiff !== 0) return priorityDiff;
+            // Secondary sort by connection strength (lower = more important)
+            return a.connectionStrength - b.connectionStrength;
+        });
+
+        return holes;
+    }
+
     /**
      * Controls how this class is serialized to JSON.
      * When JSON.stringify() is called on an instance, this method's
@@ -720,6 +1310,7 @@ export class KnowledgeGraph {
         this.edges.clear();
         this.coOccurrences.clear();
         this.entityContexts.clear();
+        this.centralityCache = null;
     }
 
     /**
