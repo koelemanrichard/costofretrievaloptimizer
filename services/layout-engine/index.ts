@@ -14,6 +14,7 @@ export { LayoutPlanner } from './LayoutPlanner';
 export { ComponentSelector } from './ComponentSelector';
 export { VisualEmphasizer } from './VisualEmphasizer';
 export { ImageHandler } from './ImageHandler';
+export { LayoutEngine, LayoutBlueprintOutput } from './LayoutEngine';
 
 // Component Mappings
 export * from './componentMappings';
