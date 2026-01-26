@@ -15,6 +15,7 @@ import { generateJsonLd, type JsonLdOptions } from '../jsonLdGenerator';
 import type { ContentBrief, EnrichedTopic, TopicalMap } from '../../../types';
 import type { DesignPersonality } from '../../../config/designTokens/personalities';
 import { designPersonalities } from '../../../config/designTokens/personalities';
+import type { BrandDesignSystem } from '../../../types/designDna';
 
 // ============================================================================
 // TYPES
@@ -29,7 +30,16 @@ export interface BlueprintRenderOptions {
   topicalMap?: TopicalMap;
   /** Design personality override */
   personalityId?: string;
-  /** Custom design tokens (colors, fonts, etc.) from BrandStyleStep */
+  /**
+   * Full Brand Design System (takes precedence over designTokens)
+   * This is THE KEY: Use the complete compiled CSS from the brand design system
+   * instead of just generating CSS variable overrides.
+   */
+  brandDesignSystem?: BrandDesignSystem;
+  /**
+   * Legacy: Custom design tokens (colors, fonts, etc.) from BrandStyleStep
+   * @deprecated Use brandDesignSystem for full brand styling
+   */
   designTokens?: {
     colors?: {
       primary?: string;
@@ -165,6 +175,34 @@ function adjustColorBrightness(hex: string, percent: number): string {
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
+/**
+ * Get mapped variant class from brand design system
+ *
+ * THE KEY FIX: Maps generic variant names (e.g., 'clean', 'modern') to
+ * brand-specific CSS classes (e.g., 'ctc-faq--corporate-clean')
+ */
+function getMappedVariantClass(
+  component: string,
+  variant: string | undefined,
+  brandSystem?: BrandDesignSystem
+): string | undefined {
+  if (!variant || !brandSystem?.variantMappings) return undefined;
+
+  // Normalize component name for lookup (e.g., 'faq-accordion' -> 'faq')
+  const componentKey = component.split('-')[0];
+
+  // Try exact component match first
+  const mappings = brandSystem.variantMappings as Record<string, Record<string, string> | undefined>;
+  let componentMappings = mappings[component];
+
+  // Fall back to normalized key
+  if (!componentMappings) {
+    componentMappings = mappings[componentKey];
+  }
+
+  return componentMappings?.[variant];
+}
+
 // ============================================================================
 // MAIN RENDERER
 // ============================================================================
@@ -242,7 +280,14 @@ export function renderBlueprint(
       componentsUsed.push('cta-inline');
     }
 
-    // Render the section
+    // Render the section with brand-aware variant mapping
+    // THE KEY FIX: Use mapped variant class from brand system if available
+    const mappedVariant = getMappedVariantClass(
+      section.presentation.component,
+      section.presentation.variant,
+      options.brandDesignSystem
+    );
+
     const ctx: RenderContext = {
       sectionId: section.id,
       content: section.sourceContent,
@@ -252,7 +297,7 @@ export function renderBlueprint(
       spacing: section.presentation.spacing,
       hasBackground: section.presentation.hasBackground,
       hasDivider: section.presentation.hasDivider,
-      variant: section.presentation.variant,
+      variant: mappedVariant || section.presentation.variant, // Use mapped variant if available
       styleHints: section.styleHints,
     };
 
@@ -298,18 +343,66 @@ export function renderBlueprint(
   // Wrap everything
   const html = wrapWithRoot(htmlParts.join('\n'), personalityId);
 
-  // Convert custom design tokens to CSS overrides
-  const customOverrides = options.designTokens ? convertDesignTokensToOverrides(options.designTokens) : undefined;
+  // ============================================================================
+  // CSS GENERATION - THE KEY FIX
+  // ============================================================================
+  // BrandDesignSystem.compiledCss was being generated but NEVER used.
+  // Now we properly inject it into the output CSS.
 
-  // Generate CSS
-  const cssResult = generateDesignSystemCss({
-    personalityId,
-    darkMode: options.darkMode ?? true,
-    minify: options.minifyCss ?? false,
-    includeReset: true,
-    includeAnimations: true,
-    customOverrides,
-  });
+  let css: string;
+
+  if (options.brandDesignSystem?.compiledCss) {
+    // THE KEY FIX: Use full brand design system CSS
+    const brandCss = options.brandDesignSystem.compiledCss;
+    const tokensCss = options.brandDesignSystem.tokens?.css || '';
+
+    // Combine: tokens first (CSS variables), then compiled component styles
+    css = `/* ============================================
+   Brand Design System - Auto-Generated
+   Source: ${options.brandDesignSystem.brandName || 'Unknown'}
+   Generated: ${options.brandDesignSystem.generatedAt || 'Unknown'}
+   ============================================ */
+
+${tokensCss}
+
+${brandCss}`;
+
+    console.log('[BlueprintRenderer] Using BrandDesignSystem.compiledCss');
+    console.log('[BlueprintRenderer] Brand CSS length:', brandCss.length);
+    console.log('[BlueprintRenderer] Tokens CSS length:', tokensCss.length);
+  } else {
+    // Legacy fallback: use designTokens with generateDesignSystemCss
+    const customOverrides = options.designTokens ? convertDesignTokensToOverrides(options.designTokens) : undefined;
+
+    // Debug: Log what tokens are being used (legacy path)
+    console.log('[BlueprintRenderer] Using legacy designTokens fallback');
+    console.log('[BlueprintRenderer] Design tokens received:', {
+      hasTokens: !!options.designTokens,
+      inputColors: options.designTokens?.colors,
+      inputFonts: options.designTokens?.fonts,
+    });
+    console.log('[BlueprintRenderer] Custom overrides generated:', customOverrides ? {
+      primary: customOverrides['--ctc-primary'],
+      secondary: customOverrides['--ctc-secondary'],
+      background: customOverrides['--ctc-background'],
+      text: customOverrides['--ctc-text'],
+    } : 'NO OVERRIDES');
+
+    // Generate CSS using the design system generator
+    const cssResult = generateDesignSystemCss({
+      personalityId,
+      darkMode: options.darkMode ?? true,
+      minify: options.minifyCss ?? false,
+      includeReset: true,
+      includeAnimations: true,
+      customOverrides,
+    });
+
+    css = cssResult.css;
+
+    // Debug: Log a sample of the generated CSS
+    console.log('[BlueprintRenderer] Generated CSS sample (first 500 chars):', css.substring(0, 500));
+  }
 
   // Generate JSON-LD
   let jsonLd = '';
@@ -333,7 +426,7 @@ export function renderBlueprint(
 
   return {
     html,
-    css: cssResult.css,
+    css, // THE KEY FIX: Now uses BrandDesignSystem.compiledCss when available
     jsonLd,
     metadata: {
       blueprint: {
