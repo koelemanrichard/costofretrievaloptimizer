@@ -392,30 +392,60 @@ export class BrandDesignSystemGenerator {
 
   /**
    * Build a focused prompt for a single component
+   * ENHANCED: Now passes actual detected values for design agency quality output
    */
   private buildComponentPrompt(componentType: string, designDna: DesignDNA): string {
-    const personality = designDna.personality?.overall || 'corporate';
-    const formality = designDna.personality?.formality || 3;
-    const energy = designDna.personality?.energy || 3;
-    const warmth = designDna.personality?.warmth || 3;
-    const shapeStyle = designDna.shapes?.borderRadius?.style || 'rounded';
-    const buttonStyle = designDna.shapes?.buttonStyle || 'rounded';
-    const cardStyle = designDna.shapes?.cardStyle || 'subtle-shadow';
-    const shadowStyle = designDna.effects?.shadows?.style || 'subtle';
-    const motionStyle = designDna.motion?.overall || 'subtle';
-    const hoverButtons = designDna.motion?.hoverEffects?.buttons || 'darken';
-    const hoverCards = designDna.motion?.hoverEffects?.cards || 'lift';
+    // Extract actual values from Design DNA
+    const colors = designDna.colors || {} as DesignDNA['colors'];
+    const typography = designDna.typography || {} as DesignDNA['typography'];
+    const shapes = designDna.shapes || {} as DesignDNA['shapes'];
+    const effects = designDna.effects || {} as DesignDNA['effects'];
+    const motion = designDna.motion || {} as DesignDNA['motion'];
+    const personality = designDna.personality || {} as DesignDNA['personality'];
+    const layout = designDna.layout || {} as DesignDNA['layout'];
+    const decorative = designDna.decorative || {} as DesignDNA['decorative'];
 
-    const personalityDescriptions: Record<string, string> = {
-      corporate: 'Professional, trustworthy, sharp edges, subtle shadows, restrained animations',
-      creative: 'Bold, expressive, rounded corners, dramatic shadows, playful animations',
-      luxurious: 'Elegant, refined, subtle curves, soft shadows, smooth transitions',
-      friendly: 'Warm, approachable, soft corners, gentle shadows, bouncy animations',
-      bold: 'Striking, impactful, strong contrasts, dramatic shadows, powerful animations',
-      minimal: 'Clean, simple, subtle shapes, minimal shadows, quick transitions',
-      elegant: 'Sophisticated, graceful, refined curves, delicate shadows, fluid animations',
-      playful: 'Fun, energetic, rounded shapes, colorful shadows, bouncy animations',
-    };
+    // Get actual color hex values
+    const primaryHex = this.getHex(colors.primary, '#3b82f6');
+    const primaryLightHex = this.getHex(colors.primaryLight, '#60a5fa');
+    const primaryDarkHex = this.getHex(colors.primaryDark, '#2563eb');
+    const secondaryHex = this.getHex(colors.secondary, '#1f2937');
+    const accentHex = this.getHex(colors.accent, '#f59e0b');
+    const neutralDarkest = colors.neutrals?.darkest || '#111827';
+    const neutralDark = colors.neutrals?.dark || '#374151';
+    const neutralMedium = colors.neutrals?.medium || '#6b7280';
+    const neutralLight = colors.neutrals?.light || '#d1d5db';
+    const neutralLightest = colors.neutrals?.lightest || '#f9fafb';
+
+    // Get actual border radius values
+    const borderRadius = shapes?.borderRadius;
+    const isBorderRadiusObject = borderRadius && typeof borderRadius === 'object';
+    const radiusSmall = (isBorderRadiusObject && typeof borderRadius.small === 'string') ? borderRadius.small : '4px';
+    const radiusMedium = (isBorderRadiusObject && typeof borderRadius.medium === 'string') ? borderRadius.medium : '8px';
+    const radiusLarge = (isBorderRadiusObject && typeof borderRadius.large === 'string') ? borderRadius.large : '16px';
+
+    // Get actual shadow definitions
+    const shadows = effects?.shadows || {} as NonNullable<DesignDNA['effects']>['shadows'];
+    const cardShadow = shadows?.cardShadow || '0 1px 3px rgba(0,0,0,0.1)';
+    const buttonShadow = shadows?.buttonShadow || '0 1px 2px rgba(0,0,0,0.05)';
+    const elevatedShadow = shadows?.elevatedShadow || '0 10px 25px rgba(0,0,0,0.15)';
+
+    // Get actual gradient definitions
+    const gradients = effects?.gradients || {} as NonNullable<DesignDNA['effects']>['gradients'];
+    const primaryGradient = gradients?.primaryGradient || `linear-gradient(135deg, ${primaryHex}, ${primaryDarkHex})`;
+    const heroGradient = gradients?.heroGradient || `linear-gradient(180deg, ${neutralLightest}, white)`;
+    const ctaGradient = gradients?.ctaGradient || primaryGradient;
+
+    // Get actual typography values
+    const headingFont = typography.headingFont || { family: 'system-ui', weight: 700 };
+    const bodyFont = typography.bodyFont || { family: 'system-ui', weight: 400, lineHeight: 1.6 };
+
+    // Color usage patterns (inferred design principles)
+    const primaryUsage = typeof colors.primary === 'object' ? colors.primary.usage : 'buttons, links, accents';
+    const secondaryUsage = typeof colors.secondary === 'object' ? colors.secondary.usage : 'headers, text';
+
+    // Build design principles from DNA
+    const designPrinciples = this.inferDesignPrinciples(designDna);
 
     const componentDescriptions: Record<string, string> = {
       button: 'Interactive button with primary, secondary, and outline variants',
@@ -432,57 +462,74 @@ export class BrandDesignSystemGenerator {
       blockquote: 'Quoted text with decorative styling',
     };
 
-    return `You are a senior CSS designer. Generate production-ready CSS for a ${componentType} component.
+    const componentSpecificGuidance = this.getComponentSpecificGuidance(componentType, designDna);
 
-## Brand Personality
-- Overall: ${personality} (${personalityDescriptions[personality] || 'Professional and clean'})
-- Formality: ${formality}/5 (${formality <= 2 ? 'casual' : formality >= 4 ? 'formal' : 'balanced'})
-- Energy: ${energy}/5 (${energy <= 2 ? 'calm' : energy >= 4 ? 'energetic' : 'moderate'})
-- Warmth: ${warmth}/5 (${warmth <= 2 ? 'cool' : warmth >= 4 ? 'warm' : 'neutral'})
+    return `You are a senior CSS designer at a top design agency. Generate PREMIUM, production-ready CSS for a ${componentType} component that matches the exact visual style of a sophisticated brand website.
 
-## Design Parameters
-- Shape style: ${shapeStyle}
-- Button style: ${buttonStyle}
-- Card style: ${cardStyle}
-- Shadow style: ${shadowStyle}
-- Motion style: ${motionStyle}
-- Button hover effect: ${hoverButtons}
-- Card hover effect: ${hoverCards}
+## ACTUAL BRAND COLORS (use these exact values as reference)
+Primary: ${primaryHex} (used for: ${primaryUsage})
+Primary Light: ${primaryLightHex}
+Primary Dark: ${primaryDarkHex}
+Secondary: ${secondaryHex} (used for: ${secondaryUsage})
+Accent: ${accentHex}
+Text (darkest): ${neutralDarkest}
+Text (dark): ${neutralDark}
+Text (medium): ${neutralMedium}
+Borders/Dividers: ${neutralLight}
+Backgrounds: ${neutralLightest}
 
-## Component: ${componentType}
+## ACTUAL TYPOGRAPHY
+Heading: "${headingFont.family || 'system-ui'}" weight ${headingFont.weight || 700}
+Body: "${bodyFont.family || 'system-ui'}" weight ${bodyFont.weight || 400}, line-height ${bodyFont.lineHeight || 1.6}
+Scale ratio: ${typography.scaleRatio || 1.25}
+
+## ACTUAL SHAPE VALUES
+Border radius - small: ${radiusSmall}, medium: ${radiusMedium}, large: ${radiusLarge}
+Button style: ${shapes.buttonStyle || 'rounded'}
+Card style: ${shapes.cardStyle || 'subtle-shadow'}
+
+## ACTUAL SHADOW DEFINITIONS (copy these exactly)
+Card shadow: ${cardShadow}
+Button shadow: ${buttonShadow}
+Elevated shadow: ${elevatedShadow}
+
+## ACTUAL GRADIENT DEFINITIONS
+Primary gradient: ${primaryGradient}
+Hero gradient: ${heroGradient}
+CTA gradient: ${ctaGradient}
+Gradient usage: ${gradients?.usage || 'subtle'}
+
+## BRAND PERSONALITY & DESIGN PRINCIPLES
+Overall: ${personality.overall || 'corporate'}
+Formality: ${personality.formality || 3}/5
+Energy: ${personality.energy || 3}/5
+Warmth: ${personality.warmth || 3}/5
+Color harmony: ${colors.harmony || 'monochromatic'}
+Contrast level: ${colors.contrastLevel || 'medium'}
+
+${designPrinciples}
+
+## COMPONENT: ${componentType}
 ${componentDescriptions[componentType] || 'UI component'}
 
-## CRITICAL: Allowed CSS Variables (use ONLY these exact names)
-Colors:
-- --ctc-primary, --ctc-primary-light, --ctc-primary-dark
-- --ctc-secondary, --ctc-accent
-- --ctc-neutral-lightest, --ctc-neutral-light, --ctc-neutral-medium, --ctc-neutral-dark, --ctc-neutral-darkest
-- --ctc-success, --ctc-warning, --ctc-error, --ctc-info
+${componentSpecificGuidance}
 
-Typography:
-- --ctc-font-heading, --ctc-font-body
-- --ctc-font-size-xs, --ctc-font-size-sm, --ctc-font-size-md, --ctc-font-size-lg, --ctc-font-size-xl, --ctc-font-size-2xl, --ctc-font-size-3xl
-- --ctc-heading-weight, --ctc-body-weight, --ctc-body-line-height
+## CSS VARIABLES TO USE
+Colors: --ctc-primary, --ctc-primary-light, --ctc-primary-dark, --ctc-secondary, --ctc-accent
+Neutrals: --ctc-neutral-lightest, --ctc-neutral-light, --ctc-neutral-medium, --ctc-neutral-dark, --ctc-neutral-darkest
+Typography: --ctc-font-heading, --ctc-font-body, --ctc-font-size-xs/sm/md/lg/xl/2xl/3xl
+Spacing: --ctc-spacing-xs/sm/md/lg/xl/2xl/3xl
+Radius: --ctc-radius-sm/md/lg/full
+Shadows: --ctc-shadow-button, --ctc-shadow-card, --ctc-shadow-elevated
+Motion: --ctc-transition-speed, --ctc-easing
 
-Spacing:
-- --ctc-spacing-xs, --ctc-spacing-sm, --ctc-spacing-md, --ctc-spacing-lg, --ctc-spacing-xl, --ctc-spacing-2xl, --ctc-spacing-3xl
-
-Border Radius:
-- --ctc-radius-sm, --ctc-radius-md, --ctc-radius-lg, --ctc-radius-full
-
-Shadows:
-- --ctc-shadow-button, --ctc-shadow-card, --ctc-shadow-elevated
-
-Motion:
-- --ctc-transition-speed, --ctc-easing
-
-## Requirements
-1. Use ONLY the CSS variables listed above - NO numeric variants like --ctc-neutral-700 or --ctc-spacing-4
-2. CSS class prefix: .ctc-${componentType}
-3. The CSS MUST reflect the brand personality - ${personality} brands need ${personalityDescriptions[personality]}
-4. Include hover, active, and focus states
-5. Make it unique to THIS brand - not generic
-6. DO NOT include any :root declarations - variables are already defined
+## QUALITY REQUIREMENTS
+1. This must look like it was designed by a top design agency - NOT a generic template
+2. Use the actual shadow values, gradient definitions, and border radii from above
+3. Create sophisticated hover states with smooth transitions
+4. Ensure visual hierarchy and proper spacing
+5. Match the brand's personality - ${personality.overall || 'corporate'} means ${this.getPersonalityDescription(personality.overall || 'corporate')}
+6. DO NOT include :root declarations - variables are already defined
 
 ## Output Format (JSON only)
 {
@@ -497,7 +544,192 @@ Motion:
   }
 }
 
-CRITICAL: Return ONLY valid JSON. DO NOT include :root declarations. Use ONLY the exact variable names listed above.`;
+CRITICAL: Return ONLY valid JSON. Make the CSS sophisticated and brand-specific, NOT generic.`;
+  }
+
+  /**
+   * Infer design principles from Design DNA
+   */
+  private inferDesignPrinciples(designDna: DesignDNA): string {
+    const principles: string[] = [];
+    const colors = designDna.colors || {} as DesignDNA['colors'];
+    const effects = designDna.effects || {} as DesignDNA['effects'];
+    const shapes = designDna.shapes || {} as DesignDNA['shapes'];
+    const motion = designDna.motion || {} as DesignDNA['motion'];
+    const spacing = designDna.spacing || {} as DesignDNA['spacing'];
+
+    // Color usage principles
+    if (colors.contrastLevel === 'subtle') {
+      principles.push('- Use subtle color contrasts, avoid harsh boundaries');
+    } else if (colors.contrastLevel === 'high') {
+      principles.push('- Use strong color contrasts for visual impact');
+    }
+
+    // Shadow principles
+    if (effects?.shadows?.style === 'subtle') {
+      principles.push('- Shadows should be barely visible, creating depth without heaviness');
+    } else if (effects?.shadows?.style === 'dramatic') {
+      principles.push('- Use bold shadows for dramatic visual separation');
+    } else if (effects?.shadows?.style === 'colored') {
+      principles.push('- Consider using colored shadows that complement the primary color');
+    }
+
+    // Shape principles
+    if (shapes?.borderRadius?.style === 'sharp') {
+      principles.push('- Keep corners sharp and precise for a professional look');
+    } else if (shapes?.borderRadius?.style === 'pill') {
+      principles.push('- Use fully rounded/pill shapes for a friendly, modern feel');
+    } else if (shapes?.borderRadius?.style === 'mixed') {
+      principles.push('- Mix rounded and sharp corners strategically');
+    }
+
+    // Motion principles
+    if (motion?.overall === 'static') {
+      principles.push('- Minimal animations, focus on instant feedback');
+    } else if (motion?.overall === 'expressive') {
+      principles.push('- Use expressive animations and playful hover effects');
+    }
+
+    // Spacing principles
+    if (spacing?.whitespacePhilosophy === 'luxurious') {
+      principles.push('- Generous whitespace creates a premium, luxurious feel');
+    } else if (spacing?.whitespacePhilosophy === 'minimal') {
+      principles.push('- Compact spacing for information density');
+    }
+
+    // Gradient usage
+    if (effects?.gradients?.usage === 'prominent') {
+      principles.push('- Use gradients prominently for visual interest');
+    } else if (effects?.gradients?.usage === 'none') {
+      principles.push('- Avoid gradients, use flat colors');
+    }
+
+    return principles.length > 0
+      ? `## DESIGN PRINCIPLES (inferred from brand analysis)\n${principles.join('\n')}`
+      : '';
+  }
+
+  /**
+   * Get component-specific design guidance
+   */
+  private getComponentSpecificGuidance(componentType: string, designDna: DesignDNA): string {
+    const shapes = designDna.shapes || {} as DesignDNA['shapes'];
+    const effects = designDna.effects || {} as DesignDNA['effects'];
+    const motion = designDna.motion || {} as DesignDNA['motion'];
+    const layout = designDna.layout || {} as DesignDNA['layout'];
+    const componentPrefs = designDna.componentPreferences || {} as DesignDNA['componentPreferences'];
+
+    const guidance: Record<string, string> = {
+      button: `
+## BUTTON-SPECIFIC GUIDANCE
+- Button style: ${shapes.buttonStyle || 'rounded'}
+- Hover effect: ${motion?.hoverEffects?.buttons || 'darken'}
+- Use the actual button shadow: var(--ctc-shadow-button)
+- Primary variant should use primary color with appropriate contrast
+- Secondary should be more subtle, outline should be transparent with border`,
+
+      card: `
+## CARD-SPECIFIC GUIDANCE
+- Card style: ${shapes.cardStyle || 'subtle-shadow'} (${this.getCardStyleDescription(shapes.cardStyle || 'subtle-shadow')})
+- Hover effect: ${motion?.hoverEffects?.cards || 'lift'}
+- Use the actual card shadow: var(--ctc-shadow-card)
+- Elevated variant uses: var(--ctc-shadow-elevated)
+- Preferred layout: ${componentPrefs?.preferredCardStyle || 'minimal'}`,
+
+      hero: `
+## HERO-SPECIFIC GUIDANCE
+- Hero style: ${layout?.heroStyle || 'contained'}
+- Use the actual hero gradient if gradients are enabled: ${effects?.gradients?.heroGradient || 'subtle background'}
+- Should feel grand and impactful while matching brand personality
+- Consider ${effects?.gradients?.usage === 'prominent' ? 'prominent gradient backgrounds' : 'subtle or no gradients'}`,
+
+      cta: `
+## CTA-SPECIFIC GUIDANCE
+- CTA style: ${componentPrefs?.ctaStyle || 'button'}
+- CTA placement pattern: ${layout?.ctaPlacement || 'inline'}
+- Use the actual CTA gradient: ${effects?.gradients?.ctaGradient || 'primary color'}
+- Should be attention-grabbing but match brand sophistication`,
+
+      testimonial: `
+## TESTIMONIAL-SPECIFIC GUIDANCE
+- Testimonial style: ${componentPrefs?.testimonialStyle || 'card'}
+- Should feel trustworthy and authentic
+- Quote marks should match brand typography character`,
+
+      faq: `
+## FAQ-SPECIFIC GUIDANCE
+- FAQ style: ${componentPrefs?.faqStyle || 'accordion'}
+- Expand/collapse animations should match motion style: ${motion?.overall || 'subtle'}`,
+
+      timeline: `
+## TIMELINE-SPECIFIC GUIDANCE
+- Line and markers should use brand colors appropriately
+- Consider using primary color for active/current items
+- Spacing should reflect brand's whitespace philosophy`,
+
+      prose: `
+## PROSE-SPECIFIC GUIDANCE
+- Link style: ${designDna.typography?.linkStyle || 'underline'}
+- Line height should be comfortable for reading
+- Paragraph spacing should match brand's spacing density`,
+
+      list: `
+## LIST-SPECIFIC GUIDANCE
+- Preferred list style: ${componentPrefs?.preferredListStyle || 'bullets'}
+- Markers should use brand accent or primary color
+- Spacing between items should feel balanced`,
+
+      table: `
+## TABLE-SPECIFIC GUIDANCE
+- Headers should use darker neutral or primary color
+- Borders should be subtle (${effects?.borders?.style || 'subtle'})
+- Alternating rows if appropriate for brand style`,
+
+      blockquote: `
+## BLOCKQUOTE-SPECIFIC GUIDANCE
+- Should feel distinctive and quotation-like
+- Consider using accent color for decorative elements
+- Border or background treatment matching card style`,
+
+      keyTakeaways: `
+## KEY TAKEAWAYS-SPECIFIC GUIDANCE
+- Should stand out from regular content
+- Consider using accent or light primary background
+- Icon or bullet style: ${componentPrefs?.preferredListStyle || 'icons'}`,
+    };
+
+    return guidance[componentType] || '';
+  }
+
+  /**
+   * Get description for card style
+   */
+  private getCardStyleDescription(style: string): string {
+    const descriptions: Record<string, string> = {
+      flat: 'no shadow, relies on background color or border',
+      'subtle-shadow': 'very light shadow for gentle depth',
+      elevated: 'prominent shadow for floating effect',
+      bordered: 'visible border instead of shadow',
+      glass: 'glassmorphism with blur and transparency',
+    };
+    return descriptions[style] || style;
+  }
+
+  /**
+   * Get personality description
+   */
+  private getPersonalityDescription(personality: string): string {
+    const descriptions: Record<string, string> = {
+      corporate: 'professional restraint, subtle sophistication, trustworthy stability',
+      creative: 'bold expression, visual interest, artistic flair',
+      luxurious: 'refined elegance, premium feel, exclusive quality',
+      friendly: 'warm approachability, inviting comfort, accessible charm',
+      bold: 'strong impact, confident presence, powerful statements',
+      minimal: 'clean simplicity, focused clarity, essential purity',
+      elegant: 'graceful sophistication, timeless beauty, refined taste',
+      playful: 'fun energy, joyful expression, engaging delight',
+    };
+    return descriptions[personality] || 'balanced professionalism';
   }
 
   /**
@@ -560,38 +792,76 @@ CRITICAL: Return ONLY valid JSON. DO NOT include :root declarations. Use ONLY th
 
   /**
    * Generate decorative elements (dividers, backgrounds, shapes)
+   * ENHANCED: Now passes actual brand values for sophisticated output
    */
   private async generateDecorativeElements(designDna: DesignDNA): Promise<BrandDesignSystem['decorative']> {
     const personality = designDna.personality?.overall || 'corporate';
-    const dividerStyle = designDna.decorative?.dividerStyle || 'line';
-    const usesWaves = designDna.decorative?.usesWaveShapes || false;
+    const colors = designDna.colors || {} as DesignDNA['colors'];
+    const effects = designDna.effects || {} as DesignDNA['effects'];
+    const decorative = designDna.decorative || {} as DesignDNA['decorative'];
+    const spacing = designDna.spacing || {} as DesignDNA['spacing'];
 
-    const prompt = `Generate decorative CSS elements for a ${personality} brand.
-Divider style: ${dividerStyle}
-Uses waves: ${usesWaves}
+    // Get actual values
+    const primaryHex = this.getHex(colors.primary, '#3b82f6');
+    const primaryLightHex = this.getHex(colors.primaryLight, '#60a5fa');
+    const neutralLightest = colors.neutrals?.lightest || '#f9fafb';
+    const neutralLight = colors.neutrals?.light || '#d1d5db';
 
-## CRITICAL: Allowed CSS Variables (use ONLY these exact names)
-- Colors: --ctc-primary, --ctc-primary-light, --ctc-primary-dark, --ctc-secondary, --ctc-accent
-- Neutrals: --ctc-neutral-lightest, --ctc-neutral-light, --ctc-neutral-medium, --ctc-neutral-dark, --ctc-neutral-darkest
-- Spacing: --ctc-spacing-xs, --ctc-spacing-sm, --ctc-spacing-md, --ctc-spacing-lg, --ctc-spacing-xl, --ctc-spacing-2xl, --ctc-spacing-3xl
-- Radius: --ctc-radius-sm, --ctc-radius-md, --ctc-radius-lg, --ctc-radius-full
+    const gradients = effects?.gradients || {} as NonNullable<DesignDNA['effects']>['gradients'];
+    const heroGradient = gradients?.heroGradient || `linear-gradient(180deg, ${neutralLightest}, white)`;
+
+    const prompt = `You are a senior CSS designer. Generate SOPHISTICATED decorative CSS elements for a premium ${personality} brand.
+
+## ACTUAL BRAND COLORS
+Primary: ${primaryHex}
+Primary Light: ${primaryLightHex}
+Background: ${neutralLightest}
+Border/Divider: ${neutralLight}
+
+## ACTUAL GRADIENT (from brand analysis)
+Hero/Section gradient: ${heroGradient}
+Gradient usage level: ${gradients?.usage || 'subtle'}
+
+## BRAND CHARACTERISTICS
+Personality: ${personality}
+Whitespace philosophy: ${spacing?.whitespacePhilosophy || 'balanced'}
+Divider style preference: ${decorative?.dividerStyle || 'line'}
+Uses wave shapes: ${decorative?.usesWaveShapes || false}
+Uses geometric patterns: ${decorative?.usesGeometricPatterns || false}
+Decorative accent color: ${decorative?.decorativeAccentColor || primaryHex}
+
+## DESIGN REQUIREMENTS
+- Section backgrounds should be SUBTLE - not heavy saturated colors
+- For ${personality} brands: ${this.getPersonalityDescription(personality)}
+- Accent sections should use VERY LIGHT tints of the primary color, not solid primary
+- Featured sections might use subtle gradients matching the hero gradient
+- Avoid aggressive color blocks - sophistication comes from subtlety
+
+## CSS VARIABLES TO USE
+Colors: --ctc-primary, --ctc-primary-light, --ctc-primary-dark, --ctc-secondary, --ctc-accent
+Neutrals: --ctc-neutral-lightest, --ctc-neutral-light, --ctc-neutral-medium, --ctc-neutral-dark, --ctc-neutral-darkest
+Spacing: --ctc-spacing-xs/sm/md/lg/xl/2xl/3xl
+Radius: --ctc-radius-sm/md/lg/full
 
 Return JSON:
 {
   "dividers": {
-    "default": ".ctc-divider { CSS }",
-    "subtle": ".ctc-divider--subtle { CSS }",
-    "decorative": ".ctc-divider--decorative { CSS }"
+    "default": ".ctc-divider { CSS - subtle, elegant }",
+    "subtle": ".ctc-divider--subtle { CSS - barely visible }",
+    "decorative": ".ctc-divider--decorative { CSS - brand-colored accent }"
   },
   "sectionBackgrounds": {
-    "default": ".ctc-section { CSS }",
-    "accent": ".ctc-section--accent { CSS }",
-    "featured": ".ctc-section--featured { CSS }"
+    "default": ".ctc-section { CSS - clean white or very light }",
+    "accent": ".ctc-section--accent { CSS - SUBTLE tint, NOT solid primary }",
+    "featured": ".ctc-section--featured { CSS - gentle gradient or light highlight }"
   }
 }
 
-DO NOT include :root declarations. Use ONLY the exact variable names listed above.
-CRITICAL: Return ONLY valid JSON.`;
+CRITICAL:
+- Return ONLY valid JSON
+- NO :root declarations
+- Keep accent sections SUBTLE - use rgba with low opacity or very light tints
+- This must look like a premium design agency created it`;
 
     try {
       const response = this.config.provider === 'gemini'
