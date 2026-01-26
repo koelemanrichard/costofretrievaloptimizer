@@ -13,6 +13,7 @@ export { SectionAnalyzer } from './SectionAnalyzer';
 export { LayoutPlanner } from './LayoutPlanner';
 export { ComponentSelector } from './ComponentSelector';
 export { VisualEmphasizer } from './VisualEmphasizer';
+export { ImageHandler } from './ImageHandler';
 
 // Component Mappings
 export * from './componentMappings';

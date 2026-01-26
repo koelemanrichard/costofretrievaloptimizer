@@ -51,6 +51,8 @@ export interface SectionConstraints {
   requiresList?: boolean;
   fsTarget?: boolean;
   paaTarget?: boolean;
+  /** Whether an image is required for this section (alias for requiresVisual) */
+  imageRequired?: boolean;
 }
 
 /**
@@ -215,7 +217,7 @@ export interface ComponentSelection {
 // =============================================================================
 
 /**
- * Image placement configuration
+ * Image placement configuration (basic)
  */
 export interface ImagePlacement {
   position: ImagePosition;
@@ -225,6 +227,57 @@ export interface ImagePlacement {
   caption?: boolean;
   lazyLoad: boolean;
   priority: 'high' | 'medium' | 'low';
+}
+
+// =============================================================================
+// SEMANTIC IMAGE PLACEMENT (for ImageHandler)
+// =============================================================================
+
+/**
+ * Semantic image position options
+ * CRITICAL: All positions are AFTER at least one paragraph (never between heading and first paragraph)
+ */
+export type SemanticImagePosition =
+  | 'after-intro-paragraph' // Safe position after first paragraph
+  | 'section-end' // At the end of a section
+  | 'float-right' // Float right within paragraph text
+  | 'float-left' // Float left within paragraph text
+  | 'full-width-break' // Full width visual break between sections
+  | 'inline'; // Inline with text (after paragraph)
+
+/**
+ * Image source type - where the image comes from
+ */
+export type ImageSource =
+  | 'article_generated' // Images from content generation (uploaded/generated)
+  | 'brand_kit' // From business brand kit
+  | 'screenshot_derived' // Elements from brand screenshots
+  | 'placeholder' // Structured placeholder with specs
+  | 'none'; // No image for this section
+
+/**
+ * Semantic role of the image
+ */
+export type ImageSemanticRole = 'hero' | 'explanatory' | 'evidence' | 'decorative';
+
+/**
+ * Placeholder specification for images that need to be created
+ */
+export interface ImagePlaceholderSpec {
+  aspectRatio: '16:9' | '4:3' | '1:1' | 'auto';
+  suggestedContent: string; // e.g., "Diagram showing X process"
+  altTextTemplate: string; // Vocabulary-extending alt text template
+}
+
+/**
+ * Semantic image placement configuration
+ * Used by ImageHandler following Semantic SEO rules
+ */
+export interface SemanticImagePlacement {
+  position: SemanticImagePosition;
+  source: ImageSource;
+  semanticRole: ImageSemanticRole;
+  placeholder?: ImagePlaceholderSpec;
 }
 
 // =============================================================================
@@ -383,8 +436,16 @@ export interface IVisualEmphasizer {
  * Image handler service interface
  */
 export interface IImageHandler {
-  determineImagePlacement(analysis: SectionAnalysis, designDna?: DesignDNA): ImagePlacement | undefined;
-  determineAllImagePlacements(analyses: SectionAnalysis[], designDna?: DesignDNA): (ImagePlacement | undefined)[];
+  determineImagePlacement(
+    analysis: SectionAnalysis,
+    designDna?: DesignDNA,
+    sectionContent?: string
+  ): SemanticImagePlacement | null;
+  determineAllImagePlacements(
+    analyses: SectionAnalysis[],
+    designDna?: DesignDNA,
+    sectionContents?: string[]
+  ): (SemanticImagePlacement | null)[];
 }
 
 /**
