@@ -11,7 +11,7 @@
  * - Actions for marking entities as proprietary or disambiguating
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useEntityHealth } from '../../hooks/useEntityHealth';
 import {
   EntityHealthRecord,
@@ -20,6 +20,12 @@ import {
 } from '../../types/entityHealth';
 import { SemanticTriple } from '../../types';
 import { Button } from '../ui/Button';
+import { KnowledgeGraph, StructuralHole } from '../../lib/knowledgeGraph';
+import {
+  generateBridgeSuggestions,
+  BridgeSuggestion,
+  BridgeSuggestionInput,
+} from '../../services/ai/bridgeSuggestionService';
 
 // ============================================================================
 // TYPES
@@ -30,6 +36,9 @@ interface EntityHealthDashboardProps {
   centralEntity: string;
   coreTopicIds?: string[];
   googleApiKey?: string;
+  knowledgeGraph?: KnowledgeGraph | null;
+  sourceContext?: string;
+  centralSearchIntent?: string[];
   onClose?: () => void;
 }
 
@@ -124,6 +133,175 @@ const VerifiedEntityCard: React.FC<VerifiedEntityCardProps> = ({ entity }) => {
       <span className={`text-xs ${statusColor}`}>
         {entity.verificationStatus === 'verified' ? 'Verified' : 'Partial'}
       </span>
+    </div>
+  );
+};
+
+/**
+ * StructuralHoleCard - Displays a structural hole with bridge suggestions
+ */
+interface StructuralHoleCardProps {
+  hole: StructuralHole;
+  index: number;
+  clusterATerms: string[];
+  clusterBTerms: string[];
+  isExpanded: boolean;
+  suggestions?: BridgeSuggestion;
+  isLoading: boolean;
+  onToggleExpand: () => void;
+  onGetSuggestions: () => void;
+}
+
+const StructuralHoleCard: React.FC<StructuralHoleCardProps> = ({
+  hole,
+  index,
+  clusterATerms,
+  clusterBTerms,
+  isExpanded,
+  suggestions,
+  isLoading,
+  onToggleExpand,
+  onGetSuggestions,
+}) => {
+  const priorityColors: Record<string, string> = {
+    critical: 'bg-red-900/50 text-red-300 border-red-500/50',
+    high: 'bg-orange-900/50 text-orange-300 border-orange-500/50',
+    medium: 'bg-yellow-900/50 text-yellow-300 border-yellow-500/50',
+    low: 'bg-blue-900/50 text-blue-300 border-blue-500/50',
+  };
+
+  const priorityLabels: Record<string, string> = {
+    critical: 'Critical Gap',
+    high: 'High Priority',
+    medium: 'Medium Priority',
+    low: 'Low Priority',
+  };
+
+  return (
+    <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`px-2 py-0.5 text-xs font-medium rounded border ${priorityColors[hole.priority]}`}>
+              {priorityLabels[hole.priority]}
+            </span>
+            <span className="text-xs text-gray-500">
+              Connection: {Math.round(hole.connectionStrength * 100)}%
+            </span>
+          </div>
+
+          {/* Cluster visualization */}
+          <div className="flex items-center gap-2 text-sm">
+            <div className="flex-1 p-2 bg-gray-700/50 rounded">
+              <div className="text-xs text-gray-500 mb-1">Cluster A ({clusterATerms.length})</div>
+              <div className="text-gray-300 truncate">
+                {clusterATerms.slice(0, 3).join(', ')}
+                {clusterATerms.length > 3 && <span className="text-gray-500"> +{clusterATerms.length - 3}</span>}
+              </div>
+            </div>
+            <div className="text-gray-500">↔</div>
+            <div className="flex-1 p-2 bg-gray-700/50 rounded">
+              <div className="text-xs text-gray-500 mb-1">Cluster B ({clusterBTerms.length})</div>
+              <div className="text-gray-300 truncate">
+                {clusterBTerms.slice(0, 3).join(', ')}
+                {clusterBTerms.length > 3 && <span className="text-gray-500"> +{clusterBTerms.length - 3}</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action button */}
+        <button
+          onClick={suggestions ? onToggleExpand : onGetSuggestions}
+          disabled={isLoading}
+          className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-wait text-white rounded transition-colors"
+        >
+          {isLoading ? (
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Loading...
+            </span>
+          ) : suggestions ? (
+            isExpanded ? 'Hide Suggestions' : 'Show Suggestions'
+          ) : (
+            'Get Bridge Ideas'
+          )}
+        </button>
+      </div>
+
+      {/* Expanded suggestions */}
+      {isExpanded && suggestions && (
+        <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-4">
+          {/* Research Questions */}
+          {suggestions.researchQuestions.length > 0 && (
+            <div>
+              <h5 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                Research Questions
+              </h5>
+              <ul className="space-y-2">
+                {suggestions.researchQuestions.map((q, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <span className="text-blue-400 mt-0.5">?</span>
+                    <div>
+                      <span className="text-gray-300">{q.question}</span>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-xs text-gray-500">Target: {q.targetAttribute}</span>
+                        <span className="text-xs text-gray-500">Bridges: {q.entityA} ↔ {q.entityB}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Topic Suggestions */}
+          {suggestions.topicSuggestions.length > 0 && (
+            <div>
+              <h5 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                Suggested Bridge Topics
+              </h5>
+              <ul className="space-y-2">
+                {suggestions.topicSuggestions.map((t, idx) => (
+                  <li key={idx} className="p-2 bg-gray-700/30 rounded">
+                    <div className="text-sm text-gray-200 font-medium">{t.title}</div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {t.predicates.map((pred, pIdx) => (
+                        <span key={pIdx} className="px-1.5 py-0.5 text-xs bg-green-900/30 text-green-400 rounded">
+                          {pred}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Bridges: {t.bridgesEntities.join(' ↔ ')}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Bridge Candidates from KG */}
+          {hole.bridgeCandidates.length > 0 && (
+            <div>
+              <h5 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                Existing Bridge Entities
+              </h5>
+              <div className="flex flex-wrap gap-2">
+                {hole.bridgeCandidates.map((candidate, idx) => (
+                  <span key={idx} className="px-2 py-1 text-xs bg-purple-900/30 text-purple-300 rounded">
+                    {candidate}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                These entities have high centrality and could serve as natural bridges.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -339,6 +517,9 @@ export const EntityHealthDashboard: React.FC<EntityHealthDashboardProps> = ({
   centralEntity,
   coreTopicIds,
   googleApiKey,
+  knowledgeGraph,
+  sourceContext = '',
+  centralSearchIntent = [],
   onClose,
 }) => {
   const {
@@ -350,6 +531,65 @@ export const EntityHealthDashboard: React.FC<EntityHealthDashboardProps> = ({
     markProprietary,
     reset,
   } = useEntityHealth();
+
+  // Structural holes state
+  const [expandedHole, setExpandedHole] = useState<number | null>(null);
+  const [bridgeSuggestions, setBridgeSuggestions] = useState<Map<number, BridgeSuggestion>>(new Map());
+  const [loadingSuggestions, setLoadingSuggestions] = useState<Set<number>>(new Set());
+
+  // Calculate structural holes from knowledge graph
+  const structuralHoles = useMemo(() => {
+    if (!knowledgeGraph) return [];
+    try {
+      return knowledgeGraph.identifyStructuralHoles(0.15);
+    } catch (err) {
+      console.error('Failed to identify structural holes:', err);
+      return [];
+    }
+  }, [knowledgeGraph]);
+
+  // Get node terms from IDs for display
+  const getNodeTerms = useCallback((nodeIds: string[]): string[] => {
+    if (!knowledgeGraph) return nodeIds;
+    return nodeIds.map(id => {
+      const node = knowledgeGraph.getNode(id);
+      return node?.term || id;
+    });
+  }, [knowledgeGraph]);
+
+  // Generate bridge suggestions for a structural hole
+  const handleGetBridgeSuggestions = useCallback(async (holeIndex: number, hole: StructuralHole) => {
+    if (loadingSuggestions.has(holeIndex)) return;
+
+    setLoadingSuggestions(prev => new Set(prev).add(holeIndex));
+
+    try {
+      const input: BridgeSuggestionInput = {
+        clusterATerms: getNodeTerms(hole.clusterA),
+        clusterBTerms: getNodeTerms(hole.clusterB),
+        centralEntity,
+        sourceContext,
+        centralSearchIntent,
+      };
+
+      const suggestions = await generateBridgeSuggestions(input, false);
+
+      setBridgeSuggestions(prev => {
+        const next = new Map(prev);
+        next.set(holeIndex, suggestions);
+        return next;
+      });
+      setExpandedHole(holeIndex);
+    } catch (err) {
+      console.error('Failed to generate bridge suggestions:', err);
+    } finally {
+      setLoadingSuggestions(prev => {
+        const next = new Set(prev);
+        next.delete(holeIndex);
+        return next;
+      });
+    }
+  }, [centralEntity, sourceContext, centralSearchIntent, getNodeTerms, loadingSuggestions]);
 
   const handleAnalyze = () => {
     analyze(eavs, centralEntity, coreTopicIds, googleApiKey);
@@ -511,6 +751,33 @@ export const EntityHealthDashboard: React.FC<EntityHealthDashboardProps> = ({
               <VerifiedEntityCard
                 key={`${entity.normalizedName}-${idx}`}
                 entity={entity}
+              />
+            ))}
+          </ExpandableSection>
+        )}
+
+        {/* Structural Holes / Bridge Opportunities */}
+        {structuralHoles.length > 0 && (
+          <ExpandableSection
+            title="Content Bridging Opportunities"
+            count={structuralHoles.length}
+            defaultExpanded={false}
+          >
+            <p className="text-xs text-gray-500 mb-3">
+              These topic clusters are disconnected or weakly connected. Create bridge content to strengthen your topical authority.
+            </p>
+            {structuralHoles.map((hole, idx) => (
+              <StructuralHoleCard
+                key={idx}
+                hole={hole}
+                index={idx}
+                clusterATerms={getNodeTerms(hole.clusterA)}
+                clusterBTerms={getNodeTerms(hole.clusterB)}
+                isExpanded={expandedHole === idx}
+                suggestions={bridgeSuggestions.get(idx)}
+                isLoading={loadingSuggestions.has(idx)}
+                onToggleExpand={() => setExpandedHole(expandedHole === idx ? null : idx)}
+                onGetSuggestions={() => handleGetBridgeSuggestions(idx, hole)}
               />
             ))}
           </ExpandableSection>

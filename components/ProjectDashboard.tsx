@@ -45,6 +45,7 @@ import {
 import { LocationManagerModal } from './templates/LocationManagerModal';
 import { PlanningDashboard, PerformanceImportModal } from './planning';
 import { KPStrategyPage } from './KPStrategyPage';
+import SocialSignalsModal from './modals/SocialSignalsModal';
 import { EntityAuthorityPage } from './EntityAuthorityPage';
 import { QueryNetworkAudit } from './QueryNetworkAudit';
 import { MentionScannerDashboard } from './MentionScannerDashboard';
@@ -60,11 +61,15 @@ import { ConfidenceDashboard, PriorityTieringSystem } from './gamification';
 // Quality Analytics
 import { PortfolioAnalytics } from './quality';
 
+// Entity Health
+import { EntityHealthDashboard } from './dashboard/EntityHealthDashboard';
+
 import { Button } from './ui/Button';
 import { FeatureErrorBoundary } from './ui/FeatureErrorBoundary';
 import TabNavigation, { createDashboardTabs, NavIcons } from './dashboard/TabNavigation';
 import StrategyOverview from './dashboard/StrategyOverview';
 import CollapsiblePanel from './dashboard/CollapsiblePanel';
+import CannibalizationWarnings from './dashboard/CannibalizationWarnings';
 
 interface ProjectDashboardProps {
   projectName: string;
@@ -404,7 +409,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     type: 'SET_TOPICS_FOR_MAP',
                     payload: {
                         mapId: topicalMap.id,
-                        topics: [...allTopics, ...data as EnrichedTopic[]],
+                        topics: [...allTopics, ...(data as unknown as EnrichedTopic[])],
                     },
                 });
             }
@@ -425,9 +430,11 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     // Location Manager Modal state
     const [showLocationManager, setShowLocationManager] = useState(false);
 
-    // KP Strategy and Entity Authority page states
+    // KP Strategy, Entity Authority, and Social Signals page states
     const [showKPStrategy, setShowKPStrategy] = useState(false);
     const [showEntityAuthority, setShowEntityAuthority] = useState(false);
+    const [showSocialSignals, setShowSocialSignals] = useState(false);
+    const [showEntityHealth, setShowEntityHealth] = useState(false);
 
     // Create navigation tabs configuration
     const dashboardTabs = createDashboardTabs({
@@ -468,11 +475,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         onContentCalendar: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'contentCalendar', visible: true } }),
         isGeneratingPlan: state.publicationPlanning?.isGeneratingPlan,
         hasPlan: !!state.publicationPlanning?.planResult,
-        // KP Strategy and Entity Authority
+        // KP Strategy, Entity Authority, and Social Signals
         onKPStrategy: () => setShowKPStrategy(true),
         onEntityAuthority: () => setShowEntityAuthority(true),
+        onSocialSignals: () => setShowSocialSignals(true),
         // Quality Analytics
         onQualityAnalytics: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'qualityAnalytics', visible: true } }),
+        // Entity Health
+        onEntityHealth: () => setShowEntityHealth(true),
     });
 
     return (
@@ -493,6 +503,19 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
             {/* Tab Navigation - All actions in one place */}
             <TabNavigation tabs={dashboardTabs} />
+
+            {/* Cannibalization Warnings - Show when topics are too similar */}
+            <CannibalizationWarnings
+                topics={allTopics}
+                knowledgeGraph={knowledgeGraph}
+                onSelectTopic={(topicId) => {
+                    const topic = allTopics.find(t => t.id === topicId);
+                    if (topic) {
+                        dispatch({ type: 'SELECT_TOPIC', payload: topic });
+                    }
+                }}
+                collapsed={true}
+            />
 
             {/* Condensed Strategy Overview */}
             <CollapsiblePanel
@@ -984,6 +1007,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 }}
             />
 
+            {/* Social Signals Modal */}
+            <SocialSignalsModal
+                isOpen={showSocialSignals}
+                onClose={() => setShowSocialSignals(false)}
+                entityName={topicalMap.pillars?.centralEntity || effectiveBusinessInfo.centralEntity || ''}
+                entityType={effectiveBusinessInfo.entityIdentity?.entityType}
+            />
+
             {/* Quality Analytics Modal */}
             {modals.qualityAnalytics && (
                 <div className="fixed inset-0 z-50 bg-gray-900/95 overflow-auto">
@@ -1009,6 +1040,23 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                 />
                             </FeatureErrorBoundary>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Entity Health Dashboard Modal */}
+            {showEntityHealth && topicalMap.eavs && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <EntityHealthDashboard
+                            eavs={topicalMap.eavs as SemanticTriple[]}
+                            centralEntity={topicalMap.pillars?.centralEntity || ''}
+                            googleApiKey={effectiveBusinessInfo?.googleKnowledgeGraphApiKey}
+                            knowledgeGraph={knowledgeGraph}
+                            sourceContext={topicalMap.pillars?.sourceContext || ''}
+                            centralSearchIntent={topicalMap.pillars?.centralSearchIntent || []}
+                            onClose={() => setShowEntityHealth(false)}
+                        />
                     </div>
                 </div>
             )}
