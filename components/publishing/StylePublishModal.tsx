@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAppState } from '../../state/appState';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { getSupabaseClient } from '../../services/supabaseClient';
@@ -69,6 +70,8 @@ import {
   saveBrandDesignSystem,
   getBrandDesignSystem,
 } from '../../services/design-analysis/brandDesignSystemStorage';
+import { renderContent } from '../../services/publishing/renderer';
+import { htmlToArticleContent } from '../../services/publishing/renderer/contentAdapter';
 
 // Map ContentTypeTemplate to PageTemplate
 function mapTemplateToPageTemplate(template: ContentTypeTemplate): PageTemplate {
@@ -134,6 +137,9 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   projectId,
   onPublishSuccess,
 }) => {
+  // Get app state for API keys
+  const { state } = useAppState();
+
   // State
   const [currentStep, setCurrentStep] = useState<StylePublishStep>('brand');
   const [style, setStyle] = useState<PublishingStyle | null>(null);
@@ -397,6 +403,12 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
 
           // Also set saved design system if available
           if (savedSystem) {
+            console.log('[Style & Publish] Loaded saved design system:', {
+              hasCompiledCss: !!savedSystem.compiledCss,
+              compiledCssLength: savedSystem.compiledCss?.length || 0,
+              brandName: savedSystem.brandName,
+              designDnaHash: savedSystem.designDnaHash,
+            });
             setDetectedDesignSystem(savedSystem);
           }
         }
@@ -699,7 +711,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           // Get the source URL from the topical map domain
           const sourceUrl = topicalMap?.business_info?.domain || '';
 
-          // Save Design DNA
+          // Save Design DNA (best-effort - continues if tables don't exist)
           const dnaId = await saveDesignDNA(projectId, {
             designDna: result.designDna,
             screenshotBase64: result.screenshotBase64,
@@ -709,9 +721,9 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             processingTimeMs: 0
           });
 
-          console.log('[Style & Publish] Saved Design DNA with id:', dnaId);
+          console.log('[Style & Publish] Saved Design DNA with id:', dnaId || '(skipped - table not found)');
 
-          // Save Brand Design System
+          // Save Brand Design System (dnaId may be null if table doesn't exist)
           if (result.designSystem) {
             await saveBrandDesignSystem(projectId, dnaId, result.designSystem);
             console.log('[Style & Publish] Saved Brand Design System');
@@ -986,6 +998,66 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           fonts: style?.designTokens?.fonts,
         });
 
+        // DEBUG: Log brand design system state
+        console.log('[Style & Publish] generatePreview - brandDesignSystem state:', {
+          hasDetectedDesignSystem: !!detectedDesignSystem,
+          hasCompiledCss: !!detectedDesignSystem?.compiledCss,
+          compiledCssLength: detectedDesignSystem?.compiledCss?.length || 0,
+          brandName: detectedDesignSystem?.brandName,
+          designDnaHash: detectedDesignSystem?.designDnaHash,
+        });
+
+        // NEW: Try unified renderer first (routes to BrandAwareComposer when extractions exist)
+        if (projectId) {
+          try {
+            const articleContent = htmlToArticleContent(articleDraft, topic.title);
+            const unifiedOutput = await renderContent(articleContent, {
+              projectId,
+              aiProvider: 'gemini',
+              aiApiKey: geminiApiKey,
+              blueprint,
+              brief,
+              topic,
+              topicalMap,
+              personalityId,
+              designTokens: style?.designTokens ? {
+                colors: {
+                  primary: style.designTokens.colors.primary,
+                  secondary: style.designTokens.colors.secondary,
+                  accent: style.designTokens.colors.accent,
+                  background: style.designTokens.colors.background,
+                  surface: style.designTokens.colors.surface,
+                  text: style.designTokens.colors.text,
+                  textMuted: style.designTokens.colors.textMuted,
+                  border: style.designTokens.colors.border,
+                },
+                fonts: {
+                  heading: style.designTokens.fonts.heading,
+                  body: style.designTokens.fonts.body,
+                },
+              } : undefined,
+              darkMode: false,
+              minifyCss: false,
+              language,
+              heroImage: layout.components.hero.imageUrl,
+              ctaConfig: {
+                primaryText: layout.components.ctaBanners.primaryText || undefined,
+                primaryUrl: '#contact',
+                secondaryText: layout.components.ctaBanners.secondaryText || undefined,
+                secondaryUrl: '#',
+              }
+            });
+
+            console.log('[Style & Publish] Unified renderer succeeded');
+            setPreview(unifiedOutput);
+            return;
+          } catch (error) {
+            console.log('[Style & Publish] Unified renderer failed, falling back:', error);
+            // Fall through to direct renderBlueprint
+          }
+        }
+
+        // EXISTING: Direct blueprint rendering as fallback
         const output = renderBlueprint(
           blueprint,
           topic.title,
@@ -1126,7 +1198,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [style, layout, articleDraft, topic, brief, personalityId, blueprint]);
+  }, [style, layout, articleDraft, topic, brief, personalityId, blueprint, detectedDesignSystem, topicalMap]);
 
   // Navigation handlers
   const handleNext = useCallback(async () => {
@@ -1223,10 +1295,10 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     setLayoutEngineBlueprint(null);
   }, []);
 
-  // Get API keys from topical map business info
-  const apifyToken = (topicalMap?.business_info as any)?.apifyToken || '';
-  const geminiApiKey = (topicalMap?.business_info as any)?.geminiApiKey || localStorage.getItem('gemini_api_key') || '';
-  const anthropicApiKey = (topicalMap?.business_info as any)?.anthropicApiKey || localStorage.getItem('anthropic_api_key') || '';
+  // Get API keys from app state businessInfo (where user settings are stored)
+  const apifyToken = state.businessInfo?.apifyToken || '';
+  const geminiApiKey = state.businessInfo?.geminiApiKey || localStorage.getItem('gemini_api_key') || '';
+  const anthropicApiKey = state.businessInfo?.anthropicApiKey || localStorage.getItem('anthropic_api_key') || '';
 
   // Render step content
   const renderStepContent = () => {
@@ -1268,7 +1340,11 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           <PreviewStep
             preview={preview}
             isGenerating={isGenerating}
-            onRegenerate={generatePreview}
+            onRegenerate={async () => {
+              // Regenerate BOTH blueprint and preview to pick up code changes
+              await generateBlueprint();
+              await generatePreview();
+            }}
             seoWarnings={preview?.seoValidation.warnings || []}
             // Layout configuration for collapsible panel
             layout={layout || undefined}
