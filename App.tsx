@@ -165,6 +165,8 @@ const App: React.FC = () => {
 
     // Track which user we've claimed migrated data for (to avoid duplicate calls)
     const claimedMigratedDataForUser = useRef<string | null>(null);
+    // Track last dispatched user ID to prevent redundant SET_USER dispatches
+    const lastDispatchedUserIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         console.log('[App] Setting up onAuthStateChange subscription (version:', authClientVersion, ')');
@@ -174,7 +176,15 @@ const App: React.FC = () => {
         // where the NEXT Supabase call anywhere in the app will hang indefinitely.
         // See: https://github.com/supabase/supabase-js/issues/1594
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            dispatch({ type: 'SET_USER', payload: session?.user ?? null });
+            const newUserId = session?.user?.id ?? null;
+
+            // Only dispatch SET_USER if user ID actually changed (prevents re-render loops
+            // when Supabase emits events after updateUser calls that only change metadata)
+            if (lastDispatchedUserIdRef.current !== newUserId) {
+                lastDispatchedUserIdRef.current = newUserId;
+                dispatch({ type: 'SET_USER', payload: session?.user ?? null });
+            }
+
             if (session?.user) {
                 // Set global usage context for AI telemetry tracking
                 setGlobalUsageContext({ userId: session.user.id });
@@ -239,6 +249,9 @@ const App: React.FC = () => {
     }, [state.user?.id, state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
     // Update global usage context when project/map changes for AI telemetry
+    // Track the last org id we set billing context for to avoid redundant calls
+    const lastBillingOrgRef = useRef<string | null>(null);
+
     useEffect(() => {
         if (state.user) {
             setGlobalUsageContext({
@@ -256,25 +269,29 @@ const App: React.FC = () => {
             if (state.activeProjectId) {
                 const activeProject = state.projects.find(p => p.id === state.activeProjectId);
                 if (activeProject?.organization_id) {
-                    // Determine key source based on project settings
-                    // Full resolution happens via edge function, this is a best-effort local estimate
-                    const keySource = determineKeySource(
-                        !!state.businessInfo.geminiApiKey || !!state.businessInfo.openAiApiKey || !!state.businessInfo.anthropicApiKey, // user has keys
-                        false, // no env keys in client
-                        activeProject.api_key_mode !== 'byok' // org keys if not BYOK
-                    );
-                    setBillingContext({
-                        organizationId: activeProject.organization_id,
-                        keySource: keySource,
-                        // If project uses org keys or inherits, billable_to is organization
-                        // If project has BYOK, billable_to is already set to user
-                        billableTo: activeProject.api_key_mode === 'byok' ? 'user' : 'organization',
-                        billableId: activeProject.api_key_mode === 'byok' ? state.user.id : activeProject.organization_id,
-                    });
+                    // Only update billing context if org actually changed (prevents re-render loops)
+                    if (lastBillingOrgRef.current !== activeProject.organization_id) {
+                        lastBillingOrgRef.current = activeProject.organization_id;
+                        // Determine key source based on project settings
+                        // Full resolution happens via edge function, this is a best-effort local estimate
+                        const keySource = determineKeySource(
+                            !!state.businessInfo.geminiApiKey || !!state.businessInfo.openAiApiKey || !!state.businessInfo.anthropicApiKey, // user has keys
+                            false, // no env keys in client
+                            activeProject.api_key_mode !== 'byok' // org keys if not BYOK
+                        );
+                        setBillingContext({
+                            organizationId: activeProject.organization_id,
+                            keySource: keySource,
+                            // If project uses org keys or inherits, billable_to is organization
+                            // If project has BYOK, billable_to is already set to user
+                            billableTo: activeProject.api_key_mode === 'byok' ? 'user' : 'organization',
+                            billableId: activeProject.api_key_mode === 'byok' ? state.user.id : activeProject.organization_id,
+                        });
+                    }
                 }
             }
         }
-    }, [state.user, state.activeProjectId, state.activeMapId, state.projects]);
+    }, [state.user?.id, state.activeProjectId, state.activeMapId, state.projects, state.businessInfo.geminiApiKey, state.businessInfo.openAiApiKey, state.businessInfo.anthropicApiKey]);
 
     // Expose utility functions to window for console access
     useEffect(() => {
@@ -338,96 +355,105 @@ const App: React.FC = () => {
         console.log('[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()');
     }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, state.activeMapId, state.activeProjectId]);
 
+    // Track which user ID we've already fetched initial data for (prevents duplicate fetches)
+    const fetchedInitialDataForUser = useRef<string | null>(null);
+
     useEffect(() => {
+        const userId = state.user?.id;
+
+        // Only fetch once per user (prevents re-fetch when user object reference changes but ID stays same)
+        if (!userId || fetchedInitialDataForUser.current === userId) {
+            return;
+        }
+        fetchedInitialDataForUser.current = userId;
+
         const fetchInitialData = async () => {
-            if (state.user) {
-                dispatch({ type: 'SET_LOADING', payload: { key: 'projects', value: true } });
-                dispatch({ type: 'SET_LOADING', payload: { key: 'settings', value: true } });
-                try {
-                    const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
-                    
-                    // Fetch Projects - RLS policies handle access control via organization membership
-                    // This returns all projects the user has access to:
-                    // - Projects in organizations they're a member of (has_project_access)
-                    // - Legacy projects they own directly (user_id = auth.uid())
-                    // Include topical_maps with updated_at to calculate map_count and last_activity
-                    const { data: projectsData, error: projectsError } = await supabase
-                        .from('projects')
-                        .select('*, topical_maps(updated_at)')
-                        .order('created_at', { ascending: false });
-                    if (projectsError) throw projectsError;
-                    // Transform to include map_count and last_activity at top level
-                    const projectsWithActivity = (projectsData || []).map((p: any) => {
-                        const maps = p.topical_maps || [];
-                        const mapDates = maps.map((m: any) => new Date(m.updated_at).getTime());
-                        const lastActivity = mapDates.length > 0 ? new Date(Math.max(...mapDates)).toISOString() : null;
-                        return {
-                            ...p,
-                            map_count: maps.length,
-                            last_activity: lastActivity,
-                            topical_maps: undefined // Remove nested relation data
-                        };
-                    });
-                    dispatch({ type: 'SET_PROJECTS', payload: projectsWithActivity });
+            dispatch({ type: 'SET_LOADING', payload: { key: 'projects', value: true } });
+            dispatch({ type: 'SET_LOADING', payload: { key: 'settings', value: true } });
+            try {
+                const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
 
-                    // Fetch Settings (global credentials only)
-                    const { data: settingsData, error: settingsError } = await supabase.functions.invoke('get-settings');
-                    if (settingsError) throw settingsError;
-                    if (settingsData) {
-                        // Filter to only apply global settings fields, not project-specific data
-                        // This prevents stale project data from user_settings overwriting defaults
-                        const GLOBAL_SETTINGS_FIELDS = [
-                            'aiProvider', 'aiModel',
-                            'geminiApiKey', 'openAiApiKey', 'anthropicApiKey', 'perplexityApiKey', 'openRouterApiKey',
-                            'dataforseoLogin', 'dataforseoPassword', 'apifyToken', 'infranodusApiKey',
-                            'jinaApiKey', 'firecrawlApiKey', 'apitemplateApiKey',
-                            'neo4jUri', 'neo4jUser', 'neo4jPassword',
-                            'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
-                            'language', 'targetMarket', 'expertise'
-                        ];
-                        const filteredSettings: Record<string, any> = {};
-                        for (const key of GLOBAL_SETTINGS_FIELDS) {
-                            if (key in settingsData) {
-                                filteredSettings[key] = settingsData[key];
-                            }
+                // Fetch Projects - RLS policies handle access control via organization membership
+                // This returns all projects the user has access to:
+                // - Projects in organizations they're a member of (has_project_access)
+                // - Legacy projects they own directly (user_id = auth.uid())
+                // Include topical_maps with updated_at to calculate map_count and last_activity
+                const { data: projectsData, error: projectsError } = await supabase
+                    .from('projects')
+                    .select('*, topical_maps(updated_at)')
+                    .order('created_at', { ascending: false });
+                if (projectsError) throw projectsError;
+                // Transform to include map_count and last_activity at top level
+                const projectsWithActivity = (projectsData || []).map((p: any) => {
+                    const maps = p.topical_maps || [];
+                    const mapDates = maps.map((m: any) => new Date(m.updated_at).getTime());
+                    const lastActivity = mapDates.length > 0 ? new Date(Math.max(...mapDates)).toISOString() : null;
+                    return {
+                        ...p,
+                        map_count: maps.length,
+                        last_activity: lastActivity,
+                        topical_maps: undefined // Remove nested relation data
+                    };
+                });
+                dispatch({ type: 'SET_PROJECTS', payload: projectsWithActivity });
+
+                // Fetch Settings (global credentials only)
+                const { data: settingsData, error: settingsError } = await supabase.functions.invoke('get-settings');
+                if (settingsError) throw settingsError;
+                if (settingsData) {
+                    // Filter to only apply global settings fields, not project-specific data
+                    // This prevents stale project data from user_settings overwriting defaults
+                    const GLOBAL_SETTINGS_FIELDS = [
+                        'aiProvider', 'aiModel',
+                        'geminiApiKey', 'openAiApiKey', 'anthropicApiKey', 'perplexityApiKey', 'openRouterApiKey',
+                        'dataforseoLogin', 'dataforseoPassword', 'apifyToken', 'infranodusApiKey',
+                        'jinaApiKey', 'firecrawlApiKey', 'apitemplateApiKey',
+                        'neo4jUri', 'neo4jUser', 'neo4jPassword',
+                        'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
+                        'language', 'targetMarket', 'expertise'
+                    ];
+                    const filteredSettings: Record<string, any> = {};
+                    for (const key of GLOBAL_SETTINGS_FIELDS) {
+                        if (key in settingsData) {
+                            filteredSettings[key] = settingsData[key];
                         }
-
-                        // Debug: Log API key sources to help diagnose auth issues
-                        const envKey = state.businessInfo.anthropicApiKey;
-                        const dbKey = filteredSettings.anthropicApiKey;
-                        console.log('[Settings] API Key Sources:', {
-                            envKeyPreview: envKey ? `${envKey.substring(0, 15)}...` : 'NOT SET',
-                            dbKeyPreview: dbKey ? `${dbKey.substring(0, 15)}...` : 'NOT SET',
-                            usingSource: dbKey ? 'DATABASE (overrides env)' : 'ENV FILE',
-                            dbKeyLength: dbKey?.length || 0,
-                            envKeyLength: envKey?.length || 0
-                        });
-
-                        // Set billing context for AI usage tracking
-                        // This determines whether platform keys or user BYOK keys are being used
-                        const keySource = determineKeySource(!!dbKey, !!envKey);
-                        setBillingContext({
-                            keySource,
-                            // If user has their own key, they are billable; otherwise platform is billable
-                            billableTo: keySource === 'user_byok' ? 'user' : 'platform',
-                            billableId: keySource === 'user_byok' ? state.user?.id : undefined,
-                        });
-
-                        dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...filteredSettings } });
-
-                        // Initialize verbose logging state from settings
-                        setVerboseLogging(filteredSettings.verboseLogging === true);
                     }
-                } catch (e) {
-                    dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to load initial data.' });
-                } finally {
-                    dispatch({ type: 'SET_LOADING', payload: { key: 'projects', value: false } });
-                    dispatch({ type: 'SET_LOADING', payload: { key: 'settings', value: false } });
+
+                    // Debug: Log API key sources to help diagnose auth issues (once per user)
+                    const envKey = state.businessInfo.anthropicApiKey;
+                    const dbKey = filteredSettings.anthropicApiKey;
+                    console.log('[Settings] API Key Sources:', {
+                        envKeyPreview: envKey ? `${envKey.substring(0, 15)}...` : 'NOT SET',
+                        dbKeyPreview: dbKey ? `${dbKey.substring(0, 15)}...` : 'NOT SET',
+                        usingSource: dbKey ? 'DATABASE (overrides env)' : 'ENV FILE',
+                        dbKeyLength: dbKey?.length || 0,
+                        envKeyLength: envKey?.length || 0
+                    });
+
+                    // Set billing context for AI usage tracking
+                    // This determines whether platform keys or user BYOK keys are being used
+                    const keySource = determineKeySource(!!dbKey, !!envKey);
+                    setBillingContext({
+                        keySource,
+                        // If user has their own key, they are billable; otherwise platform is billable
+                        billableTo: keySource === 'user_byok' ? 'user' : 'platform',
+                        billableId: keySource === 'user_byok' ? userId : undefined,
+                    });
+
+                    dispatch({ type: 'SET_BUSINESS_INFO', payload: { ...state.businessInfo, ...filteredSettings } });
+
+                    // Initialize verbose logging state from settings
+                    setVerboseLogging(filteredSettings.verboseLogging === true);
                 }
+            } catch (e) {
+                dispatch({ type: 'SET_ERROR', payload: e instanceof Error ? e.message : 'Failed to load initial data.' });
+            } finally {
+                dispatch({ type: 'SET_LOADING', payload: { key: 'projects', value: false } });
+                dispatch({ type: 'SET_LOADING', payload: { key: 'settings', value: false } });
             }
         };
         fetchInitialData();
-    }, [state.user, state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
+    }, [state.user?.id, state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
 
     const handleCreateProject = async (projectName: string, domain: string) => {

@@ -7,7 +7,7 @@
  * Created: 2026-01-09 - Multi-tenancy Phase 1
  */
 
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { getSupabaseClient } from '../services/supabaseClient';
 import {
   Organization,
@@ -15,6 +15,7 @@ import {
   OrganizationWithMembership,
   OrganizationPermissions,
   OrganizationRole,
+  OrganizationType,
   BusinessInfo,
 } from '../types';
 
@@ -129,17 +130,30 @@ export function useOrganization(businessInfo: BusinessInfo) {
   const [userId, setUserId] = useState<string | null>(null);
 
   // Get current user on mount
+  // Track last user ID to prevent redundant state updates (avoids re-render loops)
+  const lastUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!supabase) return;
 
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
+      const newUserId = user?.id ?? null;
+      if (lastUserIdRef.current !== newUserId) {
+        lastUserIdRef.current = newUserId;
+        setUserId(newUserId);
+      }
     };
     getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
+      const newUserId = session?.user?.id ?? null;
+      // Only update state if user ID actually changed (prevents re-render loops
+      // from updateUser calls that only change metadata)
+      if (lastUserIdRef.current !== newUserId) {
+        lastUserIdRef.current = newUserId;
+        setUserId(newUserId);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -317,14 +331,14 @@ export function useOrganization(businessInfo: BusinessInfo) {
     const newOrg: OrganizationWithMembership = {
       ...org,
       settings: (org.settings || {}) as Record<string, unknown>,
-      type: org.type || 'personal',
+      type: (org.type || 'personal') as OrganizationType,
       cost_visibility: org.cost_visibility as unknown as Organization['cost_visibility'],
       branding: org.branding as unknown as Organization['branding'],
       membership: {
         id: membership.id,
         organization_id: membership.organization_id,
         user_id: membership.user_id,
-        role: membership.role,
+        role: membership.role as OrganizationRole,
         permission_overrides: (membership.permission_overrides as Record<string, boolean>) || {},
         invited_by: membership.invited_by,
         invited_at: membership.invited_at,
