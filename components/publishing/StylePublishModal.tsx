@@ -62,6 +62,13 @@ import {
   type ProjectBlueprintRow,
   type LearnedPreferences,
 } from '../../services/publishing';
+import {
+  initBrandDesignSystemStorage,
+  saveDesignDNA,
+  getDesignDNA,
+  saveBrandDesignSystem,
+  getBrandDesignSystem,
+} from '../../services/design-analysis/brandDesignSystemStorage';
 
 // Map ContentTypeTemplate to PageTemplate
 function mapTemplateToPageTemplate(template: ContentTypeTemplate): PageTemplate {
@@ -170,6 +177,12 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [detectedDesignSystem, setDetectedDesignSystem] = useState<BrandDesignSystem | null>(null);
   const [detectedScreenshot, setDetectedScreenshot] = useState<string | null>(null);
 
+  // Saved brand data state (persistence)
+  const [savedBrandDataLoaded, setSavedBrandDataLoaded] = useState(false);
+  const [isLoadingSavedBrand, setIsLoadingSavedBrand] = useState(false);
+  const [savedBrandSourceUrl, setSavedBrandSourceUrl] = useState<string | null>(null);
+  const [savedBrandExtractedAt, setSavedBrandExtractedAt] = useState<string | null>(null);
+
   // Layout Engine state (for new LayoutIntelligenceStep)
   const [layoutEngineBlueprint, setLayoutEngineBlueprint] = useState<LayoutEngineBlueprint | null>(null);
   const [isLayoutEngineGenerating, setIsLayoutEngineGenerating] = useState(false);
@@ -228,9 +241,9 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
       setCurrentStep('brand');
       setPreview(null);
       setErrors([]);
-      setDetectedDesignDna(null);
-      setDetectedDesignSystem(null);
-      setDetectedScreenshot(null);
+      // Don't reset brand data on close - we want to preserve it for reuse
+      // Only reset the "loaded" flag so we check for updates next time
+      setSavedBrandDataLoaded(false);
     }
   }, [isOpen]);
 
@@ -304,6 +317,102 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
 
     initAndFetch();
   }, [isOpen, topic.map_id, projectId, supabaseUrl, supabaseAnonKey]);
+
+  // Load saved brand data when modal opens
+  useEffect(() => {
+    if (!isOpen || !projectId || savedBrandDataLoaded) return;
+
+    const loadSavedBrandData = async () => {
+      setIsLoadingSavedBrand(true);
+      try {
+        // Initialize the brand storage client
+        initBrandDesignSystemStorage(supabaseUrl, supabaseAnonKey);
+
+        // Fetch saved Design DNA and Brand Design System
+        const [savedDna, savedSystem] = await Promise.all([
+          getDesignDNA(projectId).catch(() => null),
+          getBrandDesignSystem(projectId).catch(() => null),
+        ]);
+
+        if (savedDna) {
+          console.log('[Style & Publish] Loaded saved brand data:', {
+            sourceUrl: savedDna.sourceUrl,
+            extractedAt: savedDna.extractedAt,
+            hasScreenshot: !!savedDna.screenshotBase64,
+          });
+
+          // Set the saved data
+          setDetectedDesignDna(savedDna.designDna);
+          setDetectedScreenshot(savedDna.screenshotBase64);
+          setSavedBrandSourceUrl(savedDna.sourceUrl);
+          setSavedBrandExtractedAt(savedDna.extractedAt);
+
+          // Apply design tokens from saved DNA to style
+          if (savedDna.designDna && style) {
+            const dna = savedDna.designDna;
+            const colors = dna?.colors || {} as typeof dna.colors;
+            const neutrals = colors?.neutrals || {} as Record<string, string>;
+            const typography = dna?.typography || {} as typeof dna.typography;
+
+            const getColorHex = (color: { hex?: string } | string | undefined, fallback: string): string => {
+              if (!color) return fallback;
+              if (typeof color === 'string') return color;
+              return color.hex || fallback;
+            };
+
+            const primaryHex = getColorHex(colors?.primary, '#3b82f6');
+            const secondaryHex = getColorHex(colors?.secondary, '#1f2937');
+
+            const newTokens = brandKitToDesignTokens({
+              colors: {
+                primary: primaryHex,
+                secondary: secondaryHex,
+                background: neutrals?.lightest || '#f9fafb',
+                surface: neutrals?.light || '#f3f4f6',
+                text: neutrals?.darkest || '#111827',
+                textMuted: neutrals?.medium || '#6b7280',
+                border: neutrals?.light || '#e5e7eb',
+                textOnImage: '#ffffff',
+                overlayGradient: `linear-gradient(135deg, ${primaryHex}, ${secondaryHex})`
+              },
+              fonts: {
+                heading: typography?.headingFont?.family || 'system-ui',
+                body: typography?.bodyFont?.family || 'system-ui'
+              },
+              logoPlacement: 'top-left',
+              logoOpacity: 1,
+              copyright: { holder: '' },
+              heroTemplates: []
+            });
+
+            setStyle(prevStyle => {
+              if (!prevStyle) return prevStyle;
+              return {
+                ...prevStyle,
+                designTokens: { ...prevStyle.designTokens, ...newTokens },
+                updatedAt: new Date().toISOString()
+              };
+            });
+          }
+
+          // Also set saved design system if available
+          if (savedSystem) {
+            setDetectedDesignSystem(savedSystem);
+          }
+        }
+
+        setSavedBrandDataLoaded(true);
+      } catch (error) {
+        console.error('[Style & Publish] Error loading saved brand data:', error);
+        // Don't show error to user - saved data is optional
+        setSavedBrandDataLoaded(true);
+      } finally {
+        setIsLoadingSavedBrand(false);
+      }
+    };
+
+    loadSavedBrandData();
+  }, [isOpen, projectId, savedBrandDataLoaded, supabaseUrl, supabaseAnonKey, style]);
 
   // Get current step index
   const currentStepIndex = useMemo(() =>
@@ -580,7 +689,46 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     generateBlueprint(newTokens, suggestedPersonality);
     generateLayoutEngineBlueprint(result.designDna);
     setPreview(null);
-  }, [generateBlueprint, generateLayoutEngineBlueprint]);
+
+    // Save brand data to database for reuse
+    if (projectId) {
+      const saveBrandData = async () => {
+        try {
+          initBrandDesignSystemStorage(supabaseUrl, supabaseAnonKey);
+
+          // Get the source URL from the topical map domain
+          const sourceUrl = topicalMap?.business_info?.domain || '';
+
+          // Save Design DNA
+          const dnaId = await saveDesignDNA(projectId, {
+            designDna: result.designDna,
+            screenshotBase64: result.screenshotBase64,
+            sourceUrl,
+            extractedAt: new Date().toISOString(),
+            aiModel: 'gemini-2.0-flash-exp',
+            processingTimeMs: 0
+          });
+
+          console.log('[Style & Publish] Saved Design DNA with id:', dnaId);
+
+          // Save Brand Design System
+          if (result.designSystem) {
+            await saveBrandDesignSystem(projectId, dnaId, result.designSystem);
+            console.log('[Style & Publish] Saved Brand Design System');
+          }
+
+          // Update local state to reflect saved data
+          setSavedBrandSourceUrl(sourceUrl);
+          setSavedBrandExtractedAt(new Date().toISOString());
+          setSavedBrandDataLoaded(true);
+        } catch (error) {
+          console.error('[Style & Publish] Error saving brand data:', error);
+          // Don't show error to user - saving is a background operation
+        }
+      };
+      saveBrandData();
+    }
+  }, [generateBlueprint, generateLayoutEngineBlueprint, projectId, supabaseUrl, supabaseAnonKey, topicalMap?.business_info?.domain]);
 
   // Fetch learned preferences for this project
   const fetchLearnedPreferences = useCallback(async () => {
@@ -1060,6 +1208,21 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     onClose();
   }, [onPublishSuccess, onClose]);
 
+  // Handle brand regenerate - clears saved data and allows new detection
+  const handleBrandRegenerate = useCallback(() => {
+    console.log('[Style & Publish] Regenerating brand detection...');
+    // Clear all brand-related state
+    setDetectedDesignDna(null);
+    setDetectedDesignSystem(null);
+    setDetectedScreenshot(null);
+    setSavedBrandSourceUrl(null);
+    setSavedBrandExtractedAt(null);
+    setSavedBrandDataLoaded(false);
+    // Clear preview and blueprints that depend on brand
+    setPreview(null);
+    setLayoutEngineBlueprint(null);
+  }, []);
+
   // Get API keys from topical map business info
   const apifyToken = (topicalMap?.business_info as any)?.apifyToken || '';
   const geminiApiKey = (topicalMap?.business_info as any)?.geminiApiKey || localStorage.getItem('gemini_api_key') || '';
@@ -1081,8 +1244,12 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             designDna={detectedDesignDna}
             brandDesignSystem={detectedDesignSystem}
             screenshotBase64={detectedScreenshot}
+            savedSourceUrl={savedBrandSourceUrl}
+            savedExtractedAt={savedBrandExtractedAt}
+            isLoadingSavedData={isLoadingSavedBrand}
             onDetectionComplete={handleBrandDetectionComplete}
             onDesignDnaChange={setDetectedDesignDna}
+            onRegenerate={handleBrandRegenerate}
           />
         );
 

@@ -42,6 +42,11 @@ interface BrandIntelligenceStepProps {
   brandDesignSystem: BrandDesignSystem | null;
   screenshotBase64: string | null;
 
+  // Saved brand data info (for showing when data was last analyzed)
+  savedSourceUrl?: string | null;
+  savedExtractedAt?: string | null;
+  isLoadingSavedData?: boolean;
+
   // Callbacks
   onDetectionComplete: (result: {
     designDna: DesignDNA;
@@ -49,6 +54,7 @@ interface BrandIntelligenceStepProps {
     screenshotBase64: string;
   }) => void;
   onDesignDnaChange?: (dna: DesignDNA) => void;
+  onRegenerate?: () => void;
 }
 
 // ============================================================================
@@ -122,11 +128,16 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
   designDna,
   brandDesignSystem,
   screenshotBase64,
+  savedSourceUrl,
+  savedExtractedAt,
+  isLoadingSavedData,
   onDetectionComplete,
   onDesignDnaChange,
+  onRegenerate,
 }) => {
   const [targetUrl, setTargetUrl] = useState(defaultDomain || '');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const detection = useBrandDetection({
     apifyToken,
@@ -198,10 +209,40 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     return labels[field][value] || 'Unknown';
   };
 
+  // Handle regenerate request - clears saved data and triggers new detection
+  const handleRegenerate = useCallback(() => {
+    setIsRegenerating(true);
+    // Reset detection state
+    detection.reset();
+    // Notify parent to clear saved data
+    if (onRegenerate) {
+      onRegenerate();
+    }
+    setIsRegenerating(false);
+  }, [detection, onRegenerate]);
+
+  // Format the saved date for display
+  const formatSavedDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   // Use the current state from props (if already detected) or detection result
   const currentDna = designDna || detection.result?.designDna;
   const currentScreenshot = screenshotBase64 || detection.result?.screenshotBase64;
   const hasDetection = Boolean(currentDna);
+  const hasSavedData = Boolean(savedSourceUrl && savedExtractedAt && hasDetection);
 
   return (
     <div className="space-y-6">
@@ -216,8 +257,45 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
         </div>
       </div>
 
+      {/* Loading saved data indicator */}
+      {isLoadingSavedData && (
+        <div className="p-4 bg-zinc-900/40 rounded-lg border border-zinc-600/30 flex items-center gap-3">
+          <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+          <span className="text-sm text-zinc-300">Loading saved brand data...</span>
+        </div>
+      )}
+
+      {/* Saved data banner - show when using previously saved detection */}
+      {hasSavedData && !detection.isAnalyzing && (
+        <div className="p-4 bg-gradient-to-r from-green-900/30 to-emerald-900/20 rounded-lg border border-green-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">&#9989;</span>
+              <div>
+                <p className="text-sm text-green-300 font-medium">Using saved brand profile</p>
+                <p className="text-xs text-zinc-400">
+                  Analyzed from <span className="text-zinc-300">{savedSourceUrl}</span>
+                  {savedExtractedAt && (
+                    <> on <span className="text-zinc-300">{formatSavedDate(savedExtractedAt)}</span></>
+                  )}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={isRegenerating || !apifyToken}
+              className="text-xs"
+            >
+              {isRegenerating ? 'Clearing...' : '↻ Re-analyze'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Detection Input - show when no detection and not analyzing */}
-      {!hasDetection && !detection.isAnalyzing && (
+      {!hasDetection && !detection.isAnalyzing && !isLoadingSavedData && (
         <div className="p-6 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border border-zinc-500/30">
           <div className="flex gap-2">
             <Input
