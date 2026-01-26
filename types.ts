@@ -46,6 +46,7 @@ export * from './types/social';
 export * from './types/contextualEditor';
 export * from './types/quotation';
 export * from './types/designDna';
+export * from './types/entityHealth';
 
 export enum AppStep {
   AUTH,
