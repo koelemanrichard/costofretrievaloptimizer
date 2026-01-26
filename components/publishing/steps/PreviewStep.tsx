@@ -12,6 +12,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '../../ui/Button';
 import { LayoutPanel } from '../panels/LayoutPanel';
 import { BlueprintPanel } from '../panels/BlueprintPanel';
+import { BrandMatchIndicator } from '../BrandMatchIndicator';
 import type {
   StyledContentOutput,
   DevicePreview,
@@ -41,6 +42,10 @@ interface PreviewStepProps {
   onBlueprintChange?: (blueprint: LayoutBlueprint) => void;
   isBlueprintGenerating?: boolean;
   onRegenerateBlueprint?: () => void;
+  // Brand validation
+  brandMatchScore?: number;
+  brandAssessment?: string;
+  onShowBrandDetails?: () => void;
 }
 
 interface DeviceFrameProps {
@@ -144,6 +149,10 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
   onBlueprintChange,
   isBlueprintGenerating,
   onRegenerateBlueprint,
+  // Brand validation props
+  brandMatchScore,
+  brandAssessment,
+  onShowBrandDetails,
 }) => {
   const [device, setDevice] = useState<DevicePreview>('desktop');
   const [showRawHtml, setShowRawHtml] = useState(false);
@@ -237,6 +246,15 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Brand Match Indicator */}
+      {brandMatchScore !== undefined && (
+        <BrandMatchIndicator
+          score={brandMatchScore}
+          assessmentText={brandAssessment}
+          onShowDetails={onShowBrandDetails}
+        />
+      )}
 
       {/* SEO Validation */}
       {seoWarnings.length > 0 && (
