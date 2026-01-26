@@ -66,13 +66,16 @@ function scoreOpportunities(
     else score += 10;
 
     // 2. Score based on EAV category importance in clusters
-    const clusterEntities = [...hole.clusterA, ...hole.clusterB];
-    const relevantEavs = eavs.filter(eav =>
-      clusterEntities.some(entity =>
-        entity.toLowerCase().includes(eav.entity.toLowerCase()) ||
-        eav.entity.toLowerCase().includes(entity.toLowerCase())
-      )
-    );
+    const clusterEntities = [...(hole.clusterA || []), ...(hole.clusterB || [])].filter(Boolean);
+    const relevantEavs = eavs.filter(eav => {
+      if (!eav.entity) return false;
+      const eavEntityLower = eav.entity.toLowerCase();
+      return clusterEntities.some(entity => {
+        if (!entity || typeof entity !== 'string') return false;
+        const entityLower = entity.toLowerCase();
+        return entityLower.includes(eavEntityLower) || eavEntityLower.includes(entityLower);
+      });
+    });
 
     // Higher value EAVs = more important gap
     relevantEavs.forEach(eav => {
@@ -81,12 +84,15 @@ function scoreOpportunities(
 
     // 3. CSI alignment - does bridging help CSI?
     if (pillars?.centralSearchIntent && Array.isArray(pillars.centralSearchIntent)) {
-      const csiRelevant = pillars.centralSearchIntent.some(intent =>
-        clusterEntities.some(entity =>
-          entity.toLowerCase().includes(intent.toLowerCase()) ||
-          intent.toLowerCase().includes(entity.toLowerCase())
-        )
-      );
+      const csiRelevant = pillars.centralSearchIntent.some(intent => {
+        if (!intent || typeof intent !== 'string') return false;
+        const intentLower = intent.toLowerCase();
+        return clusterEntities.some(entity => {
+          if (!entity || typeof entity !== 'string') return false;
+          const entityLower = entity.toLowerCase();
+          return entityLower.includes(intentLower) || intentLower.includes(entityLower);
+        });
+      });
       if (csiRelevant) score += 15;
     }
 
@@ -95,11 +101,12 @@ function scoreOpportunities(
 
     // Check if any existing topic could serve as a bridge
     const potentialBridge = topics.find(topic => {
+      if (!topic.title) return false;
       const title = topic.title.toLowerCase();
-      const matchesA = hole.clusterA.some(e => title.includes(e.toLowerCase()));
-      const matchesB = hole.clusterB.some(e => title.includes(e.toLowerCase()));
-      const isBridgeCandidate = hole.bridgeCandidates.some(c =>
-        title.includes(c.toLowerCase()) || c.toLowerCase().includes(title)
+      const matchesA = (hole.clusterA || []).some(e => e && typeof e === 'string' && title.includes(e.toLowerCase()));
+      const matchesB = (hole.clusterB || []).some(e => e && typeof e === 'string' && title.includes(e.toLowerCase()));
+      const isBridgeCandidate = (hole.bridgeCandidates || []).some(c =>
+        c && typeof c === 'string' && (title.includes(c.toLowerCase()) || c.toLowerCase().includes(title))
       );
       return (matchesA && matchesB) || isBridgeCandidate;
     });
@@ -110,9 +117,9 @@ function scoreOpportunities(
         targetTopic: potentialBridge,
         reason: 'Add internal links from this topic to both clusters',
       };
-    } else if (hole.bridgeCandidates.length > 0) {
+    } else if (hole.bridgeCandidates && hole.bridgeCandidates.length > 0) {
       // Suggest creating a new topic
-      const bestCandidate = hole.bridgeCandidates[0];
+      const bestCandidate = hole.bridgeCandidates[0] || 'bridge topic';
       primaryAction = {
         type: 'create_new',
         suggestedTitle: bestCandidate,
@@ -120,8 +127,8 @@ function scoreOpportunities(
       };
     } else {
       // Generic suggestion based on cluster overlap
-      const clusterAMain = hole.clusterA[0] || 'Cluster A';
-      const clusterBMain = hole.clusterB[0] || 'Cluster B';
+      const clusterAMain = (hole.clusterA && hole.clusterA[0]) || 'Cluster A';
+      const clusterBMain = (hole.clusterB && hole.clusterB[0]) || 'Cluster B';
       primaryAction = {
         type: 'create_new',
         suggestedTitle: `${clusterAMain} and ${clusterBMain}`,
@@ -213,15 +220,15 @@ const BridgingOpportunitiesPanel: React.FC<BridgingOpportunitiesPanelProps> = ({
                 </span>
               </div>
               <span className="text-xs text-gray-500">
-                {opp.hole.clusterA.length + opp.hole.clusterB.length} entities affected
+                {(opp.hole.clusterA?.length || 0) + (opp.hole.clusterB?.length || 0)} entities affected
               </span>
             </div>
 
             {/* Gap description */}
             <p className="text-sm text-gray-300 mb-2">
-              Gap between <span className="text-blue-400">{opp.hole.clusterA.slice(0, 2).join(', ')}</span>
+              Gap between <span className="text-blue-400">{(opp.hole.clusterA || []).slice(0, 2).join(', ') || 'cluster'}</span>
               {' '}and{' '}
-              <span className="text-purple-400">{opp.hole.clusterB.slice(0, 2).join(', ')}</span>
+              <span className="text-purple-400">{(opp.hole.clusterB || []).slice(0, 2).join(', ') || 'cluster'}</span>
             </p>
 
             {/* Action */}

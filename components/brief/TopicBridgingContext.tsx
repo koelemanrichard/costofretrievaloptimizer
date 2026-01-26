@@ -58,14 +58,20 @@ function calculateBridgeScore(
   const reasons: string[] = [];
   const sharedEntities: string[] = [];
 
-  const sourceTitle = sourceTopic.title.toLowerCase();
-  const targetTitle = targetTopic.title.toLowerCase();
+  const sourceTitle = (sourceTopic.title || '').toLowerCase();
+  const targetTitle = (targetTopic.title || '').toLowerCase();
+
+  // Early exit if no titles
+  if (!sourceTitle || !targetTitle) {
+    return { score: 0, reason: 'missing title', sharedEntities: [], anchorSuggestion: '' };
+  }
 
   // 1. Find shared EAV entities between topics (semantic proximity)
   const sourceEntities = new Set<string>();
   const targetEntities = new Set<string>();
 
   eavs.forEach(eav => {
+    if (!eav.entity) return;
     const entityLower = eav.entity.toLowerCase();
     const valueLower = (eav.value || '').toLowerCase();
 
@@ -98,10 +104,12 @@ function calculateBridgeScore(
 
   // 3. CSI alignment bonus - does target reinforce central search intent?
   if (pillars?.centralSearchIntent && Array.isArray(pillars.centralSearchIntent)) {
-    const csiMatch = pillars.centralSearchIntent.some(intent =>
-      targetTitle.includes(intent.toLowerCase()) ||
-      intent.toLowerCase().includes(targetTitle.split(' ')[0])
-    );
+    const csiMatch = pillars.centralSearchIntent.some(intent => {
+      if (!intent || typeof intent !== 'string') return false;
+      const intentLower = intent.toLowerCase();
+      return targetTitle.includes(intentLower) ||
+        intentLower.includes(targetTitle.split(' ')[0]);
+    });
     if (csiMatch) {
       score += 15;
       reasons.push('reinforces central search intent');
@@ -110,12 +118,16 @@ function calculateBridgeScore(
 
   // 4. Structural hole bonus - does this bridge a gap?
   const bridgesHole = structuralHoles.some(hole => {
-    const inClusterA = hole.clusterA.some(e =>
-      sourceTitle.includes(e.toLowerCase()) || e.toLowerCase().includes(sourceTitle)
-    );
-    const inClusterB = hole.clusterB.some(e =>
-      targetTitle.includes(e.toLowerCase()) || e.toLowerCase().includes(targetTitle)
-    );
+    const inClusterA = (hole.clusterA || []).some(e => {
+      if (!e || typeof e !== 'string') return false;
+      const eLower = e.toLowerCase();
+      return sourceTitle.includes(eLower) || eLower.includes(sourceTitle);
+    });
+    const inClusterB = (hole.clusterB || []).some(e => {
+      if (!e || typeof e !== 'string') return false;
+      const eLower = e.toLowerCase();
+      return targetTitle.includes(eLower) || eLower.includes(targetTitle);
+    });
     return (inClusterA && inClusterB) || (inClusterB && inClusterA);
   });
 
