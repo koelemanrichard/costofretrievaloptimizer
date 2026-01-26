@@ -194,12 +194,16 @@ export class BrandDesignSystemGenerator {
     json['--ctc-spacing-3xl'] = `${unit * 4}px`;
 
     // Border radius tokens (with fallbacks)
+    // CRITICAL: Ensure borderRadius is an object, not a string (AI sometimes returns "rounded" instead of object)
+    // Accessing .small on a string invokes deprecated String.prototype.small() which returns function code
     const shapes = designDna.shapes || {} as DesignDNA['shapes'];
-    const borderRadius = shapes?.borderRadius || {} as NonNullable<DesignDNA['shapes']>['borderRadius'];
-    json['--ctc-radius-sm'] = borderRadius?.small || '4px';
-    json['--ctc-radius-md'] = borderRadius?.medium || '8px';
-    json['--ctc-radius-lg'] = borderRadius?.large || '16px';
-    json['--ctc-radius-full'] = borderRadius?.full || '9999px';
+    const borderRadius = shapes?.borderRadius;
+    const isBorderRadiusObject = borderRadius && typeof borderRadius === 'object' && !Array.isArray(borderRadius);
+
+    json['--ctc-radius-sm'] = (isBorderRadiusObject && typeof borderRadius.small === 'string') ? borderRadius.small : '4px';
+    json['--ctc-radius-md'] = (isBorderRadiusObject && typeof borderRadius.medium === 'string') ? borderRadius.medium : '8px';
+    json['--ctc-radius-lg'] = (isBorderRadiusObject && typeof borderRadius.large === 'string') ? borderRadius.large : '16px';
+    json['--ctc-radius-full'] = (isBorderRadiusObject && typeof borderRadius.full === 'string') ? borderRadius.full : '9999px';
 
     // Shadow tokens (with fallbacks)
     const effects = designDna.effects || {} as DesignDNA['effects'];
