@@ -16,7 +16,7 @@
  * @module components/publishing/steps/BrandIntelligenceStep
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { AnalysisProgress } from '../AnalysisProgress';
@@ -142,16 +142,24 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     detection.detect(targetUrl);
   }, [targetUrl, detection]);
 
-  // Notify parent when detection completes
+  // Track which detection result we've already notified parent about (prevents infinite loop)
+  // The loop happened because onDetectionComplete was in the dependency array,
+  // and every time the parent updated state, the callback reference changed,
+  // triggering this effect again even though the detection.result was the same.
+  const lastNotifiedResultRef = useRef<typeof detection.result>(null);
+
+  // Notify parent when detection completes (only once per unique result)
   useEffect(() => {
-    if (detection.result) {
+    if (detection.result && detection.result !== lastNotifiedResultRef.current) {
+      lastNotifiedResultRef.current = detection.result;
       onDetectionComplete({
         designDna: detection.result.designDna,
         designSystem: detection.result.designSystem,
         screenshotBase64: detection.result.screenshotBase64,
       });
     }
-  }, [detection.result, onDetectionComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onDetectionComplete intentionally excluded to prevent infinite loops
+  }, [detection.result]);
 
   // Personality slider handler
   const handlePersonalityChange = useCallback(

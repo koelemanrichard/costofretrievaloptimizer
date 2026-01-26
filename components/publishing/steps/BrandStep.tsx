@@ -6,7 +6,7 @@
  * - Minimal: URL input -> one-click detect -> summary view
  * - Expanded: Full Design DNA display with edit capabilities
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { AnalysisProgress } from '../AnalysisProgress';
@@ -58,16 +58,21 @@ export const BrandStep: React.FC<BrandStepProps> = ({
     detection.detect(targetUrl);
   }, [targetUrl, detection]);
 
-  // Notify parent when detection completes
+  // Track which detection result we've already notified parent about (prevents infinite loop)
+  const lastNotifiedResultRef = useRef<typeof detection.result>(null);
+
+  // Notify parent when detection completes (only once per unique result)
   React.useEffect(() => {
-    if (detection.result) {
+    if (detection.result && detection.result !== lastNotifiedResultRef.current) {
+      lastNotifiedResultRef.current = detection.result;
       onDetectionComplete({
         designDna: detection.result.designDna,
         designSystem: detection.result.designSystem,
         screenshotBase64: detection.result.screenshotBase64,
       });
     }
-  }, [detection.result, onDetectionComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onDetectionComplete intentionally excluded to prevent infinite loops
+  }, [detection.result]);
 
   return (
     <div className="space-y-6">
