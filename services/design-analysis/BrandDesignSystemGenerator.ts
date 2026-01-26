@@ -60,7 +60,11 @@ export class BrandDesignSystemGenerator {
     const tokens = this.generateTokensFromDNA(designDna);
     const designDnaHash = this.computeDesignDnaHash(designDna);
 
-    // Generate AI-powered component styles
+    // Generate AI-powered component styles using focused, step-by-step approach
+    console.log('[BrandDesignSystemGenerator] Starting AI-powered CSS generation for:', brandName);
+    console.log('[BrandDesignSystemGenerator] Brand personality:', designDna.personality?.overall);
+    console.log('[BrandDesignSystemGenerator] Shape language:', designDna.shapes?.borderRadius?.style);
+
     let componentStyles: BrandDesignSystem['componentStyles'];
     let decorative: BrandDesignSystem['decorative'];
     let interactions: BrandDesignSystem['interactions'];
@@ -68,19 +72,37 @@ export class BrandDesignSystemGenerator {
     let imageTreatments: BrandDesignSystem['imageTreatments'];
 
     try {
-      const aiResponse = await this.generateWithAI(designDna);
-      componentStyles = aiResponse.componentStyles || this.getDefaultComponentStyles(designDna);
-      decorative = aiResponse.decorative || this.getDefaultDecorative(designDna);
-      interactions = aiResponse.interactions || this.getDefaultInteractions(designDna);
-      typographyTreatments = aiResponse.typographyTreatments || this.getDefaultTypography(designDna);
-      imageTreatments = aiResponse.imageTreatments || this.getDefaultImageTreatments(designDna);
+      // Step 1: Generate component styles one by one for better quality
+      console.log('[BrandDesignSystemGenerator] Step 1: Generating component styles...');
+      componentStyles = await this.generateComponentStylesStepByStep(designDna);
+      console.log('[BrandDesignSystemGenerator] Component styles generated successfully');
+
+      // Step 2: Generate decorative elements
+      console.log('[BrandDesignSystemGenerator] Step 2: Generating decorative elements...');
+      decorative = await this.generateDecorativeElements(designDna);
+      console.log('[BrandDesignSystemGenerator] Decorative elements generated');
+
+      // Step 3: Generate interactions
+      console.log('[BrandDesignSystemGenerator] Step 3: Generating interactions...');
+      interactions = await this.generateInteractions(designDna);
+      console.log('[BrandDesignSystemGenerator] Interactions generated');
+
+      // Step 4: Generate typography treatments
+      console.log('[BrandDesignSystemGenerator] Step 4: Generating typography treatments...');
+      typographyTreatments = await this.generateTypographyTreatments(designDna);
+      console.log('[BrandDesignSystemGenerator] Typography treatments generated');
+
+      // Step 5: Generate image treatments
+      console.log('[BrandDesignSystemGenerator] Step 5: Generating image treatments...');
+      imageTreatments = await this.generateImageTreatments(designDna);
+      console.log('[BrandDesignSystemGenerator] Image treatments generated');
+
+      console.log('[BrandDesignSystemGenerator] All AI generation steps completed successfully');
     } catch (error) {
-      // Fall back to deterministic defaults
-      componentStyles = this.getDefaultComponentStyles(designDna);
-      decorative = this.getDefaultDecorative(designDna);
-      interactions = this.getDefaultInteractions(designDna);
-      typographyTreatments = this.getDefaultTypography(designDna);
-      imageTreatments = this.getDefaultImageTreatments(designDna);
+      // NO SILENT FALLBACK - Log and propagate the error
+      console.error('[BrandDesignSystemGenerator] AI generation failed:', error);
+      console.error('[BrandDesignSystemGenerator] This is a critical error - not falling back to templates');
+      throw new Error(`AI-powered CSS generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Compile all CSS
@@ -271,8 +293,429 @@ export class BrandDesignSystemGenerator {
     }
   }
 
+  // ============================================================================
+  // STEP-BY-STEP AI GENERATION (Focused, Reliable, No Templates)
+  // ============================================================================
+
   /**
-   * Call AI to generate enhanced component styles
+   * Generate component styles one by one with focused prompts
+   * This is more reliable than generating everything at once
+   */
+  private async generateComponentStylesStepByStep(designDna: DesignDNA): Promise<BrandDesignSystem['componentStyles']> {
+    const personality = designDna.personality?.overall || 'corporate';
+    const shapeStyle = designDna.shapes?.borderRadius?.style || 'rounded';
+    const shadowStyle = designDna.effects?.shadows?.style || 'subtle';
+    const motionStyle = designDna.motion?.overall || 'subtle';
+
+    console.log('[BrandDesignSystemGenerator] Generating CSS for personality:', personality, 'shapes:', shapeStyle);
+
+    // Generate each component with focused prompts
+    const [button, card, hero, timeline, testimonial, faq, cta, keyTakeaways, prose, list, table, blockquote] = await Promise.all([
+      this.generateComponentCSS('button', designDna),
+      this.generateComponentCSS('card', designDna),
+      this.generateComponentCSS('hero', designDna),
+      this.generateComponentCSS('timeline', designDna),
+      this.generateComponentCSS('testimonial', designDna),
+      this.generateComponentCSS('faq', designDna),
+      this.generateComponentCSS('cta', designDna),
+      this.generateComponentCSS('keyTakeaways', designDna),
+      this.generateComponentCSS('prose', designDna),
+      this.generateComponentCSS('list', designDna),
+      this.generateComponentCSS('table', designDna),
+      this.generateComponentCSS('blockquote', designDna),
+    ]);
+
+    return { button, card, hero, timeline, testimonial, faq, cta, keyTakeaways, prose, list, table, blockquote };
+  }
+
+  /**
+   * Generate CSS for a single component based on brand personality
+   */
+  private async generateComponentCSS(
+    componentType: string,
+    designDna: DesignDNA
+  ): Promise<ComponentStyleDefinition> {
+    const prompt = this.buildComponentPrompt(componentType, designDna);
+
+    console.log(`[BrandDesignSystemGenerator] Generating ${componentType} CSS...`);
+
+    let response: { baseCSS: string; variants: Record<string, string>; states: Record<string, string> };
+
+    try {
+      if (this.config.provider === 'gemini') {
+        response = await this.callGeminiForComponent(prompt);
+      } else {
+        response = await this.callClaudeForComponent(prompt);
+      }
+    } catch (error) {
+      console.error(`[BrandDesignSystemGenerator] Failed to generate ${componentType}:`, error);
+      throw error;
+    }
+
+    console.log(`[BrandDesignSystemGenerator] ${componentType} CSS generated successfully`);
+
+    return {
+      baseCSS: response.baseCSS,
+      variants: response.variants || {},
+      states: {
+        hover: response.states?.hover || '',
+        active: response.states?.active || '',
+        focus: response.states?.focus || '',
+        disabled: response.states?.disabled || '',
+      },
+      responsive: {
+        mobile: '',
+        tablet: '',
+      },
+    };
+  }
+
+  /**
+   * Build a focused prompt for a single component
+   */
+  private buildComponentPrompt(componentType: string, designDna: DesignDNA): string {
+    const personality = designDna.personality?.overall || 'corporate';
+    const formality = designDna.personality?.formality || 3;
+    const energy = designDna.personality?.energy || 3;
+    const warmth = designDna.personality?.warmth || 3;
+    const shapeStyle = designDna.shapes?.borderRadius?.style || 'rounded';
+    const buttonStyle = designDna.shapes?.buttonStyle || 'rounded';
+    const cardStyle = designDna.shapes?.cardStyle || 'subtle-shadow';
+    const shadowStyle = designDna.effects?.shadows?.style || 'subtle';
+    const motionStyle = designDna.motion?.overall || 'subtle';
+    const hoverButtons = designDna.motion?.hoverEffects?.buttons || 'darken';
+    const hoverCards = designDna.motion?.hoverEffects?.cards || 'lift';
+
+    const personalityDescriptions: Record<string, string> = {
+      corporate: 'Professional, trustworthy, sharp edges, subtle shadows, restrained animations',
+      creative: 'Bold, expressive, rounded corners, dramatic shadows, playful animations',
+      luxurious: 'Elegant, refined, subtle curves, soft shadows, smooth transitions',
+      friendly: 'Warm, approachable, soft corners, gentle shadows, bouncy animations',
+      bold: 'Striking, impactful, strong contrasts, dramatic shadows, powerful animations',
+      minimal: 'Clean, simple, subtle shapes, minimal shadows, quick transitions',
+      elegant: 'Sophisticated, graceful, refined curves, delicate shadows, fluid animations',
+      playful: 'Fun, energetic, rounded shapes, colorful shadows, bouncy animations',
+    };
+
+    const componentDescriptions: Record<string, string> = {
+      button: 'Interactive button with primary, secondary, and outline variants',
+      card: 'Content container with elevated, flat, and bordered variants',
+      hero: 'Large header section with centered and full-bleed variants',
+      timeline: 'Vertical timeline with markers and connecting line',
+      testimonial: 'Quote display with author attribution',
+      faq: 'Expandable question/answer accordion',
+      cta: 'Call-to-action block with prominent styling',
+      keyTakeaways: 'Summary box highlighting key points',
+      prose: 'Body text content styling',
+      list: 'Styled list items with custom markers',
+      table: 'Data table with header and row styling',
+      blockquote: 'Quoted text with decorative styling',
+    };
+
+    return `You are a senior CSS designer. Generate production-ready CSS for a ${componentType} component.
+
+## Brand Personality
+- Overall: ${personality} (${personalityDescriptions[personality] || 'Professional and clean'})
+- Formality: ${formality}/5 (${formality <= 2 ? 'casual' : formality >= 4 ? 'formal' : 'balanced'})
+- Energy: ${energy}/5 (${energy <= 2 ? 'calm' : energy >= 4 ? 'energetic' : 'moderate'})
+- Warmth: ${warmth}/5 (${warmth <= 2 ? 'cool' : warmth >= 4 ? 'warm' : 'neutral'})
+
+## Design Parameters
+- Shape style: ${shapeStyle}
+- Button style: ${buttonStyle}
+- Card style: ${cardStyle}
+- Shadow style: ${shadowStyle}
+- Motion style: ${motionStyle}
+- Button hover effect: ${hoverButtons}
+- Card hover effect: ${hoverCards}
+
+## Component: ${componentType}
+${componentDescriptions[componentType] || 'UI component'}
+
+## Requirements
+1. Use CSS custom properties: --ctc-primary, --ctc-secondary, --ctc-accent, --ctc-neutral-*, --ctc-radius-*, --ctc-spacing-*, --ctc-shadow-*, --ctc-transition-speed
+2. CSS class prefix: .ctc-${componentType}
+3. The CSS MUST reflect the brand personality - ${personality} brands need ${personalityDescriptions[personality]}
+4. Include hover, active, and focus states
+5. Make it unique to THIS brand - not generic
+
+## Output Format (JSON only)
+{
+  "baseCSS": ".ctc-${componentType} { ... complete CSS ... }",
+  "variants": {
+    "variantName": ".ctc-${componentType}--variantName { ... }"
+  },
+  "states": {
+    "hover": ".ctc-${componentType}:hover { ... }",
+    "active": ".ctc-${componentType}:active { ... }",
+    "focus": ".ctc-${componentType}:focus-visible { ... }"
+  }
+}
+
+CRITICAL: Return ONLY valid JSON. The CSS must be unique to this ${personality} brand.`;
+  }
+
+  /**
+   * Call Gemini for a single component
+   */
+  private async callGeminiForComponent(prompt: string): Promise<{ baseCSS: string; variants: Record<string, string>; states: Record<string, string> }> {
+    const model = this.config.model || this.defaultModels.gemini;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.config.apiKey}`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 }
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+    return this.parseAIResponse(text) as { baseCSS: string; variants: Record<string, string>; states: Record<string, string> };
+  }
+
+  /**
+   * Call Claude for a single component
+   */
+  private async callClaudeForComponent(prompt: string): Promise<{ baseCSS: string; variants: Record<string, string>; states: Record<string, string> }> {
+    const model = this.config.model || this.defaultModels.anthropic;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2024-01-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Anthropic API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '{}';
+
+    return this.parseAIResponse(text) as { baseCSS: string; variants: Record<string, string>; states: Record<string, string> };
+  }
+
+  /**
+   * Generate decorative elements (dividers, backgrounds, shapes)
+   */
+  private async generateDecorativeElements(designDna: DesignDNA): Promise<BrandDesignSystem['decorative']> {
+    const personality = designDna.personality?.overall || 'corporate';
+    const dividerStyle = designDna.decorative?.dividerStyle || 'line';
+    const usesWaves = designDna.decorative?.usesWaveShapes || false;
+
+    const prompt = `Generate decorative CSS elements for a ${personality} brand.
+Divider style: ${dividerStyle}
+Uses waves: ${usesWaves}
+
+Return JSON:
+{
+  "dividers": {
+    "default": ".ctc-divider { CSS }",
+    "subtle": ".ctc-divider--subtle { CSS }",
+    "decorative": ".ctc-divider--decorative { CSS }"
+  },
+  "sectionBackgrounds": {
+    "default": ".ctc-section { CSS }",
+    "accent": ".ctc-section--accent { CSS }",
+    "featured": ".ctc-section--featured { CSS }"
+  }
+}
+
+Use --ctc-* CSS variables. Make it unique to ${personality} personality.
+CRITICAL: Return ONLY valid JSON.`;
+
+    try {
+      const response = this.config.provider === 'gemini'
+        ? await this.callGeminiForComponent(prompt)
+        : await this.callClaudeForComponent(prompt);
+
+      return {
+        dividers: {
+          default: (response as unknown as { dividers?: { default?: string } }).dividers?.default || '.ctc-divider { border-top: 1px solid var(--ctc-neutral-light); }',
+          subtle: (response as unknown as { dividers?: { subtle?: string } }).dividers?.subtle || '.ctc-divider--subtle { border-top: 1px solid var(--ctc-neutral-lightest); }',
+          decorative: (response as unknown as { dividers?: { decorative?: string } }).dividers?.decorative || '.ctc-divider--decorative { border-top: 2px solid var(--ctc-primary); }',
+        },
+        sectionBackgrounds: {
+          default: (response as unknown as { sectionBackgrounds?: { default?: string } }).sectionBackgrounds?.default || '.ctc-section { background: var(--ctc-neutral-lightest); }',
+          accent: (response as unknown as { sectionBackgrounds?: { accent?: string } }).sectionBackgrounds?.accent || '.ctc-section--accent { background: var(--ctc-primary); color: white; }',
+          featured: (response as unknown as { sectionBackgrounds?: { featured?: string } }).sectionBackgrounds?.featured || '.ctc-section--featured { background: linear-gradient(to bottom, var(--ctc-neutral-lightest), white); }',
+        },
+      };
+    } catch (error) {
+      console.error('[BrandDesignSystemGenerator] Decorative generation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate interaction styles (hover, focus, animations)
+   */
+  private async generateInteractions(designDna: DesignDNA): Promise<BrandDesignSystem['interactions']> {
+    const personality = designDna.personality?.overall || 'corporate';
+    const motionStyle = designDna.motion?.overall || 'subtle';
+    const hoverButtons = designDna.motion?.hoverEffects?.buttons || 'darken';
+    const hoverCards = designDna.motion?.hoverEffects?.cards || 'lift';
+    const hoverLinks = designDna.motion?.hoverEffects?.links || 'color';
+
+    const prompt = `Generate interaction CSS for a ${personality} brand with ${motionStyle} motion style.
+Button hover: ${hoverButtons}
+Card hover: ${hoverCards}
+Link hover: ${hoverLinks}
+
+Return JSON with actual CSS (not descriptions):
+{
+  "buttonHover": ".ctc-button:hover { actual CSS properties }",
+  "buttonActive": ".ctc-button:active { actual CSS properties }",
+  "buttonFocus": ".ctc-button:focus-visible { actual CSS properties }",
+  "cardHover": ".ctc-card:hover { actual CSS properties }",
+  "linkHover": "a:hover { actual CSS properties }",
+  "focusRing": ":focus-visible { actual CSS properties }",
+  "keyframes": {
+    "fadeIn": "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }"
+  }
+}
+
+Make animations reflect ${personality} personality:
+- corporate: subtle, professional
+- creative: bold, expressive
+- playful: bouncy, fun
+- minimal: quick, subtle
+
+CRITICAL: Return ONLY valid JSON with actual CSS code.`;
+
+    try {
+      const response = this.config.provider === 'gemini'
+        ? await this.callGeminiForComponent(prompt)
+        : await this.callClaudeForComponent(prompt);
+
+      const r = response as unknown as BrandDesignSystem['interactions'];
+      return {
+        buttonHover: r.buttonHover || '.ctc-button:hover { opacity: 0.9; }',
+        buttonActive: r.buttonActive || '.ctc-button:active { transform: scale(0.98); }',
+        buttonFocus: r.buttonFocus || '.ctc-button:focus-visible { outline: 2px solid var(--ctc-primary); outline-offset: 2px; }',
+        cardHover: r.cardHover || '.ctc-card:hover { box-shadow: var(--ctc-shadow-elevated); }',
+        linkHover: r.linkHover || 'a:hover { color: var(--ctc-primary-dark); }',
+        focusRing: r.focusRing || ':focus-visible { outline: 2px solid var(--ctc-primary); outline-offset: 2px; }',
+        keyframes: r.keyframes || {},
+      };
+    } catch (error) {
+      console.error('[BrandDesignSystemGenerator] Interactions generation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate typography treatments
+   */
+  private async generateTypographyTreatments(designDna: DesignDNA): Promise<BrandDesignSystem['typographyTreatments']> {
+    const personality = designDna.personality?.overall || 'corporate';
+    const headingStyle = designDna.typography?.headingUnderlineStyle || 'none';
+    const usesDropCaps = designDna.typography?.usesDropCaps || false;
+    const linkStyle = designDna.typography?.linkStyle || 'underline';
+
+    const prompt = `Generate typography treatment CSS for a ${personality} brand.
+Heading decoration: ${headingStyle}
+Uses drop caps: ${usesDropCaps}
+Link style: ${linkStyle}
+
+Return JSON:
+{
+  "headingDecoration": ".ctc-heading-decorated::after { CSS for underline/decoration }",
+  "dropCap": ".ctc-drop-cap::first-letter { CSS for drop cap }",
+  "pullQuote": ".ctc-pull-quote { CSS for pull quotes }",
+  "listMarker": ".ctc-list li::marker { CSS for list markers }",
+  "linkUnderline": "a { CSS for links }",
+  "codeBlock": "pre, code { CSS for code blocks }"
+}
+
+Make it unique to ${personality} personality.
+CRITICAL: Return ONLY valid JSON.`;
+
+    try {
+      const response = this.config.provider === 'gemini'
+        ? await this.callGeminiForComponent(prompt)
+        : await this.callClaudeForComponent(prompt);
+
+      const r = response as unknown as BrandDesignSystem['typographyTreatments'];
+      return {
+        headingDecoration: r.headingDecoration || '',
+        dropCap: r.dropCap || '',
+        pullQuote: r.pullQuote || '',
+        listMarker: r.listMarker || '',
+        linkUnderline: r.linkUnderline || '',
+        codeBlock: r.codeBlock || '',
+      };
+    } catch (error) {
+      console.error('[BrandDesignSystemGenerator] Typography generation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate image treatment styles
+   */
+  private async generateImageTreatments(designDna: DesignDNA): Promise<BrandDesignSystem['imageTreatments']> {
+    const personality = designDna.personality?.overall || 'corporate';
+    const frameStyle = designDna.images?.frameStyle || 'rounded';
+    const hoverEffect = designDna.images?.hoverEffect || 'none';
+
+    const prompt = `Generate image treatment CSS for a ${personality} brand.
+Frame style: ${frameStyle}
+Hover effect: ${hoverEffect}
+
+Return JSON:
+{
+  "defaultFrame": ".ctc-image { CSS for default images }",
+  "featured": ".ctc-image--featured { CSS for featured images }",
+  "thumbnail": ".ctc-image--thumbnail { CSS for thumbnails }",
+  "gallery": ".ctc-image--gallery { CSS for gallery items }"
+}
+
+Make it unique to ${personality} personality.
+CRITICAL: Return ONLY valid JSON.`;
+
+    try {
+      const response = this.config.provider === 'gemini'
+        ? await this.callGeminiForComponent(prompt)
+        : await this.callClaudeForComponent(prompt);
+
+      const r = response as unknown as BrandDesignSystem['imageTreatments'];
+      return {
+        defaultFrame: r.defaultFrame || '.ctc-image { border-radius: var(--ctc-radius-md); }',
+        featured: r.featured || '.ctc-image--featured { border-radius: var(--ctc-radius-lg); box-shadow: var(--ctc-shadow-card); }',
+        thumbnail: r.thumbnail || '.ctc-image--thumbnail { border-radius: var(--ctc-radius-sm); }',
+        gallery: r.gallery || '.ctc-image--gallery { border-radius: var(--ctc-radius-md); }',
+      };
+    } catch (error) {
+      console.error('[BrandDesignSystemGenerator] Image treatments generation failed:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // LEGACY AI GENERATION (kept for reference, not used)
+  // ============================================================================
+
+  /**
+   * Call AI to generate enhanced component styles (LEGACY - not used)
    */
   private async generateWithAI(designDna: DesignDNA): Promise<Partial<BrandDesignSystem>> {
     const prompt = buildDesignSystemGenerationPrompt(JSON.stringify(designDna, null, 2));
