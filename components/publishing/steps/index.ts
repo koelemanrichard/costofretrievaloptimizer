@@ -17,3 +17,7 @@ export { BrandDNASummary } from './BrandDNASummary';
 // New multi-pass design step
 export { DesignGenerationStep } from './DesignGenerationStep';
 export type { DesignGenerationStepProps } from './DesignGenerationStep';
+
+// New 3-step publishing flow
+export { BrandIntelligenceStep } from './BrandIntelligenceStep';
+export { LayoutIntelligenceStep } from './LayoutIntelligenceStep';
