@@ -64,3 +64,28 @@ CREATE POLICY "Users can manage own brand_components"
 CREATE POLICY "Users can manage own brand_tokens"
   ON brand_tokens FOR ALL
   USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
+
+-- URL Suggestions (for smart discovery)
+CREATE TABLE IF NOT EXISTS brand_url_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  suggested_url TEXT NOT NULL,
+  page_type TEXT NOT NULL,
+  discovered_from TEXT NOT NULL, -- 'sitemap', 'nav_link', 'hero_cta', 'featured_content', 'footer'
+  prominence_score DECIMAL(3,2) DEFAULT 0.5,
+  visual_context TEXT,
+  selected BOOLEAN DEFAULT false,
+  extracted BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(project_id, suggested_url)
+);
+
+-- Index for URL suggestions
+CREATE INDEX IF NOT EXISTS idx_brand_url_suggestions_project ON brand_url_suggestions(project_id);
+
+-- RLS for URL suggestions
+ALTER TABLE brand_url_suggestions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own brand_url_suggestions"
+  ON brand_url_suggestions FOR ALL
+  USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
