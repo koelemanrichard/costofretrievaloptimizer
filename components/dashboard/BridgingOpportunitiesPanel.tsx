@@ -1,351 +1,263 @@
 /**
  * BridgingOpportunitiesPanel
  *
- * Displays structural holes in the knowledge graph at the topical map level.
- * Shows content gaps between topic clusters and suggests bridge content.
+ * Intelligent dashboard view of the TOP bridging opportunities.
+ * Uses Semantic SEO principles to show only the most valuable content gaps
+ * with clear, actionable recommendations.
+ *
+ * Shows maximum 3 prioritized opportunities based on:
+ * - Structural hole priority
+ * - EAV attribute category importance
+ * - CSI alignment potential
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { KnowledgeGraph, StructuralHole } from '../../lib/knowledgeGraph';
-import { generateBridgeSuggestions, BridgeSuggestion, BridgeSuggestionInput } from '../../services/ai/bridgeSuggestionService';
-import { SemanticTriple, SEOPillars, EnrichedTopic } from '../../types';
+import { SemanticTriple, SEOPillars, EnrichedTopic, AttributeCategory } from '../../types';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
 
 interface BridgingOpportunitiesPanelProps {
   knowledgeGraph: KnowledgeGraph | null;
   eavs: SemanticTriple[];
   pillars?: SEOPillars;
   topics: EnrichedTopic[];
-  onCreateBridgeTopic?: (title: string, parentId?: string) => void;
+  onSelectTopic?: (topicId: string) => void;
+  onCreateTopic?: (title: string) => void;
 }
 
-// Priority colors and labels
-const priorityConfig = {
-  critical: { color: 'bg-red-500', textColor: 'text-red-400', label: 'Critical Gap' },
-  high: { color: 'bg-orange-500', textColor: 'text-orange-400', label: 'High Priority' },
-  medium: { color: 'bg-yellow-500', textColor: 'text-yellow-400', label: 'Medium Priority' },
-  low: { color: 'bg-blue-500', textColor: 'text-blue-400', label: 'Low Priority' },
+// Attribute category weights for scoring
+const CATEGORY_WEIGHTS: Record<AttributeCategory, number> = {
+  UNIQUE: 1.0,
+  ROOT: 0.8,
+  RARE: 0.5,
+  COMMON: 0.2,
 };
 
-interface StructuralHoleCardProps {
+interface ScoredOpportunity {
   hole: StructuralHole;
-  index: number;
-  eavs: SemanticTriple[];
-  pillars?: SEOPillars;
-  onCreateBridgeTopic?: (title: string, parentId?: string) => void;
+  score: number;
+  primaryAction: {
+    type: 'link_existing' | 'create_new';
+    targetTopic?: EnrichedTopic;
+    suggestedTitle?: string;
+    reason: string;
+  };
+  impactLevel: 'critical' | 'high' | 'medium';
 }
 
-const StructuralHoleCard: React.FC<StructuralHoleCardProps> = ({
-  hole,
-  index,
-  eavs,
-  pillars,
-  onCreateBridgeTopic,
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<BridgeSuggestion | null>(null);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Score and rank bridging opportunities
+ */
+function scoreOpportunities(
+  holes: StructuralHole[],
+  eavs: SemanticTriple[],
+  topics: EnrichedTopic[],
+  pillars?: SEOPillars
+): ScoredOpportunity[] {
+  const scored: ScoredOpportunity[] = [];
 
-  const config = priorityConfig[hole.priority];
+  for (const hole of holes) {
+    let score = 0;
 
-  const handleGetSuggestions = async () => {
-    setIsLoadingSuggestions(true);
-    setError(null);
-    try {
-      const input: BridgeSuggestionInput = {
-        structuralHole: hole,
-        eavs,
-        sourceContext: pillars?.sourceContext,
-        centralSearchIntent: pillars?.centralSearchIntent,
-      };
-      const result = await generateBridgeSuggestions(input, false);
-      setSuggestions(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate suggestions');
-    } finally {
-      setIsLoadingSuggestions(false);
+    // 1. Base score from priority
+    if (hole.priority === 'critical') score += 40;
+    else if (hole.priority === 'high') score += 30;
+    else if (hole.priority === 'medium') score += 20;
+    else score += 10;
+
+    // 2. Score based on EAV category importance in clusters
+    const clusterEntities = [...hole.clusterA, ...hole.clusterB];
+    const relevantEavs = eavs.filter(eav =>
+      clusterEntities.some(entity =>
+        entity.toLowerCase().includes(eav.entity.toLowerCase()) ||
+        eav.entity.toLowerCase().includes(entity.toLowerCase())
+      )
+    );
+
+    // Higher value EAVs = more important gap
+    relevantEavs.forEach(eav => {
+      score += (CATEGORY_WEIGHTS[eav.category] || 0.2) * 5;
+    });
+
+    // 3. CSI alignment - does bridging help CSI?
+    if (pillars?.centralSearchIntent && Array.isArray(pillars.centralSearchIntent)) {
+      const csiRelevant = pillars.centralSearchIntent.some(intent =>
+        clusterEntities.some(entity =>
+          entity.toLowerCase().includes(intent.toLowerCase()) ||
+          intent.toLowerCase().includes(entity.toLowerCase())
+        )
+      );
+      if (csiRelevant) score += 15;
     }
-  };
 
-  // Get human-readable cluster names (first 3 entities)
-  const clusterALabel = hole.clusterA.slice(0, 3).join(', ') + (hole.clusterA.length > 3 ? '...' : '');
-  const clusterBLabel = hole.clusterB.slice(0, 3).join(', ') + (hole.clusterB.length > 3 ? '...' : '');
+    // 4. Determine best action
+    let primaryAction: ScoredOpportunity['primaryAction'];
 
-  return (
-    <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden">
-      {/* Header - Always visible */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-3 flex items-start gap-3 hover:bg-gray-700/30 transition-colors text-left"
-      >
-        {/* Priority indicator */}
-        <div className={`w-2 h-2 rounded-full ${config.color} mt-1.5 flex-shrink-0`} />
+    // Check if any existing topic could serve as a bridge
+    const potentialBridge = topics.find(topic => {
+      const title = topic.title.toLowerCase();
+      const matchesA = hole.clusterA.some(e => title.includes(e.toLowerCase()));
+      const matchesB = hole.clusterB.some(e => title.includes(e.toLowerCase()));
+      const isBridgeCandidate = hole.bridgeCandidates.some(c =>
+        title.includes(c.toLowerCase()) || c.toLowerCase().includes(title)
+      );
+      return (matchesA && matchesB) || isBridgeCandidate;
+    });
 
-        <div className="flex-1 min-w-0">
-          {/* Priority label and connection strength */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs font-medium ${config.textColor}`}>
-              {config.label}
-            </span>
-            <span className="text-xs text-gray-500">
-              Connection: {(hole.connectionStrength * 100).toFixed(0)}%
-            </span>
-          </div>
+    if (potentialBridge) {
+      primaryAction = {
+        type: 'link_existing',
+        targetTopic: potentialBridge,
+        reason: 'Add internal links from this topic to both clusters',
+      };
+    } else if (hole.bridgeCandidates.length > 0) {
+      // Suggest creating a new topic
+      const bestCandidate = hole.bridgeCandidates[0];
+      primaryAction = {
+        type: 'create_new',
+        suggestedTitle: bestCandidate,
+        reason: `Create content about "${bestCandidate}" to bridge these clusters`,
+      };
+    } else {
+      // Generic suggestion based on cluster overlap
+      const clusterAMain = hole.clusterA[0] || 'Cluster A';
+      const clusterBMain = hole.clusterB[0] || 'Cluster B';
+      primaryAction = {
+        type: 'create_new',
+        suggestedTitle: `${clusterAMain} and ${clusterBMain}`,
+        reason: 'Create content that connects both topic areas',
+      };
+    }
 
-          {/* Cluster summary */}
-          <div className="text-sm text-gray-300">
-            <span className="text-blue-400">{hole.clusterA.length} topics</span>
-            <span className="text-gray-500 mx-2">⟷</span>
-            <span className="text-purple-400">{hole.clusterB.length} topics</span>
-          </div>
+    // Determine impact level
+    const impactLevel: 'critical' | 'high' | 'medium' =
+      score >= 50 ? 'critical' : score >= 30 ? 'high' : 'medium';
 
-          {/* Brief description */}
-          <p className="text-xs text-gray-500 mt-1 truncate">
-            Gap between "{clusterALabel}" and "{clusterBLabel}"
-          </p>
-        </div>
+    scored.push({ hole, score, primaryAction, impactLevel });
+  }
 
-        {/* Expand icon */}
-        <svg
-          className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="px-3 pb-3 border-t border-gray-700/50">
-          {/* Clusters detail */}
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <div>
-              <h5 className="text-xs font-medium text-blue-400 mb-1">Cluster A ({hole.clusterA.length})</h5>
-              <div className="space-y-1 max-h-24 overflow-y-auto">
-                {hole.clusterA.map((entity, i) => (
-                  <div key={i} className="text-xs text-gray-400 truncate">
-                    {entity}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h5 className="text-xs font-medium text-purple-400 mb-1">Cluster B ({hole.clusterB.length})</h5>
-              <div className="space-y-1 max-h-24 overflow-y-auto">
-                {hole.clusterB.map((entity, i) => (
-                  <div key={i} className="text-xs text-gray-400 truncate">
-                    {entity}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bridge candidates */}
-          {hole.bridgeCandidates.length > 0 && (
-            <div className="mt-3">
-              <h5 className="text-xs font-medium text-green-400 mb-1">
-                Bridge Candidates ({hole.bridgeCandidates.length})
-              </h5>
-              <div className="flex flex-wrap gap-1">
-                {hole.bridgeCandidates.map((candidate, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20"
-                  >
-                    {candidate}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* AI Suggestions */}
-          <div className="mt-3">
-            {!suggestions && !isLoadingSuggestions && (
-              <Button
-                onClick={handleGetSuggestions}
-                variant="secondary"
-                size="sm"
-                className="w-full"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-                Get AI Bridge Suggestions
-              </Button>
-            )}
-
-            {isLoadingSuggestions && (
-              <div className="flex items-center justify-center py-3">
-                <Loader size="sm" />
-                <span className="ml-2 text-sm text-gray-400">Generating suggestions...</span>
-              </div>
-            )}
-
-            {error && (
-              <div className="text-xs text-red-400 bg-red-500/10 rounded p-2 mt-2">
-                {error}
-              </div>
-            )}
-
-            {suggestions && (
-              <div className="space-y-3 mt-2">
-                {/* Research Questions */}
-                {suggestions.researchQuestions.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-medium text-amber-400 mb-1">Research Questions</h5>
-                    <ul className="space-y-1">
-                      {suggestions.researchQuestions.map((q, i) => (
-                        <li key={i} className="text-xs text-gray-300 flex items-start gap-2">
-                          <span className="text-amber-500 mt-0.5">?</span>
-                          {q}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Topic Suggestions */}
-                {suggestions.topicSuggestions.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-medium text-cyan-400 mb-1">Suggested Bridge Topics</h5>
-                    <div className="space-y-2">
-                      {suggestions.topicSuggestions.map((topic, i) => (
-                        <div key={i} className="bg-gray-700/30 rounded p-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-200">{topic.title}</span>
-                            {onCreateBridgeTopic && (
-                              <Button
-                                onClick={() => onCreateBridgeTopic(topic.title)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs"
-                              >
-                                + Add
-                              </Button>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1">{topic.rationale}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+  // Sort by score descending, take top 3
+  return scored.sort((a, b) => b.score - a.score).slice(0, 3);
+}
 
 const BridgingOpportunitiesPanel: React.FC<BridgingOpportunitiesPanelProps> = ({
   knowledgeGraph,
   eavs,
   pillars,
   topics,
-  onCreateBridgeTopic,
+  onSelectTopic,
+  onCreateTopic,
 }) => {
-  // Detect structural holes from knowledge graph
-  const structuralHoles = useMemo(() => {
+  // Get and score opportunities
+  const opportunities = useMemo(() => {
     if (!knowledgeGraph) return [];
+
     try {
-      return knowledgeGraph.identifyStructuralHoles(0.15);
+      const holes = knowledgeGraph.identifyStructuralHoles(0.15);
+      if (holes.length === 0) return [];
+
+      return scoreOpportunities(holes, eavs, topics, pillars);
     } catch (err) {
-      console.error('Failed to identify structural holes:', err);
+      console.error('Failed to analyze bridging opportunities:', err);
       return [];
     }
-  }, [knowledgeGraph]);
-
-  // Sort by priority
-  const sortedHoles = useMemo(() => {
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    return [...structuralHoles].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-  }, [structuralHoles]);
-
-  // Count by priority
-  const priorityCounts = useMemo(() => {
-    return structuralHoles.reduce(
-      (acc, hole) => {
-        acc[hole.priority]++;
-        return acc;
-      },
-      { critical: 0, high: 0, medium: 0, low: 0 }
-    );
-  }, [structuralHoles]);
+  }, [knowledgeGraph, eavs, topics, pillars]);
 
   if (!knowledgeGraph) {
     return (
-      <div className="text-center py-6 text-gray-500">
-        <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        <p className="text-sm">Add EAVs to your topical map to detect bridging opportunities</p>
+      <div className="text-center py-4 text-gray-500">
+        <p className="text-sm">Add EAVs to detect content gaps</p>
       </div>
     );
   }
 
-  if (structuralHoles.length === 0) {
+  if (opportunities.length === 0) {
     return (
-      <div className="text-center py-6 text-gray-500">
-        <svg className="w-8 h-8 mx-auto mb-2 text-green-500 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="text-center py-4">
+        <svg className="w-6 h-6 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <p className="text-sm text-green-400">No content gaps detected</p>
-        <p className="text-xs mt-1">Your topic clusters are well connected</p>
+        <p className="text-sm text-green-400">No critical content gaps detected</p>
+        <p className="text-xs text-gray-500 mt-1">Your topic clusters are well connected</p>
       </div>
     );
   }
+
+  const impactColors = {
+    critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', badge: 'bg-red-500' },
+    high: { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', badge: 'bg-orange-500' },
+    medium: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', badge: 'bg-yellow-500' },
+  };
 
   return (
     <div className="space-y-3">
-      {/* Summary stats */}
-      <div className="flex items-center gap-4 text-xs">
-        <span className="text-gray-400">
-          {structuralHoles.length} gap{structuralHoles.length !== 1 ? 's' : ''} detected
-        </span>
-        {priorityCounts.critical > 0 && (
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="text-red-400">{priorityCounts.critical} critical</span>
-          </span>
-        )}
-        {priorityCounts.high > 0 && (
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-orange-500" />
-            <span className="text-orange-400">{priorityCounts.high} high</span>
-          </span>
-        )}
-      </div>
+      {/* Summary */}
+      <p className="text-xs text-gray-400">
+        Top {opportunities.length} content gap{opportunities.length > 1 ? 's' : ''} that will strengthen your topical authority:
+      </p>
 
-      {/* Structural hole cards */}
-      <div className="space-y-2">
-        {sortedHoles.map((hole, index) => (
-          <StructuralHoleCard
-            key={index}
-            hole={hole}
-            index={index}
-            eavs={eavs}
-            pillars={pillars}
-            onCreateBridgeTopic={onCreateBridgeTopic}
-          />
-        ))}
-      </div>
+      {/* Opportunity cards */}
+      {opportunities.map((opp, idx) => {
+        const colors = impactColors[opp.impactLevel];
+        return (
+          <div
+            key={idx}
+            className={`p-3 rounded-lg border ${colors.bg} ${colors.border}`}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${colors.badge}`} />
+                <span className={`text-xs font-medium uppercase ${colors.text}`}>
+                  {opp.impactLevel} priority
+                </span>
+              </div>
+              <span className="text-xs text-gray-500">
+                {opp.hole.clusterA.length + opp.hole.clusterB.length} entities affected
+              </span>
+            </div>
+
+            {/* Gap description */}
+            <p className="text-sm text-gray-300 mb-2">
+              Gap between <span className="text-blue-400">{opp.hole.clusterA.slice(0, 2).join(', ')}</span>
+              {' '}and{' '}
+              <span className="text-purple-400">{opp.hole.clusterB.slice(0, 2).join(', ')}</span>
+            </p>
+
+            {/* Action */}
+            <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-700/50">
+              <p className="text-xs text-gray-400 flex-1">
+                {opp.primaryAction.reason}
+              </p>
+
+              {opp.primaryAction.type === 'link_existing' && opp.primaryAction.targetTopic && onSelectTopic ? (
+                <Button
+                  onClick={() => onSelectTopic(opp.primaryAction.targetTopic!.id)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs ml-2"
+                >
+                  View Topic
+                </Button>
+              ) : opp.primaryAction.type === 'create_new' && onCreateTopic ? (
+                <Button
+                  onClick={() => onCreateTopic(opp.primaryAction.suggestedTitle || '')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs ml-2"
+                >
+                  Create Topic
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Help text */}
-      <div className="text-xs text-gray-500 border-t border-gray-700/50 pt-3">
-        <strong className="text-gray-400">What are bridging opportunities?</strong>
-        <p className="mt-1">
-          These are gaps between topic clusters in your knowledge graph. Creating bridge content
-          connects isolated topics, improving topical authority and internal linking.
-        </p>
-      </div>
+      <p className="text-xs text-gray-500 pt-2 border-t border-gray-700/30">
+        Bridging content gaps improves internal linking and demonstrates expertise across related topics.
+      </p>
     </div>
   );
 };

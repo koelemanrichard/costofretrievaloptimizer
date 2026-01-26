@@ -566,13 +566,6 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
                 defaultExpanded={false}
                 persistKey="dashboard-bridging"
-                badge={
-                    knowledgeGraph && knowledgeGraph.identifyStructuralHoles(0.15).length > 0 ? (
-                        <span className="px-1.5 py-0.5 text-xs bg-orange-500/20 text-orange-400 rounded">
-                            {knowledgeGraph.identifyStructuralHoles(0.15).filter(h => h.priority === 'critical' || h.priority === 'high').length} gaps
-                        </span>
-                    ) : null
-                }
             >
                 <FeatureErrorBoundary featureName="Bridging Opportunities">
                     <BridgingOpportunitiesPanel
@@ -580,8 +573,11 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                         eavs={topicalMap.eavs as SemanticTriple[] || []}
                         pillars={topicalMap.pillars}
                         topics={allTopics}
-                        onCreateBridgeTopic={(title) => {
-                            // Open add topic modal with pre-filled title
+                        onSelectTopic={(topicId) => {
+                            const topic = allTopics.find(t => t.id === topicId);
+                            if (topic) handleSelectTopicForBrief(topic);
+                        }}
+                        onCreateTopic={() => {
                             dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'addTopic', visible: true } });
                         }}
                     />

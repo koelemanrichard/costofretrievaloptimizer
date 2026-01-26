@@ -1,17 +1,21 @@
 /**
  * TopicBridgingContext
  *
- * Shows bridging opportunities specific to a topic in the Content Brief modal.
- * Displays which structural holes this topic could help bridge and provides
- * AI-generated suggestions for bridge content.
+ * Intelligent bridging recommendation for a topic in the Content Brief modal.
+ * Uses Semantic SEO principles to identify the SINGLE BEST internal link
+ * that will strengthen topical authority and close knowledge gaps.
+ *
+ * Scoring factors:
+ * 1. Attribute Category Weight (UNIQUE > ROOT > RARE > COMMON)
+ * 2. Central Search Intent alignment
+ * 3. Structural hole priority
+ * 4. Semantic distance (not too close, not too far)
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { KnowledgeGraph, StructuralHole } from '../../lib/knowledgeGraph';
-import { generateBridgeSuggestions, BridgeSuggestion, BridgeSuggestionInput } from '../../services/ai/bridgeSuggestionService';
-import { EnrichedTopic, SemanticTriple, SEOPillars } from '../../types';
+import { EnrichedTopic, SemanticTriple, SEOPillars, AttributeCategory } from '../../types';
 import { Button } from '../ui/Button';
-import { Loader } from '../ui/Loader';
 import { Card } from '../ui/Card';
 
 interface TopicBridgingContextProps {
@@ -20,15 +24,159 @@ interface TopicBridgingContextProps {
   eavs: SemanticTriple[];
   pillars?: SEOPillars;
   allTopics: EnrichedTopic[];
+  onAddInternalLink?: (targetTopic: EnrichedTopic, anchorSuggestion: string) => void;
 }
 
-// Priority colors
-const priorityColors = {
-  critical: 'text-red-400 bg-red-500/10 border-red-500/30',
-  high: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
-  medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-  low: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+// Attribute category weights for scoring (Semantic SEO principle)
+const CATEGORY_WEIGHTS: Record<AttributeCategory, number> = {
+  UNIQUE: 1.0,
+  ROOT: 0.8,
+  RARE: 0.5,
+  COMMON: 0.2,
 };
+
+interface BridgeRecommendation {
+  targetTopic: EnrichedTopic;
+  score: number;
+  reason: string;
+  anchorSuggestion: string;
+  seoImpact: 'high' | 'medium' | 'low';
+  sharedEntities: string[];
+}
+
+/**
+ * Calculate bridge score based on Semantic SEO principles
+ */
+function calculateBridgeScore(
+  sourceTopic: EnrichedTopic,
+  targetTopic: EnrichedTopic,
+  eavs: SemanticTriple[],
+  pillars: SEOPillars | undefined,
+  structuralHoles: StructuralHole[]
+): { score: number; reason: string; sharedEntities: string[]; anchorSuggestion: string } {
+  let score = 0;
+  const reasons: string[] = [];
+  const sharedEntities: string[] = [];
+
+  const sourceTitle = sourceTopic.title.toLowerCase();
+  const targetTitle = targetTopic.title.toLowerCase();
+
+  // 1. Find shared EAV entities between topics (semantic proximity)
+  const sourceEntities = new Set<string>();
+  const targetEntities = new Set<string>();
+
+  eavs.forEach(eav => {
+    const entityLower = eav.entity.toLowerCase();
+    const valueLower = (eav.value || '').toLowerCase();
+
+    if (sourceTitle.includes(entityLower) || sourceTitle.includes(valueLower)) {
+      sourceEntities.add(eav.entity);
+      if (eav.value) sourceEntities.add(eav.value);
+    }
+    if (targetTitle.includes(entityLower) || targetTitle.includes(valueLower)) {
+      targetEntities.add(eav.entity);
+      if (eav.value) targetEntities.add(eav.value);
+    }
+  });
+
+  // Find overlap
+  sourceEntities.forEach(entity => {
+    if (targetEntities.has(entity)) {
+      sharedEntities.push(entity);
+    }
+  });
+
+  // 2. Score based on shared entities with category weights
+  const relevantEavs = eavs.filter(eav =>
+    sharedEntities.includes(eav.entity) || sharedEntities.includes(eav.value || '')
+  );
+
+  relevantEavs.forEach(eav => {
+    const categoryWeight = CATEGORY_WEIGHTS[eav.category] || 0.2;
+    score += categoryWeight * 10;
+  });
+
+  // 3. CSI alignment bonus - does target reinforce central search intent?
+  if (pillars?.centralSearchIntent && Array.isArray(pillars.centralSearchIntent)) {
+    const csiMatch = pillars.centralSearchIntent.some(intent =>
+      targetTitle.includes(intent.toLowerCase()) ||
+      intent.toLowerCase().includes(targetTitle.split(' ')[0])
+    );
+    if (csiMatch) {
+      score += 15;
+      reasons.push('reinforces central search intent');
+    }
+  }
+
+  // 4. Structural hole bonus - does this bridge a gap?
+  const bridgesHole = structuralHoles.some(hole => {
+    const inClusterA = hole.clusterA.some(e =>
+      sourceTitle.includes(e.toLowerCase()) || e.toLowerCase().includes(sourceTitle)
+    );
+    const inClusterB = hole.clusterB.some(e =>
+      targetTitle.includes(e.toLowerCase()) || e.toLowerCase().includes(targetTitle)
+    );
+    return (inClusterA && inClusterB) || (inClusterB && inClusterA);
+  });
+
+  if (bridgesHole) {
+    score += 20;
+    reasons.push('bridges content gap');
+  }
+
+  // 5. Topic class complementarity
+  const sourceClass = sourceTopic.topic_class || sourceTopic.metadata?.topic_class;
+  const targetClass = targetTopic.topic_class || targetTopic.metadata?.topic_class;
+
+  // Informational → Commercial is good (funnel progression)
+  if (sourceClass === 'informational' && targetClass === 'commercial') {
+    score += 10;
+    reasons.push('guides user toward conversion');
+  }
+  // Commercial → Transactional is good
+  if (sourceClass === 'commercial' && targetClass === 'transactional') {
+    score += 12;
+    reasons.push('supports purchase decision');
+  }
+  // Foundation pages deserve links
+  if (targetTopic.metadata?.is_foundation_page || targetClass === 'navigational') {
+    score += 8;
+    reasons.push('strengthens site architecture');
+  }
+
+  // 6. Parent-child relationship bonus
+  if (sourceTopic.parent_id === targetTopic.id || targetTopic.parent_id === sourceTopic.id) {
+    score += 5;
+    reasons.push('maintains topic hierarchy');
+  }
+
+  // 7. Penalty for same-cluster redundancy (we want diversity)
+  if (sourceTopic.parent_id === targetTopic.parent_id && sourceTopic.parent_id) {
+    score -= 5; // Sibling topics - slightly less valuable
+  }
+
+  // Generate anchor text suggestion from shared entities or target title
+  let anchorSuggestion = '';
+  if (sharedEntities.length > 0) {
+    // Use highest-value shared entity
+    const bestEntity = relevantEavs.sort((a, b) =>
+      (CATEGORY_WEIGHTS[b.category] || 0) - (CATEGORY_WEIGHTS[a.category] || 0)
+    )[0];
+    anchorSuggestion = bestEntity?.entity || sharedEntities[0];
+  } else {
+    // Fallback to target topic's core keyword
+    anchorSuggestion = targetTopic.title.split(':')[0].trim();
+  }
+
+  // Build reason string
+  const reasonText = reasons.length > 0
+    ? reasons.join(', ')
+    : sharedEntities.length > 0
+      ? `shares ${sharedEntities.length} semantic connection${sharedEntities.length > 1 ? 's' : ''}`
+      : 'related topic';
+
+  return { score, reason: reasonText, sharedEntities, anchorSuggestion };
+}
 
 export const TopicBridgingContext: React.FC<TopicBridgingContextProps> = ({
   topic,
@@ -36,259 +184,137 @@ export const TopicBridgingContext: React.FC<TopicBridgingContextProps> = ({
   eavs,
   pillars,
   allTopics,
+  onAddInternalLink,
 }) => {
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<BridgeSuggestion | null>(null);
-  const [selectedHole, setSelectedHole] = useState<StructuralHole | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Calculate the SINGLE BEST bridge recommendation
+  const recommendation = useMemo<BridgeRecommendation | null>(() => {
+    if (!knowledgeGraph || allTopics.length < 2) return null;
 
-  // Find structural holes that this topic could help bridge
-  const relevantHoles = useMemo(() => {
-    if (!knowledgeGraph) return [];
-
+    // Get structural holes for scoring
+    let structuralHoles: StructuralHole[] = [];
     try {
-      const allHoles = knowledgeGraph.identifyStructuralHoles(0.15);
-      const topicTitle = topic.title.toLowerCase();
-      const topicKeywords = topicTitle.split(/\s+/);
-
-      // Find holes where:
-      // 1. Topic title matches entities in either cluster
-      // 2. Topic title matches bridge candidates
-      // 3. Topic has semantic overlap with cluster entities
-      return allHoles.filter(hole => {
-        const allEntities = [...hole.clusterA, ...hole.clusterB, ...hole.bridgeCandidates];
-        const entitiesLower = allEntities.map(e => e.toLowerCase());
-
-        // Direct match
-        if (entitiesLower.some(e => e.includes(topicTitle) || topicTitle.includes(e))) {
-          return true;
-        }
-
-        // Keyword overlap
-        const hasKeywordOverlap = topicKeywords.some(keyword =>
-          keyword.length > 3 && entitiesLower.some(e => e.includes(keyword))
-        );
-
-        return hasKeywordOverlap;
-      });
+      structuralHoles = knowledgeGraph.identifyStructuralHoles(0.15);
     } catch (err) {
-      console.error('Failed to find relevant holes:', err);
-      return [];
-    }
-  }, [knowledgeGraph, topic.title]);
-
-  // Determine bridging role for this topic
-  const bridgingRole = useMemo(() => {
-    if (relevantHoles.length === 0) return null;
-
-    const topicTitle = topic.title.toLowerCase();
-    const roles: string[] = [];
-
-    for (const hole of relevantHoles) {
-      const inClusterA = hole.clusterA.some(e => e.toLowerCase().includes(topicTitle) || topicTitle.includes(e.toLowerCase()));
-      const inClusterB = hole.clusterB.some(e => e.toLowerCase().includes(topicTitle) || topicTitle.includes(e.toLowerCase()));
-      const isBridgeCandidate = hole.bridgeCandidates.some(e => e.toLowerCase().includes(topicTitle) || topicTitle.includes(e.toLowerCase()));
-
-      if (isBridgeCandidate) {
-        roles.push('Bridge Candidate');
-      } else if (inClusterA && !inClusterB) {
-        roles.push('Cluster A');
-      } else if (inClusterB && !inClusterA) {
-        roles.push('Cluster B');
-      }
+      console.error('Failed to identify structural holes:', err);
     }
 
-    return [...new Set(roles)];
-  }, [relevantHoles, topic.title]);
+    // Score all potential target topics
+    const candidates: BridgeRecommendation[] = [];
 
-  // Get suggested internal links based on bridging opportunities
-  const suggestedLinks = useMemo(() => {
-    if (relevantHoles.length === 0) return [];
+    for (const targetTopic of allTopics) {
+      // Skip self
+      if (targetTopic.id === topic.id) continue;
 
-    const links: { topic: EnrichedTopic; reason: string }[] = [];
-    const topicTitle = topic.title.toLowerCase();
+      // Skip topics without titles
+      if (!targetTopic.title) continue;
 
-    for (const hole of relevantHoles) {
-      // If this topic is in Cluster A, suggest links to Cluster B topics
-      const inClusterA = hole.clusterA.some(e => e.toLowerCase().includes(topicTitle) || topicTitle.includes(e.toLowerCase()));
-      const inClusterB = hole.clusterB.some(e => e.toLowerCase().includes(topicTitle) || topicTitle.includes(e.toLowerCase()));
-
-      const targetCluster = inClusterA ? hole.clusterB : inClusterB ? hole.clusterA : [];
-
-      for (const entity of targetCluster) {
-        const matchingTopic = allTopics.find(t =>
-          t.id !== topic.id &&
-          (t.title.toLowerCase().includes(entity.toLowerCase()) ||
-           entity.toLowerCase().includes(t.title.toLowerCase()))
-        );
-
-        if (matchingTopic && !links.find(l => l.topic.id === matchingTopic.id)) {
-          links.push({
-            topic: matchingTopic,
-            reason: `Bridges gap to ${inClusterA ? 'Cluster B' : 'Cluster A'}`,
-          });
-        }
-      }
-    }
-
-    return links.slice(0, 5); // Limit to 5 suggestions
-  }, [relevantHoles, topic, allTopics]);
-
-  const handleGetSuggestions = async (hole: StructuralHole) => {
-    setIsLoadingSuggestions(true);
-    setError(null);
-    setSelectedHole(hole);
-
-    try {
-      const input: BridgeSuggestionInput = {
-        structuralHole: hole,
+      const { score, reason, sharedEntities, anchorSuggestion } = calculateBridgeScore(
+        topic,
+        targetTopic,
         eavs,
-        sourceContext: pillars?.sourceContext,
-        centralSearchIntent: pillars?.centralSearchIntent,
-        focusTopic: topic.title,
-      };
-      const result = await generateBridgeSuggestions(input, false);
-      setSuggestions(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate suggestions');
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  };
+        pillars,
+        structuralHoles
+      );
 
-  if (!knowledgeGraph) {
+      // Only consider topics with meaningful scores
+      if (score > 5) {
+        candidates.push({
+          targetTopic,
+          score,
+          reason,
+          anchorSuggestion,
+          seoImpact: score >= 30 ? 'high' : score >= 15 ? 'medium' : 'low',
+          sharedEntities,
+        });
+      }
+    }
+
+    // Return only the BEST recommendation
+    if (candidates.length === 0) return null;
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0];
+  }, [topic, knowledgeGraph, eavs, pillars, allTopics]);
+
+  // Don't show if no meaningful recommendation
+  if (!recommendation || recommendation.score < 10) {
     return null;
   }
 
-  if (relevantHoles.length === 0) {
-    return null; // Don't show section if no relevant bridging opportunities
-  }
+  const impactColors = {
+    high: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+    medium: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    low: 'bg-gray-500/20 text-gray-400 border-gray-500/40',
+  };
 
   return (
     <Card className="p-4 bg-emerald-950/20 border border-emerald-800/50">
       <div className="flex items-center gap-2 mb-3">
         <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
-        <h3 className="font-semibold text-lg text-emerald-300">Bridging Opportunities</h3>
-        {bridgingRole && bridgingRole.length > 0 && (
-          <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">
-            {bridgingRole.join(' | ')}
-          </span>
+        <h3 className="font-semibold text-emerald-300">Recommended Internal Link</h3>
+        <span className={`text-xs px-2 py-0.5 rounded border ${impactColors[recommendation.seoImpact]}`}>
+          {recommendation.seoImpact} SEO impact
+        </span>
+      </div>
+
+      {/* The single recommendation */}
+      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            {/* Target topic */}
+            <p className="text-white font-medium text-base mb-1">
+              Link to: <span className="text-emerald-300">{recommendation.targetTopic.title}</span>
+            </p>
+
+            {/* Why - the SEO reason */}
+            <p className="text-sm text-gray-400 mb-3">
+              <span className="text-gray-500">Why:</span> This link {recommendation.reason}.
+            </p>
+
+            {/* Suggested anchor text */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">Anchor text:</span>
+              <code className="bg-gray-900 px-2 py-0.5 rounded text-cyan-300 text-xs">
+                {recommendation.anchorSuggestion}
+              </code>
+            </div>
+          </div>
+
+          {/* Action button */}
+          {onAddInternalLink && (
+            <Button
+              onClick={() => onAddInternalLink(recommendation.targetTopic, recommendation.anchorSuggestion)}
+              variant="primary"
+              size="sm"
+              className="flex-shrink-0 bg-emerald-600 hover:bg-emerald-700"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Link
+            </Button>
+          )}
+        </div>
+
+        {/* Shared semantic connections (if any, keep minimal) */}
+        {recommendation.sharedEntities.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-700/50">
+            <span className="text-xs text-gray-500">Shared entities: </span>
+            <span className="text-xs text-gray-400">
+              {recommendation.sharedEntities.slice(0, 3).join(', ')}
+              {recommendation.sharedEntities.length > 3 && ` +${recommendation.sharedEntities.length - 3} more`}
+            </span>
+          </div>
         )}
       </div>
 
-      <p className="text-xs text-gray-400 mb-4">
-        This topic can help connect disconnected content clusters in your topical map.
+      {/* Brief explanation */}
+      <p className="text-xs text-gray-500 mt-3">
+        Internal links strengthen topical authority by connecting related content.
+        This recommendation is based on semantic relevance, content gaps, and user journey optimization.
       </p>
-
-      {/* Relevant structural holes */}
-      <div className="space-y-3 mb-4">
-        <h4 className="text-sm font-medium text-gray-300">Content Gaps This Topic Can Bridge</h4>
-        {relevantHoles.map((hole, idx) => (
-          <div
-            key={idx}
-            className={`p-3 rounded border ${priorityColors[hole.priority]}`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium uppercase">
-                {hole.priority} priority gap
-              </span>
-              <span className="text-xs opacity-70">
-                {(hole.connectionStrength * 100).toFixed(0)}% connected
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-blue-400 font-medium">Cluster A:</span>
-                <div className="text-gray-400 mt-1">
-                  {hole.clusterA.slice(0, 3).join(', ')}
-                  {hole.clusterA.length > 3 && ` +${hole.clusterA.length - 3}`}
-                </div>
-              </div>
-              <div>
-                <span className="text-purple-400 font-medium">Cluster B:</span>
-                <div className="text-gray-400 mt-1">
-                  {hole.clusterB.slice(0, 3).join(', ')}
-                  {hole.clusterB.length > 3 && ` +${hole.clusterB.length - 3}`}
-                </div>
-              </div>
-            </div>
-
-            {/* AI Suggestions button */}
-            <div className="mt-3">
-              {selectedHole === hole && suggestions ? (
-                <div className="space-y-2">
-                  {suggestions.researchQuestions.length > 0 && (
-                    <div>
-                      <span className="text-xs text-amber-400 font-medium">Research Questions:</span>
-                      <ul className="mt-1 space-y-1">
-                        {suggestions.researchQuestions.slice(0, 2).map((q, i) => (
-                          <li key={i} className="text-xs text-gray-300 flex items-start gap-1">
-                            <span className="text-amber-500">?</span> {q}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Button
-                  onClick={() => handleGetSuggestions(hole)}
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs"
-                  disabled={isLoadingSuggestions && selectedHole === hole}
-                >
-                  {isLoadingSuggestions && selectedHole === hole ? (
-                    <>
-                      <Loader size="sm" className="mr-1" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      Get Bridge Content Ideas
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Suggested internal links */}
-      {suggestedLinks.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-gray-300 mb-2">Suggested Internal Links (Bridge Building)</h4>
-          <div className="space-y-2">
-            {suggestedLinks.map((link, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-2 bg-gray-800/50 rounded border border-gray-700/50"
-              >
-                <div>
-                  <span className="text-sm text-white">{link.topic.title}</span>
-                  <span className="text-xs text-gray-500 ml-2">({link.reason})</span>
-                </div>
-                <span className="text-xs text-emerald-400">
-                  Link recommended
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-xs text-red-400 bg-red-500/10 rounded p-2 mt-3">
-          {error}
-        </div>
-      )}
     </Card>
   );
 };
