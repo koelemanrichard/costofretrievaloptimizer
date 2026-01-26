@@ -10,8 +10,7 @@ export type { ContentBlock } from './ContentMatcher';
 
 export { StandaloneCssGenerator } from './StandaloneCssGenerator';
 
-// TODO: Uncomment when BrandAwareComposer.ts is implemented
-// export { BrandAwareComposer } from './BrandAwareComposer';
+export { BrandAwareComposer } from './BrandAwareComposer';
 
 // Re-export types
 export type {
