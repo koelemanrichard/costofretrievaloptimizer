@@ -11,3 +11,7 @@ export * from './types';
 // Services
 export { SectionAnalyzer } from './SectionAnalyzer';
 export { LayoutPlanner } from './LayoutPlanner';
+export { ComponentSelector } from './ComponentSelector';
+
+// Component Mappings
+export * from './componentMappings';
