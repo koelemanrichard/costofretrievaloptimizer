@@ -286,25 +286,25 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
                 <div>
                   <span className="text-zinc-400">Heading Font:</span>
                   <span className="ml-2 text-white font-medium">
-                    {currentDna.typography.headingFont.family}
+                    {currentDna.typography?.headingFont?.family || 'System UI'}
                   </span>
                 </div>
                 <div>
                   <span className="text-zinc-400">Body Font:</span>
                   <span className="ml-2 text-white font-medium">
-                    {currentDna.typography.bodyFont.family}
+                    {currentDna.typography?.bodyFont?.family || 'System UI'}
                   </span>
                 </div>
                 <div>
                   <span className="text-zinc-400">Style:</span>
                   <span className="ml-2 text-white capitalize">
-                    {currentDna.personality.overall}
+                    {currentDna.personality?.overall || 'corporate'}
                   </span>
                 </div>
                 <div>
                   <span className="text-zinc-400">Confidence:</span>
                   <span className="ml-2 text-green-400 font-medium">
-                    {Math.round(currentDna.confidence.overall * 100)}%
+                    {Math.round((currentDna.confidence?.overall || 0.5) * 100)}%
                   </span>
                 </div>
               </div>
@@ -315,12 +315,12 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
           <div className="p-4 bg-zinc-900/40 rounded-xl border border-zinc-700/50">
             <h4 className="text-sm font-medium text-zinc-300 mb-3">Color Palette</h4>
             <div className="flex gap-3 flex-wrap">
-              <ColorSwatch label="Primary" color={currentDna.colors.primary.hex} />
-              <ColorSwatch label="Secondary" color={currentDna.colors.secondary.hex} />
-              <ColorSwatch label="Accent" color={currentDna.colors.accent.hex} />
-              <ColorSwatch label="Background" color={currentDna.colors.neutrals.lightest} />
-              <ColorSwatch label="Surface" color={currentDna.colors.neutrals.light} />
-              <ColorSwatch label="Text" color={currentDna.colors.neutrals.darkest} />
+              <ColorSwatch label="Primary" color={currentDna.colors?.primary?.hex || '#3b82f6'} />
+              <ColorSwatch label="Secondary" color={currentDna.colors?.secondary?.hex || '#1f2937'} />
+              <ColorSwatch label="Accent" color={currentDna.colors?.accent?.hex || '#f59e0b'} />
+              <ColorSwatch label="Background" color={currentDna.colors?.neutrals?.lightest || '#f9fafb'} />
+              <ColorSwatch label="Surface" color={currentDna.colors?.neutrals?.light || '#f3f4f6'} />
+              <ColorSwatch label="Text" color={currentDna.colors?.neutrals?.darkest || '#111827'} />
             </div>
           </div>
 
@@ -331,10 +331,10 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
               {/* Formality Slider */}
               <PersonalitySlider
                 label="Formality"
-                value={currentDna.personality.formality}
+                value={currentDna.personality?.formality || 3}
                 lowLabel="Casual"
                 highLabel="Formal"
-                currentLabel={getPersonalityLabel('formality', currentDna.personality.formality)}
+                currentLabel={getPersonalityLabel('formality', currentDna.personality?.formality || 3)}
                 onChange={(value) => handlePersonalityChange('formality', value)}
                 disabled={!onDesignDnaChange}
               />
@@ -342,10 +342,10 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
               {/* Energy Slider */}
               <PersonalitySlider
                 label="Energy"
-                value={currentDna.personality.energy}
+                value={currentDna.personality?.energy || 3}
                 lowLabel="Calm"
                 highLabel="Bold"
-                currentLabel={getPersonalityLabel('energy', currentDna.personality.energy)}
+                currentLabel={getPersonalityLabel('energy', currentDna.personality?.energy || 3)}
                 onChange={(value) => handlePersonalityChange('energy', value)}
                 disabled={!onDesignDnaChange}
               />
@@ -353,10 +353,10 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
               {/* Warmth Slider */}
               <PersonalitySlider
                 label="Warmth"
-                value={currentDna.personality.warmth}
+                value={currentDna.personality?.warmth || 3}
                 lowLabel="Cool"
                 highLabel="Warm"
-                currentLabel={getPersonalityLabel('warmth', currentDna.personality.warmth)}
+                currentLabel={getPersonalityLabel('warmth', currentDna.personality?.warmth || 3)}
                 onChange={(value) => handlePersonalityChange('warmth', value)}
                 disabled={!onDesignDnaChange}
               />
