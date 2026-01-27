@@ -6,6 +6,7 @@
  * and BrandStyleStep tabs for a cleaner single-step experience.
  *
  * Features:
+ * - Mode toggle: Full Extraction (multi-page) vs Quick Detection (single URL)
  * - URL input for brand detection
  * - Screenshot display (prominent at top)
  * - Color palette summary (horizontal palette)
@@ -21,6 +22,9 @@ import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { AnalysisProgress } from '../AnalysisProgress';
 import { useBrandDetection } from '../../../hooks/useBrandDetection';
+import { useBrandExtraction } from '../../../hooks/useBrandExtraction';
+import { BrandUrlDiscovery, BrandExtractionProgress, BrandComponentPreview } from '../brand';
+import { BrandDesignSystemGenerator } from '../../../services/design-analysis/BrandDesignSystemGenerator';
 import type { DesignDNA, BrandDesignSystem } from '../../../types/designDna';
 
 // ============================================================================
@@ -138,7 +142,10 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
   const [targetUrl, setTargetUrl] = useState(defaultDomain || '');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isRegeneratingStyles, setIsRegeneratingStyles] = useState(false);
+  const [extractionMode, setExtractionMode] = useState<'full' | 'quick'>('full');
 
+  // Quick detection hook (single URL)
   const detection = useBrandDetection({
     apifyToken,
     geminiApiKey,
@@ -147,6 +154,13 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     supabaseAnonKey,
     projectId,
   });
+
+  // Full extraction hook (multi-page)
+  const brandExtraction = useBrandExtraction(
+    projectId || '',
+    'gemini',
+    geminiApiKey || ''
+  );
 
   const handleDetect = useCallback(() => {
     if (!targetUrl) return;
@@ -221,6 +235,43 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     setIsRegenerating(false);
   }, [detection, onRegenerate]);
 
+  // Handle regenerate styles - regenerates CSS from existing DesignDNA without re-crawling
+  const handleRegenerateStyles = useCallback(async () => {
+    if (!designDna || !geminiApiKey) {
+      console.warn('[BrandIntelligenceStep] Cannot regenerate styles: missing designDna or API key');
+      return;
+    }
+
+    setIsRegeneratingStyles(true);
+    try {
+      console.log('[BrandIntelligenceStep] Regenerating CSS from existing DesignDNA...');
+
+      const generator = new BrandDesignSystemGenerator({
+        provider: 'gemini',
+        apiKey: geminiApiKey,
+      });
+
+      const newDesignSystem = await generator.generate(
+        designDna,
+        brandDesignSystem?.brandName || 'Brand',
+        brandDesignSystem?.sourceUrl || savedSourceUrl || ''
+      );
+
+      console.log('[BrandIntelligenceStep] CSS regeneration complete, compiledCss length:', newDesignSystem.compiledCss?.length);
+
+      // Notify parent with updated design system
+      onDetectionComplete({
+        designDna: designDna,
+        designSystem: newDesignSystem,
+        screenshotBase64: screenshotBase64 || '',
+      });
+    } catch (error) {
+      console.error('[BrandIntelligenceStep] Failed to regenerate styles:', error);
+    } finally {
+      setIsRegeneratingStyles(false);
+    }
+  }, [designDna, geminiApiKey, brandDesignSystem, savedSourceUrl, screenshotBase64, onDetectionComplete]);
+
   // Format the saved date for display
   const formatSavedDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '';
@@ -257,6 +308,34 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
         </div>
       </div>
 
+      {/* Mode Toggle - show when no detection yet */}
+      {!hasDetection && !detection.isAnalyzing && !isLoadingSavedData && (
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setExtractionMode('full')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              extractionMode === 'full'
+                ? 'bg-zinc-600 text-white'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >
+            Full Extraction (Recommended)
+          </button>
+          <button
+            type="button"
+            onClick={() => setExtractionMode('quick')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              extractionMode === 'quick'
+                ? 'bg-zinc-600 text-white'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >
+            Quick Detection
+          </button>
+        </div>
+      )}
+
       {/* Loading saved data indicator */}
       {isLoadingSavedData && (
         <div className="p-4 bg-zinc-900/40 rounded-lg border border-zinc-600/30 flex items-center gap-3">
@@ -281,22 +360,95 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
                 </p>
               </div>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={isRegenerating || !apifyToken}
-              className="text-xs"
-            >
-              {isRegenerating ? 'Clearing...' : '↻ Re-analyze'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleRegenerateStyles}
+                disabled={isRegeneratingStyles || !geminiApiKey}
+                className="text-xs bg-blue-600 hover:bg-blue-500"
+              >
+                {isRegeneratingStyles ? 'Regenerating...' : '&#x1F3A8; Regenerate Styling'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isRegenerating || !apifyToken}
+                className="text-xs"
+              >
+                {isRegenerating ? 'Clearing...' : '&#x21BB; Re-analyze'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Detection Input - show when no detection and not analyzing */}
-      {!hasDetection && !detection.isAnalyzing && !isLoadingSavedData && (
-        <div className="p-6 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border border-zinc-500/30">
+      {/* FULL EXTRACTION MODE - Multi-page URL Discovery */}
+      {extractionMode === 'full' && !hasDetection && !detection.isAnalyzing && !isLoadingSavedData && (
+        <div className="p-5 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border-2 border-zinc-500/50 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 px-3 py-1 bg-zinc-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-lg">
+            Recommended
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl">&#127919;</span>
+            <div>
+              <h3 className="text-base font-bold text-white">Full Brand Extraction</h3>
+              <p className="text-xs text-zinc-300/70">Extract design from multiple pages for comprehensive brand replication</p>
+            </div>
+          </div>
+
+          {/* Render based on phase */}
+          {brandExtraction.phase === 'idle' || brandExtraction.phase === 'discovering' || brandExtraction.phase === 'selecting' ? (
+            <BrandUrlDiscovery
+              suggestions={brandExtraction.suggestions}
+              selectedUrls={brandExtraction.selectedUrls}
+              onToggleUrl={brandExtraction.toggleUrlSelection}
+              onSelectAll={brandExtraction.selectAllUrls}
+              onClearSelection={brandExtraction.clearSelection}
+              onDiscover={brandExtraction.discoverUrls}
+              onStartExtraction={brandExtraction.startExtraction}
+              isDiscovering={brandExtraction.phase === 'discovering'}
+            />
+          ) : brandExtraction.phase === 'extracting' || brandExtraction.phase === 'analyzing' ? (
+            <BrandExtractionProgress progress={brandExtraction.progress} />
+          ) : brandExtraction.phase === 'complete' ? (
+            <div className="space-y-4">
+              <BrandExtractionProgress progress={brandExtraction.progress} />
+              <BrandComponentPreview components={brandExtraction.extractedComponents} />
+            </div>
+          ) : null}
+
+          {brandExtraction.error && (
+            <p className="text-xs text-red-400 mt-3 bg-red-900/30 p-2.5 rounded-lg border border-red-500/30">
+              &#9888;&#65039; {brandExtraction.error}
+            </p>
+          )}
+
+          {/* Fallback info when Full Extraction is selected but not yet started */}
+          {brandExtraction.phase === 'idle' && brandExtraction.suggestions.length === 0 && (
+            <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-300/80 bg-zinc-500/10 p-2 rounded-lg border border-zinc-500/20">
+              <span>&#128161;</span>
+              <span>Enter your domain to discover key pages. We'll extract design elements from each page for pixel-perfect replication.</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* QUICK DETECTION MODE - Single URL */}
+      {extractionMode === 'quick' && !hasDetection && !detection.isAnalyzing && !isLoadingSavedData && (
+        <div className="p-5 bg-gradient-to-br from-zinc-900/40 to-stone-900/20 rounded-2xl border border-zinc-500/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 px-3 py-1 bg-gray-700 text-gray-300 text-[10px] font-bold uppercase tracking-widest rounded-bl-lg">
+            Quick
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl animate-pulse">&#10024;</span>
+            <div>
+              <h3 className="text-base font-bold text-white">Quick Brand Detection</h3>
+              <p className="text-xs text-zinc-300/70">Extract colors, fonts, and style from a single page</p>
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <Input
               placeholder="https://your-website.com"
@@ -317,6 +469,10 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
               &#9888; Add an Apify API token in Settings to enable brand detection
             </p>
           )}
+          <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-300/80 bg-zinc-500/10 p-2 rounded-lg border border-zinc-500/20">
+            <span>&#128161;</span>
+            <span>Quick detection analyzes a single page. For comprehensive brand extraction, use Full Extraction mode.</span>
+          </div>
         </div>
       )}
 
