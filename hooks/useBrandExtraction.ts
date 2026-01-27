@@ -328,6 +328,58 @@ export function useBrandExtraction(
             extracted_from: [url],
             extracted_at: new Date().toISOString()
           }, { onConflict: 'project_id' }); // Merge with existing
+
+          // CRITICAL: If AI analysis didn't provide tokens, use edge function extraction as fallback
+          // Edge function returns colors as object: {primary, secondary, accent, background}
+          if (!mergedTokens && (extraction.colors || extraction.typography)) {
+            console.log('[useBrandExtraction] Using edge function extraction as token fallback');
+
+            // Convert colors object to values array
+            const colorsObj = extraction.colors || {};
+            const colorValues = [
+              { hex: colorsObj.primary || '#3b82f6', usage: 'primary', frequency: 0.4 },
+              { hex: colorsObj.secondary || '#1f2937', usage: 'secondary', frequency: 0.3 },
+              { hex: colorsObj.accent || '#f59e0b', usage: 'accent', frequency: 0.2 },
+              { hex: colorsObj.background || '#ffffff', usage: 'background', frequency: 0.1 },
+            ].filter(c => c.hex); // Remove any undefined colors
+
+            const fallbackTokens: Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> = {
+              colors: {
+                values: colorValues
+              },
+              typography: {
+                headings: {
+                  fontFamily: extraction.typography?.heading || 'system-ui',
+                  fontWeight: 700,
+                },
+                body: {
+                  fontFamily: extraction.typography?.body || 'system-ui',
+                  fontWeight: 400,
+                  lineHeight: 1.6,
+                }
+              },
+              spacing: {
+                sectionGap: '48px',
+                cardPadding: '24px',
+                contentWidth: '1200px'
+              },
+              shadows: {
+                card: extraction.components?.shadow?.style || '0 1px 3px rgba(0,0,0,0.1)',
+                elevated: '0 4px 6px rgba(0,0,0,0.1)'
+              },
+              borders: {
+                radiusSmall: '4px',
+                radiusMedium: extraction.components?.button?.borderRadius || '8px',
+                radiusLarge: '16px',
+                defaultColor: '#e5e7eb'
+              },
+              gradients: {},
+              extractedFrom: [url]
+            };
+            mergedTokens = fallbackTokens;
+            setExtractedTokens(fallbackTokens);
+            console.log('[useBrandExtraction] Fallback tokens set:', fallbackTokens.colors?.values?.length, 'colors from edge function');
+          }
         }
       }
 
