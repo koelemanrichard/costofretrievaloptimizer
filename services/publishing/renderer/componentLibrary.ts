@@ -71,20 +71,11 @@ function emphasisClasses(emphasis: SectionEmphasis): string {
 }
 
 /**
- * Generate inline styles for emphasis level
+ * DEPRECATED: Use emphasisClasses() instead.
+ * Inline styles override brand CSS due to specificity.
+ * This function is kept for reference but should NOT be used.
  */
-function emphasisStyles(emphasis: SectionEmphasis): string {
-  switch (emphasis) {
-    case 'background':
-      return 'background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm)';
-    case 'featured':
-      return 'background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle)';
-    case 'hero-moment':
-      return 'background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; padding: var(--ctc-space-16) var(--ctc-space-12); border-radius: var(--ctc-radius-2xl); position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 30%, transparent)';
-    default:
-      return '';
-  }
-}
+// function emphasisStyles(emphasis: SectionEmphasis): string { ... }
 
 /**
  * Generate CSS classes for spacing
@@ -163,17 +154,17 @@ function markdownToHtml(markdown: string, imageUrlMap?: Map<string, string>): st
     // Check if we have an actual URL for this image
     if (imageUrlMap && imageUrlMap.has(cleanDescription)) {
       const imageUrl = imageUrlMap.get(cleanDescription)!;
-      return `<figure class="ctc-figure ctc-image-figure" style="margin: 2rem 0">
-        <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(alt)}" loading="lazy" style="width: 100%; max-width: 800px; height: auto; border-radius: var(--ctc-radius-lg); box-shadow: 0 4px 16px -4px rgba(0,0,0,0.1)">
-        <figcaption style="text-align: center; color: var(--ctc-text-muted); font-size: 0.875rem; margin-top: 0.5rem">${escapeHtml(alt)}</figcaption>
+      return `<figure class="ctc-figure ctc-image-figure">
+        <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(alt)}" loading="lazy" class="ctc-image">
+        <figcaption class="ctc-figcaption">${escapeHtml(alt)}</figcaption>
       </figure>`;
     }
 
     // Render as a styled placeholder
-    return `<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
-      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
-      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">${escapeHtml(cleanDescription)}</p>
-      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: ${escapeHtml(alt)}</p>
+    return `<figure class="ctc-image-placeholder">
+      <div class="ctc-image-placeholder-icon">🖼️</div>
+      <p class="ctc-image-placeholder-desc">${escapeHtml(cleanDescription)}</p>
+      <p class="ctc-image-placeholder-alt">Alt: ${escapeHtml(alt)}</p>
     </figure>`;
   });
 
@@ -187,16 +178,16 @@ function markdownToHtml(markdown: string, imageUrlMap?: Map<string, string>): st
     // Check if we have an actual URL for this image
     if (imageUrlMap && imageUrlMap.has(cleanDescription)) {
       const imageUrl = imageUrlMap.get(cleanDescription)!;
-      return `<figure class="ctc-figure ctc-image-figure" style="margin: 2rem 0">
-        <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(cleanDescription)}" loading="lazy" style="width: 100%; max-width: 800px; height: auto; border-radius: var(--ctc-radius-lg); box-shadow: 0 4px 16px -4px rgba(0,0,0,0.1)">
-        <figcaption style="text-align: center; color: var(--ctc-text-muted); font-size: 0.875rem; margin-top: 0.5rem">${escapeHtml(cleanDescription)}</figcaption>
+      return `<figure class="ctc-figure ctc-image-figure">
+        <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(cleanDescription)}" loading="lazy" class="ctc-image">
+        <figcaption class="ctc-figcaption">${escapeHtml(cleanDescription)}</figcaption>
       </figure>`;
     }
 
     // Render as a styled placeholder
-    return `<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
-      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
-      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">${escapeHtml(cleanDescription)}</p>
+    return `<figure class="ctc-image-placeholder">
+      <div class="ctc-image-placeholder-icon">🖼️</div>
+      <p class="ctc-image-placeholder-desc">${escapeHtml(cleanDescription)}</p>
     </figure>`;
   });
 
@@ -339,46 +330,22 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
   'prose': (ctx) => {
     const htmlContent = markdownToHtml(ctx.content, ctx.imageUrlMap);
-    const emphasisStyle = emphasisStyles(ctx.emphasis);
-    const bgStyles = ctx.hasBackground && !emphasisStyle
-      ? 'background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: 2rem; border: 1px solid var(--ctc-border-subtle)'
-      : emphasisStyle;
 
-    // Add decorative element for hero-moment or featured sections
-    const isSpecial = ctx.emphasis === 'hero-moment' || ctx.emphasis === 'featured';
-    const decorElement = isSpecial ? `
-      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: ${ctx.emphasis === 'hero-moment' ? 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)' : 'radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%)'}; pointer-events: none; z-index: 0"></div>
-    ` : '';
-
-    // Heading styles with Editorial Underline
-    const headingStyle = `
-      font-weight: 800;
-      font-family: var(--ctc-font-display);
-      font-size: 2.25rem;
-      letter-spacing: -0.02em;
-      color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'};
-      margin-bottom: 2rem;
-      position: relative;
-      z-index: 1;
-    `;
-
-    const headingAfterStyle = ctx.heading && ctx.emphasis !== 'hero-moment' ? `
-      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
-    ` : '';
+    // Build CSS classes - NO inline styles to allow brand CSS to control styling
+    const bgClass = ctx.hasBackground ? 'ctc-prose--has-bg' : '';
 
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-prose ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" style="${bgStyles || ''}; position: relative; overflow: hidden">
-  ${decorElement}
+<section id="${ctx.sectionId}" class="ctc-prose ${emphasisClasses(ctx.emphasis)} ${bgClass} ${spacingClasses(ctx.spacing)}">
   ${ctx.heading ? `
-  <div style="position: relative; z-index: 1">
-    ${headingAfterStyle}
-    <h${ctx.headingLevel} id="${slugify(ctx.heading)}" class="ctc-section-heading" style="${headingStyle}">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h${ctx.headingLevel} id="${slugify(ctx.heading)}" class="ctc-section-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>
   </div>` : ''}
-  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: ${ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.9)' : 'var(--ctc-text-secondary)'}; line-height: 1.8; font-size: 1.0625rem">
+  <div class="ctc-prose-content">
     ${htmlContent}
   </div>
-  ${ctx.hasDivider ? '<hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">' : ''}
+  ${ctx.hasDivider ? '<hr class="ctc-divider">' : ''}
 </section>`,
     };
   },
@@ -387,9 +354,9 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
     const htmlContent = markdownToHtml(ctx.content, ctx.imageUrlMap);
     return {
       html: `
-<div id="${ctx.sectionId}" class="ctc-lead-paragraph ${spacingClasses(ctx.spacing)}" style="position: relative">
-  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px; opacity: 0.6"></div>
-  <div style="padding-left: var(--ctc-space-8); font-size: 1.25rem; line-height: 1.8; color: var(--ctc-text-secondary); font-weight: 400; letter-spacing: -0.01em">
+<div id="${ctx.sectionId}" class="ctc-lead-paragraph ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-lead-paragraph-accent"></div>
+  <div class="ctc-lead-paragraph-content">
     ${htmlContent}
   </div>
 </div>`,
@@ -400,14 +367,13 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
     // Extract the main quote from content
     const quoteMatch = ctx.content.match(/"([^"]+)"|>?\s*([^\n]+)/);
     const quote = quoteMatch ? (quoteMatch[1] || quoteMatch[2]) : ctx.content;
-    const emphasisStyle = emphasisStyles(ctx.emphasis);
 
     return {
       html: `
-<figure id="${ctx.sectionId}" class="ctc-pull-quote ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" style="${emphasisStyle || 'background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 4%, var(--ctc-surface)) 100%)'}; border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12) var(--ctc-space-10); position: relative; text-align: center; overflow: hidden">
-  <div style="position: absolute; top: 20px; left: 40px; font-size: 8rem; line-height: 1; font-family: Georgia, serif; color: var(--ctc-primary); opacity: 0.08; pointer-events: none; z-index: 0">"</div>
-  <div style="position: absolute; bottom: 20px; right: 40px; font-size: 8rem; line-height: 1; font-family: Georgia, serif; color: var(--ctc-primary); opacity: 0.08; pointer-events: none; z-index: 0; transform: rotate(180deg)">"</div>
-  <blockquote style="position: relative; z-index: 1; font-size: var(--ctc-text-2xl); font-weight: 500; line-height: 1.5; color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'}; max-width: 700px; margin: 0 auto; font-style: italic">
+<figure id="${ctx.sectionId}" class="ctc-pull-quote ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-pull-quote-mark ctc-pull-quote-mark--open">"</div>
+  <div class="ctc-pull-quote-mark ctc-pull-quote-mark--close">"</div>
+  <blockquote class="ctc-pull-quote-text">
     "${escapeHtml(quote)}"
   </blockquote>
 </figure>`,
@@ -417,22 +383,22 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   'highlight-box': (ctx) => {
     const htmlContent = markdownToHtml(ctx.content, ctx.imageUrlMap);
     const variant = ctx.variant || 'info';
-    const variantStyles: Record<string, { variantClass: string; icon: string; iconBg: string }> = {
-      'info': { variantClass: 'ctc-highlight-box--info', icon: 'ℹ️', iconBg: 'var(--ctc-primary)' },
-      'warning': { variantClass: 'ctc-highlight-box--warning', icon: '⚠️', iconBg: '#F59E0B' },
-      'success': { variantClass: 'ctc-highlight-box--success', icon: '✓', iconBg: '#10B981' },
-      'tip': { variantClass: 'ctc-highlight-box--tip', icon: '💡', iconBg: 'var(--ctc-accent, #8B5CF6)' },
+    const variantConfig: Record<string, { variantClass: string; icon: string }> = {
+      'info': { variantClass: 'ctc-highlight-box--info', icon: 'ℹ️' },
+      'warning': { variantClass: 'ctc-highlight-box--warning', icon: '⚠️' },
+      'success': { variantClass: 'ctc-highlight-box--success', icon: '✓' },
+      'tip': { variantClass: 'ctc-highlight-box--tip', icon: '💡' },
     };
-    const style = variantStyles[variant] || variantStyles.info;
+    const config = variantConfig[variant] || variantConfig.info;
 
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-highlight-box ${style.variantClass} ${spacingClasses(ctx.spacing)}">
-  <div style="display: flex; gap: var(--ctc-space-4); align-items: flex-start; position: relative; z-index: 1">
-    <span style="width: 32px; height: 32px; min-width: 32px; border-radius: var(--ctc-radius-md); background: ${style.iconBg}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700">${style.icon}</span>
-    <div style="flex: 1">
-      ${ctx.heading ? `<h${ctx.headingLevel} style="font-weight: 600; font-size: 1.0625rem; margin-bottom: var(--ctc-space-2); color: #1f2937">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-      <div style="color: #4b5563; line-height: 1.7; font-size: 0.9375rem">
+<aside id="${ctx.sectionId}" class="ctc-highlight-box ${config.variantClass} ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-highlight-box-inner">
+    <span class="ctc-highlight-box-icon">${config.icon}</span>
+    <div class="ctc-highlight-box-content">
+      ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-highlight-box-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+      <div class="ctc-highlight-box-text">
         ${htmlContent}
       </div>
     </div>
@@ -450,9 +416,9 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 <aside id="${ctx.sectionId}" class="ctc-callout ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
   <div class="ctc-callout-content">
     <div class="ctc-callout-icon" aria-hidden="true">${icon}</div>
-    <div style="flex: 1">
-      ${ctx.heading ? `<h${ctx.headingLevel} style="font-weight: 600; font-size: 1.125rem; margin-bottom: var(--ctc-space-3); color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'}">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-      <div style="color: ${ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.9)' : 'var(--ctc-text-secondary)'}; line-height: 1.7">${htmlContent}</div>
+    <div class="ctc-callout-body">
+      ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-callout-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+      <div class="ctc-callout-text">${htmlContent}</div>
     </div>
   </div>
 </aside>`,
@@ -465,18 +431,16 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
   'bullet-list': (ctx) => {
     const items = extractListItems(ctx.content);
-    const bgStyles = ctx.hasBackground
-      ? 'padding: var(--ctc-space-8); border-radius: var(--ctc-radius-lg); background: var(--ctc-surface); border: 1px solid var(--ctc-border-subtle)'
-      : '';
+    const bgClass = ctx.hasBackground ? 'ctc-bullet-list--has-bg' : '';
 
     const htmlContent = items.length > 0
-      ? `<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--ctc-space-4)">${items.map(item => `<li style="display: flex; align-items: flex-start; gap: var(--ctc-space-3); color: var(--ctc-text-secondary); line-height: 1.6"><span style="width: 8px; height: 8px; min-width: 8px; background: var(--ctc-primary); border-radius: 50%; margin-top: 8px"></span><span>${markdownToHtml(item)}</span></li>`).join('')}</ul>`
+      ? `<ul class="ctc-bullet-list-items">${items.map(item => `<li class="ctc-bullet-list-item"><span class="ctc-bullet-list-marker"></span><span>${markdownToHtml(item)}</span></li>`).join('')}</ul>`
       : markdownToHtml(ctx.content, ctx.imageUrlMap);
 
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-bullet-list ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" style="${bgStyles}">
-  ${ctx.heading ? `<h${ctx.headingLevel} id="${slugify(ctx.heading || '')}" style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-xl); margin-bottom: var(--ctc-space-6); color: var(--ctc-text)">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+<section id="${ctx.sectionId}" class="ctc-bullet-list ${emphasisClasses(ctx.emphasis)} ${bgClass} ${spacingClasses(ctx.spacing)}">
+  ${ctx.heading ? `<h${ctx.headingLevel} id="${slugify(ctx.heading || '')}" class="ctc-bullet-list-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
   ${htmlContent}
 </section>`,
     };
@@ -507,13 +471,13 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-checklist ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" style="background: var(--ctc-surface); padding: var(--ctc-space-8); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border-subtle)">
-  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-xl); margin-bottom: var(--ctc-space-6); color: var(--ctc-text)">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-  <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--ctc-space-4)">
+<section id="${ctx.sectionId}" class="ctc-checklist ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-checklist-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  <ul class="ctc-checklist-items">
     ${items.map(item => `
-    <li style="display: flex; align-items: flex-start; gap: var(--ctc-space-4)">
-      <span style="width: 24px; height: 24px; min-width: 24px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; margin-top: 2px">✓</span>
-      <span style="color: var(--ctc-text-secondary); line-height: 1.6">${markdownToHtml(item)}</span>
+    <li class="ctc-checklist-item">
+      <span class="ctc-checklist-check">✓</span>
+      <span class="ctc-checklist-text">${markdownToHtml(item)}</span>
     </li>`).join('')}
   </ul>
 </section>`,
@@ -522,7 +486,6 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
   'icon-list': (ctx) => {
     const items = extractListItems(ctx.content);
-    const icons = ['🔹', '🔸', '▸', '→', '•'];
 
     // CRITICAL: Fallback to prose if no list items
     if (items.length === 0) {
@@ -532,12 +495,12 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
     return {
       html: `
 <div id="${ctx.sectionId}" class="ctc-icon-list ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
-  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 2.5rem; font-weight: 700;">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-  <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 1.5rem;">
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-icon-list-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  <ul class="ctc-icon-list-items">
     ${items.map((item, i) => `
-    <li class="ctc-icon-list-item" style="display: flex; align-items: flex-start; gap: 1.25rem;">
-      <span class="ctc-icon" style="width: 2.5rem; height: 2.5rem; background: var(--ctc-primary-light); color: var(--ctc-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 0.9rem;">${i + 1}</span>
-      <div style="padding-top: 0.25rem;">${markdownToHtml(item)}</div>
+    <li class="ctc-icon-list-item">
+      <span class="ctc-icon-list-number">${i + 1}</span>
+      <div class="ctc-icon-list-content">${markdownToHtml(item)}</div>
     </li>`).join('')}
   </ul>
 </div>`,
@@ -554,7 +517,7 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
       return {
         html: `
 <section id="${ctx.sectionId}" class="ctc-prose ctc-card-grid-fallback ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
-  ${ctx.heading ? `<h${ctx.headingLevel} id="${slugify(ctx.heading)}" class="ctc-section-heading" style="font-weight: var(--ctc-heading-weight); font-family: var(--ctc-font-display); font-size: var(--ctc-text-2xl); color: var(--ctc-text)">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} id="${slugify(ctx.heading)}" class="ctc-section-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
   <div class="ctc-prose-content">
     ${htmlContent}
   </div>
@@ -562,28 +525,23 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
       };
     }
 
-    const emphasisStyle = emphasisStyles(ctx.emphasis);
-
     // Determine card variant based on emphasis
     const cardClass = ctx.emphasis === 'hero-moment' ? 'ctc-card--glass' : 'ctc-card--raised';
 
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-card-grid ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" ${emphasisStyle ? `style="${emphasisStyle}"` : ''}>
-  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-10); color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'}; position: relative; z-index: 1">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ctc-space-6); position: relative; z-index: 1">
+<section id="${ctx.sectionId}" class="ctc-card-grid ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-card-grid-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  <div class="ctc-card-grid-container">
     ${items.map((item, i) => {
         const parts = item.split(/[:\-–]/).map(p => p.trim());
         const title = parts[0];
         const desc = parts[1] || '';
-        const textColor = ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)';
-        const descColor = ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.85)' : 'var(--ctc-text-secondary)';
-        const glassBg = ctx.emphasis === 'hero-moment' ? 'background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2);' : '';
         return `
-    <div class="ctc-card ${cardClass}" style="padding: var(--ctc-space-8); ${glassBg}">
+    <div class="ctc-card ${cardClass}">
       <div class="ctc-card-icon" aria-hidden="true">${icons[i % icons.length]}</div>
-      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: ${textColor}; line-height: 1.3">${markdownToHtml(title)}</h3>
-      ${desc ? `<p style="font-size: var(--ctc-text-sm); color: ${descColor}; line-height: 1.7">${markdownToHtml(desc)}</p>` : ''}
+      <h3 class="ctc-card-title">${markdownToHtml(title)}</h3>
+      ${desc ? `<p class="ctc-card-desc">${markdownToHtml(desc)}</p>` : ''}
     </div>`;
       }).join('')}
   </div>
@@ -599,23 +557,19 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
       return componentRenderers['prose']!(ctx);
     }
 
-    const emphasisStyle = emphasisStyles(ctx.emphasis);
-
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-feature-list ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" ${emphasisStyle ? `style="${emphasisStyle}"` : ''}>
-  ${ctx.heading ? `<h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-xl); margin-bottom: var(--ctc-space-8); color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'}">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-  <dl style="display: flex; flex-direction: column; gap: var(--ctc-space-4)">
+<section id="${ctx.sectionId}" class="ctc-feature-list ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-feature-list-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  <dl class="ctc-feature-list-items">
     ${items.map((item, i) => {
         const parts = item.split(/[:\-–]/).map(p => p.trim());
-        const bgColor = ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.1)' : 'var(--ctc-surface)';
-        const borderColor = ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.2)' : 'var(--ctc-border-subtle)';
         return `
-    <div style="display: flex; gap: var(--ctc-space-6); padding: var(--ctc-space-5) var(--ctc-space-6); border-radius: var(--ctc-radius-lg); background: ${bgColor}; border: 1px solid ${borderColor}; align-items: flex-start; transition: all 0.2s ease">
-      <div style="width: 36px; height: 36px; min-width: 36px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.875rem">${i + 1}</div>
-      <div style="flex: 1">
-        <dt style="font-weight: 600; font-size: 1.0625rem; color: ${ctx.emphasis === 'hero-moment' ? 'white' : 'var(--ctc-text)'}; margin-bottom: var(--ctc-space-1)">${markdownToHtml(parts[0])}</dt>
-        <dd style="color: ${ctx.emphasis === 'hero-moment' ? 'rgba(255,255,255,0.85)' : 'var(--ctc-text-secondary)'}; line-height: 1.6; font-size: 0.9375rem">${markdownToHtml(parts[1] || '')}</dd>
+    <div class="ctc-feature-list-item">
+      <div class="ctc-feature-list-number">${i + 1}</div>
+      <div class="ctc-feature-list-content">
+        <dt class="ctc-feature-list-title">${markdownToHtml(parts[0])}</dt>
+        <dd class="ctc-feature-list-desc">${markdownToHtml(parts[1] || '')}</dd>
       </div>
     </div>`;
       }).join('')}
@@ -665,18 +619,18 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     // Render intro prose if present (provides semantic context like "5 phases")
     const introHtml = introProse
-      ? `<div class="ctc-timeline-intro" style="max-width: 700px; margin: 0 auto var(--ctc-space-8) auto; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">${markdownToHtml(introProse)}</div>`
+      ? `<div class="ctc-timeline-intro">${markdownToHtml(introProse)}</div>`
       : '';
 
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-timeline-vertical ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-section-heading" style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-6); color: var(--ctc-text)" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-section-heading" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
   ${introHtml}
-  <div class="ctc-timeline-track" style="position: relative; padding-left: var(--ctc-space-12); max-width: 700px; margin: 0 auto">
-    <div class="ctc-timeline-line" style="position: absolute; left: 16px; top: 8px; bottom: 8px; width: 3px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px"></div>
+  <div class="ctc-timeline-track">
+    <div class="ctc-timeline-line"></div>
     ${steps.map((step, i) => `
-    <div class="ctc-timeline-step" style="${i === steps.length - 1 ? 'padding-bottom: 0' : ''}" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+    <div class="ctc-timeline-step ${i === steps.length - 1 ? 'ctc-timeline-step--last' : ''}" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
       <meta itemprop="position" content="${i + 1}">
       <span class="ctc-timeline-step-number">${i + 1}</span>
       <div class="ctc-timeline-step-content">
@@ -708,30 +662,30 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     // Render intro prose if present (provides semantic context like "5 phases")
     const introHtml = introProse
-      ? `<div class="ctc-timeline-intro" style="max-width: 700px; margin: 0 auto 2.5rem auto; text-align: center; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">${markdownToHtml(introProse)}</div>`
+      ? `<div class="ctc-timeline-intro ctc-timeline-intro--centered">${markdownToHtml(introProse)}</div>`
       : '';
 
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-timeline-zigzag ${emphasisClasses(ctx.emphasis)} ${spacingClasses('breathe')}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} class="text-3xl font-bold text-center mb-6" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-section-heading" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
   ${introHtml}
-  <div class="ctc-timeline-zigzag-track relative before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-1 before:bg-gradient-to-b before:from-[var(--ctc-primary)] before:to-[var(--ctc-primary-light)] before:-translate-x-1/2">
+  <div class="ctc-timeline-zigzag-track">
     ${steps.map((step, i) => {
         const isLeft = i % 2 === 0;
         return `
-    <div class="ctc-timeline-zigzag-step relative flex mb-12 ${isLeft ? '' : 'flex-row-reverse'}" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+    <div class="ctc-timeline-zigzag-step ${isLeft ? 'ctc-timeline-zigzag-step--left' : 'ctc-timeline-zigzag-step--right'}" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
       <meta itemprop="position" content="${i + 1}">
-      <div class="flex-1 ${isLeft ? 'pr-12 text-right' : 'pl-12 text-left'}">
-        <div class="ctc-step-card inline-block max-w-md p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-lg">
-          <h3 class="ctc-step-title text-xl font-semibold mb-2" itemprop="name">${markdownToHtml(step.title)}</h3>
-          <p class="ctc-step-desc text-[var(--ctc-text-secondary)]" itemprop="text">${markdownToHtml(step.description)}</p>
+      <div class="ctc-timeline-zigzag-content">
+        <div class="ctc-step-card">
+          <h3 class="ctc-step-title" itemprop="name">${markdownToHtml(step.title)}</h3>
+          <p class="ctc-step-desc" itemprop="text">${markdownToHtml(step.description)}</p>
         </div>
       </div>
-      <div class="ctc-step-node absolute left-1/2 -translate-x-1/2 z-10">
-        <span class="w-12 h-12 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-lg font-bold shadow-lg">${i + 1}</span>
+      <div class="ctc-step-node">
+        <span class="ctc-step-node-number">${i + 1}</span>
       </div>
-      <div class="flex-1"></div>
+      <div class="ctc-timeline-zigzag-spacer"></div>
     </div>`;
       }).join('')}
   </div>
@@ -758,22 +712,22 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     // Render intro prose if present (provides semantic context like "5 phases")
     const introHtml = introProse
-      ? `<div class="ctc-steps-intro" style="color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem; margin-bottom: var(--ctc-space-6)">${markdownToHtml(introProse)}</div>`
+      ? `<div class="ctc-steps-intro">${markdownToHtml(introProse)}</div>`
       : '';
 
     return {
       html: `
 <section id="${ctx.sectionId}" class="ctc-steps-numbered ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/HowTo">
-  ${ctx.heading ? `<h${ctx.headingLevel} class="text-xl font-semibold mb-4" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-section-heading" itemprop="name">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
   ${introHtml}
-  <ol class="ctc-steps-list space-y-4">
+  <ol class="ctc-steps-list">
     ${steps.map((step, i) => `
-    <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+    <li class="ctc-step" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
       <meta itemprop="position" content="${i + 1}">
-      <span class="ctc-step-num w-8 h-8 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center font-bold flex-shrink-0">${i + 1}</span>
-      <div>
-        <h4 class="ctc-step-title font-semibold" itemprop="name">${markdownToHtml(step.title)}</h4>
-        ${step.description ? `<p class="ctc-step-desc text-sm text-[var(--ctc-text-secondary)] mt-1" itemprop="text">${markdownToHtml(step.description)}</p>` : ''}
+      <span class="ctc-step-num">${i + 1}</span>
+      <div class="ctc-step-content">
+        <h4 class="ctc-step-title" itemprop="name">${markdownToHtml(step.title)}</h4>
+        ${step.description ? `<p class="ctc-step-desc" itemprop="text">${markdownToHtml(step.description)}</p>` : ''}
       </div>
     </li>`).join('')}
   </ol>
@@ -806,26 +760,26 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
       html: `
 <section id="${ctx.sectionId}" class="ctc-faq-accordion ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/FAQPage">
   ${ctx.heading ? `
-  <div style="text-align: center; margin-bottom: 2.5rem">
-    <span style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; padding: 0.5rem 1rem; border-radius: var(--ctc-radius-full); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem">
+  <div class="ctc-faq-header">
+    <span class="ctc-faq-badge">
       <span>❓</span> FAQ
     </span>
-    <h${ctx.headingLevel} style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: 1.75rem; color: var(--ctc-text); margin: 0">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>
+    <h${ctx.headingLevel} class="ctc-faq-title">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>
   </div>` : ''}
-  <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem">
+  <div class="ctc-faq-list">
     ${faqs.map((faq, i) => `
-    <div style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border-subtle); overflow: hidden; transition: all 0.2s ease" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-      <h3 style="margin: 0">
-        <button type="button" aria-expanded="false" aria-controls="faq-answer-${ctx.sectionId}-${i}" class="ctc-faq-trigger" style="width: 100%; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 1.25rem 1.5rem; background: transparent; border: none; cursor: pointer; font-size: 1.0625rem; font-weight: 600; color: var(--ctc-text); transition: all 0.2s ease; gap: 1rem">
-          <span style="display: flex; align-items: center; gap: 0.75rem">
-            <span style="width: 28px; height: 28px; min-width: 28px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-surface), var(--ctc-background)); border: 1px solid var(--ctc-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: var(--ctc-text-muted)">${i + 1}</span>
+    <div class="ctc-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 class="ctc-faq-question-wrapper">
+        <button type="button" aria-expanded="false" aria-controls="faq-answer-${ctx.sectionId}-${i}" class="ctc-faq-trigger">
+          <span class="ctc-faq-question-content">
+            <span class="ctc-faq-number">${i + 1}</span>
             <span itemprop="name">${markdownToHtml(faq.question)}</span>
           </span>
-          <span class="ctc-faq-icon" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 300; transition: transform 0.2s ease" aria-hidden="true">+</span>
+          <span class="ctc-faq-icon" aria-hidden="true">+</span>
         </button>
       </h3>
       <div id="faq-answer-${ctx.sectionId}-${i}" class="ctc-faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" hidden>
-        <div style="padding: 0 1.5rem 1.5rem 4rem; color: var(--ctc-text-secondary); line-height: 1.7; font-size: 0.9375rem" itemprop="text">${markdownToHtml(faq.answer)}</div>
+        <div class="ctc-faq-answer-content" itemprop="text">${markdownToHtml(faq.answer)}</div>
       </div>
     </div>`).join('')}
   </div>
@@ -855,13 +809,13 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-faq-cards ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/FAQPage">
-  ${ctx.heading ? `<h${ctx.headingLevel} class="text-2xl font-semibold text-center mb-8">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
-  <div class="grid md:grid-cols-${columns} gap-6">
+<section id="${ctx.sectionId}" class="ctc-faq-cards ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}" itemscope itemtype="https://schema.org/FAQPage" data-columns="${columns}">
+  ${ctx.heading ? `<h${ctx.headingLevel} class="ctc-section-heading">${escapeHtml(ctx.heading)}</h${ctx.headingLevel}>` : ''}
+  <div class="ctc-faq-cards-grid">
     ${faqs.map(faq => `
-    <div class="ctc-faq-card p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-sm" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-      <h3 class="ctc-faq-question font-semibold mb-3" itemprop="name">${markdownToHtml(faq.question)}</h3>
-      <div class="ctc-faq-answer text-[var(--ctc-text-secondary)]" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+    <div class="ctc-faq-card" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 class="ctc-faq-question" itemprop="name">${markdownToHtml(faq.question)}</h3>
+      <div class="ctc-faq-card-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
         <p itemprop="text">${markdownToHtml(faq.answer)}</p>
       </div>
     </div>`).join('')}
@@ -888,24 +842,22 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
   'cta-banner': (ctx) => {
     const isHeroMoment = ctx.emphasis === 'hero-moment';
-    const bgStyle = isHeroMoment
-      ? 'background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white'
-      : 'background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 5%, var(--ctc-surface)) 100%); border: 1px solid var(--ctc-border)';
+    const bannerClass = isHeroMoment ? 'ctc-cta-banner--prominent' : 'ctc-cta-banner--subtle';
 
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-cta-banner" style="${bgStyle}; border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12) var(--ctc-space-10); text-align: center; margin: var(--ctc-space-16) 0; position: relative; overflow: hidden; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.15)">
-  <div style="position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: ${isHeroMoment ? 'rgba(255,255,255,0.1)' : 'var(--ctc-primary)'}; opacity: ${isHeroMoment ? '1' : '0.05'}; border-radius: 50%; pointer-events: none"></div>
-  <div style="position: absolute; bottom: -80px; left: -80px; width: 200px; height: 200px; background: ${isHeroMoment ? 'rgba(255,255,255,0.08)' : 'var(--ctc-primary)'}; opacity: ${isHeroMoment ? '1' : '0.03'}; border-radius: 50%; pointer-events: none"></div>
-  <div style="position: relative; z-index: 1">
-    ${ctx.heading ? `<h2 style="font-family: var(--ctc-font-display); font-weight: 700; font-size: var(--ctc-text-3xl); margin-bottom: var(--ctc-space-4); color: ${isHeroMoment ? 'white' : 'var(--ctc-text)'}">${escapeHtml(ctx.heading)}</h2>` : ''}
-    <div style="font-size: var(--ctc-text-lg); opacity: 0.9; margin-bottom: var(--ctc-space-8); max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6; color: ${isHeroMoment ? 'rgba(255,255,255,0.9)' : 'var(--ctc-text-secondary)'}">
+<aside id="${ctx.sectionId}" class="ctc-cta-banner ${bannerClass} ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-cta-banner-decor ctc-cta-banner-decor--1"></div>
+  <div class="ctc-cta-banner-decor ctc-cta-banner-decor--2"></div>
+  <div class="ctc-cta-banner-content">
+    ${ctx.heading ? `<h2 class="ctc-cta-banner-title">${escapeHtml(ctx.heading)}</h2>` : ''}
+    <div class="ctc-cta-banner-text">
       ${markdownToHtml(ctx.content, ctx.imageUrlMap)}
     </div>
-    <div style="display: flex; gap: var(--ctc-space-4); justify-content: center; flex-wrap: wrap">
-      <a href="#contact" style="display: inline-flex; align-items: center; gap: var(--ctc-space-2); padding: var(--ctc-space-4) var(--ctc-space-10); border-radius: var(--ctc-radius-full); font-weight: 600; font-size: 1.0625rem; ${isHeroMoment ? 'background: white; color: var(--ctc-primary); box-shadow: 0 4px 16px -2px rgba(0,0,0,0.2)' : 'background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--ctc-primary) 40%, transparent)'}; transition: all 0.2s ease; text-decoration: none">
+    <div class="ctc-cta-banner-actions">
+      <a href="#contact" class="ctc-btn ctc-btn-primary">
         Neem Contact Op
-        <span style="font-size: 1.25rem">→</span>
+        <span class="ctc-btn-arrow">→</span>
       </a>
     </div>
   </div>
@@ -916,12 +868,12 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
   'cta-inline': (ctx) => {
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-cta-inline flex items-center justify-between gap-6 p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] border border-[var(--ctc-border)] my-8">
-  <div class="ctc-cta-text">
-    ${ctx.heading ? `<strong class="block mb-1">${escapeHtml(ctx.heading)}</strong>` : ''}
-    <span class="text-[var(--ctc-text-secondary)]">${markdownToHtml(ctx.content, ctx.imageUrlMap)}</span>
+<aside id="${ctx.sectionId}" class="ctc-cta-inline ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-cta-inline-text">
+    ${ctx.heading ? `<strong class="ctc-cta-inline-heading">${escapeHtml(ctx.heading)}</strong>` : ''}
+    <span class="ctc-cta-inline-desc">${markdownToHtml(ctx.content, ctx.imageUrlMap)}</span>
   </div>
-  <a href="#contact" class="ctc-btn ctc-btn-primary px-6 py-2 rounded-[var(--ctc-radius-full)] bg-[var(--ctc-primary)] text-white font-semibold hover:opacity-90 transition-opacity flex-shrink-0">
+  <a href="#contact" class="ctc-btn ctc-btn-primary">
     Meer Info
   </a>
 </aside>`,
@@ -934,7 +886,6 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
   'key-takeaways': (ctx) => {
     const items = extractListItems(ctx.content);
-    const icons = ['💡', '✓', '🎯', '📌', '⭐', '🔑', '📍', '✨'];
 
     // If no list items found, fall back to prose
     if (items.length === 0) {
@@ -943,21 +894,21 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-key-takeaways" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; padding: 2.5rem 2rem; border-radius: var(--ctc-radius-2xl); margin: 3rem 0; position: relative; overflow: hidden; box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--ctc-primary) 50%, transparent)">
-  <div style="position: absolute; top: -80px; right: -80px; width: 300px; height: 300px; background: white; opacity: 0.08; border-radius: 50%; pointer-events: none"></div>
-  <div style="position: absolute; bottom: -50px; left: 5%; width: 150px; height: 150px; background: white; opacity: 0.06; border-radius: 50%; pointer-events: none"></div>
-  <div style="position: absolute; top: 40%; right: 10%; width: 80px; height: 80px; background: white; opacity: 0.04; border-radius: 50%; pointer-events: none"></div>
+<aside id="${ctx.sectionId}" class="ctc-key-takeaways ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <div class="ctc-key-takeaways-decor ctc-key-takeaways-decor--1"></div>
+  <div class="ctc-key-takeaways-decor ctc-key-takeaways-decor--2"></div>
+  <div class="ctc-key-takeaways-decor ctc-key-takeaways-decor--3"></div>
 
-  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; position: relative; z-index: 1">
-    <span style="width: 48px; height: 48px; background: white; color: var(--ctc-primary); border-radius: var(--ctc-radius-xl); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15)">💡</span>
-    <h2 style="font-family: var(--ctc-font-display); font-size: 1.5rem; font-weight: 700; margin: 0">${escapeHtml(ctx.heading || 'Belangrijkste Punten')}</h2>
+  <div class="ctc-key-takeaways-header">
+    <span class="ctc-key-takeaways-icon">💡</span>
+    <h2 class="ctc-key-takeaways-title">${escapeHtml(ctx.heading || 'Belangrijkste Punten')}</h2>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; position: relative; z-index: 1">
+  <div class="ctc-key-takeaways-grid">
     ${items.map((item, i) => `
-    <div style="display: flex; align-items: flex-start; gap: 1rem; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); padding: 1.25rem; border-radius: var(--ctc-radius-lg); border: 1px solid rgba(255, 255, 255, 0.18); transition: all 0.2s ease">
-      <span style="width: 32px; height: 32px; min-width: 32px; border-radius: var(--ctc-radius-md); background: white; color: var(--ctc-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1)">${items.length <= 3 ? icons[1] : (i + 1)}</span>
-      <span style="color: rgba(255, 255, 255, 0.95); line-height: 1.6; font-size: 0.9375rem">${markdownToHtml(item)}</span>
+    <div class="ctc-key-takeaways-item">
+      <span class="ctc-key-takeaways-number">${items.length <= 3 ? '✓' : (i + 1)}</span>
+      <span class="ctc-key-takeaways-text">${markdownToHtml(item)}</span>
     </div>`).join('')}
   </div>
 </aside>`,
@@ -969,12 +920,12 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     return {
       html: `
-<aside id="${ctx.sectionId}" class="ctc-summary-box border-2 border-[var(--ctc-primary)] rounded-[var(--ctc-radius-lg)] p-6 my-8">
-  <h2 class="ctc-summary-title text-lg font-semibold text-[var(--ctc-primary)] mb-4 flex items-center gap-2">
-    <span>📋</span>
+<aside id="${ctx.sectionId}" class="ctc-summary-box ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <h2 class="ctc-summary-title">
+    <span class="ctc-summary-icon">📋</span>
     ${escapeHtml(ctx.heading || 'Samenvatting')}
   </h2>
-  <div class="ctc-summary-content prose prose-sm max-w-none">
+  <div class="ctc-summary-content">
     ${htmlContent}
   </div>
 </aside>`,
@@ -986,13 +937,13 @@ const componentRenderers: Partial<Record<ComponentType, ComponentRenderer>> = {
 
     return {
       html: `
-<section id="${ctx.sectionId}" class="ctc-sources-section p-6 bg-[var(--ctc-surface)] rounded-[var(--ctc-radius-lg)] border border-[var(--ctc-border)] my-8">
-  <h2 class="ctc-sources-title text-xl font-semibold mb-4">${escapeHtml(ctx.heading || 'Bronnen')}</h2>
-  <ul class="ctc-sources-list space-y-2">
+<section id="${ctx.sectionId}" class="ctc-sources-section ${emphasisClasses(ctx.emphasis)} ${spacingClasses(ctx.spacing)}">
+  <h2 class="ctc-sources-title">${escapeHtml(ctx.heading || 'Bronnen')}</h2>
+  <ul class="ctc-sources-list">
     ${items.map(item => `
-    <li class="ctc-source-item flex items-start gap-2">
-      <span class="text-[var(--ctc-primary)]">•</span>
-      <span class="text-[var(--ctc-text-secondary)]">${markdownToHtml(item)}</span>
+    <li class="ctc-source-item">
+      <span class="ctc-source-marker">•</span>
+      <span class="ctc-source-text">${markdownToHtml(item)}</span>
     </li>`).join('')}
   </ul>
 </section>`,

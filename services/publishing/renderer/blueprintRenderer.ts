@@ -526,20 +526,9 @@ function renderHero(
   // Get localized defaults
   const localizedDefaults = getLocalizedCtaDefaults(language);
 
-  // DESIGN AGENCY QUALITY: Use CSS variables for hero background
-  // This allows brand CSS to override with brand-specific gradients/colors
-  // --ctc-hero-bg can be set by brand CSS for full customization
-  let heroStyle = 'background: var(--ctc-hero-bg, var(--ctc-background)); border-bottom: 1px solid var(--ctc-border-subtle)';
-  let textColor = 'color: var(--ctc-hero-text, var(--ctc-text))';
-  let subtitleColor = 'color: var(--ctc-hero-subtitle, var(--ctc-text-secondary))';
-  let btnPrimaryStyle = 'background: var(--ctc-primary); color: white; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent)';
-  let btnSecondaryStyle = 'background: transparent; color: var(--ctc-primary); border: 2px solid var(--ctc-primary)';
-
-  if (strategy.visualStyle === 'bold' || strategy.visualStyle === 'marketing') {
-    heroStyle = 'background: var(--ctc-hero-bg, linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%)); color: white';
-    textColor = 'color: var(--ctc-hero-text, white)';
-    subtitleColor = 'color: var(--ctc-hero-subtitle, rgba(255,255,255,0.9))';
-  }
+  // Determine hero variant classes based on visual style
+  const isBoldStyle = strategy.visualStyle === 'bold' || strategy.visualStyle === 'marketing';
+  const heroVariantClass = isBoldStyle ? 'ctc-hero--gradient' : 'ctc-hero--solid';
 
   const showCta = ctaIntensity === 'prominent' || ctaIntensity === 'moderate' || strategy.primaryGoal === 'convert' || ctaConfig?.primaryText;
   const primaryText = ctaConfig?.primaryText || localizedDefaults.primaryText;
@@ -548,28 +537,28 @@ function renderHero(
   // Render Split Layout for Images (Modern Service Vibe)
   if (hasHeroImage && isEditorial) {
     return `
-<header class="ctc-hero" role="banner" style="${heroStyle}; padding: 8rem 0 6rem; overflow: hidden; position: relative">
-  <span style="position: absolute; top: 2rem; right: 2rem; font-size: 0.65rem; color: var(--ctc-text-muted); background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--ctc-border-subtle); z-index: 20">✨ Visual match: detected from site</span>
+<header class="ctc-hero ctc-hero--split ${heroVariantClass}" role="banner">
+  <span class="ctc-hero-badge-match">✨ Visual match: detected from site</span>
   <div class="ctc-container">
-    <div class="ctc-grid ctc-grid-2 items-center gap-16 text-left">
+    <div class="ctc-hero-grid">
       <div class="ctc-hero-content">
-        <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ctc-primary); background: var(--ctc-primary-light); padding: 0.4rem 1rem; border-radius: 100px; margin-bottom: 2rem; border: 1px solid color-mix(in srgb, var(--ctc-primary) 20%, transparent)">🛡️ Gecertificeerd Partner</div>
-        <h1 class="ctc-hero-title" style="${textColor}; font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.8rem, 6vw, 4rem); line-height: 1.05; margin-bottom: 2rem; letter-spacing: -0.03em; text-transform: capitalize">
-          ${escapeHtml(title).replace(/(&quot;[a-z ]+&quot;|&#39;[a-z ]+&#39;)/gi, '<span style="color: var(--ctc-primary)">$1</span>')}
+        <div class="ctc-hero-badge">🛡️ Gecertificeerd Partner</div>
+        <h1 class="ctc-hero-title">
+          ${escapeHtml(title)}
         </h1>
-        <p class="ctc-hero-subtitle" style="${subtitleColor}; font-size: 1.25rem; line-height: 1.7; margin-bottom: 3rem">
+        <p class="ctc-hero-subtitle">
           ${extractFirstParagraph(introContent)}
         </p>
         ${showCta ? `
-        <div class="ctc-hero-actions" style="display: flex; gap: 1rem; align-items: center">
-          <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="${btnPrimaryStyle}; padding: 1.25rem 3rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 1.125rem">
-            ${escapeHtml(primaryText)} <span style="font-size: 1.25rem">→</span>
+        <div class="ctc-hero-actions">
+          <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" class="ctc-btn ctc-btn-primary ctc-btn-lg">
+            ${escapeHtml(primaryText)} <span class="ctc-btn-arrow">→</span>
           </a>
         </div>` : ''}
       </div>
-      <div class="ctc-hero-visual" style="position: relative">
-        <div style="position: absolute; inset: -20px; background: var(--ctc-primary); opacity: 0.1; filter: blur(40px); border-radius: 50%"></div>
-        <img src="${escapeHtml(heroImage)}" alt="${escapeHtml(title)}" style="position: relative; z-index: 1; border-radius: var(--ctc-radius-2xl); box-shadow: var(--ctc-shadow-float); width: 100%; height: 500px; object-fit: cover">
+      <div class="ctc-hero-visual">
+        <div class="ctc-hero-visual-glow"></div>
+        <img src="${escapeHtml(heroImage)}" alt="${escapeHtml(title)}" class="ctc-hero-image" loading="lazy">
       </div>
     </div>
   </div>
@@ -578,23 +567,23 @@ function renderHero(
 
   // Classic Centered (High Impact)
   return `
-<header class="ctc-hero ctc-hero--solid" role="banner" style="${heroStyle}; position: relative; padding: 10rem 1.5rem 8rem; text-align: center; overflow: hidden">
-  <span style="position: absolute; top: 2rem; right: 2rem; font-size: 0.65rem; color: var(--ctc-text-muted); background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--ctc-border-subtle); z-index: 20">✨ Visual match: detected from site</span>
-  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0">
-    <div style="position: absolute; top: -100px; right: -50px; width: 500px; height: 500px; background: var(--ctc-primary); opacity: 0.08; border-radius: 50%; filter: blur(100px)"></div>
-    <div style="position: absolute; bottom: -50px; left: -50px; width: 400px; height: 400px; background: var(--ctc-secondary, var(--ctc-primary)); opacity: 0.05; border-radius: 50%; filter: blur(80px)"></div>
+<header class="ctc-hero ctc-hero--centered ${heroVariantClass}" role="banner">
+  <span class="ctc-hero-badge-match">✨ Visual match: detected from site</span>
+  <div class="ctc-hero-decor">
+    <div class="ctc-hero-decor-orb ctc-hero-decor-orb--1"></div>
+    <div class="ctc-hero-decor-orb ctc-hero-decor-orb--2"></div>
   </div>
-  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 56rem; margin: 0 auto">
-    <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ctc-primary); background: white; padding: 0.5rem 1.25rem; border-radius: 100px; box-shadow: var(--ctc-shadow-sm); margin-bottom: 2.5rem; border: 1px solid var(--ctc-border-subtle); position: relative; z-index: 10">🛡️ Gecertificeerd Partner</div>
-    <h1 class="ctc-hero-title" style="${textColor}; font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.8rem, 8vw, 4.8rem); line-height: 1.05; margin-bottom: 2rem; letter-spacing: -0.03em; text-transform: capitalize">
+  <div class="ctc-hero-content">
+    <div class="ctc-hero-badge">🛡️ Gecertificeerd Partner</div>
+    <h1 class="ctc-hero-title">
       ${escapeHtml(title)}
     </h1>
-    <p class="ctc-hero-subtitle" style="${subtitleColor}; font-size: 1.35rem; max-width: 42rem; margin: 0 auto 3.5rem; line-height: 1.7">
+    <p class="ctc-hero-subtitle">
       ${extractFirstParagraph(introContent)}
     </p>
     ${showCta ? `
-    <div class="ctc-hero-actions" style="display: flex; gap: 1.5rem; justify-content: center">
-      <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="${btnPrimaryStyle}; padding: 1.25rem 3rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; transition: transform 0.2s ease; font-size: 1.125rem">
+    <div class="ctc-hero-actions">
+      <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" class="ctc-btn ctc-btn-primary ctc-btn-lg">
         ${escapeHtml(primaryText)}
       </a>
     </div>` : ''}
@@ -619,31 +608,16 @@ function renderToc(
 
   if (headings.length < 3) return '';
 
-  const isSidebar = position === 'sidebar';
-  const isFloating = position === 'floating';
-
-  // Base styles for all TOC positions
-  let wrapperStyle = 'background: #ffffff; border-radius: var(--ctc-radius-lg); border: 1px solid var(--ctc-border-subtle); padding: 3rem; box-shadow: var(--ctc-shadow-float); z-index: 50; position: relative;';
-
-  if (isSidebar) {
-    wrapperStyle += ' position: sticky; top: 2rem;';
-  } else if (isFloating) {
-    wrapperStyle += ' position: fixed; bottom: 2rem; right: 2rem; z-index: 100;';
-  } else {
-    // LUXURY OVERLAP: Pull TOC up into the Hero
-    wrapperStyle += ' margin: -6rem auto 6rem; width: 100%; max-width: 1100px;';
-  }
-
   return `
-<nav class="ctc-toc ctc-toc--${position}" style="${wrapperStyle}" aria-label="Inhoudsopgave">
-  <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--ctc-primary-light); display: inline-block">
-    <h2 style="font-family: var(--ctc-font-display); font-weight: 700; font-size: 1.5rem; color: var(--ctc-text); margin: 0; letter-spacing: -0.01em">Wat u kunt verwachten</h2>
+<nav class="ctc-toc ctc-toc--${position}" aria-label="Inhoudsopgave">
+  <div class="ctc-toc-header">
+    <h2 class="ctc-toc-title">Wat u kunt verwachten</h2>
   </div>
-  <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem">
-    ${headings.map((h, i) => `
-    <li>
-      <a href="#${h.id}" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
-        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+  <ul class="ctc-toc-list">
+    ${headings.map((h) => `
+    <li class="ctc-toc-item">
+      <a href="#${h.id}" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
         <span>${escapeHtml(h.text)}</span>
       </a>
     </li>`).join('')}
@@ -667,15 +641,15 @@ function renderInlineCta(
   const primaryText = ctaConfig?.primaryText || localizedDefaults.primaryText;
 
   return `
-<aside class="ctc-cta-inline" style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 2.5rem 3rem; border-radius: var(--ctc-radius-lg); background: white; border: 1px solid var(--ctc-border-subtle); margin: 4rem 0; position: relative; overflow: hidden; box-shadow: var(--ctc-shadow-md)">
-  <div style="position: absolute; top: -30px; left: -30px; width: 120px; height: 120px; background: var(--ctc-primary); opacity: 0.03; border-radius: 50%; pointer-events: none"></div>
-  <div style="position: relative; z-index: 1; flex: 1">
-    <strong style="display: block; margin-bottom: 0.5rem; font-family: var(--ctc-font-display); font-weight: 700; color: var(--ctc-text); font-size: 1.5rem; letter-spacing: -0.01em">${escapeHtml(title)}</strong>
-    ${text ? `<span style="color: var(--ctc-text-secondary); font-size: 1.0625rem; line-height: 1.6">${escapeHtml(text)}</span>` : ''}
+<aside class="ctc-cta-inline">
+  <div class="ctc-cta-inline-decor"></div>
+  <div class="ctc-cta-inline-content">
+    <strong class="ctc-cta-inline-title">${escapeHtml(title)}</strong>
+    ${text ? `<span class="ctc-cta-inline-text">${escapeHtml(text)}</span>` : ''}
   </div>
-  <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="background: var(--ctc-primary); color: white; padding: 1rem 2.5rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; transition: all 0.2s ease; flex-shrink: 0; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 10px 20px -5px color-mix(in srgb, var(--ctc-primary) 30%, transparent)">
+  <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" class="ctc-btn ctc-btn-primary">
     ${escapeHtml(primaryText)}
-    <span style="font-size: 1.25rem">→</span>
+    <span class="ctc-btn-arrow">→</span>
   </a>
 </aside>`;
 }
@@ -694,48 +668,22 @@ function renderCtaBanner(
   const isProminent = strategy?.intensity === 'prominent';
   const title = ctaConfig?.bannerTitle || localizedDefaults.bannerTitle;
   const text = ctaConfig?.bannerText || '';
-
-  // Determine styling based on intensity
-  let bannerStyle: string;
-  let titleStyle: string;
-  let textStyle: string;
-  let primaryBtnStyle: string;
-  let secondaryBtnStyle: string;
-  let decorativeOrbs: string;
-
-  if (isProminent) {
-    bannerStyle = 'background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 25%, transparent)';
-    titleStyle = 'color: white; font-family: var(--ctc-font-display); font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1.5rem; letter-spacing: -0.02em';
-    textStyle = 'color: rgba(255,255,255,0.9); font-size: 1.25rem; max-width: 42rem; margin: 0 auto 3rem; line-height: 1.7';
-    primaryBtnStyle = 'background: white; color: var(--ctc-primary); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2); font-weight: 800; padding: 1.25rem 3.5rem; font-size: 1.125rem';
-    secondaryBtnStyle = 'background: transparent; color: white; border: 2px solid rgba(255,255,255,0.8)';
-    decorativeOrbs = `
-    <div style="position: absolute; top: -80px; right: -80px; width: 250px; height: 250px; background: white; opacity: 0.1; border-radius: 50%; pointer-events: none"></div>
-    <div style="position: absolute; bottom: -60px; left: -60px; width: 180px; height: 180px; background: white; opacity: 0.08; border-radius: 50%; pointer-events: none"></div>`;
-  } else {
-    bannerStyle = 'background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 5%, var(--ctc-surface)) 100%); border: 1px solid var(--ctc-border); position: relative; overflow: hidden';
-    titleStyle = 'color: var(--ctc-text); font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin-bottom: 1rem';
-    textStyle = 'color: var(--ctc-text-secondary); font-size: 1.125rem; max-width: 36rem; margin: 0 auto 2rem; line-height: 1.6';
-    primaryBtnStyle = 'background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--ctc-primary) 40%, transparent)';
-    secondaryBtnStyle = 'background: transparent; color: var(--ctc-primary); border: 2px solid var(--ctc-primary)';
-    decorativeOrbs = `
-    <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: var(--ctc-primary); opacity: 0.05; border-radius: 50%; pointer-events: none"></div>
-    <div style="position: absolute; bottom: -40px; left: -40px; width: 100px; height: 100px; background: var(--ctc-primary); opacity: 0.03; border-radius: 50%; pointer-events: none"></div>`;
-  }
+  const bannerClass = isProminent ? 'ctc-cta-banner--prominent' : 'ctc-cta-banner--subtle';
 
   return `
-<aside class="ctc-cta-banner" style="${bannerStyle}; border-radius: var(--ctc-radius-2xl); padding: 3rem 2rem; text-align: center; margin: 3rem 0; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.12)">
-  ${decorativeOrbs}
-  <div style="position: relative; z-index: 1">
-    <h2 class="ctc-cta-title" style="${titleStyle}">${escapeHtml(title)}</h2>
-    ${text ? `<p class="ctc-cta-text" style="${textStyle}">${escapeHtml(text)}</p>` : ''}
-    <div class="ctc-cta-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap">
-      <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" style="${primaryBtnStyle}; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+<aside class="ctc-cta-banner ${bannerClass}">
+  <div class="ctc-cta-banner-decor ctc-cta-banner-decor--1"></div>
+  <div class="ctc-cta-banner-decor ctc-cta-banner-decor--2"></div>
+  <div class="ctc-cta-banner-inner">
+    <h2 class="ctc-cta-banner-title">${escapeHtml(title)}</h2>
+    ${text ? `<p class="ctc-cta-banner-text">${escapeHtml(text)}</p>` : ''}
+    <div class="ctc-cta-banner-actions">
+      <a href="${escapeHtml(ctaConfig?.primaryUrl || '#contact')}" class="ctc-btn ctc-btn-primary ctc-btn-lg">
         ${escapeHtml(ctaConfig?.primaryText || localizedDefaults.primaryText)}
-        <span style="font-size: 1.125rem">→</span>
+        <span class="ctc-btn-arrow">→</span>
       </a>
       ${ctaConfig?.secondaryText || !ctaConfig?.primaryText ? `
-      <a href="${escapeHtml(ctaConfig?.secondaryUrl || '#')}" style="${secondaryBtnStyle}; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+      <a href="${escapeHtml(ctaConfig?.secondaryUrl || '#')}" class="ctc-btn ctc-btn-secondary">
         ${escapeHtml(ctaConfig?.secondaryText || localizedDefaults.secondaryText)}
       </a>` : ''}
     </div>
@@ -751,18 +699,18 @@ function renderAuthorBox(
   position: 'top' | 'bottom' | 'both'
 ): string {
   return `
-<aside class="ctc-author-box flex gap-6 items-start p-6 bg-[var(--ctc-surface)] rounded-[var(--ctc-radius-lg)] border border-[var(--ctc-border)] my-8" itemscope itemtype="https://schema.org/Person">
+<aside class="ctc-author-box" itemscope itemtype="https://schema.org/Person">
   ${author.imageUrl ? `
-  <img src="${escapeHtml(author.imageUrl)}" alt="${escapeHtml(author.name)}" class="ctc-author-avatar w-16 h-16 rounded-full object-cover" itemprop="image">
+  <img src="${escapeHtml(author.imageUrl)}" alt="${escapeHtml(author.name)}" class="ctc-author-avatar" itemprop="image">
   ` : `
-  <div class="ctc-author-avatar w-16 h-16 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-xl font-bold">
+  <div class="ctc-author-avatar ctc-author-avatar--placeholder">
     ${author.name.charAt(0).toUpperCase()}
   </div>`}
   <div class="ctc-author-info">
-    <span class="ctc-author-label text-xs text-[var(--ctc-text-muted)] uppercase tracking-wider">Geschreven door</span>
-    <strong class="ctc-author-name block text-lg" itemprop="name">${escapeHtml(author.name)}</strong>
-    ${author.title ? `<span class="ctc-author-title text-sm text-[var(--ctc-text-secondary)]" itemprop="jobTitle">${escapeHtml(author.title)}</span>` : ''}
-    ${author.bio ? `<p class="ctc-author-bio text-sm text-[var(--ctc-text-muted)] mt-2" itemprop="description">${escapeHtml(author.bio)}</p>` : ''}
+    <span class="ctc-author-label">Geschreven door</span>
+    <strong class="ctc-author-name" itemprop="name">${escapeHtml(author.name)}</strong>
+    ${author.title ? `<span class="ctc-author-title" itemprop="jobTitle">${escapeHtml(author.title)}</span>` : ''}
+    ${author.bio ? `<p class="ctc-author-bio" itemprop="description">${escapeHtml(author.bio)}</p>` : ''}
   </div>
 </aside>`;
 }
