@@ -31,6 +31,20 @@ export interface BlueprintRenderOptions {
   /** Design personality override */
   personalityId?: string;
   /**
+   * Actual article content to render (takes precedence over blueprint.sections[].sourceContent)
+   * THIS IS THE KEY FIX: Without this, the blueprint uses brief summaries instead of actual article content
+   */
+  articleContent?: {
+    title: string;
+    sections: Array<{
+      id: string;
+      heading?: string;
+      headingLevel?: number;
+      content: string;
+      type?: string;
+    }>;
+  };
+  /**
    * Full Brand Design System (takes precedence over designTokens)
    * This is THE KEY: Use the complete compiled CSS from the brand design system
    * instead of just generating CSS variable overrides.
@@ -228,9 +242,13 @@ export function renderBlueprint(
 
   // 1. Hero section (using title and meta description)
   if (blueprint.sections.length > 0) {
+    // THE KEY FIX: Use actual article intro content if available
+    const firstArticleSection = options.articleContent?.sections[0];
+    const introContent = firstArticleSection?.content || blueprint.sections[0].sourceContent;
+
     const heroHtml = renderHero(
       articleTitle,
-      blueprint.sections[0].sourceContent,
+      introContent,
       blueprint.pageStrategy,
       options.heroImage,
       options.ctaConfig,
@@ -271,8 +289,16 @@ export function renderBlueprint(
   // Skip first section if it was used as intro in hero
   const sectionsToRender = blueprint.sections;
 
+  // THE KEY FIX: Log whether we're using article content or blueprint content
+  console.log('[STYLING PIPELINE] Section content source:', {
+    hasArticleContent: !!options.articleContent,
+    articleSectionCount: options.articleContent?.sections?.length || 0,
+    blueprintSectionCount: sectionsToRender.length,
+    usingSource: options.articleContent ? 'articleContent (ACTUAL ARTICLE)' : 'blueprint.sourceContent (BRIEF SUMMARY)',
+  });
+
   for (let i = 0; i < sectionsToRender.length; i++) {
-    const section = sectionsToRender[i];
+    const blueprintSection = sectionsToRender[i];
 
     // Insert CTA at appropriate positions
     if (shouldInsertCta(i, sectionsToRender.length, blueprint.globalElements.ctaStrategy.positions, 'mid-content')) {
@@ -283,29 +309,45 @@ export function renderBlueprint(
     // Render the section with brand-aware variant mapping
     // THE KEY FIX: Use mapped variant class from brand system if available
     const mappedVariant = getMappedVariantClass(
-      section.presentation.component,
-      section.presentation.variant,
+      blueprintSection.presentation.component,
+      blueprintSection.presentation.variant,
       options.brandDesignSystem
     );
 
+    // THE KEY FIX: Use actual article content if available, otherwise fall back to blueprint sourceContent
+    // This ensures the ACTUAL article (with images injected) is rendered, not brief summaries
+    const articleSection = options.articleContent?.sections[i];
+    const actualContent = articleSection?.content || blueprintSection.sourceContent;
+
+    // Log first section content source for debugging
+    if (i === 0) {
+      console.log('[STYLING PIPELINE] First section content decision:', {
+        hasArticleSection: !!articleSection,
+        articleContentLength: articleSection?.content?.length || 0,
+        blueprintContentLength: blueprintSection.sourceContent?.length || 0,
+        usingArticleContent: !!articleSection?.content,
+        contentPreview: actualContent?.substring(0, 150) || '(empty)',
+      });
+    }
+
     const ctx: RenderContext = {
-      sectionId: section.id,
-      content: section.sourceContent,
-      heading: section.heading,
-      headingLevel: section.headingLevel || 2,
-      emphasis: section.presentation.emphasis,
-      spacing: section.presentation.spacing,
-      hasBackground: section.presentation.hasBackground,
-      hasDivider: section.presentation.hasDivider,
-      variant: mappedVariant || section.presentation.variant, // Use mapped variant if available
-      styleHints: section.styleHints,
+      sectionId: blueprintSection.id,
+      content: actualContent,  // THE KEY FIX: Now uses actual article content with images
+      heading: articleSection?.heading || blueprintSection.heading,
+      headingLevel: articleSection?.headingLevel || blueprintSection.headingLevel || 2,
+      emphasis: blueprintSection.presentation.emphasis,
+      spacing: blueprintSection.presentation.spacing,
+      hasBackground: blueprintSection.presentation.hasBackground,
+      hasDivider: blueprintSection.presentation.hasDivider,
+      variant: mappedVariant || blueprintSection.presentation.variant, // Use mapped variant if available
+      styleHints: blueprintSection.styleHints,
     };
 
-    const renderer = getComponentRenderer(section.presentation.component);
+    const renderer = getComponentRenderer(blueprintSection.presentation.component);
     const rendered = renderer(ctx);
 
     htmlParts.push(rendered.html);
-    componentsUsed.push(section.presentation.component);
+    componentsUsed.push(blueprintSection.presentation.component);
 
     if (rendered.jsonLd) {
       jsonLdParts.push(rendered.jsonLd);

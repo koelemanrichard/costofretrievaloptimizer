@@ -17,6 +17,7 @@ import { SERVICE_MODULES, CATEGORY_INFO } from '../../config/quotation/modules';
 import { QUOTATION_PACKAGES } from '../../config/quotation/packages';
 import { ModuleEditModal } from './ModuleEditModal';
 import { PackageEditModal } from './PackageEditModal';
+import { QuotationTool } from '../quotation/QuotationTool';
 import {
   useQuotationSettings,
   QuotationSettingsProvider,
@@ -69,6 +70,7 @@ const QuotationPricingAdminContent: React.FC = () => {
   const [editingModule, setEditingModule] = useState<ServiceModule | null>(null);
   const [editingPackage, setEditingPackage] = useState<QuotationPackage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showQuoteWizard, setShowQuoteWizard] = useState(false);
 
   // State for loaded data
   const [modules, setModules] = useState<ServiceModule[]>(SERVICE_MODULES as ServiceModule[]);
@@ -170,20 +172,28 @@ const QuotationPricingAdminContent: React.FC = () => {
           <p className="text-gray-400 mt-1">Configure service modules, packages, and pricing multipliers</p>
         </div>
 
-        {/* Currency Selector */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Currency:</label>
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {availableCurrencies.map((code) => (
-              <option key={code} value={code}>
-                {currencyInfo[code].symbol} {code}
-              </option>
-            ))}
-          </select>
+        {/* Currency Selector and Create Quote */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-400">Currency:</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {availableCurrencies.map((code) => (
+                <option key={code} value={code}>
+                  {currencyInfo[code].symbol} {code}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button onClick={() => setShowQuoteWizard(true)}>
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create Quote
+          </Button>
         </div>
       </div>
 
@@ -492,6 +502,15 @@ const QuotationPricingAdminContent: React.FC = () => {
         isLoading={isSaving}
         availableModules={modules}
       />
+
+      {/* Quote Wizard Modal */}
+      {showQuoteWizard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-900 rounded-xl w-full max-w-5xl max-h-[90vh] overflow-auto">
+            <QuotationTool onClose={() => setShowQuoteWizard(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

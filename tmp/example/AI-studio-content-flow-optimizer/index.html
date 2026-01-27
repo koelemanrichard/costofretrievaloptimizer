@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Flow Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'],
+              mono: ['Roboto Mono', 'monospace'],
+            },
+            colors: {
+              brand: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                900: '#0c4a6e',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Custom Typography for rendered HTML content */
+      .prose-content ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+      .prose-content ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 1em; }
+      .prose-content li { margin-bottom: 0.5em; }
+      .prose-content p { margin-bottom: 1em; }
+      .prose-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5em; font-size: 0.95em; }
+      .prose-content th, .prose-content td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
+      .prose-content th { background-color: #f8fafc; font-weight: 600; color: #1e293b; }
+      .prose-content h3 { font-size: 1.25rem; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.75em; color: #111827; }
+      .prose-content h4 { font-size: 1.1rem; font-weight: 600; margin-top: 1.2em; margin-bottom: 0.5em; color: #334155; }
+      .prose-content strong { font-weight: 700; color: #0f172a; }
+      .prose-content a { color: var(--primary, #0284c7); text-decoration: underline; text-underline-offset: 2px; }
+      .prose-content a:hover { color: var(--secondary, #0369a1); }
+      .prose-content blockquote { border-left: 4px solid var(--primary, #0ea5e9); padding-left: 1rem; font-style: italic; color: #475569; margin-bottom: 1em; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

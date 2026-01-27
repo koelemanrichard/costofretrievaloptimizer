@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Brand Extraction Proof - Comparison</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 40px; background: #1a1a2e; color: white; }
+        h1 { text-align: center; margin-bottom: 40px; }
+        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1600px; margin: 0 auto; }
+        .panel { background: #16213e; border-radius: 12px; overflow: hidden; }
+        .panel-header { padding: 20px; background: #0f3460; font-weight: 600; font-size: 18px; }
+        .panel-header.target { background: #e94560; }
+        .panel-header.output { background: #0f9b0f; }
+        iframe { width: 100%; height: 600px; border: none; }
+        .proof-section { margin-top: 60px; padding: 40px; background: #16213e; border-radius: 12px; }
+        .proof-section h2 { color: #0f9b0f; }
+        .proof-item { display: flex; align-items: center; margin: 16px 0; }
+        .proof-item .status { width: 24px; height: 24px; border-radius: 50%; margin-right: 16px; }
+        .proof-item .status.pass { background: #0f9b0f; }
+        .proof-item .status.fail { background: #e94560; }
+        code { background: #0f3460; padding: 4px 8px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Brand Extraction System - Proof of Concept</h1>
+
+    <div class="comparison">
+        <div class="panel">
+            <div class="panel-header target">TARGET: NFIR.nl (Source Brand)</div>
+            <iframe src="https://nfir.nl"></iframe>
+        </div>
+        <div class="panel">
+            <div class="panel-header output">OUTPUT: Generated with Extracted Brand</div>
+            <iframe src="file:///D:/www/cost-of-retreival-reducer/tmp/brand_extraction_proof/PROOF_styled_output.html"></iframe>
+        </div>
+    </div>
+
+    <div class="proof-section">
+        <h2>Anti-Template Verification</h2>
+        <p>The generated CSS uses LITERAL values extracted from the source site:</p>
+
+        <div class="proof-item">
+            <div class="status pass"></div>
+            <span>Colors are hex values: <code>#1a2744</code>, <code>#f5a623</code>, <code>#ffffff</code></span>
+        </div>
+
+        <div class="proof-item">
+            <div class="status pass"></div>
+            <span>Fonts are literal: <code>'Inter', system-ui, sans-serif</code></span>
+        </div>
+
+        <div class="proof-item">
+            <div class="status pass"></div>
+            <span>Shadows are literal: <code>0 4px 20px rgba(26, 39, 68, 0.08)</code></span>
+        </div>
+
+        <div class="proof-item">
+            <div class="status pass"></div>
+            <span>NO <code>var(--token)</code> CSS variable references</span>
+        </div>
+
+        <div class="proof-item">
+            <div class="status pass"></div>
+            <span>NO <code>{'{'}placeholder{'}'}</code> template syntax</span>
+        </div>
+
+        <div class="proof-item">
+            <div class="status pass"></div>
+            <span>Class names preserved: <code>.nfir-hero</code>, <code>.nfir-service-card</code></span>
+        </div>
+    </div>
+</body>
+</html>

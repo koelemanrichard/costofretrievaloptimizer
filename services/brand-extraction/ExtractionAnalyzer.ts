@@ -393,17 +393,73 @@ For each component, provide:
   /**
    * Extract HTML element by CSS selector hint
    *
-   * This is a simplified extraction that looks for elements matching
-   * the selector pattern in the raw HTML string.
+   * Uses DOMParser for proper HTML parsing in browser environment,
+   * with regex fallback for server-side/edge environments.
    */
   private extractHtmlBySelector(rawHtml: string, selectorHint: string): string {
+    // Try DOMParser first (works in browser)
+    if (typeof DOMParser !== 'undefined') {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, 'text/html');
+
+        // Clean up selector for querySelector
+        let cleanSelector = selectorHint;
+
+        // Handle common selector patterns
+        if (cleanSelector.includes(' > ')) {
+          // Try with and without child combinator
+          const parts = cleanSelector.split(' > ');
+          cleanSelector = parts[parts.length - 1]; // Use last part
+        }
+
+        // Remove pseudo-selectors that querySelector doesn't support well
+        cleanSelector = cleanSelector.replace(/:nth-child\([^)]+\)/g, '');
+        cleanSelector = cleanSelector.replace(/:first-of-type/g, '');
+        cleanSelector = cleanSelector.replace(/:last-of-type/g, '');
+
+        // Try to find the element
+        let element = doc.querySelector(cleanSelector);
+
+        // If not found with cleaned selector, try common component selectors
+        if (!element) {
+          const fallbackSelectors = [
+            'article',
+            'main',
+            'section',
+            '.content',
+            '.article',
+            '.post',
+            '[role="main"]',
+          ];
+
+          for (const sel of fallbackSelectors) {
+            element = doc.querySelector(sel);
+            if (element) break;
+          }
+        }
+
+        if (element) {
+          // Get the outer HTML
+          const html = element.outerHTML;
+          if (html && html.length > 50) {
+            console.log('[ExtractionAnalyzer] DOM extraction successful for:', selectorHint.substring(0, 50));
+            return html;
+          }
+        }
+      } catch (domError) {
+        console.warn('[ExtractionAnalyzer] DOMParser failed:', domError);
+      }
+    }
+
+    // Fallback: Regex-based extraction
     // Handle class selectors like ".hero-section" or "section.hero"
     const classMatch = selectorHint.match(/\.([a-zA-Z0-9_-]+)/);
     if (classMatch) {
       const className = classMatch[1];
-      // Look for elements with this class
+      // Look for elements with this class - use non-greedy match
       const elementRegex = new RegExp(
-        `<([a-z][a-z0-9]*)\\s+[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>[\\s\\S]*?<\\/\\1>`,
+        `<([a-z][a-z0-9]*)\\s+[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/\\1>`,
         'i'
       );
       const match = rawHtml.match(elementRegex);
@@ -412,18 +468,26 @@ For each component, provide:
       }
     }
 
-    // Handle 'body' selector specially - extract body content
-    if (selectorHint === 'body') {
+    // Handle 'body' selector specially - extract main content area
+    if (selectorHint === 'body' || selectorHint.startsWith('body')) {
+      // Try to find main content area first
+      const mainMatch = rawHtml.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+      if (mainMatch) {
+        return mainMatch[0];
+      }
+      const articleMatch = rawHtml.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+      if (articleMatch) {
+        return articleMatch[0];
+      }
       const bodyMatch = rawHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       if (bodyMatch) {
         return bodyMatch[0];
       }
-      // If no body tag, return everything
       return rawHtml;
     }
 
     // Handle tag selectors like "section" or "header"
-    const tagMatch = selectorHint.match(/^([a-z][a-z0-9]*)(?:\s|$|:)/i);
+    const tagMatch = selectorHint.match(/^([a-z][a-z0-9]*)(?:\s|$|:|\.)/i);
     if (tagMatch) {
       const tagName = tagMatch[1];
       const tagRegex = new RegExp(`<${tagName}[^>]*>[\\s\\S]*?<\\/${tagName}>`, 'i');
@@ -433,8 +497,26 @@ For each component, provide:
       }
     }
 
-    // Fallback: return a placeholder indicating we couldn't extract
-    return `<!-- Component: ${selectorHint} -->`;
+    // CRITICAL: Instead of returning placeholder, try to extract ANY suitable content
+    // This is the key fix - we should never return just a comment
+    const contentSelectors = [
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+      /<main[^>]*>([\s\S]*?)<\/main>/i,
+      /<section[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+      /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    ];
+
+    for (const regex of contentSelectors) {
+      const match = rawHtml.match(regex);
+      if (match) {
+        console.log('[ExtractionAnalyzer] Found content via fallback selector');
+        return match[0];
+      }
+    }
+
+    // Last resort: return empty section template for injection
+    console.warn('[ExtractionAnalyzer] Could not extract HTML for:', selectorHint.substring(0, 50));
+    return `<section class="brand-content" data-extraction-hint="${selectorHint.substring(0, 50).replace(/"/g, "'")}"></section>`;
   }
 
   /**

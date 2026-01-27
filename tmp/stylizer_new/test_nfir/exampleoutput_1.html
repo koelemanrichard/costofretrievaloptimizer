@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Styled Article</title>
+  <!-- Tailwind CSS for utility classes used in components -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+/* ============================================
+   Brand Design System - Auto-Generated
+   Source: https://www.nfir.nl
+   Brand: www.nfir.nl
+   Generated: 2026-01-26T16:19:24.673Z
+   ============================================ */
+
+/* ==========================================================================
+   Brand Design System - Auto-generated CSS
+   ========================================================================== */
+/* CSS Custom Properties */
+:root {
+  --ctc-primary: #0047BB;
+  --ctc-primary-light: #6699FF;
+  --ctc-primary-dark: #002E80;
+  --ctc-secondary: #F2994A;
+  --ctc-accent: #F2994A;
+  --ctc-neutral-darkest: #000000;
+  --ctc-neutral-dark: #333333;
+  --ctc-neutral-medium: #666666;
+  --ctc-neutral-light: #999999;
+  --ctc-neutral-lightest: #FFFFFF;
+  --ctc-success: #10b981;
+  --ctc-warning: #f59e0b;
+  --ctc-error: #ef4444;
+  --ctc-info: #3b82f6;
+  --ctc-font-heading: Arial, sans-serif;
+  --ctc-font-body: Arial, sans-serif;
+  --ctc-font-size-base: 16px;
+  --ctc-font-scale-ratio: 1.2;
+  --ctc-heading-weight: 700;
+  --ctc-body-weight: 400;
+  --ctc-body-line-height: 1.5;
+  --ctc-font-size-xs: 11.11px;
+  --ctc-font-size-sm: 13.33px;
+  --ctc-font-size-md: 16px;
+  --ctc-font-size-lg: 19.20px;
+  --ctc-font-size-xl: 23.04px;
+  --ctc-font-size-2xl: 27.65px;
+  --ctc-font-size-3xl: 33.18px;
+  --ctc-spacing-unit: 8px;
+  --ctc-spacing-xs: 2px;
+  --ctc-spacing-sm: 4px;
+  --ctc-spacing-md: 8px;
+  --ctc-spacing-lg: 12px;
+  --ctc-spacing-xl: 16px;
+  --ctc-spacing-2xl: 24px;
+  --ctc-spacing-3xl: 32px;
+  --ctc-radius-sm: 4px;
+  --ctc-radius-md: 8px;
+  --ctc-radius-lg: 12px;
+  --ctc-radius-full: 9999px;
+  --ctc-shadow-card: 0 1px 3px rgba(0,0,0,0.1);
+  --ctc-shadow-button: 0 1px 2px rgba(0,0,0,0.05);
+  --ctc-shadow-elevated: 0 10px 25px rgba(0,0,0,0.15);
+  --ctc-transition-speed: 250ms;
+  --ctc-easing: ease;
+}
+/* ==========================================================================
+   Component Styles
+   ========================================================================== */
+
+/* Button Component */
+.ctc-button {
+  display: inline-block;
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-md);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ctc-neutral-darkest);
+  text-align: center;
+  text-decoration: none;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--ctc-radius-md);
+  background-color: transparent;
+  box-shadow: var(--ctc-shadow-button);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), border-color var(--ctc-transition-speed) var(--ctc-easing), color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  user-select: none;
+  -webkit-appearance: none; /* Remove default button styling on some browsers */
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.ctc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ctc-button--primary {
+  background-color: var(--ctc-primary);
+  color: #FFFFFF;
+  border-color: var(--ctc-primary);
+}
+
+.ctc-button--primary:hover {
+  background-color: var(--ctc-primary-dark);
+  border-color: var(--ctc-primary-dark);
+}
+
+.ctc-button--primary:active {
+  background-color: var(--ctc-primary-dark);
+  box-shadow: none;
+}
+.ctc-button--secondary {
+  background-color: var(--ctc-secondary);
+  color: var(--ctc-neutral-darkest);
+  border-color: var(--ctc-secondary);
+}
+
+.ctc-button--secondary:hover {
+  background-color: #d9853e; /* Slightly darker shade of secondary */
+  border-color: #d9853e;
+}
+
+.ctc-button--secondary:active {
+  background-color: #d9853e;
+  box-shadow: none;
+}
+.ctc-button--outline {
+  background-color: transparent;
+  color: var(--ctc-primary);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-button--outline:hover {
+  background-color: var(--ctc-primary-light);
+  color: #FFFFFF;
+}
+
+.ctc-button--outline:active {
+  background-color: var(--ctc-primary-dark);
+  color: #FFFFFF;
+  box-shadow: none;
+}
+.ctc-button:hover {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  transform: translateY(-1px); /* Subtle lift */
+}
+
+.ctc-button:active {
+  box-shadow: 0 0 0 rgba(0,0,0,0.05);
+  transform: translateY(0); /* Reset lift */
+}
+.ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Card Component */
+.ctc-card {
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-md);
+  box-shadow: var(--ctc-shadow-card);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  border: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-card > *:not(:last-child) {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-card h2, .ctc-card h3, .ctc-card h4, .ctc-card h5, .ctc-card h6 {
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  margin-top: 0;
+  margin-bottom: var(--ctc-spacing-xs);
+  line-height: 1.2;
+}
+
+.ctc-card h2 {
+  font-size: var(--ctc-font-size-xl);
+}
+
+.ctc-card h3 {
+  font-size: var(--ctc-font-size-lg);
+}
+
+.ctc-card h4 {
+  font-size: var(--ctc-font-size-md);
+}
+
+.ctc-card--flat {
+  box-shadow: none;
+  border: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-card--elevated {
+  box-shadow: var(--ctc-shadow-elevated);
+  border: none;
+}
+
+.ctc-card--bordered {
+  border: 2px solid var(--ctc-primary-light);
+  box-shadow: none;
+}
+
+.ctc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+
+.ctc-card:active {
+  transform: translateY(0);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-card:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: -2px;
+}
+
+/* Hero Component */
+.ctc-hero {
+  padding: var(--ctc-spacing-3xl) var(--ctc-spacing-xl);
+  background-color: var(--ctc-neutral-lightest);
+  text-align: center;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-hero h1 {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-3xl);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-hero p {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-lg);
+  line-height: 1.5;
+  color: var(--ctc-neutral-medium);
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-hero .ctc-button {
+  display: inline-block;
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-lg);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  text-decoration: none;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-hero .ctc-button--primary {
+  background-color: var(--ctc-primary);
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-hero .ctc-button--secondary {
+  background-color: var(--ctc-secondary);
+  color: var(--ctc-neutral-lightest);
+}
+.ctc-hero--full-bleed {
+  padding: var(--ctc-spacing-3xl) 0;
+  width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-hero--full-bleed h1, .ctc-hero--full-bleed p {
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-hero--contained {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.ctc-hero--contained {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.ctc-hero .ctc-button:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transform: translateY(-2px);
+}
+
+.ctc-hero .ctc-button--primary:hover {
+  background-color: var(--ctc-primary-dark);
+}
+
+.ctc-hero .ctc-button--secondary:hover {
+  background-color: var(--ctc-accent);
+}
+.ctc-hero .ctc-button:active {
+  transform: translateY(0);
+  box-shadow: var(--ctc-shadow-button);
+}
+.ctc-hero .ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+
+/* Timeline Component */
+.ctc-timeline {
+  position: relative;
+  padding: var(--ctc-spacing-lg) 0;
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+}
+
+.ctc-timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background-color: var(--ctc-neutral-light);
+  z-index: 1;
+}
+
+.ctc-timeline-item {
+  position: relative;
+  margin-bottom: var(--ctc-spacing-xl);
+}
+
+.ctc-timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-timeline-item-content {
+  width: 45%;
+  padding: var(--ctc-spacing-md);
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+  transition: all var(--ctc-transition-speed) var(--ctc-easing);
+  position: relative;
+  z-index: 2;
+}
+
+.ctc-timeline-item-content:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-timeline-item:nth-child(odd) .ctc-timeline-item-content {
+  float: left;
+  text-align: right;
+}
+
+.ctc-timeline-item:nth-child(even) .ctc-timeline-item-content {
+  float: right;
+}
+
+.ctc-timeline-item-content h3 {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  font-weight: 700;
+  margin-bottom: var(--ctc-spacing-sm);
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-timeline-item-content p {
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+}
+
+.ctc-timeline-item-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: var(--ctc-spacing-lg);
+  height: var(--ctc-spacing-lg);
+  border-radius: 50%;
+  background-color: var(--ctc-primary);
+  border: 2px solid var(--ctc-neutral-lightest);
+  z-index: 3;
+  transition: all var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-timeline-item-marker:hover {
+  transform: translateX(-50%) translateY(-50%) scale(1.1);
+  box-shadow: var(--ctc-shadow-button);
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+  .ctc-timeline::before {
+    left: 10%;
+  }
+
+  .ctc-timeline-item-content {
+    width: 80%;
+    float: right !important; /* Override float for mobile */
+    text-align: left !important; /* Override text-align for mobile */
+  }
+
+  .ctc-timeline-item-marker {
+    left: 10%;
+  }
+}
+
+.ctc-timeline--secondary .ctc-timeline::before {
+  background-color: var(--ctc-secondary);
+}
+
+.ctc-timeline--secondary .ctc-timeline-item-marker {
+  background-color: var(--ctc-secondary);
+}
+.ctc-timeline--active .ctc-timeline-item-marker.active {
+  background-color: var(--ctc-primary-light);
+  border: 2px solid var(--ctc-primary-dark);
+}
+.ctc-timeline--minimal .ctc-timeline-item-content {
+  background-color: transparent;
+  box-shadow: none;
+  border: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-timeline--minimal .ctc-timeline-item-content:hover {
+  box-shadow: var(--ctc-shadow-card);
+}
+.ctc-timeline-item:hover .ctc-timeline-item-marker {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary-dark);
+}
+
+.ctc-timeline-item:hover .ctc-timeline-item-content {
+   box-shadow: var(--ctc-shadow-elevated);
+}
+.ctc-timeline-item.active .ctc-timeline-item-marker {
+  background-color: var(--ctc-primary-dark);
+  border-color: var(--ctc-primary-light);
+}
+
+.ctc-timeline-item.active .ctc-timeline-item-content {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-neutral-darkest);
+}
+.ctc-timeline-item:focus-visible .ctc-timeline-item-content {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+
+/* Testimonial Component */
+.ctc-testimonial {
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+  padding: var(--ctc-spacing-lg);
+  text-align: left;
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-testimonial__quote {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-lg);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+  margin-bottom: var(--ctc-spacing-md);
+  position: relative;
+  padding-left: var(--ctc-spacing-lg);
+}
+
+.ctc-testimonial__quote:before {
+  content: '\201C'; /* Left double quotation mark */
+  font-size: 3rem;
+  font-family: var(--ctc-font-heading);
+  color: var(--ctc-primary);
+  position: absolute;
+  left: 0;
+  top: -0.5rem;
+  line-height: 1;
+}
+
+.ctc-testimonial__quote:after {
+  content: '\201D'; /* Right double quotation mark */
+  font-size: 3rem;
+  font-family: var(--ctc-font-heading);
+  color: var(--ctc-primary);
+  position: absolute;
+  right: -0.5rem; /* Adjust for visual balance */
+  bottom: -1rem; /* Adjust for visual balance */
+  line-height: 1;
+}
+
+.ctc-testimonial__author {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-darkest);
+  margin-top: var(--ctc-spacing-sm);
+  text-align: right;
+}
+
+.ctc-testimonial__author-title {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-neutral-medium);
+  display: block;
+  margin-top: var(--ctc-spacing-xs);
+  text-align: right;
+}
+.ctc-testimonial--primary {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-testimonial--primary .ctc-testimonial__quote {
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-testimonial--primary .ctc-testimonial__quote:before,
+.ctc-testimonial--primary .ctc-testimonial__quote:after {
+  color: var(--ctc-secondary);
+}
+.ctc-testimonial--secondary {
+  background-color: var(--ctc-secondary);
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-testimonial--secondary .ctc-testimonial__quote {
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-testimonial--secondary .ctc-testimonial__quote:before,
+.ctc-testimonial--secondary .ctc-testimonial__quote:after {
+  color: var(--ctc-primary);
+}
+.ctc-testimonial:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+}
+.ctc-testimonial:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease-in-out;
+}
+.ctc-testimonial:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: -2px;
+}
+
+/* Faq Component */
+.ctc-faq {
+  border: 1px solid var(--ctc-neutral-light);
+  border-radius: var(--ctc-radius-md);
+  margin-bottom: var(--ctc-spacing-md);
+  box-shadow: var(--ctc-shadow-card);
+  background-color: var(--ctc-neutral-lightest);
+}
+
+.ctc-faq__item {
+  border-bottom: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-faq__item:last-child {
+  border-bottom: none;
+}
+
+.ctc-faq__question {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  padding: var(--ctc-spacing-md);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-faq__question:hover {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-faq__question:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: -2px;
+}
+
+.ctc-faq__question::after {
+  content: '+';
+  font-size: var(--ctc-font-size-xl);
+  color: var(--ctc-primary);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-faq__question[aria-expanded='true']::after {
+  content: '-';
+  transform: rotate(45deg);
+}
+
+.ctc-faq__answer {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  padding: 0 var(--ctc-spacing-md);
+  overflow: hidden;
+  transition: max-height var(--ctc-transition-speed) var(--ctc-easing), padding var(--ctc-transition-speed) var(--ctc-easing);
+  max-height: 0;
+}
+
+.ctc-faq__answer[aria-hidden='false'] {
+  max-height: 500px; /* Adjust as needed based on content */
+  padding: var(--ctc-spacing-md);
+}
+.ctc-faq--primary {
+  border-color: var(--ctc-primary);
+}
+
+.ctc-faq--primary .ctc-faq__question {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-faq--primary .ctc-faq__question:hover {
+  background-color: var(--ctc-primary-dark);
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-faq--primary .ctc-faq__question::after {
+  color: var(--ctc-primary-dark);
+}
+.ctc-faq--secondary {
+  border-color: var(--ctc-secondary);
+}
+
+.ctc-faq--secondary .ctc-faq__question {
+  color: var(--ctc-secondary);
+}
+
+.ctc-faq--secondary .ctc-faq__question:hover {
+  background-color: var(--ctc-secondary);
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-faq--secondary .ctc-faq__question::after {
+  color: var(--ctc-secondary);
+}
+.ctc-faq:hover {
+  /* Add global hover effects if needed */
+}
+.ctc-faq:active {
+  /* Add global active effects if needed */
+}
+.ctc-faq:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: -2px;
+}
+
+/* Cta Component */
+.ctc-cta {
+  display: inline-block;
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-xl);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ctc-neutral-lightest);
+  background-color: var(--ctc-primary);
+  border: none;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing), transform var(--ctc-transition-speed) var(--ctc-easing);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ctc-cta:visited {
+ color: var(--ctc-neutral-lightest);
+}
+.ctc-cta--secondary {
+    background-color: var(--ctc-secondary);
+    color: var(--ctc-neutral-darkest);
+  }
+.ctc-cta--small {
+    padding: var(--ctc-spacing-sm) var(--ctc-spacing-lg);
+    font-size: var(--ctc-font-size-sm);
+  }
+.ctc-cta--large {
+    padding: var(--ctc-spacing-lg) var(--ctc-spacing-2xl);
+    font-size: var(--ctc-font-size-lg);
+  }
+.ctc-cta:hover {
+    background-color: var(--ctc-primary-light);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+  }
+.ctc-cta:active {
+    background-color: var(--ctc-primary-dark);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    transform: translateY(0);
+  }
+.ctc-cta:focus-visible {
+    outline: 2px solid var(--ctc-accent);
+    outline-offset: 2px;
+  }
+
+/* KeyTakeaways Component */
+.ctc-keyTakeaways {
+  background-color: var(--ctc-primary-light);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-md);
+  margin-bottom: var(--ctc-spacing-lg);
+  box-shadow: var(--ctc-shadow-card);
+  font-family: var(--ctc-font-body);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-keyTakeaways ul {
+  list-style-type: disc;
+  padding-left: var(--ctc-spacing-lg);
+  margin: 0;
+}
+
+.ctc-keyTakeaways li {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways li:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-keyTakeaways h3 {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  color: var(--ctc-neutral-darkest);
+  margin-top: 0;
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways p {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways p:last-child {
+  margin-bottom: 0;
+}
+.ctc-keyTakeaways--secondaryBackground {
+  background-color: #FFF3E0; /* A very light tint of the secondary color */
+}
+.ctc-keyTakeaways--primaryBorder {
+  border: 1px solid var(--ctc-primary);
+  background-color: var(--ctc-neutral-lightest);
+}
+.ctc-keyTakeaways:hover {
+  background-color: var(--ctc-primary-light);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+.ctc-keyTakeaways:active {
+  background-color: var(--ctc-primary);
+  color: var(--ctc-neutral-lightest);
+}
+.ctc-keyTakeaways:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Prose Component */
+.ctc-prose {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+}
+
+.ctc-prose p {
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose h1,
+.ctc-prose h2,
+.ctc-prose h3,
+.ctc-prose h4,
+.ctc-prose h5,
+.ctc-prose h6 {
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  margin-top: var(--ctc-spacing-xl);
+  margin-bottom: var(--ctc-spacing-md);
+  line-height: 1.2;
+}
+
+.ctc-prose h1 {
+  font-size: var(--ctc-font-size-3xl);
+}
+
+.ctc-prose h2 {
+  font-size: var(--ctc-font-size-2xl);
+}
+
+.ctc-prose h3 {
+  font-size: var(--ctc-font-size-xl);
+}
+
+.ctc-prose h4 {
+  font-size: var(--ctc-font-size-lg);
+}
+
+.ctc-prose h5 {
+  font-size: var(--ctc-font-size-md);
+}
+
+.ctc-prose h6 {
+  font-size: var(--ctc-font-size-sm);
+}
+
+.ctc-prose a {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-prose a:hover {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-prose ul,
+.ctc-prose ol {
+  margin-left: var(--ctc-spacing-lg);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose li {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-prose blockquote {
+  border-left: 4px solid var(--ctc-neutral-medium);
+  padding-left: var(--ctc-spacing-lg);
+  margin: var(--ctc-spacing-md) 0;
+  font-style: italic;
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-prose code {
+  font-family: monospace;
+  background-color: #f4f4f4;
+  padding: 2px 5px;
+  border-radius: var(--ctc-radius-sm);
+  font-size: 0.85em;
+}
+
+.ctc-prose pre {
+  background-color: #f4f4f4;
+  padding: var(--ctc-spacing-md);
+  overflow-x: auto;
+  border-radius: var(--ctc-radius-sm);
+}
+
+.ctc-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose th,
+.ctc-prose td {
+  border: 1px solid var(--ctc-borders-dividers);
+  padding: var(--ctc-spacing-sm);
+  text-align: left;
+}
+
+.ctc-prose th {
+  font-weight: bold;
+  background-color: #f9f9f9;
+}
+
+.ctc-prose hr {
+  border: none;
+  border-top: 1px solid var(--ctc-borders-dividers);
+  margin: var(--ctc-spacing-xl) 0;
+}
+
+.ctc-prose--narrow {
+  max-width: 70ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+.ctc-prose--centered {
+  text-align: center;
+}
+.ctc-prose a:hover {
+  text-decoration: none;
+  color: var(--ctc-secondary);
+}
+.ctc-prose a:active {
+  color: var(--ctc-primary-dark);
+}
+.ctc-prose a:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+
+/* List Component */
+.ctc-list {
+  list-style-type: disc;
+  padding-left: var(--ctc-spacing-md);
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-list li {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  margin-bottom: var(--ctc-spacing-sm);
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-list li:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-list li::marker {
+  color: var(--ctc-accent);
+  font-size: 1em; /* Match list item font size */
+}
+
+/* Optional: Add a subtle divider between list items */
+.ctc-list li + li {
+  /* border-top: 1px solid var(--ctc-neutral-light);
+  padding-top: var(--ctc-spacing-sm); */
+}
+
+.ctc-list--primary li::marker {
+  color: var(--ctc-primary);
+}
+.ctc-list--numbered {
+  list-style-type: decimal;
+}
+
+.ctc-list--numbered li::marker {
+  color: var(--ctc-primary);
+}
+.ctc-list--no-bullets {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.ctc-list--no-bullets li::marker {
+  display: none;
+}
+.ctc-list--inline {
+  display: flex;
+  flex-wrap: wrap;
+  list-style-type: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.ctc-list--inline li {
+  margin-right: var(--ctc-spacing-md);
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-list--inline li::marker {
+  display: none;
+}
+.ctc-list li:hover {
+  color: var(--ctc-primary);
+}
+.ctc-list li:active {
+  color: var(--ctc-primary-dark);
+}
+.ctc-list li:focus-visible {
+  outline: 2px solid var(--ctc-primary-light);
+  outline-offset: 2px;
+}
+
+/* Table Component */
+.ctc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  border: 1px solid var(--ctc-neutral-light);
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden; /* Ensures border-radius applies to inner elements */
+}
+
+.ctc-table th,
+.ctc-table td {
+  padding: var(--ctc-spacing-md);
+  text-align: left;
+}
+
+.ctc-table thead {
+  background-color: var(--ctc-primary);
+  color: white;
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+}
+
+.ctc-table th {
+  font-weight: 700;
+}
+
+.ctc-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.ctc-table tbody tr:hover {
+  background-color: var(--ctc-primary-light);
+  color: white;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-table td {
+  border-top: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-table th:first-child,
+.ctc-table td:first-child {
+  padding-left: var(--ctc-spacing-lg);
+}
+
+.ctc-table th:last-child,
+.ctc-table td:last-child {
+  padding-right: var(--ctc-spacing-lg);
+}
+.ctc-table--striped tbody tr:nth-child(odd) {
+  background-color: white;
+}
+.ctc-table--bordered {
+  border: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-table--bordered th,
+.ctc-table--bordered td {
+  border: 1px solid var(--ctc-neutral-light);
+}
+.ctc-table--compact th,
+.ctc-table--compact td {
+  padding: var(--ctc-spacing-sm);
+}
+.ctc-table tbody tr:hover {
+  box-shadow: var(--ctc-shadow-card);
+}
+.ctc-table tbody tr:active {
+  background-color: var(--ctc-primary-dark);
+  color: white;
+}
+.ctc-table tbody tr:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+/* Blockquote Component */
+.ctc-blockquote {
+  position: relative;
+  padding: var(--ctc-spacing-lg);
+  padding-left: calc(var(--ctc-spacing-lg) * 2);
+  margin: var(--ctc-spacing-md) 0;
+  border-left: 4px solid var(--ctc-accent);
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-sm);
+  box-shadow: var(--ctc-shadow-card);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-blockquote::before {
+  content: '\201C'; /* Left double quotation mark */
+  position: absolute;
+  top: var(--ctc-spacing-md);
+  left: var(--ctc-spacing-md);
+  font-size: var(--ctc-font-size-3xl);
+  color: var(--ctc-accent);
+  font-family: Arial, sans-serif; /* Ensure quotation mark is rendered correctly */
+  line-height: 1;
+}
+
+.ctc-blockquote p {
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-blockquote cite {
+  display: block;
+  font-size: var(--ctc-font-size-sm);
+  font-style: italic;
+  text-align: right;
+  color: var(--ctc-neutral-medium);
+}
+
+.ctc-blockquote cite::before {
+  content: '\2014\00A0'; /* Em dash and non-breaking space */
+}
+
+.ctc-blockquote--primary {
+  border-left-color: var(--ctc-primary);
+}
+
+.ctc-blockquote--primary::before {
+  color: var(--ctc-primary);
+}
+.ctc-blockquote--secondary {
+  border-left-color: var(--ctc-secondary);
+}
+
+.ctc-blockquote--secondary::before {
+  color: var(--ctc-secondary);
+}
+.ctc-blockquote:hover {
+  background-color: #f9f9f9; /* Slightly lighter background on hover */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12); /* Slightly enhanced shadow on hover */
+}
+
+.ctc-blockquote:active {
+  background-color: #f2f2f2; /* Slightly darker background on active */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); /* Slightly reduced shadow on active */
+}
+
+.ctc-blockquote:focus-visible {
+  outline: 2px solid var(--ctc-primary-light);
+  outline-offset: -2px;
+}
+/* ==========================================================================
+   Decorative Elements
+   ========================================================================== */
+.ctc-divider {
+  border: none;
+  height: 1px;
+  background-color: var(--ctc-neutral-medium);
+  margin: var(--ctc-spacing-lg) 0;
+}
+.ctc-divider--subtle {
+  background-color: var(--ctc-neutral-light);
+  margin: var(--ctc-spacing-md) 0;
+}
+.ctc-divider--decorative {
+  height: 2px;
+  background-color: var(--ctc-primary-light);
+  margin: var(--ctc-spacing-lg) 0;
+  border-radius: var(--ctc-radius-sm);
+}
+.ctc-section {
+  background-color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-2xl) 0;
+}
+.ctc-section--accent {
+  background-color: rgba(var(--ctc-primary-rgb), 0.05); /* VERY SUBTLE */
+  padding: var(--ctc-spacing-2xl) 0;
+}
+.ctc-section--featured {
+  background: linear-gradient(to right, rgba(var(--ctc-primary-rgb), 0.02), rgba(var(--ctc-primary-light-rgb), 0.02));
+  padding: var(--ctc-spacing-3xl) 0;
+  border-top: 1px solid var(--ctc-neutral-light);
+  border-bottom: 1px solid var(--ctc-neutral-light);
+}
+/* ==========================================================================
+   Interactions & Animations
+   ========================================================================== */
+.ctc-button:hover {
+  background-color: var(--ctc-primary-dark);
+  box-shadow: var(--ctc-shadow-button);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-button:active {
+  background-color: var(--ctc-primary);
+  box-shadow: none;
+  transform: translateY(1px);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+  transition: outline-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--ctc-shadow-card);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+a:hover {
+  text-decoration: underline;
+  transition: text-decoration var(--ctc-transition-speed) var(--ctc-easing);
+}
+:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+  transition: outline-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* ==========================================================================
+   Typography Treatments
+   ========================================================================== */
+.ctc-pull-quote {
+  font-size: var(--ctc-font-size-lg);
+  font-style: italic;
+  color: var(--ctc-neutral-dark);
+  margin: var(--ctc-spacing-lg) 0;
+  padding: var(--ctc-spacing-md);
+  border-left: 4px solid var(--ctc-accent);
+}
+.ctc-list li::marker {
+  color: var(--ctc-primary);
+  font-weight: var(--ctc-body-weight);
+}
+a {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--ctc-primary-dark);
+}
+pre, code {
+  font-family: monospace;
+  background-color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-sm);
+  border-radius: var(--ctc-radius-sm);
+  overflow-x: auto;
+  color: var(--ctc-neutral-darkest);
+}
+/* ==========================================================================
+   Image Treatments
+   ========================================================================== */
+.ctc-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition: none;
+}
+.ctc-image--featured {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: none;
+  border-radius: --ctc-radius-md;
+  box-shadow: --ctc-shadow-card;
+  transition: none;
+}
+.ctc-image--thumbnail {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: none;
+  border-radius: --ctc-radius-sm;
+  box-shadow: none;
+  transition: none;
+}
+.ctc-image--gallery {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: none;
+  border-radius: --ctc-radius-lg;
+  box-shadow: --ctc-shadow-elevated;
+  transition: none;
+}
+  </style>
+</head>
+<body>
+<div class="ctc-root ctc-styled ctc-personality-corporate-professional" data-ctc-version="2.0" data-blueprint-rendered="true">
+
+<header class="ctc-hero ctc-hero--solid" role="banner" style="background: var(--ctc-hero-bg, linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%)); color: white; position: relative; padding: 10rem 1.5rem 8rem; text-align: center; overflow: hidden">
+  <span style="position: absolute; top: 2rem; right: 2rem; font-size: 0.65rem; color: var(--ctc-text-muted); background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--ctc-border-subtle); z-index: 20">✨ Visual match: detected from site</span>
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0">
+    <div style="position: absolute; top: -100px; right: -50px; width: 500px; height: 500px; background: var(--ctc-primary); opacity: 0.08; border-radius: 50%; filter: blur(100px)"></div>
+    <div style="position: absolute; bottom: -50px; left: -50px; width: 400px; height: 400px; background: var(--ctc-secondary, var(--ctc-primary)); opacity: 0.05; border-radius: 50%; filter: blur(80px)"></div>
+  </div>
+  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 56rem; margin: 0 auto">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ctc-primary); background: white; padding: 0.5rem 1.25rem; border-radius: 100px; box-shadow: var(--ctc-shadow-sm); margin-bottom: 2.5rem; border: 1px solid var(--ctc-border-subtle); position: relative; z-index: 10">🛡️ Gecertificeerd Partner</div>
+    <h1 class="ctc-hero-title" style="color: var(--ctc-hero-text, white); font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.8rem, 8vw, 4.8rem); line-height: 1.05; margin-bottom: 2rem; letter-spacing: -0.03em; text-transform: capitalize">
+      Incident Response Retainer voor Vitale Sectoren
+    </h1>
+    <p class="ctc-hero-subtitle" style="color: var(--ctc-hero-subtitle, rgba(255,255,255,0.9)); font-size: 1.35rem; max-width: 42rem; margin: 0 auto 3.5rem; line-height: 1.7">
+      Een Incident Response Retainer voor Vitale Sectoren is een contractuele overeenkomst die organisaties in kritieke infrastructuur directe toegang tot gespecialiseerde cybersecurity-experts garandeert
+    </p>
+    
+    <div class="ctc-hero-actions" style="display: flex; gap: 1.5rem; justify-content: center">
+      <a href="#contact" style="background: var(--ctc-primary); color: white; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); padding: 1.25rem 3rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; transition: transform 0.2s ease; font-size: 1.125rem">
+        Meer Informatie
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="ctc-toc ctc-toc--inline" style="background: #ffffff; border-radius: var(--ctc-radius-lg); border: 1px solid var(--ctc-border-subtle); padding: 3rem; box-shadow: var(--ctc-shadow-float); z-index: 50; position: relative; margin: -6rem auto 6rem; width: 100%; max-width: 1100px;" aria-label="Inhoudsopgave">
+  <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--ctc-primary-light); display: inline-block">
+    <h2 style="font-family: var(--ctc-font-display); font-weight: 700; font-size: 1.5rem; color: var(--ctc-text); margin: 0; letter-spacing: -0.01em">Wat u kunt verwachten</h2>
+  </div>
+  <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem">
+    
+    <li>
+      <a href="#key-takeaways" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Belangrijkste Punten</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-1" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Incident Response Retainer voor Vitale Sectoren: Een Overzicht</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-2" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Wat is een Incident Response Retainer voor Vitale Sectoren?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-3" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Waarom Organisaties in Kritieke Infrastructuur een Incident Response Retainer Nodig Hebben</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-4" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Sleutelmogelijkheden van NFIR&#39;s Incident Response Retainer</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-5" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Welke Sectoren Profiteren het Meest van een Incident Response Retainer?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-6" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Hoe de Incident Response Retainer Werkt: Het Proces van Ontvangst tot Oplossing</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-7" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Prijzen en Pakketten: Wat Kost een Incident Response Retainer?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-8" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Service Level Agreement (SLA) en Contracttermijnen</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-9" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Responstijd: De 3-uurs Garantie</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-10" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>24/7 Beschikbaarheid als Contractuele Basis</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-11" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Contracttermijnen: Flexibiliteit en Stabiliteit</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-12" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Escalatiemechanismen en Wederzijdse Verplichtingen</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-13" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Vergelijking: Incident Response Retainer versus Ad-hoc Diensten</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-14" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Beschikbaarheid en Responstijden</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-15" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Financiële Voorspelbaarheid</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-16" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Kennisvoordeel en Contextuele Integratie</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-17" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Proactieve Beveiligingsinvesteringen</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-18" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Juridische Verankering en Contractuele Zekerheid</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-19" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Volgende Stappen voor Incident Response Retainer voor Vitale Sectoren</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-20" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Continue Exploring Incident Response Retainer</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<main class="ctc-main" role="main">
+<article class="ctc-article" itemscope itemtype="https://schema.org/Article">
+<meta itemprop="headline" content="Incident Response Retainer voor Vitale Sectoren">
+
+<section id="key-takeaways" class="ctc-prose ctc-section--hero py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; padding: var(--ctc-space-16) var(--ctc-space-12); border-radius: var(--ctc-radius-2xl); position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+    <h2 id="belangrijkste-punten" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: white;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Belangrijkste Punten</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: rgba(255,255,255,0.9); line-height: 1.8; font-size: 1.0625rem">
+    # Incident Response Retainer voor Vitale Sectoren
+Een Incident Response Retainer voor Vitale Sectoren is een contractuele overeenkomst die organisaties in kritieke infrastructuur directe toegang tot gespecialiseerde cybersecurity-experts garandeert
+  </div>
+  
+</section>
+
+<div id="section-0" class="ctc-lead-paragraph py-12 md:py-16" style="position: relative">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px; opacity: 0.6"></div>
+  <div style="padding-left: var(--ctc-space-8); font-size: 1.25rem; line-height: 1.8; color: var(--ctc-text-secondary); font-weight: 400; letter-spacing: -0.01em">
+    # Incident Response Retainer voor Vitale Sectoren
+  </div>
+</div>
+
+<section id="section-1" class="ctc-prose  py-8 md:py-10" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="incident-response-retainer-voor-vitale-sectoren-ee" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Incident Response Retainer voor Vitale Sectoren: Een Overzicht</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Een Incident Response Retainer voor Vitale Sectoren is een contractuele overeenkomst die organisaties in kritieke infrastructuur directe toegang tot gespecialiseerde cybersecurity-experts garandeert. Deze experts staan beschikbaar met vooraf bepaalde reactietijden en vastgelegde ondersteuningsomvang. Het model stelt vitale organisaties in staat beveiligingsincidenten direct aan te pakken, zonder kostbare vertragingen door het zoeken naar externe hulp.
+
+Dit artikel verkent de werking en belang van een Incident Response Retainer voor organisaties met kritieke infrastructuur. We behandelen eerst wat dit model concreet inhoudt en waarom vitale sectoren ervan afhankelijk zijn. Daarna belichten we de sleutelmogelijkheden van gespecialiseerde retainer-diensten en welke sectoren het meest baat hebben bij deze aanpak.
+
+Vervolgens beschrijven we hoe het opvangproces van incident tot oplossing in de praktijk werkt. We analyseren vervolgens de prijsstructuur en beschikbare pakketten, onderzoeken de opbouw van Service Level Agreements en contracttermijnen, en concluderen met een rechtstreekse vergelijking tussen retainer-modellen en ad-hoc cybersecurity-diensten.
+
+Vitale sectoren zoals energie, waterbeheer, gezondheidszorg en financiële diensten opereren onder regelgeving die aantoonbare respons-capaciteit vereist. Een Incident Response Retainer beperkt incidentkosten door preventieve voorbereiding op te nemen en garandeert naleving van cybersecurity-normen. Organisaties kunnen zich daarmee focussen op hun kernactiviteiten, wetende dat cyberincidenten professioneel en snel worden afgehandeld.
+  </div>
+  
+</section>
+
+<section id="section-2" class="ctc-prose ctc-section--bg py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="wat-is-een-incident-response-retainer-voor-vitale-" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Wat is een Incident Response Retainer voor Vitale Sectoren?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Een Incident Response Retainer voor Vitale Sectoren biedt proactieve, contractuele bescherming met gegarandeerde respons-capaciteit voor acute bedreigingen. De 24/7 beschikbaarheid stelt operatoren van kritieke infrastructuur in staat om gedurende alle uren toegang te hebben tot geoefende cyberbeveiliging specialisten. Deze permanente paraatheid verkort de responstijd aanzienlijk en beperkt de schadeveroorzaking van cyberaanvallen.
+
+Het kernvoordeel schuilt in een vast team van experts dat exclusief voor uw organisatie beschikbaar is. Dit team verwerft diepgaande kennis van uw specifieke omgeving, systemen en bedreigingslandschap. Dankzij deze gespecialiseerde voorbereiding diagnosticeert het response-team incidenten sneller en interveniëert effectiever, omdat het uw organisatie grondiger begrijpt dan ad-hoc teams. Deze inzet vormt de basis voor operationele zekerheid en financiële stabiliteit.
+
+Daarnaast biedt de financiële structuur duidelijke voorspelbaarheid. Een vaste retainer-vergoeding garandeert resourcetoewijzing zonder budgetschokken op het kritieke moment van crisis. Vitale sectoren beschikken over transparante budgetteringskosten, terwijl zij onbeperkte raadpleging en preventieve ondersteuning genieten. Deze kostenverdeling verankert cyberbeveiliging structureel in uw strategische planning.
+
+Bovendien integreert een Incident Response Retainer kennisdeling en trainingscomponenten als standaardonderdeel. Het vaste team voert regelmatige vulnerability assessments uit, simuleert aanvalsscenario's en begeleidt uw intern security personeel in best practices. Deze doorlopende voorbereiding transformeert de dienst van zuiver reactieve inzet naar strategische beveiligingsinvestering. Deze fundamentele verschuiving naar proactieve bescherming verhoogt de algehele weerbaarheid van kritieke infrastructuur structureel.
+  </div>
+  
+</section>
+
+<section id="section-3" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="waarom-organisaties-in-kritieke-infrastructuur-een" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Waarom Organisaties in Kritieke Infrastructuur een Incident Response Retainer Nodig Hebben</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    De weerbaarheid van vitale organisaties hangt af van hun vermogen beveiligingsincidenten onmiddellijk en effectief op te lossen. Responstijd bepaalt het verschil tussen beperkte schade en organisatorische ramp. Een Incident Response Retainer voor Vitale Sectoren versterkt deze weerbaarheid door gespecialiseerde respons-capaciteit in kritieke momenten te waarborgen.
+
+Organisaties in kritieke sectoren—energiebedrijven, waterleidingmaatschappijen en ziekenhuizen—ondervinden cyberaanvallen met directe gevolgen voor publieke diensten en veiligheid. Zonder voorbereide responstrategie verliezen zij waardevolle minuten terwijl beveiligingskader en contactlijsten worden samengesteld. Elke minuut vertraging vergroot blootstelling, breidt gecompromitteerde systemen uit en verhoogt de impact op vitale dienstverlening. Een Incident Response Retainer elimineert deze vertraging doordat gespecialiseerde teams onmiddellijk beschikbaar zijn.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Visuele chronologische vergelijking toont twee tijdlijnen naast elkaar: links een traag ad-hoc respons-scenario met 4-6 uur vertraging voordat specialisten beschikbaar zijn (weergegeven met rode waarschuwings-iconen en klokken die snel aftellen), rechts de NFIR-retainer met zijn gegarandeerde 3-uur reactietime (groen gemarkeerd met checkmarks en een snelle klok). Onderste grafiek toont damage-escalatie: rode lijn schiet steil omhoog bij vertraagde respons, groene lijn blijft laag bij snelle interventie. De 3-uurs garantie is prominent in een blauw banner bovenaan uitgelicht</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Vergelijking van activeringstijden gespecialiseerde cyberteams: conventionele ad-hoc benadering versus contractueel gereserveerde bemanning met getijdgebonden beschikbaarheid</p>
+    </figure>
+
+Het retainer-model biedt gegarandeerde toegang tot gespecialiseerde beveiligingsprofessionals die onmiddellijk beschikbaar zijn. Het vaste team kent kritieke systemen, netwerkarchitectuur en bedrijfsprocessen via voorbereiding en kennisoverdracht die integrale onderdelen van het arrangement vormen. Deze voorbereiding elimineert kostbare zoekfasen en stelt organisaties in staat binnen vastgestelde reactietijden effectief in te grijpen. Waar ad-hoc respons improviseren, handelen voorbereidde teams volgens heldere protocollen.
+
+Downtime in vitale infrastructuur veroorzaakt direct inkomstenverlies, regelgeving-boetes, schadeclaims van gebruikers en aanzienlijke herstelkosten. Organisaties met de zekerheid dat responders binnen vastgestelde tijdframes beschikbaar zijn, reduceren deze risico's aanzienlijk. Deze economische voordelen verklaren waarom professionele cyberbeveiliging-retainers bedrijfsimpact minimaliseren en operationele continuïteit waarborgen.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<aside id="section-4" class="ctc-callout  py-8 md:py-10">
+  <div class="ctc-callout-content">
+    <div class="ctc-callout-icon" aria-hidden="true">💡</div>
+    <div style="flex: 1">
+      <h2 style="font-weight: 600; font-size: 1.125rem; margin-bottom: var(--ctc-space-3); color: var(--ctc-text)">Sleutelmogelijkheden van NFIR&#39;s Incident Response Retainer</h2>
+      <div style="color: var(--ctc-text-secondary); line-height: 1.7">De cyberveerkracht van vitale organisaties wordt bepaald door operationele voordelen die intern beheerde cyberbeveiliging niet realiseert. Het Incident Response Retainer voor Vitale Sectoren van NFIR biedt organisaties in kritieke infrastructuur deze voordelen door kernfunctionaliteiten te combineren die crisisbeheersing met wettelijke grondslag waarborgen.
+
+<strong>Politie-geautoriseerde CERT-expertise onderscheidt dit aanbod fundamenteel.</strong> NFIR-specialisten beschikken over formele erkenning en wettelijke mandaten die interne beveiligingsteams ontberen. Deze autorisatie verleent respons-acties rechtsgeldige status en maakt directe communicatie met overheidsinstanties mogelijk. Voor organisaties onder regelgeving is deze juridische grondslag essentieel—zij vormt de basis voor operationele garanties en juridische erkenning van crisisbeheersing.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Circulair procesdiagram met zes verbonden stadia van cyberincident-afhandeling: (1) Waarschuwing/Detectie-fase toont monitoren en alertering icoon, (2) Diagnostische analyse-fase met vergrootglas en gegevensstromen, (3) Beperking en isolatie-fase met blokkering symbolen, (4) Eliminatie van aanvalsinfrastructuur fase met radiogolven gestreept, (5) Systeemherstel en verificatie-fase met groen vinkje, (6) Forensische documentatie en compliance-fase met rapport icoon. Elk stadium bevat NFIR&#39;s 24/7 CERT-team-badge in de hoek. Pijlen verbinden elke fase cyclisch. Centraal in diagram staat: &quot;NFIR Volledige Dekkingscyclus&quot; in vetgedrukt</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Zes-stadia cyberincident-neutralisatieproces: detectie door permanente monitoring via specialistische cybersecurity-experts in alle operationele fasen, inclusief forensische vastlegging voor juridische naleving en organisatiebrede kwetsbaarheidsverbetering</p>
+    </figure>
+
+<strong>Een garanteerde responstijd van zeventig seconden stelt interventie zeker.</strong> Permanente beschikbaarheid stelt NFIR in staat initiële respons onmiddellijk in te zetten wanneer vitale sectoren steun activeren. Dit snelheidsvoordeel voorkomt verdere netwerkcompromittering en gegevensexfiltratie. Aangezien de uiteindelijke schadeomvang bij cyberincidenten rechtstreeks afhangt van reactietijd, beschikken NFIR-deelnemers over een vastgestelde operationele garantie ondersteund door gereserveerde middelen.
+
+<strong>Gereserveerde capaciteit waarborgt onderzoeks- en insluitingsfasen zonder vertraging.</strong> Het Incident Response Retainer reserveert technische en analitische middelen voortijds voor vitale organisaties. Forensische en remediëringsacties ondervinden daardoor geen congestie door beschikbaarheidstekort. Deze capaciteitsgarantie stelt organisaties in staat containmentactiviteiten onverwijld in te zetten.
+
+<strong>Sectorspecifieke kennis verkort diagnosefasen aanzienlijk.</strong> NFIR handhaaft gespecialiseerde expertise in bedreigingspatronen, kritieke infrastructuurconfiguraties en regelgeving die vitale organisaties treffen. Dit domeinweten vermindert foutieve remediatiebeslissingen en verkort hersteltijd. Diagnosefasen versnellen verder door geëscaleerde communicatiekanalen met direct toegang tot specialisten.
+
+<strong>Geëscaleerde communicatiekanalen naar Nederlandse overheidsinstituties versterken naleving en vertrouwen.</strong> Organisaties coördineren crisiscommunicatie via gouvernementele netwerken, wat meldplichten vergemakkelijkt en toezichthouderrelaties verstevigt. Door deze directe verbindingen transformeert voorbereiding zich in meetbare organisationele weerstand. Het Incident Response Retainer voor Vitale Sectoren converteert cyberbeveiliging van defensieve investering naar strategisch operationeel voordeel.</div>
+    </div>
+  </div>
+</aside>
+
+<section id="section-5" class="ctc-prose ctc-section--bg py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="welke-sectoren-profiteren-het-meest-van-een-incide" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Welke Sectoren Profiteren het Meest van een Incident Response Retainer?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Een Incident Response Retainer voor Vitale Sectoren beschermt organisaties waar cyberincidenten directe gevolgen hebben voor maatschappelijke veiligheid en economische stabiliteit. Deze sectoren combineren strenge regelgeving met kritieke afhankelijkheden, waardoor een voorbereide beveiligingsteam essentieel wordt voor snelle incidentherkenning en operationele continuïteit. Voor organisaties die kritieke infrastructuur beheren, vormt een retainer-gebaseerde respons-structuur onmisbaar.
+
+<strong>Financiële Sector: Het Zenuwstelsel van de Economie</strong>
+
+Banken, verzekeraars en beleggingsfirma's opereren onder de Richtlijn Informatiebeveiliging Financiële Sector (RIBFS) en internationale compliance-frameworks. Cyberincidenten verstoren betalingssystemen, vermogensbeheer en klantvertrouwen binnen uren. Een Incident Response Retainer stelt financiële instellingen in staat inbraakpatronen in geldstromen onmiddellijk te herkennen en beschadigd vertrouwen te voorkomen voordat massale gevolgen ontstaan. Dit vermogen transformeert financiële organisaties in beveiligde instituties met contractueel gegarandeerde expert-beschikbaarheid.
+
+<strong>Energie- en Waterbeheer: Kritieke Voorzieningen voor Miljoenen</strong>
+
+Energiebedrijven en waterleidingmaatschappijen beheren infrastructuur waarvan bevolkingsgroepen rechtstreeks afhankelijk zijn. De Europese Richtlijn Netten- en Informatiebeveiliging (NIS2-richtlijn) verplicht deze organisaties tot vastgestelde respons-procedures. Een Incident Response Retainer verzekert sneller herstel van operationele systemen en garandeert dat essentiële voorzieningen na cyberaanvallen beschikbaar blijven. Deze verkorte hersteltijden minimaliseren onderbreking in elektriciteitsvoorziening, waterkwaliteit en maatschappelijke diensten—kritieke voordelen die vitale sectoren van andere bedrijfstakken onderscheiden.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Horizontale infographic toont vijf iconen met bijbehorende labels en korte beschrijvingstekst. Linksboven: energiesektor icon (transformator/stroompylon) met &quot;Elektriciteitsmaatschappijen en gaslevering&quot; label. Rechtsboven: telecommunicatie-icon (zendmast/antenne) met &quot;Netwerk- en connectiviteitsproviders&quot; label. Midden: gezondheidszorg-icon (stethoscoop/medicijnfles) met &quot;Ziekenhuizen en medische diensten&quot; label. Linksonder: financiële-icon (munten/grafiek) met &quot;Banken en beleggingsinstellingen&quot; label. Rechtsonder: bestuurlijke-icon (regeringsgebouw/schild) met &quot;Publieke diensten en overheidsfuncties&quot; label. Onder elk icoon staat &quot;NFIR-beschermd&quot; badge. Kleurencodering per sektor. Achtergrond bevat subtiele cybersecurity-elementen (cijfercode, netwerklijnen)</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Vijf primaire economische sectoren met infrastructuur-afhankelijkheden: elektriciteit en gastoevoer, digitale communicatienetwerken, medische en patiëntenzorg, financiële marktoperaties en overheidsadministratie—elk vereist specialistische bescherming tegen digitale bedreigingen en onderbreking</p>
+    </figure>
+
+<strong>Gezondheidszorg: Leven en Juridische Verantwoordelijkheid</strong>
+
+Ziekenhuizen, laboratoria en medicijnleveranciers beschermen patiëntgegevens en medische apparatuur tegen ransomware en ongeautoriseerde toegang. Een vertraagde respons op cyberincidenten in healthcare-omgevingen brengt mensenlevens in gevaar en leidt tot wettelijke aansprakelijkheid. Een Incident Response Retainer verkort reactietijd drastisch en biedt healthcare-organisaties de mogelijkheid verstoorde systemen onmiddellijk te isoleren en diensten in te herstellen. Deze onmiddellijke respons-capaciteit beschermt healthcare-providers tegen langdurige operationele verstoringen en waarborgt patiëntveiligheid—doelen die alleen voorbereide, contractueel gebonden respons-teams bereiken.
+
+<strong>Telecommunicatie en Technologie: De Dragers van Digitale Connectiviteit</strong>
+
+Telecom- en technologiebedrijven verwerken verkeersstroom, cloudinfrastructuur en communicatiekanalen die andere vitale sectoren ondersteunen. Hun rol in digitale connectiviteit maakt hen zelf kritieke infrastructuur. Een Incident Response Retainer waarborgt dat deze organisaties storingen in hun netwerklaag sneller lokaliseren en gevolgen voor afhankelijke sectoren minimaliseren. Dit voorkomen van cascadeuitstoringen demonstreert hoe telecommunicatiebedrijven niet alleen hun eigen operaties beschermen, maar ook maatschappelijke continuïteit van alle aangesloten vitale sectoren waarborgen.
+
+<strong>Overheid en Publieke Diensten: De Basis van Institutioneel Vertrouwen</strong>
+
+Overheidsinstanties, lokale overheden en publieke diensten beheren gegevens en diensten waarop burgers en bedrijven vertrouwen. Een Incident Response Retainer stelt publieke organisaties in staat cyberincidenten af te handelen met dezelfde professionele respons-standaards als private bedrijven. Dit versterkt publiek vertrouwen in overheidsinstituties en waarborgt dat essentiële diensten—van belastingadministratie tot burgerregistratie—onverstoord opereren.
+
+<strong>Van Reactieve Crisis naar Proactieve Beveiliging</strong>
+
+Een Incident Response Retainer voor Vitale Sectoren transformeert organisaties van reactieve crisis-managers naar proactieve beveiligingsteams met contractueel verzekerde expertise, aantoonbare respons-capaciteiten en branchespecifieke protocollen. Deze aanpak volstaat aan regelgeving en waarborgt operationele continuïteit. Dit transformatieproces bereikt zijn volle potentieel wanneer organisaties begrijpen hoe het respons-proces daadwerkelijk in praktijk wordt uitgevoerd.
+  </div>
+  
+</section>
+
+<section id="section-6" class="ctc-timeline-zigzag ctc-section--featured py-12 md:py-16" itemscope itemtype="https://schema.org/HowTo">
+  <h2 class="text-3xl font-bold text-center mb-6" itemprop="name">Hoe de Incident Response Retainer Werkt: Het Proces van Ontvangst tot Oplossing</h2>
+  <div class="ctc-timeline-intro" style="max-width: 700px; margin: 0 auto 2.5rem auto; text-align: center; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">Een Incident Response Retainer voor Vitale Sectoren implementeert een gestructureerd proces dat organisaties van de eerste beveiligingsgebeurtenis tot volledige oplossing begeleidt. Dit proces vertaalt contractueel verzekerde expertise, branchespecifieke protocollen en regelgevingsnalevingsstandaarden in operationele continuïteit.
+
+Het respons-proces bestaat uit vijf opeenvolgende fasen, elk met specifieke doelstellingen en deliverables:</div>
+  <div class="ctc-timeline-zigzag-track relative before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-1 before:bg-gradient-to-b before:from-[var(--ctc-primary)] before:to-[var(--ctc-primary-light)] before:-translate-x-1/2">
+    
+    <div class="ctc-timeline-zigzag-step relative flex mb-12 " itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="1">
+      <div class="flex-1 pr-12 text-right">
+        <div class="ctc-step-card inline-block max-w-md p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-lg">
+          <h3 class="ctc-step-title text-xl font-semibold mb-2" itemprop="name"><strong>Melding en triage</strong></h3>
+          <p class="ctc-step-desc text-[var(--ctc-text-secondary)]" itemprop="text">Uw organisatie stelt het respons</p>
+        </div>
+      </div>
+      <div class="ctc-step-node absolute left-1/2 -translate-x-1/2 z-10">
+        <span class="w-12 h-12 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-lg font-bold shadow-lg">1</span>
+      </div>
+      <div class="flex-1"></div>
+    </div>
+    <div class="ctc-timeline-zigzag-step relative flex mb-12 flex-row-reverse" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="2">
+      <div class="flex-1 pl-12 text-left">
+        <div class="ctc-step-card inline-block max-w-md p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-lg">
+          <h3 class="ctc-step-title text-xl font-semibold mb-2" itemprop="name"><strong>Inperking</strong></h3>
+          <p class="ctc-step-desc text-[var(--ctc-text-secondary)]" itemprop="text">Het respons</p>
+        </div>
+      </div>
+      <div class="ctc-step-node absolute left-1/2 -translate-x-1/2 z-10">
+        <span class="w-12 h-12 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-lg font-bold shadow-lg">2</span>
+      </div>
+      <div class="flex-1"></div>
+    </div>
+    <div class="ctc-timeline-zigzag-step relative flex mb-12 " itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="3">
+      <div class="flex-1 pr-12 text-right">
+        <div class="ctc-step-card inline-block max-w-md p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-lg">
+          <h3 class="ctc-step-title text-xl font-semibold mb-2" itemprop="name">**Onderzoeks</h3>
+          <p class="ctc-step-desc text-[var(--ctc-text-secondary)]" itemprop="text">en analysefase**</p>
+        </div>
+      </div>
+      <div class="ctc-step-node absolute left-1/2 -translate-x-1/2 z-10">
+        <span class="w-12 h-12 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-lg font-bold shadow-lg">3</span>
+      </div>
+      <div class="flex-1"></div>
+    </div>
+    <div class="ctc-timeline-zigzag-step relative flex mb-12 flex-row-reverse" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="4">
+      <div class="flex-1 pl-12 text-left">
+        <div class="ctc-step-card inline-block max-w-md p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-lg">
+          <h3 class="ctc-step-title text-xl font-semibold mb-2" itemprop="name"><strong>Herstel en remediatie</strong></h3>
+          <p class="ctc-step-desc text-[var(--ctc-text-secondary)]" itemprop="text">Systemen worden hersteld, patches geïmplementeerd en beveiligingsmaatregelen versterkt. Het team leidt deze activiteiten rechtstreeks en verifieert dat kwetsbaarheden zijn opgeheven voordat normale operaties hervatten. Zonder grondige remediatie riskeert een organisatie dezelfde beveiligingsgebeurtenis opnieuw, waardoor de waarde van professionele respons</p>
+        </div>
+      </div>
+      <div class="ctc-step-node absolute left-1/2 -translate-x-1/2 z-10">
+        <span class="w-12 h-12 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-lg font-bold shadow-lg">4</span>
+      </div>
+      <div class="flex-1"></div>
+    </div>
+    <div class="ctc-timeline-zigzag-step relative flex mb-12 " itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="5">
+      <div class="flex-1 pr-12 text-right">
+        <div class="ctc-step-card inline-block max-w-md p-6 rounded-[var(--ctc-radius-lg)] bg-[var(--ctc-surface)] shadow-lg">
+          <h3 class="ctc-step-title text-xl font-semibold mb-2" itemprop="name"><strong>Eindrapportage en kennisoverdracht</strong></h3>
+          <p class="ctc-step-desc text-[var(--ctc-text-secondary)]" itemprop="text">Een gedetailleerd rapport vat alle bevindingen, ondernomen maatregelen en aanbevelingen samen. Dit document dient als contractueel bewijs van respons</p>
+        </div>
+      </div>
+      <div class="ctc-step-node absolute left-1/2 -translate-x-1/2 z-10">
+        <span class="w-12 h-12 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center text-lg font-bold shadow-lg">5</span>
+      </div>
+      <div class="flex-1"></div>
+    </div>
+  </div>
+</section>
+
+<section id="section-7" class="ctc-prose ctc-section--featured py-8 md:py-10" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="prijzen-en-pakketten-wat-kost-een-incident-respons" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Prijzen en Pakketten: Wat Kost een Incident Response Retainer?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Een Incident Response Retainer voor Vitale Sectoren transformeert cyberbeveiliging van onvoorziene uitgaven naar begrote investeringen. Organisaties in kritieke infrastructuur kiezen uit drie primaire prijsmodellen, elk afgestemd op specifieke operationele en financiële behoeften.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Staafgrafiek met drie verticale balken die jaarlijkse kostenuitgaven visualiseren: linksbalk toont Ad-hoc Incident Response met onregelmatige kostenpieken en variabele hoogte; middelbalk illustreert Retainer-Gebaseerde Services met stabiele, voorspelbare kosten; rechtsbalk presenteert ROI-analyse met percentagewinsten voor vitale sectoren. Legenda onderin onderscheidt kostencategorieën met gecodeerde kleuren. X-as geeft kostenniveaus aan, Y-as toont financiële impact over twaalf maanden. Visuele contrasten benadrukken budgetzekerheid en financiële stabiliteit</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Jaarlijkse uitgavenvergelijking tussen proactieve contractmodellen en noodplanningscenario&#39;s in kritieke infrastructuurbeveiligingsbudgetten, met rendementberekeningen voor strategische sectoren</p>
+    </figure>
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Overzicht van Prijsmodellen</h3>
+
+De drie standaardprijsmodellen voor Incident Response Retainers verschillen fundamenteel in structuur, flexibiliteit en geschiktheid voor verschillende organisatietypen:
+
+| <strong>Prijsmodel</strong> | <strong>Structuur</strong> | <strong>Geschikt voor</strong> | <strong>Voordelen</strong> |
+|---|---|---|---|
+| Vaste maandelijkse retainer | Vooraf bepaald bedrag per maand | Stabiele organisaties met voorspelbare risicoprofiel | Budgetzekerheid, vaste kosten, gereserveerde capaciteit |
+| Gestaffelde pakketten | Bedrag gekoppeld aan organisatiegrootte en risicoprofiel | Organisaties van uiteenlopende omvang in dezelfde sector | Proportionele kostenallocatie, groei-vriendelijk, schaalbaar |
+| Hybride model | Minimale retainer + variabele kosten voor gespecialiseerde expertise | Organisaties met veranderende behoeften en incidentcomplexiteit | Flexibiliteit, kostenoptimalisatie, gespecialiseerde ondersteuning |
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Maandelijkse Retainer met Vast Bedrag</h3>
+
+Dit model biedt organisaties volledige budgetzekerheid door een vast maandelijks bedrag in te voeren. Abonnees ontvangen gegarandeerde responstijden, gereserveerde capaciteit en proactieve monitoring zonder maandelijkse fluctuaties. Het vaste tarief elimineert budgetvolatiliteit doordat cyberbeveiliging onderdeel wordt van structurele operationele uitgaven in plaats van noodbudgetten. Jaarlijkse financiële planning vereenvoudigt aanzienlijk en plotselinge budgetshocks ontstaan niet wanneer cyberincidenten zich voordoen. Dit voordeel is bijzonder waardevol voor vitale sectoren waar budgetplanning maanden van tevoren wordt vastgesteld.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Gestaffelde Pakketten naar Organisatiegrootte</h3>
+
+Dit model werkt met gestaffelde pakketten die direct correleren met organisatiegrootte en risicoprofiel. Een energiebedrijf met duizend werknemers selecteert bijvoorbeeld een ander pakket dan een waterleidingmaatschappij met tweehonderd medewerkers. De gestaffelde pakketten spiegelen incidentcomplexiteit, escalatieprotocollen en beschikbare expertise. Prijsstelling evolueert proportioneel met organisatiegroei, waardoor kostenallocatie aansluit op bedrijfsomvang. Kleinere organisaties vermijden onnodige capaciteitskosten, terwijl grotere entiteiten volledige ondersteuning ontvangen. Voor vitale sectoren met uiteenlopende organisatiegroottes biedt dit model precisie in kostentoewijzing.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Hybride Model met Variabele Componenten</h3>
+
+Dit model combineert een retainer-basis met variabele componenten voor maximale flexibiliteit. Organisaties betalen een minimale maandelijkse vergoeding voor permanente beschikbaarheid en forensische capaciteit. Additionele kosten ontstaan uitsluitend wanneer incidenten gespecialiseerde expertise vereisen of verlengde operaties nodig hebben. Dit model biedt aanzienlijke kostenbesparing voor organisaties met lage incidentfrequentie, terwijl volledige dekking gegarandeerd blijft wanneer crises zich voordoen. Voor vitale sectoren die wisselende incidentfrequenties ondergaan, biedt dit model het optimale evenwicht tussen permanent gereedheid en kostenefficiëntie.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Integratie met Operationele Processen</h3>
+
+Al deze prijsmodellen integreren naadloos met het incident response-proces. Wanneer cyberincidenten zich voordoen, doorlopen abonnees dezelfde ontvangst-, onderzoeks- en herstelstadia zonder onverwachte financiële gevolgen. De retainer garandeert dat technische teams onmiddellijk operationeel zijn zonder interne budgetgoedkeuringen of vertraging door financiële administratie. Organisaties concentreren zich tijdens crises volledig op response en herstel, niet op financiële onderhandelingen.
+
+Vitale sectoren selecteren hun prijsmodel omdat kostenzekerheid operationele continuïteit ondersteunt. Een elektriciteitsbedrijf dat cyberbeveiliging in de begroting opneemt, reageert sneller en gerichtter dan organisaties die plotselinge uitgaven tegemoet zien. Een Incident Response Retainer voor Vitale Sectoren transformeert cybersecurity van onberekenbare kostenpost naar gestructureerde beveiligingsinvestering die naadloos aansluit bij routinefinancieel management. Vitale sectoren waarborgen daarmee dat cyberbeveiliging geen financiële verrassing blijft, maar een voorziene bedrijfsuitgave waarop zij kunnen rekenen wanneer het meest telt.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<aside id="section-8" class="ctc-callout  py-12 md:py-16">
+  <div class="ctc-callout-content">
+    <div class="ctc-callout-icon" aria-hidden="true">💡</div>
+    <div style="flex: 1">
+      <h2 style="font-weight: 600; font-size: 1.125rem; margin-bottom: var(--ctc-space-3); color: var(--ctc-text)">Service Level Agreement (SLA) en Contracttermijnen</h2>
+      <div style="color: var(--ctc-text-secondary); line-height: 1.7">Een Incident Response Retainer voor Vitale Sectoren verankert operationele beloften in formele Service Level Agreements (SLA's). Deze bindende overeenkomsten specificeren prestatieverplichtingen die de dienstverlener garandeert: responstijden, beschikbaarheidsvereisten en ondersteuningsniveaus. De SLA transformeert cybersecurity-diensten van onzekere variabelen naar juridisch verankerde zekerheid—een fundamenteel onderscheid dat organisaties in kritieke sectoren beschermt tegen onvoorspelbare capaciteitsrisico's.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Infografische tijdlijnvisualisatie waarin twee parallelle horizontale pijlen de reactiescenario&#39;s vergelijken: bovenste pijl toont Retainer-Model met drie uur gemarkeerd in groen (gegarandeerde reactievenster) en timestamps voor detectie, eerste contact en teamactivatie; onderste pijl illustreert traditioneel Ad-hoc-Model met rode waarschuwingsmarkeringen bij vier tot vierentwintig uur vertragingen. Pictogrammen van klokken, checkmarks en alertmeldingen accentueren de snelheidsverschillen. Tekstannotaties leggen uit hoe vroegere interventie schade minimaliseert</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Chronologische vergelijking van reactiviteitsramingen tussen contractuele rapidresponsteams en vrij beschikbare specialisten in cybersecurity-crisisbeheer</p>
+    </figure></div>
+    </div>
+  </div>
+</aside>
+
+<section id="section-9" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="responstijd-de-3-uurs-garantie" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Responstijd: De 3-uurs Garantie</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    De 3-uurs responstijdgarantie vormt het kernbestanddeel van professionele Incident Response Retainer-overeenkomsten. Dit criterium onderscheidt gespecialiseerde diensten aanzienlijk van ad-hoc aanbieders. NFIR-specialisten worden operationeel actief binnen drie uur na meldingsontvangstt, waardoor vitale sectoren snelle schadebeperkingen en effectieve herstelmaatregelen kunnen inzetten. Deze initiële respons omvat grondige incidentanalyse, nauwkeurige impactbepaling en strategische prioriteitsstelling van vervolgactiviteiten. Omdat cyberincidenten zich buiten kantooruren afspelen, voorkomt snelle interventie existentiële bedreigingen voor kritieke infrastructuur. Deze contractuele verplichting waarborgt operationele continuïteit op het moment dat cyberbedreigingen zich voordoen.
+  </div>
+  
+</section>
+
+<section id="section-10" class="ctc-prose ctc-section--bg py-8 md:py-10" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="247-beschikbaarheid-als-contractuele-basis" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">24/7 Beschikbaarheid als Contractuele Basis</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Incident Response Retainers waarborgen ononderbroken beschikbaarheid gedurende het contractjaar, met uitzondering van vooraf geplande onderhoudsvensters. Deze continue inzetbaarheid stelt organisaties in staat cyberincidenten op elk moment—onafhankelijk van seizoen of kantooruren—professioneel te beheersen. Vitale sectoren verkrijgen gegarandeerde bereikbaarheid via telefoon, directe communicatielijnen met vastgestelde contactpersonen en gestructureerde escalatieprotocollen. Prioritaire behandeling in incident-wachtrijen verzekert dat kritieke bedreigingen onmiddellijke aandacht ontvangen. Deze beschikbaarheidsgarantie vormt de operationele ruggengraat van retainer-contracten en onderscheidt geverifieerde respons-capaciteit structureel van theoretische toezeggingen.
+  </div>
+  
+</section>
+
+<section id="section-11" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="contracttermijnen-flexibiliteit-en-stabiliteit" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Contracttermijnen: Flexibiliteit en Stabiliteit</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Organisaties kiezen contractduren die hun beveiligingsbehoeften optimaal afstemmen op operationele realiteit. Jaarlijkse contracten bieden stabiliteit en kostzekerheid voor organisaties met voorspelbare bedreigingsprofielen, waardoor lange-termijn budgetplanning wordt geoptimaliseerd. Driemaandelijkse opties maximaliseren flexibiliteit voor sectoren met wisselende cybersecurity-uitdagingen en onzekere dreigingslandschappen. Multi-jarige overeenkomsten reduceren administratieve overhead en verschaffen volumekortingen van 15-25 procent, wat de totale kosteneffectiviteit aanzienlijk verhoogt. De gekozen termijn bepaalt niet alleen de financiële planning, maar ook de integratiedepth met uw organisationele cybersecurity-strategie.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-12" class="ctc-prose  py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: 2rem; border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="escalatiemechanismen-en-wederzijdse-verplichtingen" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Escalatiemechanismen en Wederzijdse Verplichtingen</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    SLA's definiëren nauwkeurige gevolgen wanneer responstijden worden overschreden, wat beide partijen disciplineert naar daadwerkelijke prestatielevering. Contractuele bepalingen voorzien in creditnota's, vervolgingskosten of compensatiemechanismen die beide partijen motiveert beveiligingsdoelstellingen waarachtig na te komen. Deze wederzijdse verplichtingen transformeren Incident Response Retainers van eenzijdige diensten naar gelijkwaardige partnerschappen. Juridisch verankerde escalatiemechanismen creëren accountability-structuren die vitale sectoren kunnen afdwingen—essentieel wanneer minuten beslissend zijn. Deze gestructureerde aansprakelijkheid onderscheidt retainer-contracten fundamenteel van ad-hoc incident response-diensten.
+  </div>
+  
+</section>
+
+<section id="section-13" class="ctc-prose ctc-section--featured py-8 md:py-10" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="vergelijking-incident-response-retainer-versus-ad-" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Vergelijking: Incident Response Retainer versus Ad-hoc Diensten</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    <strong>Incident Response Retainer voor Vitale Sectoren</strong> transformeert cyberabweer van reactieve crisisbeheersing naar voorspelbare, juridisch verankerde zekerheid. Service Level Agreements (SLA's) in retainer-contracten—zoals besproken in de vorige sectie—garanderen responstijden, beschikbaarheid en prestatieniveaus die aantoonbare organisationele veerkracht produceren.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Procesdiagram met zes opeenvolgende fasen weergegeven in een horizontale stroom: Detectie (rode waarschuwingspictogram), Analyse (vergrootglasymbol), Containment (afschermingsicoontje), Eradicatie (verwijderingsmarkering), Herstel (groen opwaarts pijltje), en Rapportage (documentenpictogram). Onder elke fase verschijnt een tekstblock waarin NFIR&#39;s 24/7 CERT-teamrollen worden genoemd (primaire contact, forensische specialis, netwerkarchitect enz.). Gekleurde verbindingslijnen tonen parallelprocessen en communicatiepunten. Rechtsboven een badge geeft &quot;Ononderbroken Coverage&quot; aan</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Zesfasig cybercrisismanagementprotocol met gespecialiseerde personeelstoewijzingen en doorlopende ondersteuningsteams in elke stap van identificatie naar documentatie</p>
+    </figure>
+  </div>
+  
+</section>
+
+<section id="section-14" class="ctc-prose ctc-section--bg py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="beschikbaarheid-en-responstijden" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Beschikbaarheid en Responstijden</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    <strong>Incident Response Retainer</strong> garandeert gespecialiseerde teams gedurende vaste periodes met gedefinieerde responstijden, wat vitale sectoren prioritaire toegang verleent. Ad-hoc diensten daarentegen koppelen respons aan momentane capaciteit en expertise van externe providers zonder prestatiegaranties.
+
+Deze structuurverschil produceert aanzienlijke verschillen in reactievermogen: retainer-contracten garanderen response-windows van 15 tot 60 minuten, terwijl ad-hoc ondersteuning 4 tot 24 uur reactietijd vereist. In cybersecurity-contexten bepaalt deze tijdsdimensie rechtstreeks de schaal van operationele schade en maatschappelijke gevolgen.
+  </div>
+  
+</section>
+
+<section id="section-15" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="financile-voorspelbaarheid" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Financiële Voorspelbaarheid</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Kostzekerheid vormt een kritiek voordeel van <strong>Incident Response Retainer</strong> en bepaalt de financiële stabiliteit die essentieel is voor effectief budgetbeheer. Vaste maandelijkse of jaarlijkse bedragen maken budgetplanning nauwkeurig en voorspelbaar, waardoor CFO's en beveiligingsleiders zonder verrassingen hun middelen kunnen inzetten.
+
+Ad-hoc diensten introduceren daarentegen onvoorzienbare kostenstijgingen wanneer incidenten escaleren, omdat providers per uur of per incident factureren zonder kostenplafond. Een kritisch incident genereert onder ad-hoc-modellen duizenden euro's aan onverwachte kosten, terwijl retainer-contracten deze uitgaven reeds hebben gebudgetteerd en beheerst.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-16" class="ctc-prose  py-8 md:py-10" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: 2rem; border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="kennisvoordeel-en-contextuele-integratie" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Kennisvoordeel en Contextuele Integratie</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    De continuïteit van kennisoverdracht en infrastructuurdocumentatie onderscheidt <strong>Incident Response Retainer</strong> fundamenteel van ad-hoc modellen. Retainer-teams beschikken over voorkennis van kritieke assets, systemen en organisatiestructuur, wat diagnostische fasen versnelt van uren naar minuten.
+
+Ad-hoc providers starten daarentegen zonder deze context, waardoor mitigatie vertraagt en downtime toeneemt—kostbaar voor vitale sectoren waar operationele stilleggen directe maatschappelijke gevolgen genereren. Deze kennisvoordeel verdiept zich naarmate retainer-partners nauwer integreren met organisatiestructuur en beveiligingslandschap.
+  </div>
+  
+</section>
+
+<section id="section-17" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="proactieve-beveiligingsinvesteringen" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Proactieve Beveiligingsinvesteringen</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Proactieve beveiligingselementen zoals vulnerability assessments, penetration testing en incident respons-trainingen onderscheiden <strong>Incident Response Retainer</strong> van reactieve alternatieven. Ad-hoc modellen richten zich uitsluitend op crisisbeheersing zonder preventieve investeringen in organisationele weerbaarheid.
+
+Retainer-partners investeren voortdurend in beveiligingsposuur, waardoor de waarschijnlijkheid van ernstige incidenten systematisch afneemt. Deze preventieve benadering transformeert retainers van zuivere kostenposten naar strategische investeringen in organisationele veerkracht en langetermijnzekerheid.
+  </div>
+  
+</section>
+
+<section id="section-18" class="ctc-prose ctc-section--bg py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="juridische-verankering-en-contractuele-zekerheid" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Juridische Verankering en Contractuele Zekerheid</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    De juridische verankering van SLA's transformeert operationeel risico in beheerd risico met gedefinieerde prestatieniveaus, die rechtspersonen expliciet kunnen handhaven. Niet-naleving leidt tot contractuele consequenties en compensatie—bescherming die ad-hoc partners niet bieden aangezien zij time-and-materials-modellen hanteren zonder prestatiegaranties.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Infografische sectoroverzicht waarin vijf verticale kolommen elk een kritieke infrastructuursector visualiseren: Energie (geel elektriciteitsgrafieken), Telecommunicatie (blauw netwerkpictogrammen), Zorg (rood medische kruis en stethoscopen), Financiën (groen grafiekpictogrammen en muntcijfers), en Overheid (paars overheidgebouwen). Onder elke kolom staat een tekstlabel met sectorspecifieke threattypologieën en waarom retainer-gebaseerde defensie essentieel is. Bovenaan is een gezamenlijke titel &quot;Waar Contractuele Garanties Maatschappelijke Stabiliteit Waarborgen&quot;</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Vijf-sector comparatieve gids met gevaarverhogingen en wettelijke nalevingsimperatief voor kritieke diensten in energie, communicatie, medische zorg, beurs- en administrative sectoren</p>
+    </figure>
+
+Voor vitale sectoren waar downtime directe maatschappelijke impact genereert, waar regelgeving strikte incidentrespons-vereisten stelt en waar reputatierisico's aanzienlijk zijn, biedt <strong>Incident Response Retainer voor Vitale Sectoren</strong> essentiële zekerheid: operationeel betrouwbaar, juridisch bindend en financieel stabiel.
+  </div>
+  
+</section>
+
+<section id="section-19" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="volgende-stappen-voor-incident-response-retainer-v" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Volgende Stappen voor Incident Response Retainer voor Vitale Sectoren</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Uw organisatie beschikt nu over de strategische kennis om incidentrespons structureel in te bedden in plaats van reactief te opereren. Het moment om een retainer-partnership te evalueren is gekomen—voordat de volgende beveiligingsdreiging zich voordoet. Neem vandaag contact op met gespecialiseerde incident response-providers die uw kritieke systemen volledig begrijpen en contractueel geborgde responstijden waarborgen. Dit is de investering die uw vitale sector werkelijk defensief versterkt.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-20" class="ctc-card-grid ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle)">
+  <h2 style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-10); color: var(--ctc-text); position: relative; z-index: 1">Continue Exploring Incident Response Retainer</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ctc-space-6); position: relative; z-index: 1">
+    
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">✨</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">[Incident Response Retainer met Gegarandeerde Responstijd](/topics/incident</h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">response</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🎯</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">[Politie</h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Geautoriseerd CERT Team Retainer](/topics/politie</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🚀</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">[Preventieve Cybersecurity Retainer Diensten](/topics/preventieve</h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">cybersecurity</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">💡</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">[Incident Response Retainer Prijzen en Pakketten](/topics/incident</h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">response</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">⭐</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">[Incident Response Retainer Contracten en SLA's](/topics/incident</h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">response</p>
+    </div>
+  </div>
+</section>
+</article>
+</main>
+
+<aside class="ctc-cta-banner" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 25%, transparent); border-radius: var(--ctc-radius-2xl); padding: 3rem 2rem; text-align: center; margin: 3rem 0; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.12)">
+  
+    <div style="position: absolute; top: -80px; right: -80px; width: 250px; height: 250px; background: white; opacity: 0.1; border-radius: 50%; pointer-events: none"></div>
+    <div style="position: absolute; bottom: -60px; left: -60px; width: 180px; height: 180px; background: white; opacity: 0.08; border-radius: 50%; pointer-events: none"></div>
+  <div style="position: relative; z-index: 1">
+    <h2 class="ctc-cta-title" style="color: white; font-family: var(--ctc-font-display); font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1.5rem; letter-spacing: -0.02em">Klaar om te beginnen?</h2>
+    
+    <div class="ctc-cta-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap">
+      <a href="#contact" style="background: white; color: var(--ctc-primary); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2); font-weight: 800; padding: 1.25rem 3.5rem; font-size: 1.125rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Meer Informatie
+        <span style="font-size: 1.125rem">→</span>
+      </a>
+      
+      <a href="#" style="background: transparent; color: white; border: 2px solid rgba(255,255,255,0.8); display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Contact
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function() {
+  // FAQ Accordion Toggle
+  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+      var icon = trigger.querySelector('.ctc-faq-icon');
+      var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+      trigger.setAttribute('aria-expanded', !isExpanded);
+      if (answer) {
+        answer.hidden = isExpanded;
+      }
+      if (icon) {
+        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      }
+    });
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Add hover effects for cards and interactive elements
+  document.querySelectorAll('.ctc-toc a').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+      this.style.background = 'var(--ctc-surface)';
+    });
+    link.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+    });
+  });
+})();
+</script>
+</div>
+<script>
+// FAQ Accordion Toggle
+document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+  trigger.addEventListener('click', function() {
+    var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+    var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+    trigger.setAttribute('aria-expanded', !isExpanded);
+    if (answer) answer.hidden = isExpanded;
+  });
+});
+
+// Smooth scroll for TOC links
+document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>

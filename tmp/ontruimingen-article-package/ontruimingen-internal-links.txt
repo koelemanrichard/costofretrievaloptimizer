@@ -1,0 +1,53 @@
+═══════════════════════════════════════════════════════════════════════════════
+                        INTERNAL LINKING PLAN
+═══════════════════════════════════════════════════════════════════════════════
+
+Article: ontruimingen
+Total Internal Links: 4
+
+─────────────────────────────────────────────────────────────────────────────────
+
+
+LINK 1
+────────
+Anchor Text: "procesflow van offerte tot oplevering"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 2
+────────
+Anchor Text: "hulp bij boedelafwikkeling na overlijden"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 3
+────────
+Anchor Text: "selectie van ontruimingspartner voor corporaties"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 4
+────────
+Anchor Text: "definitie kleine verhuizing versus ontruiming"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          SEO FACTS (EAVs)
+═══════════════════════════════════════════════════════════════════════════════
+
+Key facts and data points to include in the content:
+
+No EAV data available
+
+
+Generated: January 23, 2026

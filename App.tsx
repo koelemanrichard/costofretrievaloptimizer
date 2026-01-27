@@ -429,6 +429,12 @@ const App: React.FC = () => {
                         dbKeyLength: dbKey?.length || 0,
                         envKeyLength: envKey?.length || 0
                     });
+                    // Debug: Log Apify token specifically
+                    console.log('[Settings] Apify Token:', {
+                        hasApifyToken: !!filteredSettings.apifyToken,
+                        apifyTokenLength: filteredSettings.apifyToken?.length || 0,
+                        apifyTokenPreview: filteredSettings.apifyToken ? `${filteredSettings.apifyToken.substring(0, 10)}...` : 'NOT SET',
+                    });
 
                     // Set billing context for AI usage tracking
                     // This determines whether platform keys or user BYOK keys are being used

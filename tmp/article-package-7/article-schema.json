@@ -1,0 +1,299 @@
+{
+  "schema": {
+    "@graph": [
+      {
+        "@id": "https://example.com#organization",
+        "url": "https://example.com",
+        "name": "Organization",
+        "@type": "Organization"
+      },
+      {
+        "@id": "https://example.com#website",
+        "url": "https://example.com",
+        "name": "Website",
+        "@type": "WebSite",
+        "publisher": {
+          "@id": "https://example.com#organization",
+          "@type": "Organization"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://example.com/search?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "item": "https://example.com",
+            "name": "Home",
+            "@type": "ListItem",
+            "position": 1
+          },
+          {
+            "item": "https://example.com/topics",
+            "name": "Topics",
+            "@type": "ListItem",
+            "position": 2
+          },
+          {
+            "item": "https://example.com/article",
+            "name": "Naden en Aansluitingen Controleren",
+            "@type": "ListItem",
+            "position": 3
+          }
+        ]
+      },
+      {
+        "@id": "https://example.com/article#article",
+        "name": "Naden en Aansluitingen Controleren",
+        "@type": "BlogPosting",
+        "author": {
+          "@id": "https://example.com#author",
+          "@type": "Person"
+        },
+        "headline": "Naden en Aansluitingen Controleren",
+        "publisher": {
+          "@id": "https://example.com#organization",
+          "@type": "Organization"
+        },
+        "wordCount": 2995,
+        "inLanguage": "nl",
+        "dateModified": "2026-01-14T11:56:35.543Z",
+        "datePublished": "2026-01-14T11:56:35.543Z",
+        "mainEntityOfPage": {
+          "@id": "https://example.com/article",
+          "@type": "WebPage"
+        }
+      }
+    ],
+    "@context": "https://schema.org"
+  },
+  "version": 1,
+  "pageType": "Article",
+  "reasoning": "Page Type: Article\nDetected Article based on: Long-form content (3007 words)\n\nResolved 2 entities to external knowledge bases:\n- Naden (Thing): Q37530435\n- Brabant (Place): Q37459216\n\nSchema graph contains 4 items",
+  "configUsed": {
+    "autoFix": true,
+    "includeWebPage": true,
+    "includeEntities": true,
+    "validationLevel": "standard",
+    "includeBreadcrumb": true,
+    "externalValidation": false,
+    "includeAuthorSchema": true,
+    "maxAutoFixIterations": 3,
+    "maxEntityResolutions": 10,
+    "includeOrganizationSchema": true
+  },
+  "validation": {
+    "isValid": true,
+    "warnings": [
+      {
+        "path": "https://example.com/article#article/image",
+        "message": "Article is missing an image property",
+        "category": "best_practice",
+        "recommendation": "Add a featured image to improve rich result eligibility"
+      },
+      {
+        "path": "https://example.com/article#article/speakable",
+        "message": "Article is missing speakable property",
+        "category": "best_practice",
+        "recommendation": "Add speakable property to enable voice assistant support"
+      }
+    ],
+    "entityErrors": [],
+    "overallScore": 96,
+    "syntaxErrors": [],
+    "autoFixApplied": false,
+    "autoFixChanges": [],
+    "schemaOrgErrors": [],
+    "autoFixIterations": 0,
+    "contentParityErrors": [],
+    "eavConsistencyErrors": [],
+    "externalValidationRun": false
+  },
+  "generatedAt": "2026-01-14T11:56:35.544Z",
+  "schemaString": "{\n  \"@context\": \"https://schema.org\",\n  \"@graph\": [\n    {\n      \"@type\": \"Organization\",\n      \"@id\": \"https://example.com#organization\",\n      \"name\": \"Organization\",\n      \"url\": \"https://example.com\"\n    },\n    {\n      \"@type\": \"WebSite\",\n      \"@id\": \"https://example.com#website\",\n      \"name\": \"Website\",\n      \"url\": \"https://example.com\",\n      \"publisher\": {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://example.com#organization\"\n      },\n      \"potentialAction\": {\n        \"@type\": \"SearchAction\",\n        \"target\": {\n          \"@type\": \"EntryPoint\",\n          \"urlTemplate\": \"https://example.com/search?q={search_term_string}\"\n        },\n        \"query-input\": \"required name=search_term_string\"\n      }\n    },\n    {\n      \"@type\": \"BreadcrumbList\",\n      \"itemListElement\": [\n        {\n          \"@type\": \"ListItem\",\n          \"position\": 1,\n          \"name\": \"Home\",\n          \"item\": \"https://example.com\"\n        },\n        {\n          \"@type\": \"ListItem\",\n          \"position\": 2,\n          \"name\": \"Topics\",\n          \"item\": \"https://example.com/topics\"\n        },\n        {\n          \"@type\": \"ListItem\",\n          \"position\": 3,\n          \"name\": \"Naden en Aansluitingen Controleren\",\n          \"item\": \"https://example.com/article\"\n        }\n      ]\n    },\n    {\n      \"@type\": \"BlogPosting\",\n      \"@id\": \"https://example.com/article#article\",\n      \"mainEntityOfPage\": {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://example.com/article\"\n      },\n      \"headline\": \"Naden en Aansluitingen Controleren\",\n      \"name\": \"Naden en Aansluitingen Controleren\",\n      \"datePublished\": \"2026-01-14T11:56:35.543Z\",\n      \"dateModified\": \"2026-01-14T11:56:35.543Z\",\n      \"author\": {\n        \"@type\": \"Person\",\n        \"@id\": \"https://example.com#author\"\n      },\n      \"publisher\": {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://example.com#organization\"\n      },\n      \"wordCount\": 2995,\n      \"inLanguage\": \"nl\"\n    }\n  ]\n}",
+  "entitiesSkipped": [
+    "Plat Dak Dakwerken",
+    "Aansluitingen Controleren",
+    "Een Overzicht\n\nNaden",
+    "Dakdekker Brabant",
+    "Waarom Naden",
+    "Meest Kwetsbare Punten",
+    "Uw Platte Dak Vormen\n\nNaden",
+    "Verticale Naadverbindingen Bij Plat Dak Dakwerken\n\nNaden",
+    "Aansluitingen",
+    "Controleren",
+    "Dakdekker",
+    "EPDM",
+    "Professionele"
+  ],
+  "richResultTypes": [
+    "Article",
+    "AMP Article"
+  ],
+  "detectedPageType": "Article",
+  "entityCandidates": [
+    {
+      "name": "Plat Dak Dakwerken",
+      "role": "subject",
+      "type": "Place",
+      "context": "Met ons team van erkende dakdekkers bedienen wij sinds jaar en dag de regio Brabant en Midden-Nederland met complete platdak oplossingen. Van acute lekkage-reparaties tot volledige dakrenovaties met moderne duurzame materialen – wij kennen de lokale klimaatomstandigheden en bouwtradities als geen ander. Onze klanten, van particulieren tot bouwprofessionals, vertrouwen op onze 10 jaar garantie en persoonlijke aanpak binnen een straal van 75 km.",
+      "mentions": 10,
+      "isMainEntity": true
+    },
+    {
+      "name": "Aansluitingen Controleren",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Een Overzicht\n\nNaden",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Dakdekker Brabant",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Waarom Naden",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Meest Kwetsbare Punten",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Uw Platte Dak Vormen\n\nNaden",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Verticale Naadverbindingen Bij Plat Dak Dakwerken\n\nNaden",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Naden",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Aansluitingen",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Controleren",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Dakdekker",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Brabant",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "EPDM",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    },
+    {
+      "name": "Professionele",
+      "role": "mentioned",
+      "type": "Thing",
+      "context": "",
+      "mentions": 1,
+      "isMainEntity": false
+    }
+  ],
+  "resolvedEntities": [
+    {
+      "id": "09c8766c-73fb-44f1-a66f-181adb3e1e0d",
+      "name": "Naden",
+      "type": "Thing",
+      "sameAs": [
+        "https://www.wikidata.org/wiki/Q37530435"
+      ],
+      "source": "wikidata",
+      "properties": {},
+      "wikidataId": "Q37530435",
+      "wikipediaUrl": null,
+      "lastVerifiedAt": "2026-01-14T10:16:46.978+00:00",
+      "confidenceScore": 1
+    },
+    {
+      "id": "70a9e6a8-e2ee-4679-a847-27d540e330a1",
+      "name": "Brabant",
+      "type": "Place",
+      "sameAs": [
+        "https://www.wikidata.org/wiki/Q37459216"
+      ],
+      "source": "wikidata",
+      "properties": {},
+      "wikidataId": "Q37459216",
+      "wikipediaUrl": null,
+      "lastVerifiedAt": "2025-12-17T19:05:58.119+00:00",
+      "confidenceScore": 1
+    }
+  ],
+  "pageTypeOverridden": false,
+  "richResultWarnings": [],
+  "publisher": {
+    "@type": "Organization",
+    "name": "Dakdekker / Dakdekker Brabant",
+    "description": "Bouw & Installatie, specifiek: Dakbedekking en Dakonderhoud."
+  }
+}

@@ -225,6 +225,16 @@ export function useQuotation(): UseQuotationReturn {
   const startAnalysis = useCallback(async () => {
     if (!wizardState.url.trim()) return;
 
+    // Check if API keys are configured
+    const hasApifyKey = !!state.businessInfo.apifyToken;
+
+    if (!hasApifyKey) {
+      setError(
+        'Full analysis requires API keys. Please configure your Apify API key in Settings, or use "Quick Estimate" for instant results based on URL patterns.'
+      );
+      return;
+    }
+
     setWizardState((prev) => ({ ...prev, isAnalyzing: true }));
     setError(null);
     setAnalysisProgress(null);
@@ -257,7 +267,7 @@ export function useQuotation(): UseQuotationReturn {
       // Auto-advance to next step
       goToStep('analysis_result');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setError(err instanceof Error ? err.message : 'Analysis failed. Try using "Quick Estimate" instead.');
       setWizardState((prev) => ({ ...prev, isAnalyzing: false }));
     }
   }, [wizardState.url, state.businessInfo, goToStep]);
@@ -369,13 +379,15 @@ export function useQuotation(): UseQuotationReturn {
 
   const recommendedPackageId = useMemo((): string | null => {
     if (!wizardState.analysisResult) return null;
-    const hasLocalFocus = wizardState.questionnaireResponses.targetMarket === 'local';
+    const hasLocalFocus = wizardState.questionnaireResponses.targetMarket === 'local' ||
+                          wizardState.questionnaireResponses.primaryGoal === 'local';
     const recommended = getRecommendedPackage(
       wizardState.analysisResult.siteSize,
-      hasLocalFocus
+      hasLocalFocus,
+      wizardState.questionnaireResponses.budgetRange
     );
     return recommended?.id || null;
-  }, [wizardState.analysisResult, wizardState.questionnaireResponses.targetMarket]);
+  }, [wizardState.analysisResult, wizardState.questionnaireResponses]);
 
   // Pricing context
   const pricingContext = useMemo((): PricingContext | null => {

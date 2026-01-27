@@ -1,0 +1,33 @@
+cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[vite] connecting...
+[vite] connected.
+%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[ConsoleLogger] Installed
+[App] Logging services initialized
+[App] Starting session check...
+[App] No stored session found, skipping getSession()
+[App] Setting up onAuthStateChange subscription (version: 0 )
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Unsubscribing from onAuthStateChange (version: 0 )
+[App] Logging services initialized
+[App] Setting up onAuthStateChange subscription (version: 0 )
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[VersionCheck] Initial version: 1.0.20260127.1347
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[AuthScreen] Starting auth process...
+[AuthScreen] Attempting login for: richard@kjenmarks.nl
+[AuthScreen] Login response received: {hasData: true, hasError: false}
+[AuthScreen] Login successful, dispatching user
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[Settings] API Key Sources: {envKeyPreview: sk-ant-api03-Zu..., dbKeyPreview: sk-ant-api03-Zu..., usingSource: DATABASE (overrides env), dbKeyLength: 108, envKeyLength: 108}
+[Telemetry] Billing context set: {organizationId: NOT SET, keySource: user_byok, billableTo: user}
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false

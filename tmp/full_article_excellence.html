@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Woningontruiming Noord-Brabant | Volledige Ontzorging</title>
+    <!-- Premium Font Stack -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Brand DNA: Daadvracht Orange */
+            --brand-primary: #EA580C;
+            --brand-primary-light: #FFedd5;
+            --brand-primary-dark: #9a3412;
+            --brand-secondary: #18181b;
+
+            /* Elevation & Surface */
+            --bg-canvas: #fcfcfc;
+            --bg-surface: #ffffff;
+            --bg-muted: #f8fafc;
+            --text-main: #18181b;
+            --text-muted: #52525b;
+            --border-soft: #e4e4e7;
+
+            /* Design System Constants */
+            --radius-xl: 1.5rem;
+            --radius-lg: 1rem;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+
+            /* Typography */
+            --font-display: 'Playfair Display', serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+
+            /* Spacing Rhythm */
+            --section-gap: 6rem;
+            --content-width: 800px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-canvas);
+            color: var(--text-main);
+            line-height: 1.8;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .container-lg {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* HEADER & HERO */
+        .hero {
+            padding: 10rem 0 8rem;
+            position: relative;
+            background: radial-gradient(circle at 80% 20%, var(--brand-primary-light) 0%, transparent 45%),
+                radial-gradient(circle at 15% 85%, #f1f5f9 0%, transparent 35%);
+            border-bottom: 1px solid var(--border-soft);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .hero::before {
+            content: "DAAD";
+            position: absolute;
+            font-family: var(--font-display);
+            font-size: 25vw;
+            font-weight: 900;
+            opacity: 0.02;
+            bottom: -5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--brand-primary);
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2.5rem;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            line-height: 1.05;
+            margin-bottom: 2rem;
+            letter-spacing: -0.03em;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero .brand-dna-tag {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-soft);
+        }
+
+        /* TABLE OF CONTENTS */
+        .toc-card {
+            background: white;
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            margin: -5rem auto 4rem;
+            position: relative;
+            z-index: 20;
+            box-shadow: var(--shadow-float);
+        }
+
+        .toc-card h2 {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--brand-primary-light);
+            padding-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .toc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            list-style: none;
+        }
+
+        .toc-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toc-link:hover {
+            color: var(--brand-primary);
+        }
+
+        .toc-link::before {
+            content: "→";
+            color: var(--brand-primary);
+            opacity: 0.5;
+        }
+
+        /* SECTIONS & PROSE */
+        .section {
+            padding: var(--section-gap) 0;
+        }
+
+        .prose h2 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            line-height: 1.1;
+        }
+
+        .prose p {
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+            color: #3f3f46;
+        }
+
+        /* IMAGE COMPONENT */
+        .image-bespoke {
+            margin: 4rem 0;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-float);
+            background: var(--bg-muted);
+        }
+
+        .image-bespoke img {
+            width: 100%;
+            display: block;
+            filter: saturate(1.1);
+        }
+
+        .image-caption {
+            padding: 1.5rem 2rem;
+            background: white;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-style: italic;
+            border-top: 1px solid var(--border-soft);
+        }
+
+        /* CARD GRID: SERVICES */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .service-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-soft);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--brand-primary-light);
+        }
+
+        .service-card .icon {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-card h3 {
+            font-family: var(--font-display);
+            margin-bottom: 1rem;
+        }
+
+        /* TIMELINE: OUR PROCESS */
+        .timeline {
+            margin-top: 4rem;
+        }
+
+        .timeline-item {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 3rem;
+            margin-bottom: 4rem;
+            position: relative;
+        }
+
+        .timeline-date {
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--brand-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding-top: 0.5rem;
+        }
+
+        .timeline-content {
+            padding-bottom: 3rem;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .timeline-content h4 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* TESTIMONIAL */
+        .quote-section {
+            background: var(--brand-secondary);
+            color: white;
+            padding: 6rem 0;
+            border-radius: var(--radius-xl);
+            margin: 6rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quote-section blockquote {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-style: italic;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.3;
+        }
+
+        .quote-author {
+            margin-top: 2rem;
+            font-weight: 600;
+            color: var(--brand-primary-light);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+        }
+
+        /* CTA BANNER */
+        .cta-banner {
+            padding: 5rem;
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+            border-radius: var(--radius-xl);
+            color: white;
+            text-align: center;
+            box-shadow: 0 30px 60px -12px rgba(234, 88, 12, 0.3);
+            margin: 8rem 0 4rem;
+        }
+
+        .cta-banner h2 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: var(--brand-primary);
+            padding: 1.25rem 3rem;
+            border-radius: 100px;
+            font-weight: 800;
+            text-decoration: none;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="hero">
+        <span class="brand-dna-tag">✨ Visual match: daadvracht.nl</span>
+        <div class="container">
+            <div class="hero-tag">
+                <span>🛡️ Gecertificeerd Ontruimingsbedrijf</span>
+            </div>
+            <h1>Breda’s meest vertrouwde <span
+                    style="font-style: italic; color: var(--brand-primary)">woningontruimers</span>.</h1>
+            <p style="font-size: 1.25rem; color: var(--text-muted); max-width: 700px; margin: 0 auto;">Professionele
+                leegruiming voor particulieren en makelaars in heel Noord-Brabant. Bezemschoon opgeleverd met oog voor
+                detail.</p>
+        </div>
+    </header>
+
+    <div class="container-lg">
+        <nav class="toc-card">
+            <h2>Wat u kunt verwachten</h2>
+            <ul class="toc-grid">
+                <li><a href="#waarom" class="toc-link">Waarom Daadvracht?</a></li>
+                <li><a href="#services" class="toc-link">Onze Diensten</a></li>
+                <li><a href="#werkwijze" class="toc-link">De Werkwijze</a></li>
+                <li><a href="#ervaringen" class="toc-link">Ervaringen</a></li>
+                <li><a href="#contact" class="toc-link">Offerte Aanvragen</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <main>
+        <section id="waarom" class="section container prose">
+            <div class="ai-intelligence-label"
+                style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; background: #eff6ff; color: #1d4ed8; width: fit-content; padding: 0.25rem 0.75rem; border-radius: 100px; margin-bottom: 2rem; font-weight: 600;">
+                ✨ Editorial Style: High Contrast Serif</div>
+            <h2>Respectvolle ontruiming van elke woning.</h2>
+            <p>Het leeghalen van een woning is meer dan alleen het verplaatsen van spulletjes. Of het nu gaat om een
+                verhuizing naar een zorginstelling of het afwikkelen van een boedel na een overlijden: er komt emotie
+                bij kijken. Wij begrijpen dat en handelen daar ook naar.</p>
+            <p>Bij Daadvracht combineren we fysieke kracht met menselijke zachtheid. Onze teams zijn getraind om
+                waardevolle herinneringen te identificeren en veilig te stellen, terwijl we de rest van de woning
+                vakkundig klaarmaken voor de volgende bestemming.</p>
+        </section>
+
+        <section id="services" class="section container-lg">
+            <div style="text-align: center; margin-bottom: 4rem;">
+                <h2 style="font-family: var(--font-display); font-size: 3rem;">Gespecialiseerde Diensten</h2>
+                <p style="color: var(--text-muted);">Compleet pakket van A tot Z.</p>
+            </div>
+            <div class="service-grid">
+                <div class="service-card">
+                    <div class="icon">🏠</div>
+                    <h3>Woningontruiming</h3>
+                    <p>Volledige ontruiming inclusief verwijdering van vloerbedekking, gordijnrails en eindschoonmaak.
+                    </p>
+                </div>
+                <div class="service-card">
+                    <div class="icon">♻️</div>
+                    <h3>Boedelafwikkeling</h3>
+                    <p>Duurzame verwerking van inboedel. Goede spullen krijgen een tweede leven via onze partners.</p>
+                </div>
+                <div class="service-card">
+                    <div class="icon">🏗️</div>
+                    <h3>Seniorenverhuizing</h3>
+                    <p>Begeleiding van deur tot deur naar een nieuwe, kleinere woonruimte zonder stress.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="container">
+            <figure class="image-bespoke">
+                <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80"
+                    alt="Schoon interieur na ontruiming">
+                <figcaption class="image-caption">Een bezemschoon resultaat: direct klaar voor de nieuwe huurder of
+                    koper.</figcaption>
+            </figure>
+        </div>
+
+        <section id="werkwijze" class="section container">
+            <h2 style="font-family: var(--font-display); font-size: 2.5rem; margin-bottom: 3rem;">Onze Heldere Werkwijze
+            </h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">Stap 01</div>
+                    <div class="timeline-content">
+                        <h4>De Eerste Inspectie</h4>
+                        <p>We komen gratig en vrijblijvend langs om de omvang van de werkzaamheden te bepalen. Geen
+                            schattingsfouten, maar een exact plan.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Stap 02</div>
+                    <div class="timeline-content">
+                        <h4>Transparante Offerte</h4>
+                        <p>Binnen 24 uur ontvangt u een all-in prijsopgave. Geen verborgen toeslagen voor
+                            afvalverwijdering of transport.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Stap 03</div>
+                    <div class="timeline-content">
+                        <h4>De Uitvoering</h4>
+                        <p>Op de afgesproken dag gaat ons team aan de slag. Wij werken efficiënt, stil en met de hoogste
+                            mate van zorg voor uw eigendommen.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ervaringen" class="container">
+            <div class="quote-section">
+                <blockquote>"De snelheid waarmee Daadvracht handelde was verbluffend, maar het was hun respectvolle
+                    houding die voor ons het verschil maakte."</blockquote>
+                <div class="quote-author">Familie de Vries, Breda</div>
+            </div>
+        </section>
+
+        <section id="contact" class="container">
+            <div class="cta-banner">
+                <h2>Klaar voor een zorgeloze start?</h2>
+                <p style="margin-bottom: 2.5rem; opacity: 0.9;">Vraag nu uw gratis inspectie aan voor de regio Breda en
+                    Tilburg.</p>
+                <a href="#" class="cta-button">Vraag een Gratis Offerte aan</a>
+                <p style="margin-top: 1.5rem; font-size: 0.8rem; opacity: 0.7;">✓ Binnen 24 uur antwoord | ✓
+                    Vrijblijvend | ✓ Geen aanbetaling nodig</p>
+            </div>
+        </section>
+    </main>
+
+    <footer
+        style="padding: 4rem 0; border-top: 1px solid var(--border-soft); text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        <div class="container">
+            <p>&copy; 2026 Daadvracht Ontruimingen. Alle rechten voorbehouden.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

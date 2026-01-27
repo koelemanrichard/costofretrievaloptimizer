@@ -1,0 +1,160 @@
+═══════════════════════════════════════════════════════════════════════════════
+                         CONTENT QUALITY REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+Article: Totaal VvE Beheer Almere
+Generated: January 27, 2026
+
+─────────────────────────────────────────────────────────────────────────────────
+                            OVERVIEW
+─────────────────────────────────────────────────────────────────────────────────
+
+Overall Quality Score: 73/100
+Word Count: 2.663
+Character Count: 21.408
+Optimization Passes Completed: 10
+
+─────────────────────────────────────────────────────────────────────────────────
+                         AUDIT CHECKS
+─────────────────────────────────────────────────────────────────────────────────
+
+No detailed audit available. Run the audit to see specific checks.
+
+EAV Coverage: Not checked
+Link Coverage: Not checked
+Linguistic Score: N/A/100
+
+─────────────────────────────────────────────────────────────────────────────────
+                           IMAGES
+─────────────────────────────────────────────────────────────────────────────────
+
+Total Images: 18
+
+
+Image 1: HERO
+  Description: Drieluik infographic met iconen voor euro, moersleutel en document die samenkomen bij een centraal logo, visualiserend de synergie tussen de kerntaken voor vastgoedbehoud.
+  Alt Text: integrale dienstverlening flevoland vastgoed drie pijlers boekhouding onderhoud administratie servicepakket
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/hero-1769347212648.png
+
+
+Image 2: SECTION
+  Description: Vergelijkende staafgrafiek die de kostenontwikkeling en besparingen toont over 5 jaar tussen eigen bestuur en professionele uitbesteding, inclusief ROI-indicator en liquiditeitsprognose.
+  Alt Text: kostenanalyse vve-bijdrage rendement investering polderstad appartementencomplex begroting grafiek liquiditeit
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769347238692.png
+
+
+Image 3: DIAGRAM
+  Description: Circulair procesdiagram van de meerjarenonderhoudscyclus: inspecteren, plannen, begroten, uitvoeren en evalueren, gecentreerd rond coördinatie en kwaliteitsbewaking.
+  Alt Text: onderhoudsplan cyclus renovatie planning inspectie bouwkundige staat gebouwencomplex vastgoedbehoud
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506097331.png
+
+
+Image 4: SECTION
+  Description: Stroomschema van de administratieve besluitvorming, tonende de tijdlijn van uitnodiging, agendapunten en stemming tot officiële notulering voor een rechtsgeldige algemene ledenvergadering.
+  Alt Text: organisatie ledenvergadering juridische kaders besluitvorming stappenplan wetgeving vastgoed notulen
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506116674.png
+
+
+Image 5: CHART
+  Description: Een gestileerde infographic die de 'Hybride Kracht' van MVGM visualiseert. Centraal staat een landkaart van Almere met locatie-markers in wijken zoals Poort en Buiten, verbonden aan een centraal schild dat landelijke expertise symboliseert. Iconen rondom tonen de 24/7 calamiteitenservice, het SKW-kwaliteitsstempel en een tablet voor het digitale bewonersportaal.
+  Alt Text: Vakkundige vastgoedzorg, landelijke ondersteuning, gebiedskennis Flevoland, kwaliteitskeurmerk, digitale transparantie, calamiteitenservice, wijkgebonden specialisten
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/chart-1769506131817.png
+
+
+Image 6: DIAGRAM
+  Description: Een vergelijkend staafdiagram dat de 'Total Cost of Ownership' over een periode van 5 jaar toont. De balk voor 'Budget Optie' begint laag, maar toont hoge, onvoorspelbare pieken voor onvoorzien meerwerk en toeslagen. De balk voor 'Full Service' toont een stabiel, voorspelbaar verloop zonder verrassingen. Een pijl met 'ROI' wijst naar de lange termijn waardestijging bij de stabiele optie.
+  Alt Text: Prijsvergelijking vastgoedmanagement, operationele uitgaven, investeringsrendement, kostenplaatje meerjarenplan, budgetzekerheid, modulaire prijsopbouw, polderstad vastgoedwaarde
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506144800.png
+
+
+Image 7: SECTION
+  Description: Een technische dwarsdoorsnede-illustratie van een Almeers appartementencomplex. De visualisatie accentueert specifieke aandachtspunten: de heipalen in de poldergrond (funderingsmonitoring), de aansluiting op het warmtenet (stadsverwarming), en onderhoudszones op het platte dak. Tekstvakken verbinden deze elementen met specialistische taken en lokale aannemers.
+  Alt Text: Funderingsonderzoek polderbodem, warmtenet exploitatie, specialistische bouwkunde, gemeentelijke regelgeving, aannemersnetwerk Flevoland, vastgoedbehoud, preventief onderhoudsplan
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506165209.png
+
+
+Image 8: SECTION
+  Description: Een isometrische 3D-visualisatie van een modern daklandschap in Almere. Te zien zijn zonnepanelen-opstellingen, groene dakbedekking (sedum) en laadpalen in de onderliggende parkeergarage. Pijlen geven de stroom aan van inspectie, naar installatie, tot aan de subsidieaanvraag.
+  Alt Text: Energietransitie verduurzamingsmaatregelen, zonnepanelen installatie, laadinfrastructuur, subsidiebegeleiding SVVE, energie-efficiëntie, wooncomfort verbetering, bouwkundige dakinspectie
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506185346.png
+
+
+Image 9: DIAGRAM
+  Description: Een circulair procesdiagram dat de 'Service Cyclus' verbeeldt. De stappen lopen van 'Contract Analyse' naar 'Begroting', door naar 'Onderhoudsplanning' en eindigend bij 'Evaluatie'. Het centrale knooppunt is de Algemene Ledenvergadering (ALV) waar besluiten worden bekrachtigd.
+  Alt Text: Besluitvormingsproces eigenaarsvereniging, overstapprocedure administratiekantoor, contractanalyse, vergaderstructuur, ledenservice, transparante communicatie, vastgoedzorg cyclus
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506209419.png
+
+
+Image 10: DIAGRAM
+  Description: Circulair procesdiagram van de meerjarenonderhoudscyclus: inspecteren, plannen, begroten, uitvoeren en evalueren, gecentreerd rond coördinatie en kwaliteitsbewaking.
+  Alt Text: onderhoudsplan cyclus renovatie planning inspectie bouwkundige staat gebouwencomplex vastgoedbehoud
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506230736.png
+
+
+Image 11: SECTION
+  Description: Stroomschema van de administratieve besluitvorming, tonende de tijdlijn van uitnodiging, agendapunten en stemming tot officiële notulering voor een rechtsgeldige algemene ledenvergadering.
+  Alt Text: organisatie ledenvergadering juridische kaders besluitvorming stappenplan wetgeving vastgoed notulen
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506249656.png
+
+
+Image 12: SECTION
+  Description: Een isometrische 3D-visualisatie van een modern daklandschap in Almere. Te zien zijn zonnepanelen-opstellingen, groene dakbedekking (sedum) en laadpalen in de onderliggende parkeergarage. Pijlen geven de stroom aan van inspectie, naar installatie, tot aan de subsidieaanvraag.
+  Alt Text: Energietransitie verduurzamingsmaatregelen, zonnepanelen installatie, laadinfrastructuur, subsidiebegeleiding SVVE, energie-efficiëntie, wooncomfort verbetering, bouwkundige dakinspectie
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506267810.png
+
+
+Image 13: DIAGRAM
+  Description: Een vergelijkend staafdiagram dat de 'Total Cost of Ownership' over een periode van 5 jaar toont. De balk voor 'Budget Optie' begint laag, maar toont hoge, onvoorspelbare pieken voor onvoorzien meerwerk en toeslagen. De balk voor 'Full Service' toont een stabiel, voorspelbaar verloop zonder verrassingen. Een pijl met 'ROI' wijst naar de lange termijn waardestijging bij de stabiele optie.
+  Alt Text: Prijsvergelijking vastgoedmanagement, operationele uitgaven, investeringsrendement, kostenplaatje meerjarenplan, budgetzekerheid, modulaire prijsopbouw, polderstad vastgoedwaarde
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506339357.png
+
+
+Image 14: CHART
+  Description: Een gestileerde infographic die de 'Hybride Kracht' van MVGM visualiseert. Centraal staat een landkaart van Almere met locatie-markers in wijken zoals Poort en Buiten, verbonden aan een centraal schild dat landelijke expertise symboliseert. Iconen rondom tonen de 24/7 calamiteitenservice, het SKW-kwaliteitsstempel en een tablet voor het digitale bewonersportaal.
+  Alt Text: Vakkundige vastgoedzorg, landelijke ondersteuning, gebiedskennis Flevoland, kwaliteitskeurmerk, digitale transparantie, calamiteitenservice, wijkgebonden specialisten
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/chart-1769506353245.png
+
+
+Image 15: HERO
+  Description: Drieluik infographic met iconen voor euro, moersleutel en document die samenkomen bij een centraal logo, visualiserend de synergie tussen de kerntaken voor vastgoedbehoud.
+  Alt Text: integrale dienstverlening flevoland vastgoed drie pijlers boekhouding onderhoud administratie servicepakket
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/hero-1769347212648.png
+
+
+Image 16: SECTION
+  Description: Vergelijkende staafgrafiek die de kostenontwikkeling en besparingen toont over 5 jaar tussen eigen bestuur en professionele uitbesteding, inclusief ROI-indicator en liquiditeitsprognose.
+  Alt Text: kostenanalyse vve-bijdrage rendement investering polderstad appartementencomplex begroting grafiek liquiditeit
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769347238692.png
+
+
+Image 17: SECTION
+  Description: Een technische dwarsdoorsnede-illustratie van een Almeers appartementencomplex. De visualisatie accentueert specifieke aandachtspunten: de heipalen in de poldergrond (funderingsmonitoring), de aansluiting op het warmtenet (stadsverwarming), en onderhoudszones op het platte dak. Tekstvakken verbinden deze elementen met specialistische taken en lokale aannemers.
+  Alt Text: Funderingsonderzoek polderbodem, warmtenet exploitatie, specialistische bouwkunde, gemeentelijke regelgeving, aannemersnetwerk Flevoland, vastgoedbehoud, preventief onderhoudsplan
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506165209.png
+
+
+Image 18: DIAGRAM
+  Description: Een circulair procesdiagram dat de 'Service Cyclus' verbeeldt. De stappen lopen van 'Contract Analyse' naar 'Begroting', door naar 'Onderhoudsplanning' en eindigend bij 'Evaluatie'. Het centrale knooppunt is de Algemene Ledenvergadering (ALV) waar besluiten worden bekrachtigd.
+  Alt Text: Besluitvormingsproces eigenaarsvereniging, overstapprocedure administratiekantoor, contractanalyse, vergaderstructuur, ledenservice, transparante communicatie, vastgoedzorg cyclus
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506209419.png
+
+
+═══════════════════════════════════════════════════════════════════════════════

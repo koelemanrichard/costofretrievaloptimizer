@@ -1,0 +1,159 @@
+/**
+ * CutTheCrap Connector Admin Styles
+ */
+
+.cutthecrap-settings {
+    max-width: 800px;
+}
+
+.cutthecrap-header {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.cutthecrap-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.cutthecrap-logo h2 {
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+    color: #1d2327;
+}
+
+.cutthecrap-logo .version {
+    background: #2271b1;
+    color: #fff;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.cutthecrap-status-card,
+.cutthecrap-info-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.cutthecrap-status-card h3,
+.cutthecrap-info-card h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.status-dot.status-active {
+    background: #00a32a;
+}
+
+.status-dot.status-error {
+    background: #d63638;
+}
+
+.status-dot.status-pending {
+    background: #dba617;
+}
+
+.help-text {
+    color: #50575e;
+    margin-bottom: 10px;
+}
+
+.cutthecrap-status-card ol {
+    margin-left: 20px;
+    color: #50575e;
+}
+
+.cutthecrap-status-card ol li {
+    margin-bottom: 8px;
+}
+
+.cutthecrap-status-card code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.app-password-help {
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.app-password-help h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.app-password-help ol {
+    margin-bottom: 15px;
+}
+
+.cutthecrap-info-card table {
+    margin-top: 15px;
+}
+
+.cutthecrap-info-card table code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.cutthecrap-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #c3c4c7;
+    color: #50575e;
+}
+
+.cutthecrap-footer a {
+    color: #2271b1;
+    text-decoration: none;
+}
+
+.cutthecrap-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Form styles */
+.cutthecrap-settings .form-table th {
+    width: 200px;
+}
+
+.cutthecrap-settings .regular-text {
+    width: 100%;
+    max-width: 400px;
+}
+
+.cutthecrap-settings .description {
+    color: #646970;
+    font-style: italic;
+    margin-top: 5px;
+}

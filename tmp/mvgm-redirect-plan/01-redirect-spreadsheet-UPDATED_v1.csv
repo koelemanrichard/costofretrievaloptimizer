@@ -1,0 +1,56 @@
+### 2. New Site Preparation;;
+;;
+- [ ] **All destination URLs return 200** (not 404; not redirect);
+- [ ] **Content parity**: New pages have equal or better content;;
+"- [ ] **Canonical tags**: Point to new domain (`<link rel=""canonical"" href=""https://mvgm-vvebeheer.nl/..."">`)";;
+- [ ] **No noindex**: Verify new pages are indexable;;
+- [ ] **XML Sitemap**: Created and ready at `mvgm-vvebeheer.nl/sitemap.xml`;;
+- [ ] **robots.txt**: Allows crawling of all important pages;;
+- [ ] **HTTPS**: SSL certificate installed and working;;
+- [ ] **Mobile-friendly**: New site passes Google Mobile-Friendly test;;
+;;
+### 3. Google Search Console Setup;;
+;;
+- [ ] Add `mvgm-vvebeheer.nl` as new property;;
+- [ ] Verify ownership (DNS or HTML file);;
+- [ ] Submit sitemap;;
+- [ ] **Do NOT use Change of Address tool** (partial migration;;
+;;
+;;
+## During Migration;;
+;;
+### Phase 1 Execution (09-02-2026);;
+;;
+1. **Implement redirects** for legal/news pages;;
+2. **Test each redirect** manually in incognito browser;;
+3. **Check for chains**: Use redirect checker tool;;
+4. **Monitor server logs** for 404s and 500s;;
+;;
+### Phase 2 Execution (16-02-2026) - CRITICAL;;
+;;
+This phase includes the homepage with 43 backlinks.;;
+;;
+1. **Pre-flight check**: Verify `mvgm-vvebeheer.nl/` loads correctly;;
+2. **Implement redirects** during low-traffic hours (early morning);;
+3. **Immediately test** the main redirect: `mvgm.com/nl/vastgoeddiensten/vve-beheer/`;;
+4. **Request indexing** in GSC for `mvgm-vvebeheer.nl/`;;
+5. **Monitor Search Console** for crawl errors within 24 hours;;
+;;
+### Phase 3 Execution (23-02-2026);;
+;;
+1. Implement city/region page redirects;;
+2. Final internal link cleanup on mvgm.com;;
+3. Update footer/navigation links;;
+;;
+## Link Equity Preservation Rules;;
+### Rule 1: Always Use 301 (Permanent) Redirects;;
+### Rule 2: Avoid Redirect Chains;Bad: mvgm.com/vve-beheer/ ? mvgm.com/nl/vve-beheer/ ? mvgm-vvebeheer.nl/ (Each hop loses ~10% equity.);"Good: mvgm.com/vve-beheer/ ? mvgm-vvebeheer.nl/
+mvgm.com/nl/vve-beheer/ ? mvgm-vvebeheer.nl/ (Direct to final destination.)"
+### Rule 3: Match Content Relevance;When content is 1:1 matched, Google transfers relevance signals more effectively.;
+### Rule 4: Preserve URL Structure Where Possible;Your city pages do this well: /vve-beheer/amsterdam/ ? /amsterdam/ (The semantic similarity helps Google understand the relationship.);
+### Rule 5: Keep Redirects Active for 1+ Year;"Do not remove 301 redirects for at least 12 months:
+- Google needs time to discover and process all redirects
+- Cached pages in browsers will still try old URLs
+- Some backlinks may not update their href values";
+;;
+## Post-Migration Monitoring;;

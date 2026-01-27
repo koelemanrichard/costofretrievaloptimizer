@@ -583,70 +583,96 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
       try {
         const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
 
-        // First try content_briefs table (primary storage) - also fetch version history
-        const { data: briefData, error: briefError } = await supabase
-          .from('content_briefs')
-          .select('article_draft, draft_history')
-          .eq('id', brief.id)
-          .single();
+        // Fetch BOTH sources in parallel and compare timestamps to use the NEWER one
+        // This prevents stale/corrupted drafts (like those with base64 images) from being loaded
+        const [briefResult, jobResult] = await Promise.all([
+          supabase
+            .from('content_briefs')
+            .select('article_draft, draft_history, updated_at')
+            .eq('id', brief.id)
+            .single(),
+          supabase
+            .from('content_generation_jobs')
+            .select('draft_content, updated_at')
+            .eq('brief_id', brief.id)
+            .eq('status', 'completed')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        ]);
 
-        if (!briefError && briefData?.article_draft) {
-          console.log('[DraftingModal] Loaded draft from content_briefs:', briefData.article_draft.length, 'chars');
-          setDraftContent(briefData.article_draft);
-          loadedBriefIdRef.current = brief.id;
-          loadedDraftLengthRef.current = briefData.article_draft.length;
-          loadedAtRef.current = new Date().toISOString();
+        const briefData = briefResult.data;
+        const jobData = jobResult.data;
 
-          // Load version history if available
-          if (briefData.draft_history && Array.isArray(briefData.draft_history)) {
-            setDraftHistory(briefData.draft_history as typeof draftHistory);
-            console.log('[DraftingModal] Loaded version history:', briefData.draft_history.length, 'versions');
+        console.log('[DraftingModal] Fetched both sources:', {
+          briefDraftLength: briefData?.article_draft?.length || 0,
+          briefUpdatedAt: briefData?.updated_at,
+          jobDraftLength: jobData?.draft_content?.length || 0,
+          jobUpdatedAt: jobData?.updated_at
+        });
+
+        // Determine which draft to use based on timestamp (newer wins)
+        let selectedDraft: string | null = null;
+        let selectedSource: 'brief' | 'job' | null = null;
+
+        if (briefData?.article_draft && jobData?.draft_content) {
+          // Both exist - compare timestamps
+          const briefTime = new Date(briefData.updated_at || 0).getTime();
+          const jobTime = new Date(jobData.updated_at || 0).getTime();
+
+          if (jobTime > briefTime) {
+            // Job is newer - use it and sync to brief
+            selectedDraft = jobData.draft_content;
+            selectedSource = 'job';
+            console.log('[DraftingModal] Using NEWER draft from job:', jobData.draft_content.length, 'chars');
+
+            // Sync newer job content to content_briefs
+            await supabase
+              .from('content_briefs')
+              .update({ article_draft: jobData.draft_content, updated_at: new Date().toISOString() })
+              .eq('id', brief.id);
+          } else {
+            // Brief is newer or same - use it
+            selectedDraft = briefData.article_draft;
+            selectedSource = 'brief';
+            console.log('[DraftingModal] Using draft from content_briefs:', briefData.article_draft.length, 'chars');
           }
+        } else if (briefData?.article_draft) {
+          selectedDraft = briefData.article_draft;
+          selectedSource = 'brief';
+          console.log('[DraftingModal] Only brief draft available:', briefData.article_draft.length, 'chars');
+        } else if (jobData?.draft_content) {
+          selectedDraft = jobData.draft_content;
+          selectedSource = 'job';
+          console.log('[DraftingModal] Only job draft available:', jobData.draft_content.length, 'chars');
 
-          // Also update React state so it stays in sync
-          if (activeMapId && brief.topic_id) {
-            dispatch({
-              type: 'UPDATE_BRIEF',
-              payload: {
-                mapId: activeMapId,
-                topicId: brief.topic_id,
-                updates: { articleDraft: briefData.article_draft }
-              }
-            });
-          }
-          return;
-        }
-
-        // Fallback: try content_generation_jobs table
-        const { data: jobData, error: jobError } = await supabase
-          .from('content_generation_jobs')
-          .select('draft_content')
-          .eq('brief_id', brief.id)
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!jobError && jobData?.draft_content) {
-          console.log('[DraftingModal] Loaded draft from content_generation_jobs:', jobData.draft_content.length, 'chars');
-          setDraftContent(jobData.draft_content);
-          loadedBriefIdRef.current = brief.id;
-          loadedDraftLengthRef.current = jobData.draft_content.length;
-          loadedAtRef.current = new Date().toISOString();
-
-          // Sync to content_briefs and React state
+          // Sync to content_briefs
           await supabase
             .from('content_briefs')
             .update({ article_draft: jobData.draft_content })
             .eq('id', brief.id);
+        }
 
+        if (selectedDraft) {
+          setDraftContent(selectedDraft);
+          loadedBriefIdRef.current = brief.id;
+          loadedDraftLengthRef.current = selectedDraft.length;
+          loadedAtRef.current = new Date().toISOString();
+
+          // Load version history if available (from brief)
+          if (briefData?.draft_history && Array.isArray(briefData.draft_history)) {
+            setDraftHistory(briefData.draft_history as typeof draftHistory);
+            console.log('[DraftingModal] Loaded version history:', briefData.draft_history.length, 'versions');
+          }
+
+          // Update React state
           if (activeMapId && brief.topic_id) {
             dispatch({
               type: 'UPDATE_BRIEF',
               payload: {
                 mapId: activeMapId,
                 topicId: brief.topic_id,
-                updates: { articleDraft: jobData.draft_content }
+                updates: { articleDraft: selectedDraft }
               }
             });
           }

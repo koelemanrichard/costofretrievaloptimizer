@@ -1,0 +1,92 @@
+{
+  "network_errors": [],
+  "console_logs": [
+    {
+      "type": "warning",
+      "text": "cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting..."
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected."
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+    },
+    {
+      "type": "log",
+      "text": "[App] Rendering step: 0 user: false activeProject: false activeMap: false"
+    },
+    {
+      "type": "log",
+      "text": "[App] Rendering step: 0 user: false activeProject: false activeMap: false"
+    },
+    {
+      "type": "log",
+      "text": "[ConsoleLogger] Installed"
+    },
+    {
+      "type": "log",
+      "text": "[App] Logging services initialized"
+    },
+    {
+      "type": "log",
+      "text": "[App] Starting session check..."
+    },
+    {
+      "type": "log",
+      "text": "[App] No stored session found, skipping getSession()"
+    },
+    {
+      "type": "log",
+      "text": "[App] Setting up onAuthStateChange subscription (version: 0 )"
+    },
+    {
+      "type": "log",
+      "text": "[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()"
+    },
+    {
+      "type": "log",
+      "text": "[App] Unsubscribing from onAuthStateChange (version: 0 )"
+    },
+    {
+      "type": "log",
+      "text": "[App] Logging services initialized"
+    },
+    {
+      "type": "log",
+      "text": "[App] Setting up onAuthStateChange subscription (version: 0 )"
+    },
+    {
+      "type": "log",
+      "text": "[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()"
+    },
+    {
+      "type": "log",
+      "text": "[VersionCheck] Initial version: 1.0.20260126.1737"
+    },
+    {
+      "type": "log",
+      "text": "[App] Rendering step: 0 user: false activeProject: false activeMap: false"
+    },
+    {
+      "type": "log",
+      "text": "[App] Rendering step: 0 user: false activeProject: false activeMap: false"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o"
+    }
+  ],
+  "summary": {
+    "total_network_errors": 0,
+    "406_errors": 0,
+    "design_table_406": 0,
+    "console_errors": 0,
+    "apify_warnings": 0
+  }
+}

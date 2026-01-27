@@ -111,26 +111,117 @@ export class StandaloneCssGenerator {
    * Preserves literal CSS values - NO abstraction.
    */
   private generateComponentCss(component: ExtractedComponent): string {
-    const { literalCss, theirClassNames } = component;
+    const { literalCss, theirClassNames, componentType } = component;
 
-    if (!literalCss || !theirClassNames?.length) {
-      return '';
+    // If we have literal CSS, transform it
+    if (literalCss && literalCss.trim()) {
+      let transformedCss = literalCss;
+
+      // For each of their class names, add a brand-prefixed alternative
+      if (theirClassNames?.length) {
+        for (const className of theirClassNames) {
+          const brandClassName = `brand-${className}`;
+
+          // Match the class selector and create a dual selector
+          // .hero { ... } becomes .hero, .brand-hero { ... }
+          const classRegex = new RegExp(`\\.${this.escapeRegex(className)}\\s*\\{`, 'g');
+          transformedCss = transformedCss.replace(classRegex, `.${className}, .${brandClassName} {`);
+        }
+      }
+
+      return transformedCss;
     }
 
-    // Parse and transform the literal CSS to add brand-prefixed selectors
-    let transformedCss = literalCss;
+    // FALLBACK: Generate baseline CSS when literal extraction failed
+    // Use CSS custom properties from tokens for brand consistency
+    return this.generateFallbackComponentCss(component);
+  }
 
-    // For each of their class names, add a brand-prefixed alternative
-    for (const className of theirClassNames) {
-      const brandClassName = `brand-${className}`;
+  /**
+   * Generate fallback CSS for components when literal extraction failed.
+   * Uses CSS custom properties for brand consistency.
+   */
+  private generateFallbackComponentCss(component: ExtractedComponent): string {
+    const type = component.componentType || 'section';
+    const classNames = component.theirClassNames?.filter(c => c && c.trim()) || [];
+    const selector = classNames.length > 0
+      ? `.${classNames.join(', .')}, .brand-${type}`
+      : `.brand-${type}`;
 
-      // Match the class selector and create a dual selector
-      // .hero { ... } becomes .hero, .brand-hero { ... }
-      const classRegex = new RegExp(`\\.${this.escapeRegex(className)}\\s*\\{`, 'g');
-      transformedCss = transformedCss.replace(classRegex, `.${className}, .${brandClassName} {`);
+    // Generate semantic CSS based on component type
+    switch (type.toLowerCase()) {
+      case 'hero':
+        return `${selector} {
+  padding: var(--spacing-section, 3rem) var(--spacing-card, 1.5rem);
+  background: linear-gradient(135deg, var(--color-primary, #1a1a2e) 0%, var(--color-secondary, #4a4a68) 100%);
+  color: white;
+  text-align: center;
+}
+${selector} .brand-heading {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-heading, 700);
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}`;
+
+      case 'cta':
+        return `${selector} {
+  padding: var(--spacing-card, 1.5rem);
+  background: var(--color-primary, #1a1a2e);
+  color: white;
+  border-radius: var(--radius-medium, 8px);
+  text-align: center;
+}
+${selector} a, ${selector} button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-accent, #3b82f6);
+  color: white;
+  border-radius: var(--radius-small, 4px);
+  text-decoration: none;
+  font-weight: 600;
+}`;
+
+      case 'article':
+      case 'content':
+      case 'section':
+      default:
+        return `${selector} {
+  max-width: var(--content-width, 800px);
+  margin: 0 auto;
+  padding: var(--spacing-card, 1.5rem);
+}
+${selector} .brand-heading {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-heading, 700);
+  font-size: 1.5rem;
+  color: var(--color-primary, #1a1a2e);
+  margin-bottom: 1rem;
+}
+${selector} .brand-content {
+  font-family: var(--font-body);
+  line-height: var(--line-height-body, 1.6);
+  color: var(--color-secondary, #4a4a68);
+}
+${selector} .brand-content p {
+  margin-bottom: 1rem;
+}
+${selector} .brand-content strong {
+  color: var(--color-primary, #1a1a2e);
+  font-weight: 600;
+}
+${selector} .brand-content a {
+  color: var(--color-accent, #3b82f6);
+  text-decoration: underline;
+}
+${selector} .brand-content ul, ${selector} .brand-content ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+${selector} .brand-content li {
+  margin-bottom: 0.5rem;
+}`;
     }
-
-    return transformedCss;
   }
 
   /**

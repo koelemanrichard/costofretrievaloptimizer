@@ -210,19 +210,55 @@ export function getActivePackages(): PackageDefinition[] {
   );
 }
 
+import { BudgetRange } from '../../types/quotation';
+
 /**
- * Get recommended package based on analysis
+ * Get recommended package based on analysis, budget, and goals
  */
 export function getRecommendedPackage(
   siteSize: SiteSize,
-  hasLocalFocus: boolean = false
+  hasLocalFocus: boolean = false,
+  budgetRange?: BudgetRange
 ): PackageDefinition {
-  // Local businesses get local package
+  // If budget is provided, prioritize budget-appropriate packages
+  if (budgetRange) {
+    // Map budget ranges to package price limits (monthly budget * ~3 months for project scope)
+    const budgetPackageMap: Record<BudgetRange, string[]> = {
+      under_1000: ['pkg_starter', 'pkg_local'], // $1500-2800
+      '1000_2500': ['pkg_local', 'pkg_growth', 'pkg_technical_only', 'pkg_ai_ready'], // $2800-4500
+      '2500_5000': ['pkg_growth', 'pkg_content_focus', 'pkg_authority'], // $4500-8500
+      '5000_10000': ['pkg_authority', 'pkg_enterprise'], // $8500-18000
+      '10000_25000': ['pkg_enterprise'], // $18000+
+      over_25000: ['pkg_enterprise'], // $18000+
+    };
+
+    const affordablePackages = budgetPackageMap[budgetRange] || [];
+
+    // If local focus, prefer local package if affordable
+    if (hasLocalFocus && affordablePackages.includes('pkg_local')) {
+      return getPackageById('pkg_local')!;
+    }
+
+    // Find the best package that matches both budget and site size
+    for (const pkgId of affordablePackages) {
+      const pkg = getPackageById(pkgId);
+      if (pkg && pkg.targetSiteSizes.includes(siteSize)) {
+        return pkg;
+      }
+    }
+
+    // If no exact match, return the highest affordable package
+    const lastAffordable = affordablePackages[affordablePackages.length - 1];
+    if (lastAffordable) {
+      return getPackageById(lastAffordable)!;
+    }
+  }
+
+  // Fallback: use site size only (original logic)
   if (hasLocalFocus && (siteSize === 'small' || siteSize === 'medium')) {
     return getPackageById('pkg_local')!;
   }
 
-  // Match by site size
   switch (siteSize) {
     case 'small':
       return getPackageById('pkg_starter')!;

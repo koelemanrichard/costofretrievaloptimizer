@@ -1,0 +1,118 @@
+═══════════════════════════════════════════════════════════════════════════════
+                         CONTENT QUALITY REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+Article: ontruimingen
+Generated: January 23, 2026
+
+─────────────────────────────────────────────────────────────────────────────────
+                            OVERVIEW
+─────────────────────────────────────────────────────────────────────────────────
+
+Overall Quality Score: 74/100
+Word Count: 2.122
+Character Count: 17.608
+Optimization Passes Completed: 10
+
+─────────────────────────────────────────────────────────────────────────────────
+                         AUDIT CHECKS
+─────────────────────────────────────────────────────────────────────────────────
+
+No detailed audit available. Run the audit to see specific checks.
+
+EAV Coverage: Not checked
+Link Coverage: Not checked
+Linguistic Score: N/A/100
+
+─────────────────────────────────────────────────────────────────────────────────
+                           IMAGES
+─────────────────────────────────────────────────────────────────────────────────
+
+Total Images: 12
+
+
+Image 1: HERO
+  Description: Vergelijkingstabel met vier scenario's voor ruimteleegmaak (erfenis, verhuizing, bedrijfsbeëindiging, renovatie) met per situatie de specifieke voordelen en tijdsbesparing van professionele aanpak
+  Alt Text: scenario's waarbij volledig legen noodzakelijk is, vergeleken op efficiëntie en kostenbesparing
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/woningontruiming-noord-brabant/hero-1769110938883.png
+
+
+Image 2: SECTION
+  Description: Infografische weergave van het stapsgewijze ontruimingsproces met controlepunten: eerste inspectie met checklist, inventarisatie met documentatie, categorisering naar waarde en bestemming, fysieke verwijdering met voorzichtigheid, grondige schoonmaak met kwaliteitszegels, en definitieve oplevering met handtekeningformulier
+  Alt Text: gestructureerd afloopmechanisme met communicatiepunten en kwaliteitscontrole-momenten
+  Status: placeholder
+  Not yet generated
+
+
+Image 3: DIAGRAM
+  Description: Visueel stroomdiagram van het vijffasige proces met visuele markeringen voor inspectie, offertering, planning, uitvoering en overdracht, waarbij elke fase duidelijke begin- en eindpunten aangeeft met communicatiemomenten en kwaliteitscriteria weergegeven
+  Alt Text: lineair proceduremodel met tussenliggende contactmomenten en oplevering-verificatiepunten
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/woningontruiming-noord-brabant/diagram-1769111001748.png
+
+
+Image 4: DIAGRAM
+  Description: Venn-diagram dat het overlap-gebied tussen volledige leegruiming en emotionele steunverlening toont, met in het centraal snijvlak 'vertrouwen-gebaseerde samenwerking' en 'gevoelsmatig veilige begeleiding', omgeven door aan beide zijden specifieke aspecten als sortering, transport, rouwbegeleiding en communicatie
+  Alt Text: conceptueel model van praktische hulpverlening en emotionele ondersteuning met gezamenlijke doelen
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/woningontruiming-noord-brabant/diagram-1769111144700.png
+
+
+Image 5: SECTION
+  Description: Vergelijkingstabel met vier scenario's waarin ontruimingsservice essentieel is voor vastgoedprofessionals: overlijdensfallen met erfenis-complicaties, spoedige verhuizingen met korte termijnen, woningcorporatie-renovaties met meerdere eenheden, en makelaarsmakingsprojecten met directe inhuurbehoefte. Elke scenario toont specifieke voordelen zoals snelle leegmaking, bezemschone oplevering, parallelle projectcoördinatie en contractuele garanties.
+  Alt Text: vergelijking vastgoedscenario's met service-voordelen voor professionele leegmakingen
+  Status: placeholder
+  Not yet generated
+
+
+Image 6: DIAGRAM
+  Description: Venn-diagram waarin twee overlappende cirkels de relatie illustreren tussen 'Leegmakingsservice' (grote cirkel links) en 'Compacte verhuizingen' (kleine cirkel rechts). Het overlappende gebied benadrukt de kernzone 'Volledige ontzorging' met gedeelde kenmerken als eenmalig aanspreekpunt, uniforme kwaliteitsnormen, bezemschone inlevering en naadloze coördinatie. De illustratie toont hoe beide services nauw verweven zijn binnen het Daadvracht-aanbod.
+  Alt Text: relatie tussen leegmaak- en verhuisservices met gemeenschappelijke ontzorgingsvoordelen
+  Status: placeholder
+  Not yet generated
+
+
+Image 7: HERO
+  Description: Vergelijkingstabel met vier scenario's voor ruimteleegmaak (erfenis, verhuizing, bedrijfsbeëindiging, renovatie) met per situatie de specifieke voordelen en tijdsbesparing van professionele aanpak
+  Alt Text: scenario's waarbij volledig legen noodzakelijk is, vergeleken op efficiëntie en kostenbesparing
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/woningontruiming-noord-brabant/hero-1769110938883.png
+
+
+Image 8: SECTION
+  Description: Infografische weergave van het stapsgewijze ontruimingsproces met controlepunten: eerste inspectie met checklist, inventarisatie met documentatie, categorisering naar waarde en bestemming, fysieke verwijdering met voorzichtigheid, grondige schoonmaak met kwaliteitszegels, en definitieve oplevering met handtekeningformulier
+  Alt Text: gestructureerd afloopmechanisme met communicatiepunten en kwaliteitscontrole-momenten
+  Status: placeholder
+  Not yet generated
+
+
+Image 9: DIAGRAM
+  Description: Visueel stroomdiagram van het vijffasige proces met visuele markeringen voor inspectie, offertering, planning, uitvoering en overdracht, waarbij elke fase duidelijke begin- en eindpunten aangeeft met communicatiemomenten en kwaliteitscriteria weergegeven
+  Alt Text: lineair proceduremodel met tussenliggende contactmomenten en oplevering-verificatiepunten
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/woningontruiming-noord-brabant/diagram-1769111001748.png
+
+
+Image 10: DIAGRAM
+  Description: Venn-diagram dat het overlap-gebied tussen volledige leegruiming en emotionele steunverlening toont, met in het centraal snijvlak 'vertrouwen-gebaseerde samenwerking' en 'gevoelsmatig veilige begeleiding', omgeven door aan beide zijden specifieke aspecten als sortering, transport, rouwbegeleiding en communicatie
+  Alt Text: conceptueel model van praktische hulpverlening en emotionele ondersteuning met gezamenlijke doelen
+  Status: generated
+  URL: https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/woningontruiming-noord-brabant/diagram-1769111144700.png
+
+
+Image 11: SECTION
+  Description: Vergelijkingstabel met vier scenario's waarin ontruimingsservice essentieel is voor vastgoedprofessionals: overlijdensfallen met erfenis-complicaties, spoedige verhuizingen met korte termijnen, woningcorporatie-renovaties met meerdere eenheden, en makelaarsmakingsprojecten met directe inhuurbehoefte. Elke scenario toont specifieke voordelen zoals snelle leegmaking, bezemschone oplevering, parallelle projectcoördinatie en contractuele garanties.
+  Alt Text: vergelijking vastgoedscenario's met service-voordelen voor professionele leegmakingen
+  Status: placeholder
+  Not yet generated
+
+
+Image 12: DIAGRAM
+  Description: Venn-diagram waarin twee overlappende cirkels de relatie illustreren tussen 'Leegmakingsservice' (grote cirkel links) en 'Compacte verhuizingen' (kleine cirkel rechts). Het overlappende gebied benadrukt de kernzone 'Volledige ontzorging' met gedeelde kenmerken als eenmalig aanspreekpunt, uniforme kwaliteitsnormen, bezemschone inlevering en naadloze coördinatie. De illustratie toont hoe beide services nauw verweven zijn binnen het Daadvracht-aanbod.
+  Alt Text: relatie tussen leegmaak- en verhuisservices met gemeenschappelijke ontzorgingsvoordelen
+  Status: placeholder
+  Not yet generated
+
+
+═══════════════════════════════════════════════════════════════════════════════

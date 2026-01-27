@@ -1,0 +1,148 @@
+/* Auto-generated Brand Styles */
+
+/* Base tokens */
+:root {
+  --color-primary-dark: #1a2744;
+  --color-background-dark: #0d1829;
+  --color-accent-yellow: #f5a623;
+  --color-text-light: #ffffff;
+  --color-text-muted: #5a6a7e;
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-weight-heading: 700;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-weight-body: 400;
+  --line-height-body: 1.6;
+  --spacing-section: 80px;
+  --spacing-card: 32px;
+  --content-width: 1200px;
+  --shadow-card: 0 4px 20px rgba(26, 39, 68, 0.08);
+  --shadow-elevated: 0 8px 30px rgba(26, 39, 68, 0.12);
+  --radius-small: 4px;
+  --radius-medium: 8px;
+  --radius-large: 16px;
+  --border-color: #e8eaed;
+}
+
+/* Component: Hero section with dark blue gradient background, white text, yellow CTA button */
+
+      .nfir-hero, .brand-nfir-hero {
+        background: linear-gradient(135deg, #1a2744 0%, #0d1829 100%);
+        padding: 80px 40px;
+        min-height: 500px;
+        display: flex;
+        align-items: center;
+      }
+      .nfir-hero-content, .brand-nfir-hero-content {
+        max-width: 600px;
+      }
+      .nfir-hero-title, .brand-nfir-hero-title {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 48px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 20px;
+        line-height: 1.2;
+      }
+      .nfir-hero-subtitle, .brand-nfir-hero-subtitle {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 32px;
+        line-height: 1.6;
+      }
+      .nfir-cta-primary, .brand-nfir-cta-primary {
+        display: inline-block;
+        background-color: #f5a623;
+        color: #1a2744;
+        padding: 16px 32px;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+      }
+      .nfir-cta-primary:hover {
+        background-color: #e6951a;
+      }
+    
+
+/* Component: Service card with white background, dark blue text, subtle shadow */
+
+      .nfir-service-card, .brand-nfir-service-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 4px 20px rgba(26, 39, 68, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .nfir-service-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(26, 39, 68, 0.12);
+      }
+      .nfir-card-title, .brand-nfir-card-title {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a2744;
+        margin-bottom: 12px;
+      }
+      .nfir-card-description, .brand-nfir-card-description {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 16px;
+        color: #5a6a7e;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+      .nfir-card-link, .brand-nfir-card-link {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        color: #f5a623;
+        text-decoration: none;
+      }
+      .nfir-card-link:hover {
+        text-decoration: underline;
+      }
+    
+
+/* Component: FAQ accordion with clean borders and expand/collapse functionality */
+
+      .nfir-faq-section, .brand-nfir-faq-section {
+        max-width: 800px;
+        margin: 60px auto;
+        padding: 0 20px;
+      }
+      .nfir-faq-heading, .brand-nfir-faq-heading {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1a2744;
+        margin-bottom: 32px;
+        text-align: center;
+      }
+      .nfir-faq-item, .brand-nfir-faq-item {
+        border-bottom: 1px solid #e8eaed;
+        padding: 20px 0;
+      }
+      .nfir-faq-question, .brand-nfir-faq-question {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a2744;
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        padding: 0;
+      }
+      .nfir-faq-answer, .brand-nfir-faq-answer {
+        padding-top: 16px;
+      }
+      .nfir-faq-answer p {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 16px;
+        color: #5a6a7e;
+        line-height: 1.7;
+      }

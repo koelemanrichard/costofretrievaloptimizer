@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Styled Article</title>
+  <!-- Tailwind CSS for utility classes used in components -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+/* ============================================
+   Brand Design System - Auto-Generated
+   Source: Unknown
+   Brand: mvgm.com
+   Generated: 2026-01-27T09:50:45.826786+00:00
+   ============================================ */
+
+/* ==========================================================================
+   Brand Design System - Auto-generated CSS
+   ========================================================================== */
+/* CSS Custom Properties */
+:root {
+  --ctc-primary: #004a7c;
+  --ctc-primary-light: #e0f2fe;
+  --ctc-primary-dark: #002642;
+  --ctc-secondary: #7b61ff;
+  --ctc-accent: #3b82f6;
+  --ctc-neutral-darkest: #111827;
+  --ctc-neutral-dark: #374151;
+  --ctc-neutral-medium: #6b7280;
+  --ctc-neutral-light: #d1d5db;
+  --ctc-neutral-lightest: #f9fafb;
+  --ctc-success: #10b981;
+  --ctc-warning: #f59e0b;
+  --ctc-error: #ef4444;
+  --ctc-info: #3b82f6;
+  --ctc-font-heading: Arial, sans-serif;
+  --ctc-font-body: Arial, sans-serif;
+  --ctc-font-size-base: 16px;
+  --ctc-font-scale-ratio: 1.2;
+  --ctc-heading-weight: 700;
+  --ctc-body-weight: 400;
+  --ctc-body-line-height: 1.5;
+  --ctc-font-size-xs: 11.11px;
+  --ctc-font-size-sm: 13.33px;
+  --ctc-font-size-md: 16px;
+  --ctc-font-size-lg: 19.20px;
+  --ctc-font-size-xl: 23.04px;
+  --ctc-font-size-2xl: 27.65px;
+  --ctc-font-size-3xl: 33.18px;
+  --ctc-spacing-unit: 8px;
+  --ctc-spacing-xs: 2px;
+  --ctc-spacing-sm: 4px;
+  --ctc-spacing-md: 8px;
+  --ctc-spacing-lg: 12px;
+  --ctc-spacing-xl: 16px;
+  --ctc-spacing-2xl: 24px;
+  --ctc-spacing-3xl: 32px;
+  --ctc-radius-sm: 4px;
+  --ctc-radius-md: 8px;
+  --ctc-radius-lg: 12px;
+  --ctc-radius-full: 9999px;
+  --ctc-shadow-card: 0 1px 3px rgba(0,0,0,0.05);
+  --ctc-shadow-button: 0 1px 2px rgba(0,0,0,0.05);
+  --ctc-shadow-elevated: 0 4px 6px rgba(0,0,0,0.05);
+  --ctc-transition-speed: 250ms;
+  --ctc-easing: ease;
+}
+/* ==========================================================================
+   Component Styles
+   ========================================================================== */
+
+/* Button Component */
+.ctc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-md);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ctc-neutral-darkest);
+  background-color: var(--ctc-neutral-lightest);
+  border: 1px solid var(--ctc-borders-dividers);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  cursor: pointer;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), border-color var(--ctc-transition-speed) var(--ctc-easing), color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  text-decoration: none; /* Resets link styles */
+  user-select: none; /* Prevents text selection during clicks */
+  gap: var(--ctc-spacing-xs); /* Space for icon if needed */
+}
+
+.ctc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ctc-button:disabled:hover {
+  background-color: var(--ctc-neutral-lightest);
+  border-color: var(--ctc-borders-dividers);
+  color: var(--ctc-neutral-darkest);
+  box-shadow: var(--ctc-shadow-button);
+}
+
+.ctc-button--primary {
+  background-color: var(--ctc-primary);
+  color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-button--primary:hover {
+  background-color: var(--ctc-primary-dark);
+  border-color: var(--ctc-primary-dark);
+  color: var(--ctc-primary-light);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-button--primary:active {
+  background-color: var(--ctc-primary);
+  border-color: var(--ctc-primary);
+  box-shadow: var(--ctc-shadow-button);
+}
+
+.ctc-button--secondary {
+  background-color: var(--ctc-secondary);
+  color: var(--ctc-neutral-lightest);
+  border-color: var(--ctc-secondary);
+}
+
+.ctc-button--secondary:hover {
+  background-color: #6349e6; /* Darken secondary by 20% */
+  border-color: #6349e6;
+  color: var(--ctc-neutral-lightest);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-button--secondary:active {
+  background-color: var(--ctc-secondary);
+  border-color: var(--ctc-secondary);
+  box-shadow: var(--ctc-shadow-button);
+}
+
+.ctc-button--outline {
+  background-color: transparent;
+  color: var(--ctc-primary);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-button--outline:hover {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-primary-dark);
+  border-color: var(--ctc-primary);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-button--outline:active {
+  background-color: transparent;
+  border-color: var(--ctc-primary);
+  box-shadow: var(--ctc-shadow-button);
+}
+
+.ctc-button:hover {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-borders-dividers);
+  color: var(--ctc-neutral-darkest);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-button:active {
+  background-color: var(--ctc-neutral-light);
+  border-color: var(--ctc-borders-dividers);
+  box-shadow: var(--ctc-shadow-button);
+}
+
+.ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Card Component */
+.ctc-card {
+  background-color: var(--ctc-neutral-lightest);
+  border: 1px solid var(--ctc-borders-dividers);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-md);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ctc-spacing-sm);
+}
+
+.ctc-card-title {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  margin-bottom: var(--ctc-spacing-xs);
+}
+
+.ctc-card-desc {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-medium);
+  line-height: 1.5;
+}
+
+.ctc-card-content {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+}
+.ctc-card--elevated {
+  box-shadow: var(--ctc-shadow-elevated);
+  border: none;
+}
+
+.ctc-card--flat {
+  border: none;
+  background-color: transparent;
+}
+
+.ctc-card--bordered {
+  border: 1px solid var(--ctc-borders-dividers);
+}
+
+.ctc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.ctc-card:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+/* Hero Component */
+.ctc-hero {
+  padding: var(--ctc-spacing-3xl) var(--ctc-spacing-lg);
+  background-color: var(--ctc-neutral-lightest);
+  text-align: center;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-hero-title {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-3xl);
+  font-weight: 700;
+  color: var(--ctc-primary-dark);
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-hero-subtitle {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-lg);
+  color: var(--ctc-neutral-medium);
+  line-height: 1.5;
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-hero-content {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-hero-badge {
+  display: inline-block;
+  padding: var(--ctc-spacing-xs) var(--ctc-spacing-sm);
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-primary);
+  border-radius: var(--ctc-radius-full);
+  font-size: var(--ctc-font-size-sm);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--ctc-spacing-md);
+}
+
+.ctc-hero-decor {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ctc-radius-lg);
+}
+
+.ctc-hero-decor-orb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--ctc-primary-light);
+  opacity: 0.2;
+  border-radius: var(--ctc-radius-lg);
+  pointer-events: none;
+}
+
+/* Full-bleed variant */
+.ctc-hero--full-bleed {
+  padding: var(--ctc-spacing-3xl) 0;
+  margin-left: calc(var(--ctc-spacing-lg) * -1);
+  margin-right: calc(var(--ctc-spacing-lg) * -1);
+  width: calc(100% + var(--ctc-spacing-lg) * 2);
+  border-radius: 0;
+  box-shadow: none;
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-hero--full-bleed .ctc-hero-title,
+.ctc-hero--full-bleed .ctc-hero-subtitle,
+.ctc-hero--full-bleed .ctc-hero-content {
+  max-width: 768px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 768px) {
+  .ctc-hero {
+    padding: var(--ctc-spacing-3xl) var(--ctc-spacing-xl);
+  }
+
+  .ctc-hero--full-bleed {
+    margin-left: calc(var(--ctc-spacing-xl) * -1);
+    margin-right: calc(var(--ctc-spacing-xl) * -1);
+    width: calc(100% + var(--ctc-spacing-xl) * 2);
+  }
+}
+.ctc-hero--centered {
+  text-align: center;
+}
+
+.ctc-hero--centered .ctc-hero-actions {
+  justify-content: center;
+}
+.ctc-hero--primary {
+  background-color: var(--ctc-primary);
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-hero--primary .ctc-hero-title {
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-hero--primary .ctc-hero-subtitle {
+  color: var(--ctc-primary-light);
+}
+
+.ctc-hero--primary .ctc-hero-content {
+  color: var(--ctc-neutral-light);
+}
+
+.ctc-hero--primary .ctc-hero-badge {
+  background-color: var(--ctc-primary-dark);
+  color: var(--ctc-neutral-lightest);
+}
+.ctc-hero:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-hero-actions .ctc-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+.ctc-hero:active {
+  box-shadow: var(--ctc-shadow-card);
+  transform: translateY(1px);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-hero-actions .ctc-btn:active {
+  transform: translateY(0);
+  box-shadow: var(--ctc-shadow-button);
+}
+.ctc-hero:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+  border-radius: var(--ctc-radius-md);
+}
+
+/* Timeline Component */
+.ctc-timeline {
+  position: relative;
+  padding: var(--ctc-spacing-lg) 0;
+}
+
+.ctc-timeline-track {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin-left: calc(var(--ctc-spacing-xl) / 2);
+}
+
+.ctc-timeline-track::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--ctc-spacing-xl) / 2);
+  width: 2px;
+  background-color: var(--ctc-neutral-light);
+  z-index: 1;
+}
+
+.ctc-timeline-step {
+  margin-bottom: var(--ctc-spacing-xl);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.ctc-timeline-marker {
+  width: var(--ctc-spacing-xl);
+  height: var(--ctc-spacing-xl);
+  border-radius: 50%;
+  background-color: var(--ctc-neutral-lightest);
+  border: 2px solid var(--ctc-neutral-light);
+  z-index: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* Prevent marker from shrinking */
+}
+
+.ctc-timeline-marker::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--ctc-spacing-xl) / 4);
+  height: calc(var(--ctc-spacing-xl) / 4);
+  border-radius: 50%;
+  background-color: var(--ctc-neutral-medium);
+  opacity: 0;
+  transition: opacity var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-timeline-step:hover .ctc-timeline-marker::after, .ctc-timeline-step:focus-within .ctc-timeline-marker::after {
+  opacity: 1;
+}
+
+.ctc-timeline-step-content {
+  margin-left: var(--ctc-spacing-md);
+  padding: var(--ctc-spacing-md);
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+  width: 100%; /* Take up remaining space */
+  box-sizing: border-box; /* Include padding and border in element's total width and height */
+}
+
+.ctc-timeline-step-content h3 {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-timeline-step-content p {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+}
+
+/* Active State */
+.ctc-timeline-step--active .ctc-timeline-marker {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-timeline-step--active .ctc-timeline-marker::after {
+  background-color: var(--ctc-primary);
+  opacity: 1;
+}
+
+.ctc-timeline-step--active .ctc-timeline-step-content h3 {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-timeline--alternate .ctc-timeline-step:nth-child(odd) {
+    flex-direction: row;
+}
+
+.ctc-timeline--alternate .ctc-timeline-step:nth-child(even) {
+    flex-direction: row-reverse;
+}
+
+.ctc-timeline--alternate .ctc-timeline-step:nth-child(odd) .ctc-timeline-step-content {
+    margin-left: var(--ctc-spacing-md);
+    margin-right: 0;
+}
+
+.ctc-timeline--alternate .ctc-timeline-step:nth-child(even) .ctc-timeline-step-content {
+    margin-right: var(--ctc-spacing-md);
+    margin-left: 0;
+}
+
+.ctc-timeline--alternate .ctc-timeline-track {
+    margin-left: var(--ctc-spacing-xl);
+}
+
+.ctc-timeline--alternate .ctc-timeline-track::before {
+    left: var(--ctc-spacing-xl);
+}
+.ctc-timeline--condensed .ctc-timeline-step {
+    margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-timeline--condensed .ctc-timeline-step-content {
+    padding: var(--ctc-spacing-sm);
+}
+
+.ctc-timeline--condensed .ctc-timeline-step-content h3 {
+    font-size: var(--ctc-font-size-md);
+    margin-bottom: var(--ctc-spacing-xs);
+}
+
+.ctc-timeline--condensed .ctc-timeline-step-content p {
+    font-size: var(--ctc-font-size-sm);
+}
+.ctc-timeline--no-line .ctc-timeline-track::before {
+    display: none;
+}
+.ctc-timeline-step:hover .ctc-timeline-step-content {
+    box-shadow: var(--ctc-shadow-elevated);
+    transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-timeline-step:active .ctc-timeline-step-content {
+    transform: scale(0.98);
+    transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-timeline-step:focus-within .ctc-timeline-step-content {
+    outline: 2px solid var(--ctc-accent);
+    outline-offset: 2px;
+}
+
+/* Testimonial Component */
+.ctc-testimonial {
+  background-color: var(--ctc-neutral-lightest);
+  border: 1px solid var(--ctc-borders-dividers);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-lg);
+  box-shadow: var(--ctc-shadow-card);
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ctc-spacing-md);
+}
+
+.ctc-testimonial:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-testimonial-quote {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-lg);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+  position: relative;
+  padding-left: var(--ctc-spacing-xl);
+}
+
+.ctc-testimonial-quote::before {
+  content: '\201C'; /* Left double quotation mark */
+  font-size: 3rem;
+  font-family: var(--ctc-font-heading);
+  color: var(--ctc-primary);
+  position: absolute;
+  left: 0;
+  top: -0.5rem;
+  opacity: 0.7;
+}
+
+.ctc-testimonial-author {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-primary-dark);
+  text-align: right;
+}
+
+.ctc-testimonial-author-title {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-neutral-medium);
+  text-align: right;
+}
+.ctc-testimonial--primary {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-testimonial--primary .ctc-testimonial-quote {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-testimonial--primary .ctc-testimonial-quote::before {
+  color: var(--ctc-secondary);
+}
+
+.ctc-testimonial--primary .ctc-testimonial-author {
+  color: var(--ctc-primary);
+}
+
+.ctc-testimonial--primary .ctc-testimonial-author-title {
+  color: var(--ctc-neutral-dark);
+}
+.ctc-testimonial--compact {
+  padding: var(--ctc-spacing-md);
+  gap: var(--ctc-spacing-sm);
+}
+
+.ctc-testimonial--compact .ctc-testimonial-quote {
+  font-size: var(--ctc-font-size-md);
+  padding-left: var(--ctc-spacing-lg);
+}
+
+.ctc-testimonial--compact .ctc-testimonial-quote::before {
+  font-size: 2rem;
+  top: -0.25rem;
+}
+
+.ctc-testimonial--compact .ctc-testimonial-author {
+  font-size: var(--ctc-font-size-sm);
+}
+
+.ctc-testimonial--compact .ctc-testimonial-author-title {
+  font-size: var(--ctc-font-size-xs);
+}
+.ctc-testimonial:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transform: translateY(-2px); /* Subtle lift on hover */
+}
+.ctc-testimonial:active {
+  box-shadow: var(--ctc-shadow-card);
+  transform: translateY(0); /* Reset transform on active */
+}
+.ctc-testimonial:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+/* Faq Component */
+.ctc-faq {
+  border: 1px solid var(--ctc-neutral-light);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+  background-color: var(--ctc-backgrounds);
+  overflow: hidden; /* Prevents border radius overflow */
+}
+
+.ctc-faq-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ctc-faq-item {
+  border-bottom: 1px solid var(--ctc-borders-dividers);
+}
+
+.ctc-faq-item:last-child {
+  border-bottom: none;
+}
+
+.ctc-faq-question {
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-text-darkest);
+  padding: var(--ctc-spacing-md);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-faq-question:hover {
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-faq-question:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+.ctc-faq-question::after {
+  content: '+';
+  font-size: var(--ctc-font-size-xl);
+  color: var(--ctc-secondary);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-faq-item--open .ctc-faq-question::after {
+  content: '-';
+  transform: rotate(45deg);
+}
+
+.ctc-faq-answer {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-text-medium);
+  overflow: hidden; /* Required for smooth transition */
+  transition: max-height var(--ctc-transition-speed) var(--ctc-easing);
+  max-height: 0;
+}
+
+.ctc-faq-item--open .ctc-faq-answer {
+  max-height: 500px; /* Adjust this value based on expected content height */
+  /* The above value is a placeholder.  A more sophisticated solution would involve JS to dynamically determine max-height */
+}
+
+.ctc-faq-answer-content {
+  padding: var(--ctc-spacing-md);
+}
+
+.ctc-faq--shadow {
+  box-shadow: var(--ctc-shadow-elevated);
+}
+.ctc-faq--primary-bg {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary-light);
+}
+.ctc-faq--no-border {
+  border: none;
+}
+.ctc-faq--rounded {
+  border-radius: var(--ctc-radius-lg);
+}
+
+.ctc-faq-question:hover {
+  background-color: var(--ctc-primary-light);
+}
+.ctc-faq-question:active {
+  background-color: var(--ctc-primary-light);
+  opacity: 0.8;
+}
+.ctc-faq-question:focus-visible {
+   outline: 2px solid var(--ctc-accent);
+   outline-offset: -2px;
+}
+
+/* Cta Component */
+.ctc-cta {
+  display: inline-block;
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-md);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  line-height: 1.5;
+  color: #fff;
+  background-color: var(--ctc-accent);
+  border: none;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing), transform var(--ctc-transition-speed) var(--ctc-easing);
+  -webkit-appearance: none; /* Remove default button styling on some browsers */
+  -moz-appearance: none;
+  appearance: none;
+  outline: none; /* Remove focus outline, we'll add our own */
+}
+
+.ctc-cta:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+
+.ctc-cta-banner-content {
+  /* Add styles for banner content if needed */
+}
+
+.ctc-cta-banner-title {
+  /* Add styles for banner title if needed */
+}
+
+.ctc-cta-banner-text {
+  /* Add styles for banner text if needed */
+}
+
+.ctc-cta-banner-actions {
+  /* Add styles for banner actions if needed */
+}
+
+.ctc-cta-banner-decor {
+  /* Add styles for banner decoration if needed */
+}
+.ctc-cta--primary {
+  background-color: var(--ctc-primary);
+}
+
+.ctc-cta--primary:hover {
+  background-color: var(--ctc-primary-dark);
+}
+.ctc-cta--secondary {
+  background-color: var(--ctc-secondary);
+}
+
+.ctc-cta--secondary:hover {
+  background-color: #6349ff; /* Darken slightly */
+}
+.ctc-cta--small {
+  padding: var(--ctc-spacing-xs) var(--ctc-spacing-sm);
+  font-size: var(--ctc-font-size-sm);
+}
+.ctc-cta--large {
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-lg);
+  font-size: var(--ctc-font-size-lg);
+}
+.ctc-cta:hover {
+  background-color: #2563eb; /* Darken Accent slightly */
+  box-shadow: var(--ctc-shadow-elevated);
+  transform: translateY(-1px);
+}
+.ctc-cta:active {
+  background-color: #1e40af; /* Darken Accent even more */
+  box-shadow: 0 0 0 rgba(0,0,0,0.0);
+  transform: translateY(0);
+}
+.ctc-cta:focus-visible {
+  box-shadow: 0 0 0 3px var(--ctc-primary-light);
+}
+
+/* KeyTakeaways Component */
+.ctc-keyTakeaways {
+  background-color: var(--ctc-primary-light);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-lg);
+  box-shadow: var(--ctc-shadow-card);
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-keyTakeaways-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--ctc-spacing-md);
+}
+
+.ctc-keyTakeaways-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways-icon {
+  color: var(--ctc-secondary);
+  font-size: var(--ctc-font-size-lg);
+  margin-top: var(--ctc-spacing-xs);
+  min-width: 24px; /* Ensure consistent icon spacing */
+  text-align: center;
+}
+
+.ctc-keyTakeaways-text {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+}
+
+.ctc-keyTakeaways-text strong {
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+}
+
+/* Using bullets instead of icons */
+.ctc-keyTakeaways--bullets .ctc-keyTakeaways-icon {
+  content: '\2022'; /* Unicode bullet character */
+  display: block;
+  font-size: var(--ctc-font-size-md);
+  line-height: 1;
+  margin-top: var(--ctc-spacing-sm);
+  color: var(--ctc-accent);
+}
+
+.ctc-keyTakeaways--primary {
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-keyTakeaways--primary .ctc-keyTakeaways-icon {
+  color: var(--ctc-primary);
+}
+
+.ctc-keyTakeaways--secondary {
+  background-color: #f0f0ff; /* A very light tint of secondary */
+}
+
+.ctc-keyTakeaways--secondary .ctc-keyTakeaways-icon {
+  color: var(--ctc-secondary);
+}
+
+.ctc-keyTakeaways:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-keyTakeaways-item:hover .ctc-keyTakeaways-text {
+  color: var(--ctc-neutral-darkest);
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-keyTakeaways:active {
+  transform: scale(0.98);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-keyTakeaways:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Prose Component */
+.ctc-prose {
+  --ctc-font-body: Arial, sans-serif;
+  --ctc-neutral-dark: #374151;
+  --ctc-spacing-md: 1.5rem;
+  --ctc-spacing-lg: 2rem;
+
+  font-family: var(--ctc-font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+}
+
+.ctc-prose-content > *:not(:last-child) {
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose-content h1, .ctc-prose-content h2, .ctc-prose-content h3, .ctc-prose-content h4, .ctc-prose-content h5, .ctc-prose-content h6 {
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  color: #004a7c;
+  margin-top: var(--ctc-spacing-lg);
+  margin-bottom: var(--ctc-spacing-md);
+  line-height: 1.2;
+}
+
+.ctc-prose-content h1 {
+  font-size: 2.488rem; /* 1.2^4 */
+}
+
+.ctc-prose-content h2 {
+  font-size: 2.074rem; /* 1.2^3 */
+}
+
+.ctc-prose-content h3 {
+  font-size: 1.728rem; /* 1.2^2 */
+}
+
+.ctc-prose-content h4 {
+  font-size: 1.44rem; /* 1.2^1 */
+}
+
+.ctc-prose-content h5 {
+  font-size: 1.2rem; /* 1.2^0 */
+}
+
+.ctc-prose-content h6 {
+  font-size: 1rem;
+}
+
+.ctc-prose-content p {
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+  transition: color 0.2s ease-in-out;
+}
+
+.ctc-prose-content a:hover {
+  color: #004a7c;
+}
+
+.ctc-prose-content ul,
+.ctc-prose-content ol {
+  padding-left: 2rem;
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose-content ul {
+  list-style-type: disc;
+}
+
+.ctc-prose-content ol {
+  list-style-type: decimal;
+}
+
+.ctc-prose-content blockquote {
+  border-left: 4px solid #d1d5db;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #6b7280;
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose-content code {
+  font-family: monospace;
+  background-color: #f9fafb;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.ctc-prose-content pre {
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose-content hr {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: var(--ctc-spacing-lg) 0;
+}
+
+.ctc-section-header {
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-section-heading {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #004a7c;
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-section-heading-accent {
+  color: #7b61ff;
+}
+.ctc-prose a:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+  }
+.ctc-prose a:active {
+    opacity: 0.6;
+  }
+.ctc-prose a:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+/* List Component */
+.ctc-list {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-list-item {
+  position: relative;
+  padding-left: var(--ctc-spacing-xl);
+  margin-bottom: var(--ctc-spacing-sm);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+}
+
+.ctc-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-list-marker {
+  position: absolute;
+  top: 0.5em;
+  left: 0;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background-color: var(--ctc-accent);
+  transform: translateY(-50%);
+}
+
+.ctc-list-item::before {
+  content: '';
+  position: absolute;
+  top: 0.75em;
+  left: calc(var(--ctc-spacing-sm) * -1);
+  width: 0.25em;
+  height: 0.25em;
+  border-radius: 50%;
+  background-color: var(--ctc-accent);
+  transform: translateY(-50%);
+  display: none; /* Hide default bullet */
+}
+
+.ctc-list-item:hover {
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-list-item:hover .ctc-list-marker {
+  background-color: var(--ctc-primary);
+}
+.ctc-list--primary .ctc-list-marker {
+  background-color: var(--ctc-primary);
+}
+
+.ctc-list--primary .ctc-list-item:hover .ctc-list-marker {
+  background-color: var(--ctc-secondary);
+}
+.ctc-list--numbered {
+  counter-reset: list-counter;
+}
+
+.ctc-list--numbered .ctc-list-item {
+  padding-left: var(--ctc-spacing-lg);
+}
+
+.ctc-list--numbered .ctc-list-item::before {
+  content: counter(list-counter) ".";
+  counter-increment: list-counter;
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-primary);
+  font-weight: 700;
+  display: inline;
+  transform: translateY(0);
+}
+
+.ctc-list--numbered .ctc-list-marker {
+  display: none;
+}
+.ctc-list:hover {
+  /* Add a subtle hover effect to the entire list if needed */
+}
+.ctc-list:active {
+  /* Add an active state effect if needed */
+}
+.ctc-list:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Table Component */
+.ctc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden; /* Ensures border-radius is respected for inner elements */
+  box-shadow: var(--ctc-shadow-card);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-table-head {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-primary-dark);
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+}
+
+.ctc-table-header, .ctc-table-cell {
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-table-header {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.ctc-table-body .ctc-table-row:nth-child(even) {
+  background-color: var(--ctc-neutral-lightest);
+}
+
+.ctc-table-body .ctc-table-row:last-child .ctc-table-cell {
+  border-bottom: none;
+}
+
+.ctc-table-row:hover {
+  background-color: var(--ctc-primary-light);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-table-row:active {
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-table-cell {
+  font-weight: 400;
+}
+
+.ctc-table--striped .ctc-table-body .ctc-table-row:nth-child(odd) {
+  background-color: #fff;
+}
+
+.ctc-table--striped .ctc-table-body .ctc-table-row:nth-child(even) {
+  background-color: var(--ctc-neutral-lightest);
+}
+.ctc-table--compact .ctc-table-header, .ctc-table--compact .ctc-table-cell {
+  padding: var(--ctc-spacing-xs) var(--ctc-spacing-sm);
+  font-size: var(--ctc-font-size-sm);
+}
+.ctc-table-row:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transform: translateY(-1px);
+}
+
+.ctc-table-row:hover .ctc-table-cell {
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-table-row:active {
+  background-color: var(--ctc-primary-light);
+}
+.ctc-table-row:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+/* Blockquote Component */
+.ctc-blockquote {
+  background-color: var(--ctc-neutral-lightest);
+  border-left: 4px solid var(--ctc-secondary);
+  padding: var(--ctc-spacing-md);
+  margin: var(--ctc-spacing-lg) 0;
+  border-radius: var(--ctc-radius-sm);
+  box-shadow: var(--ctc-shadow-card);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), border-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-blockquote cite {
+  display: block;
+  font-size: var(--ctc-font-size-sm);
+  font-style: italic;
+  color: var(--ctc-neutral-medium);
+  margin-top: var(--ctc-spacing-sm);
+  text-align: right;
+}
+
+.ctc-blockquote cite::before {
+  content: "\2014 \2009"; /* em dash + hair space */
+}
+
+.ctc-blockquote--primary {
+  border-left-color: var(--ctc-primary);
+}
+
+.ctc-blockquote--primary cite {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-blockquote--accent {
+  border-left-color: var(--ctc-accent);
+}
+
+.ctc-blockquote--accent cite {
+  color: var(--ctc-accent);
+}
+
+.ctc-blockquote:hover {
+  background-color: var(--ctc-primary-light);
+}
+.ctc-blockquote:active {
+  background-color: #edf5fa; /* Slightly darker than primary light */
+}
+.ctc-blockquote:focus-visible {
+  outline: 2px solid var(--ctc-secondary);
+  outline-offset: -2px; /* Adjust as needed for visual appeal */
+}
+/* ==========================================================================
+   Decorative Elements
+   ========================================================================== */
+.ctc-divider {
+  border: none;
+  height: 1px;
+  background-color: var(--ctc-neutral-light);
+  margin: var(--ctc-spacing-md) 0;
+}
+.ctc-divider--subtle {
+  background-color: var(--ctc-neutral-lightest);
+  margin: var(--ctc-spacing-sm) 0;
+}
+.ctc-divider--decorative {
+  height: 2px;
+  background-color: var(--ctc-accent);
+  opacity: 0.2;
+  margin: var(--ctc-spacing-lg) 0;
+}
+.ctc-section {
+  background-color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-2xl) 0;
+}
+.ctc-section--accent {
+  background-color: rgba(var(--ctc-primary-rgb), 0.04);
+  padding: var(--ctc-spacing-2xl) 0;
+}
+.ctc-section--featured {
+  background: linear-gradient(to bottom, rgba(var(--ctc-primary-rgb), 0.02), rgba(var(--ctc-primary-rgb), 0.06));
+  padding: var(--ctc-spacing-3xl) 0;
+  border-top: 1px solid rgba(var(--ctc-primary-rgb), 0.1);
+  border-bottom: 1px solid rgba(var(--ctc-primary-rgb), 0.1);
+}
+/* ==========================================================================
+   Interactions & Animations
+   ========================================================================== */
+.ctc-button:hover {
+  background-color: var(--ctc-primary-dark);
+  box-shadow: var(--ctc-shadow-button);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-button:active {
+  background-color: var(--ctc-primary);
+  transform: scale(0.98);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+.ctc-card:hover {
+  box-shadow: var(--ctc-shadow-card);
+  transform: translateY(-3px);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+a:hover {
+  text-decoration: underline;
+  color: var(--ctc-primary-dark);
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* ==========================================================================
+   Typography Treatments
+   ========================================================================== */
+.ctc-pull-quote {
+  font-size: var(--ctc-font-size-lg);
+  font-style: italic;
+  color: var(--ctc-neutral-dark);
+  margin: var(--ctc-spacing-lg) 0;
+  padding: var(--ctc-spacing-md);
+  border-left: 4px solid var(--ctc-accent);
+}
+.ctc-list li::marker {
+  color: var(--ctc-primary);
+  font-size: var(--ctc-font-size-md);
+}
+a {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--ctc-primary-dark);
+}
+pre, code {
+  font-family: monospace;
+  background-color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-sm);
+  border-radius: var(--ctc-radius-sm);
+  overflow-x: auto;
+  color: var(--ctc-neutral-darkest);
+}
+/* ==========================================================================
+   Image Treatments
+   ========================================================================== */
+.ctc-image {
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden; /* Ensures the image respects the border radius */
+  display: block; /* Removes any extra spacing below the image */
+}
+.ctc-image--featured {
+  border-radius: var(--ctc-radius-lg);
+  box-shadow: var(--ctc-shadow-card);
+  overflow: hidden;
+  display: block;
+}
+.ctc-image--thumbnail {
+  border-radius: var(--ctc-radius-sm);
+  overflow: hidden;
+  display: block;
+}
+.ctc-image--gallery {
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden;
+  display: block;
+}
+  </style>
+</head>
+<body>
+<div class="ctc-root ctc-styled ctc-personality-corporate-professional" data-ctc-version="2.0" data-blueprint-rendered="true">
+
+<header class="ctc-hero ctc-hero--centered ctc-hero--gradient" role="banner">
+  <span class="ctc-hero-badge-match">✨ Visual match: detected from site</span>
+  <div class="ctc-hero-decor">
+    <div class="ctc-hero-decor-orb ctc-hero-decor-orb--1"></div>
+    <div class="ctc-hero-decor-orb ctc-hero-decor-orb--2"></div>
+  </div>
+  <div class="ctc-hero-content">
+    <div class="ctc-hero-badge">🛡️ Gecertificeerd Partner</div>
+    <h1 class="ctc-hero-title">
+      Totaal VvE Beheer Almere
+    </h1>
+    <p class="ctc-hero-subtitle">
+      
+    </p>
+    
+    <div class="ctc-hero-actions">
+      <a href="#contact" class="ctc-btn ctc-btn-primary ctc-btn-lg">
+        Meer Informatie
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="ctc-toc ctc-toc--inline" aria-label="Inhoudsopgave">
+  <div class="ctc-toc-header">
+    <h2 class="ctc-toc-title">Wat u kunt verwachten</h2>
+  </div>
+  <ul class="ctc-toc-list">
+    
+    <li class="ctc-toc-item">
+      <a href="#section-1" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Totaal VvE Beheer Almere: Een Overzicht</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-2" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Wat is Totaal VvE Beheer in Almere?</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-3" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>De Drie Pijlers van MVGM Totaalpakket VvE Beheer</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-4" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Waarom Kiezen voor MVGM Totaal VvE Beheer in Almere?</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-5" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Tarieven en Kosten VvE Beheer Almere Vergelijken</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-6" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Specifieke Voordelen voor VvE&#39;s in Almere</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-7" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Verduurzaming en Toekomstbestendig VvE Beheer</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-8" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Veelgestelde Vragen over Totaal VvE Beheer Almere</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-9" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Start Nu met Professioneel Totaal VvE Beheer</span>
+      </a>
+    </li>
+    <li class="ctc-toc-item">
+      <a href="#section-10" class="ctc-toc-link">
+        <span class="ctc-toc-arrow">→</span>
+        <span>Volgende Stappen voor Totaal VvE Beheer Almere</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<main class="ctc-main" role="main">
+<article class="ctc-article" itemscope itemtype="https://schema.org/Article">
+<meta itemprop="headline" content="Totaal VvE Beheer Almere">
+
+<div id="section-0" class="ctc-lead-paragraph py-12 md:py-16">
+  <div class="ctc-lead-paragraph-accent"></div>
+  <div class="ctc-lead-paragraph-content">
+    # Totaal VvE Beheer Almere
+  </div>
+</div>
+
+<section id="section-1" class="ctc-prose ctc-section--featured ctc-prose--has-bg py-12 md:py-16">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h2 id="totaal-vve-beheer-almere-een-overzicht" class="ctc-section-heading">Totaal VvE Beheer Almere: Een Overzicht</h2>
+  </div>
+  <div class="ctc-prose-content">
+    Totaal VvE Beheer Almere omvat een integrale dienstverlening waarbij een professionele vastgoedmanager de volledige verantwoordelijkheid neemt voor alle administratieve, financiële, technische en bestuurlijke taken. Deze vorm van beheer ontzorgt Verenigingen van Eigenaren volledig door operationele expertise te combineren met diepgaande kennis van de lokale regelgeving in Almere.
+
+In dit artikel analyseren we de kernaspecten van totaalbeheer, met specifieke aandacht voor de drie pijlers van het MVGM-totaalpakket. Vervolgens lichten we de keuze voor deze beheerder toe, ondersteund door inzicht in lokale tariefstructuren en een kostenvergelijking binnen de regio. Daarnaast bespreken we de concrete voordelen voor Almeerse VvE's en de noodzaak van verduurzaming om wooncomplexen toekomstbestendig te maken. We sluiten af met antwoorden op veelgestelde vragen en praktische richtlijnen voor de implementatie van professioneel beheer.
+  </div>
+  
+</section>
+
+<section id="section-2" class="ctc-prose ctc-section--bg  py-8 md:py-10">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h2 id="wat-is-totaal-vve-beheer-in-almere" class="ctc-section-heading">Wat is Totaal VvE Beheer in Almere?</h2>
+  </div>
+  <div class="ctc-prose-content">
+    Totaal VvE Beheer Almere brengt technische, financiële en administratieve expertise samen in één allesomvattende dienstverlening. Door deze centralisatie bij één lokale specialist verbetert de woonkwaliteit in onze polderstad aanzienlijk. Het samenvoegen van deze disciplines ontzorgt VvE-besturen en eigenaren volledig, waardoor complexe vraagstukken en dagelijkse operationele lasten verleden tijd zijn. Bovendien zorgt specifieke kennis van de Almeerse vastgoedmarkt en gemeentelijke regelgeving voor een perfecte aansluiting op de lokale eisen.
+
+Binnen deze integrale aanpak vormt de administratieve ondersteuning de basis; van nauwkeurige ledenregistraties en het faciliteren van de Algemene Ledenvergadering tot het strikt handhaven van het splitsingsreglement. Tegelijkertijd garanderen financiële experts een transparante boekhouding, terwijl de technische divisie de bouwkundige staat waarborgt via een gedegen Meerjarenonderhoudsplan (MJOP) en snelle storingsopvolging. Dankzij korte lijnen wordt er bij calamiteiten in het complex direct geschakeld, wat resulteert in een gestructureerde werkwijze die naadloos past bij de dynamiek van wonen in Almere.
+  </div>
+  
+</section>
+
+<section id="section-3" class="ctc-prose ctc-card-grid-fallback ctc-section--featured py-12 md:py-16">
+  <h2 id="de-drie-pijlers-van-mvgm-totaalpakket-vve-beheer" class="ctc-section-heading">De Drie Pijlers van MVGM Totaalpakket VvE Beheer</h2>
+  <div class="ctc-prose-content">
+    <strong>Totaal VvE Beheer Almere</strong> integreert drie kernpijlers om vastgoedeigenaren in Flevoland volledig te ontzorgen. Duurzaam waardebehoud van lokale appartementencomplexen vereist een naadloze afstemming van economische, technische en bestuurlijke taken. Financiële dienstverlening vormt hierbij het fundament, waarbij direct inzicht in liquiditeit en begrotingen wordt verschaft. Een sluitende boekhouding financiert noodzakelijke investeringen en voorkomt onverwachte verhogingen van de periodieke ledenbijdrage.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/hero-1769347212648.png" alt="integrale dienstverlening flevoland vastgoed drie pijlers boekhouding onderhoud administratie servicepakket" width="1200" height="630" loading="eager" class="ctc-injected-image" />
+
+Technisch management fungeert als tweede cruciale steunpilaar, met een scherpe focus op de fysieke staat van objecten in de polderstad. De uitvoering van het Meerjarenonderhoudsplan (MJOP) verhelpt bouwkundige mankementen preventief en sluit achterstallig onderhoud uit. Administratieve en bestuurlijke ondersteuning completeert het totaalpakket door de juridische kaders te leveren, inclusief vakkundige begeleiding van de Algemene Ledenvergadering (ALV). De synergie tussen deze elementen maakt financiële gezondheid de basis voor succesvol beleid, met <strong>transparantie</strong> en <strong>zekerheid</strong> als resultaat.
+  </div>
+</section>
+
+<section id="section-4" class="ctc-prose ctc-section--featured  py-12 md:py-16">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h3 id="financieel-vve-beheer-transparantie-en-zekerheid" class="ctc-section-heading">Financieel VvE Beheer: Transparantie en Zekerheid</h3>
+  </div>
+  <div class="ctc-prose-content">
+    Bij Totaal VvE Beheer Almere vormt financiële stabiliteit de basis voor een gezonde en toekomstbestendige Vereniging van Eigenaren. Wij zorgen voor een nauwkeurige uitvoering van vergaderbesluiten door de volledige boekhouding uit handen te nemen, variërend van het opstellen van jaarrekeningen tot het deskundig beheren van reservefondsen. De inrichting van onze administratie voldoet hierbij aan de strikte richtlijnen van de Raad voor de Jaarverslaggeving. Via een beveiligd online portaal hebben eigenaren bovendien 24/7 inzicht in alle relevante documenten, facturen en actuele bankafschriften.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769347238692.png" alt="kostenanalyse vve-bijdrage rendement investering polderstad appartementencomplex begroting grafiek liquiditeit" width="800" height="600" loading="lazy" class="ctc-injected-image" />
+
+Deze transparantie wordt verder gewaarborgd door realistische conceptbegrotingen, die de ledenvergadering tijdig inzicht bieden in de verwachte kostenontwikkeling. De veiligheid van uw middelen staat voorop; bankrekeningen staan altijd op naam van de rechtspersoon, waardoor het verenigingsvermogen strikt gescheiden blijft van beheerdersgelden. Door actief debiteurenbeheer en consequente inning van bijdragen beschermen we de liquiditeitspositie van uw appartementencomplex in de polderstad. Dit solide financiële fundament stelt de VvE in staat om noodzakelijke investeringen en onderhoud vlot en zonder betalingsproblemen te realiseren.
+  </div>
+  <hr class="ctc-divider">
+</section>
+
+<section id="section-5" class="ctc-prose ctc-section--featured ctc-prose--has-bg py-8 md:py-10">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h3 id="technisch-beheer-en-mjop-voor-almere-vves" class="ctc-section-heading">Technisch Beheer en MJOP voor Almere VvE&#39;s</h3>
+  </div>
+  <div class="ctc-prose-content">
+    Totaal VvE Beheer Almere waarborgt de bouwkundige staat van wooncomplexen door middel van structureel technisch toezicht. De basis hiervoor wordt gevormd door een sluitend Meerjarenonderhoudsplan (MJOP), dat de planning dicteert voor zowel preventief als correctief onderhoud. Dit strategische document brengt kapitaalintensieve posten, zoals dakrenovaties, liftvervangingen en gevelonderhoud, helder in kaart over een periode van vijftien jaar. Een adequate financiële reservering stelt de Vereniging van Eigenaars vervolgens in staat om noodzakelijk herstelwerk direct uit te voeren, wat essentieel is voor optimaal waardebehoud van het vastgoed.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506097331.png" alt="onderhoudsplan cyclus renovatie planning inspectie bouwkundige staat gebouwencomplex vastgoedbehoud" width="1000" height="600" loading="lazy" class="ctc-injected-image" />
+
+Specifieke expertise omtrent Flevolandse bouwmethodieken en de kenmerkende polderbodem minimaliseert hierbij onvoorziene risico's tijdens bouwkundige projecten. De technisch manager selecteert offertes van lokale vaklieden op basis van strikte prijs-kwaliteitscriteria, wat bijdraagt aan een kostenefficiënte exploitatie. Door consequente inspecties voorkomen we achterstallig onderhoud en garanderen we de veiligheid van de bewoners. Deze technische besluitvorming wordt bovendien naadloos afgestemd op de administratieve organisatie, zodat ook de juridische verankering te allen tijde gewaarborgd is.
+  </div>
+  
+</section>
+
+<section id="section-6" class="ctc-prose ctc-card-grid-fallback ctc-section--featured py-12 md:py-16">
+  <h3 id="administratief-beheer-vergaderingen-en-juridische-" class="ctc-section-heading">Administratief Beheer: Vergaderingen en Juridische Zaken</h3>
+  <div class="ctc-prose-content">
+    Administratieve regie vormt het juridische fundament voor correcte besluitvorming binnen vastgoedcomplexen. <strong>Totaal VvE Beheer Almere</strong> versterkt de vastgoedwaarde door regelgeving strikt na te leven, hand in hand met het fysieke onderhoud. Het team in Flevoland organiseert de Algemene Ledenvergadering (ALV) stipt volgens de wettelijke termijnen en geldende statuten. Door de inzet van een technisch voorzitter verlopen deze bijeenkomsten gestructureerd, wat resulteert in efficiënte besluitvorming over cruciale zaken zoals de begroting en het MJOP.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506116674.png" alt="organisatie ledenvergadering juridische kaders besluitvorming stappenplan wetgeving vastgoed notulen" width="800" height="600" loading="lazy" class="ctc-injected-image" />
+
+Daarnaast toetsen juridische specialisten complexe situaties direct aan de splitsingsakte en het huishoudelijk reglement van complexen in de polderstad. Bij wanbetalingen of interne conflicten wordt daadkrachtig opgetreden middels juridisch gevalideerde correspondentie. Het secretariaat houdt tevens het eigenaarsregister nauwgezet bij voor een foutloze verrekening van kosten bij eigendomsoverdrachten. Met deze integrale dienstverlening worden verenigingsbesturen volledig ontlast van arbeidsintensieve taken, waarmee deze lokale specialist zijn meerwaarde voor VvE's in de regio Almere bevestigt.
+  </div>
+</section>
+
+<section id="section-7" class="ctc-prose ctc-section--featured  py-12 md:py-16">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h2 id="waarom-kiezen-voor-mvgm-totaal-vve-beheer-in-almer" class="ctc-section-heading">Waarom Kiezen voor MVGM Totaal VvE Beheer in Almere?</h2>
+  </div>
+  <div class="ctc-prose-content">
+    MVGM Totaal VvE Beheer Almere combineert de slagkracht van een landelijke organisatie met een diepgewortelde betrokkenheid in de Flevopolder. Met ruim 70 jaar ervaring en een beheerportefeuille van 3.700 complexen bieden wij een robuust fundament voor iedere Vereniging van Eigenaren. Onze juridische specialisten vertalen complexe wetgeving moeiteloos naar een foutloze administratie, waarbij het SKW-productcertificaat maximale financiële transparantie en onafhankelijkheid waarborgt voor het bestuur.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/chart-1769506131817.png" alt="Vakkundige vastgoedzorg, landelijke ondersteuning, gebiedskennis Flevoland, kwaliteitskeurmerk, digitale transparantie, calamiteitenservice, wijkgebonden specialisten" width="800" height="600" loading="lazy" class="ctc-injected-image" />
+
+Deze expertise wordt in de praktijk gebracht door lokale specialisten die de specifieke dynamiek van wijken als Almere Poort en Almere Buiten door en door kennen. U profiteert hierdoor direct van collectieve inkoopkracht, terwijl één vaste accountmanager fungeert als centrale spil voor zowel planmatig onderhoud als dagelijkse reparaties. Voor acute storingen staat onze calamiteitendienst 24/7 paraat en via het digitale portaal hebben bewoners altijd realtime inzicht in de financiën en notulen. Zo borgen wij de continuïteit van de vereniging en een zorgeloos woongenot in onze stad.
+  </div>
+  
+</section>
+
+<section id="section-8" class="ctc-prose   py-8 md:py-10">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h2 id="tarieven-en-kosten-vve-beheer-almere-vergelijken" class="ctc-section-heading">Tarieven en Kosten VvE Beheer Almere Vergelijken</h2>
+  </div>
+  <div class="ctc-prose-content">
+    Bij het selecteren van Totaal VvE Beheer in Almere draait alles om de strategische balans tussen de maandelijkse VvE-bijdrage en de kwaliteit van het integrale dienstenpakket. De tariefstelling voor dit complete beheerconcept hangt sterk af van de omvang van het complex, de bouwkundige staat en de gewenste intensiteit van de dienstverlening. Gevestigde vastgoedpartners, zoals MVGM, werken met modulaire prijsstructuren die naadloos aansluiten op de specifieke behoeften van vastgoed in onze polderstad. Volledige financiële transparantie over de vergoeding versus de geleverde expertise vormt daarbij het fundament voor een duurzame bestuurlijke samenwerking.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506144800.png" alt="Prijsvergelijking vastgoedmanagement, operationele uitgaven, investeringsrendement, kostenplaatje meerjarenplan, budgetzekerheid, modulaire prijsopbouw, polderstad vastgoedwaarde" width="1000" height="600" loading="lazy" class="ctc-injected-image" />
+
+Professionele beheerders in de regio Flevoland rekenen doorgaans vaste tarieven per appartementsrecht voor de reguliere werkzaamheden. De uiteindelijke investering kan echter variëren op basis van specifieke wensen, zoals de frequentie van vergaderingen en de behoefte aan intensief technisch toezicht. Waar budgetopties vaak essentiële taken uitsluiten – met onverwachte kostenposten als gevolg – biedt volledige ontzorging eigenaren juist directe financiële zekerheid. Onderstaand overzicht verduidelijkt het verschil in waardepropositie tussen prijsvechters en full-service dienstverleners:
+<table class="ctc-table">
+      <thead class="ctc-table-head">
+        <tr class="ctc-table-row"><th class="ctc-table-header" style="text-align: left">Vergelijkingspunt</th><th class="ctc-table-header" style="text-align: left">Budget Administratiekantoor</th><th class="ctc-table-header" style="text-align: left">Professionele Totaalbeheerder (zoals MVGM)</th></tr>
+      </thead>
+      <tbody class="ctc-table-body">
+        <tr class="ctc-table-row"><td class="ctc-table-cell" style="text-align: left"><strong>Basisvergoeding</strong></td><td class="ctc-table-cell" style="text-align: left">Gereduceerd instaptarief per eenheid</td><td class="ctc-table-cell" style="text-align: left">Marktconforme prijs inclusief alle kerntaken</td></tr><tr class="ctc-table-row"><td class="ctc-table-cell" style="text-align: left"><strong>Meerwerk</strong></td><td class="ctc-table-cell" style="text-align: left">Hoge toeslagen voor standaard handelingen</td><td class="ctc-table-cell" style="text-align: left">Strikt afgebakend en beperkt tot uitzonderingen</td></tr><tr class="ctc-table-row"><td class="ctc-table-cell" style="text-align: left"><strong>MJOP Expertise</strong></td><td class="ctc-table-cell" style="text-align: left">Vaak extern belegd of generiek van aard</td><td class="ctc-table-cell" style="text-align: left">Interne bouwkunde specifiek voor Almeerse poldergrond</td></tr><tr class="ctc-table-row"><td class="ctc-table-cell" style="text-align: left"><strong>Storingsdienst</strong></td><td class="ctc-table-cell" style="text-align: left">Beperkte bereikbaarheid in de avonduren</td><td class="ctc-table-cell" style="text-align: left">24/7 noodlijn voor lokale calamiteiten</td></tr><tr class="ctc-table-row"><td class="ctc-table-cell" style="text-align: left"><strong>Financieel Inzicht</strong></td><td class="ctc-table-cell" style="text-align: left">Periodieke verantwoording achteraf</td><td class="ctc-table-cell" style="text-align: left">Real-time dashboarding en actuele liquiditeitsprognoses</td></tr>
+      </tbody>
+    </table>
+Een kritische offerteanalyse kijkt verder dan de basisprijs en weegt ook de dekking van het meerjarenonderhoudsplan (MJOP) en de reactiesnelheid bij calamiteiten mee. Marktconforme tarieven garanderen de inzet van specialistische kennis, cruciaal om de vastgoedwaarde op lange termijn te beschermen tegen de risico's van achterstallig onderhoud. Lokale expertise is hierbij onmisbaar; specifieke kennis van de situatie in Almere voegt essentiële waarde toe aan een solide financiële basis en een hoogwaardig serviceniveau.
+  </div>
+  <hr class="ctc-divider">
+</section>
+
+<section id="section-9" class="ctc-prose  ctc-prose--has-bg py-12 md:py-16">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h2 id="specifieke-voordelen-voor-vves-in-almere" class="ctc-section-heading">Specifieke Voordelen voor VvE&#39;s in Almere</h2>
+  </div>
+  <div class="ctc-prose-content">
+    <strong>Totaal VvE Beheer Almere</strong> combineert een transparante financiële structuur met diepgaande kennis van de lokale vastgoedmarkt. Uitdagingen zoals stadsverwarming en de specifieke bodemgesteldheid in de polder vragen om een technisch regisseur die de situatie in Flevoland tot in detail begrijpt. Deze gebiedsfocus maakt onvoorziene kosten bij groot onderhoud beheersbaar dankzij nauwkeurige bouwkundige prognoses. Terwijl ons expertiseteam de complexe administratieve lasten volledig uit handen neemt, zorgt onze kennis van de ondergrond voor de noodzakelijke monitoring van fundering en terrein.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506165209.png" alt="Funderingsonderzoek polderbodem, warmtenet exploitatie, specialistische bouwkunde, gemeentelijke regelgeving, aannemersnetwerk Flevoland, vastgoedbehoud, preventief onderhoudsplan" width="800" height="600" loading="lazy" class="ctc-injected-image" />
+
+Daarnaast profiteert uw VvE van directe samenwerkingsverbanden met specialisten die bekend zijn met de typische Almeerse bouwwijzen. Dit integrale dienstenpakket rust op een betrouwbaar netwerk met een hoog reactievermogen. De belangrijkste pluspunten voor appartementencomplexen in dit werkgebied zijn:
+
+*   <strong>Expertise Stadsverwarming</strong>: Specialistisch inzicht in de technische exploitatie en administratieve afhandeling van het lokale warmtenet.
+*   <strong>Geverifieerde Aannemers</strong>: Toegang tot vakmensen met specifieke ervaring in de experimentele systeembouw van wijken als Almere Haven en Almere Stad.
+*   <strong>Aansluiting op Gemeentebeleid</strong>: Meerjarenonderhoudsplannen (MJOP) die naadloos aansluiten op de verordeningen en duurzaamheidsambities van de gemeente Almere.
+*   <strong>Snelle Calamiteitenservice</strong>: Korte lijnen met leveranciers in de regio garanderen directe actie bij spoedgevallen en inkoopvoordeel bij renovaties.
+
+Met deze proactieve werkwijze borgt <strong>Totaal VvE Beheer</strong> het langdurige waardebehoud van uw vastgoed. Dit stabiele fundament vormt de ideale basis voor een effectieve transitie naar verduurzaming en modernisering.
+  </div>
+  
+</section>
+
+<section id="section-10" class="ctc-prose ctc-section--featured  py-12 md:py-16">
+  
+  <div class="ctc-section-header">
+    <div class="ctc-section-heading-accent"></div>
+    <h2 id="verduurzaming-en-toekomstbestendig-vve-beheer" class="ctc-section-heading">Verduurzaming en Toekomstbestendig VvE Beheer</h2>
+  </div>
+  <div class="ctc-prose-content">
+    Totaal VvE Beheer Almere koppelt specialistisch verduurzamingsadvies direct aan subsidiebegeleiding en de realisatie van zonne-energiesystemen. Deze methode transformeert noodzakelijk onderhoud in waardevermeerderende investeringen voor het complex, waarbij energie-efficiëntie en wooncomfort prioriteit krijgen boven reactief herstelwerk. Alle expertise omtrent deze energietransitie is binnen onze organisatie gebundeld.
+
+<img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769506185346.png" alt="Energietransitie verduurzamingsmaatregelen, zonnepanelen installatie, laadinfrastructuur, subsidiebegeleiding SVVE, energie-efficiëntie, wooncomfort verbetering, bouwkundige dakinspectie" width="800" height="600" loading="lazy" class="ctc-injected-image" />
+
+Gezien de vele platte daken in de polderstad analyseren onze technische inspecteurs nauwkeurig de draagkracht van de constructie voor zonnepanelen. Financiële experts berekenen vervolgens de specifieke terugverdientijd voor de Vereniging van Eigenaars, terwijl bouwkundigen adviseren over noodzakelijke poliswijzigingen van de opstalverzekering om volledige dekking te garanderen.
+
+Ook de installatie van laadvoorzieningen in parkeergarages vraagt om maatwerk, waaronder strikte brandveiligheidsprotocollen en capaciteitsanalyses van de hoofdaansluiting. Wij stellen een toekomstbestendig laadpaalbeleid op dat de netwerkstabiliteit waarborgt bij verdere expansie. Door actieve ondersteuning bij regelingen zoals de SVVE wordt het investeringsbudget verruimd, wat resulteert in structureel lagere energiekosten en een groener energielabel per wooneenheid.
+  </div>
+  
+</section>
+</article>
+</main>
+
+<aside class="ctc-cta-banner ctc-cta-banner--prominent">
+  <div class="ctc-cta-banner-decor ctc-cta-banner-decor--1"></div>
+  <div class="ctc-cta-banner-decor ctc-cta-banner-decor--2"></div>
+  <div class="ctc-cta-banner-inner">
+    <h2 class="ctc-cta-banner-title">Klaar om te beginnen?</h2>
+    
+    <div class="ctc-cta-banner-actions">
+      <a href="#contact" class="ctc-btn ctc-btn-primary ctc-btn-lg">
+        Meer Informatie
+        <span class="ctc-btn-arrow">→</span>
+      </a>
+      
+      <a href="#" class="ctc-btn ctc-btn-secondary">
+        Contact
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function() {
+  // FAQ Accordion Toggle
+  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+      var icon = trigger.querySelector('.ctc-faq-icon');
+      var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+      trigger.setAttribute('aria-expanded', !isExpanded);
+      if (answer) {
+        answer.hidden = isExpanded;
+      }
+      if (icon) {
+        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      }
+    });
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Add hover effects for cards and interactive elements
+  document.querySelectorAll('.ctc-toc a').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+      this.style.background = 'var(--ctc-surface)';
+    });
+    link.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+    });
+  });
+})();
+</script>
+</div>
+<script>
+// FAQ Accordion Toggle
+document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+  trigger.addEventListener('click', function() {
+    var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+    var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+    trigger.setAttribute('aria-expanded', !isExpanded);
+    if (answer) answer.hidden = isExpanded;
+  });
+});
+
+// Smooth scroll for TOC links
+document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -148,6 +148,74 @@ export class BrandAwareComposer {
   }
 
   /**
+   * Convert markdown content to HTML.
+   * Simple markdown parser for common patterns.
+   */
+  private markdownToHtml(markdown: string): string {
+    if (!markdown) return '';
+
+    let html = markdown;
+
+    // Convert markdown headings (but preserve heading structure)
+    html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>');
+    html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>');
+    html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+
+    // Convert bold (**text** or __text__)
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+    // Convert italic (*text* or _text_) - be careful not to match already converted bold
+    html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    html = html.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>');
+
+    // Convert links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+    // Convert unordered lists
+    html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
+    // Wrap consecutive li elements in ul
+    html = html.replace(/(<li>[\s\S]*?<\/li>)(\n<li>[\s\S]*?<\/li>)*/g, (match) => {
+      return '<ul>' + match + '</ul>';
+    });
+
+    // Convert ordered lists
+    html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+
+    // Convert paragraphs (double newlines)
+    const paragraphs = html.split(/\n\n+/);
+    html = paragraphs
+      .map(p => {
+        const trimmed = p.trim();
+        // Don't wrap if already wrapped in block elements
+        if (
+          trimmed.startsWith('<h') ||
+          trimmed.startsWith('<ul') ||
+          trimmed.startsWith('<ol') ||
+          trimmed.startsWith('<li') ||
+          trimmed.startsWith('<p') ||
+          trimmed.startsWith('<div') ||
+          trimmed.startsWith('<section') ||
+          trimmed.startsWith('<img') ||
+          trimmed.startsWith('<table')
+        ) {
+          return trimmed;
+        }
+        if (trimmed) {
+          return `<p>${trimmed}</p>`;
+        }
+        return '';
+      })
+      .filter(p => p)
+      .join('\n');
+
+    return html;
+  }
+
+  /**
    * Compose article content into brand-styled HTML.
    *
    * @param content - The article content to compose
@@ -183,11 +251,20 @@ export class BrandAwareComposer {
 
     // Process each section
     for (const section of content.sections) {
+      // CRITICAL: Convert markdown content to HTML before composing
+      const htmlContent = this.markdownToHtml(section.content);
+
       const contentBlock: ContentBlock = {
         type: 'section',
         heading: section.heading,
         headingLevel: section.headingLevel,
-        body: section.content
+        body: htmlContent // Use converted HTML
+      };
+
+      // Create a copy of the section with HTML content
+      const htmlSection: ArticleSection = {
+        ...section,
+        content: htmlContent
       };
 
       // Try to match to a component
@@ -195,7 +272,7 @@ export class BrandAwareComposer {
 
       if (match) {
         // Use extracted component
-        const renderedSection = this.renderWithComponent(section, match.component);
+        const renderedSection = this.renderWithComponent(htmlSection, match.component);
         htmlSections.push(renderedSection);
 
         componentsUsed.push({
@@ -208,7 +285,7 @@ export class BrandAwareComposer {
         extractionsUsed.add(match.component.extractionId);
       } else {
         // Use fallback styling
-        const renderedSection = this.renderWithFallback(section);
+        const renderedSection = this.renderWithFallback(htmlSection);
         htmlSections.push(renderedSection);
         synthesizedCount++;
       }
@@ -252,24 +329,52 @@ export class BrandAwareComposer {
   private renderWithComponent(section: ArticleSection, component: ExtractedComponent): string {
     // CRITICAL: Use the literal HTML from the extracted component
     // This preserves the exact structure and styling from the target site
-    let html = component.literalHtml;
+    const html = component.literalHtml;
 
-    if (!html || html.trim() === '') {
+    // Check if we have usable literal HTML (not just a comment or placeholder)
+    const hasUsableLiteralHtml = html &&
+      html.trim() !== '' &&
+      !html.trim().startsWith('<!--') &&
+      html.length > 100 && // Must be substantial HTML
+      (html.includes('<') && html.includes('>'));
+
+    if (!hasUsableLiteralHtml) {
       // Fallback if no literal HTML available
-      return this.renderWithFallback(section);
+      // But still apply brand class names for styling
+      console.log('[BrandAwareComposer] No usable literal HTML for component:', component.componentType);
+      return this.renderWithBrandStyling(section, component);
     }
 
     // Inject content into the literal HTML structure
     // Strategy: Find the content areas and replace them
-    html = this.injectContentIntoLiteralHtml(html, section, component);
+    let result = this.injectContentIntoLiteralHtml(html, section, component);
 
     // Add SEO semantic layer (wrap in semantic element if not already)
-    if (!html.includes('<section') && !html.includes('<article')) {
+    if (!result.includes('<section') && !result.includes('<article')) {
       const classNames = component.theirClassNames.join(' ');
-      html = `<section class="${classNames} brand-section" data-brand-component="${component.componentType}">\n${html}\n</section>`;
+      result = `<section class="${classNames} brand-section" data-brand-component="${component.componentType}">\n${result}\n</section>`;
     }
 
-    return html;
+    return result;
+  }
+
+  /**
+   * Render a section with brand styling classes but without literal HTML.
+   * This is used when component extraction succeeded (got classes) but
+   * literal HTML extraction failed.
+   */
+  private renderWithBrandStyling(section: ArticleSection, component: ExtractedComponent): string {
+    const headingTag = `h${section.headingLevel}`;
+    const classNames = component.theirClassNames.filter(c => c && c.trim()).join(' ');
+    const componentType = component.componentType || 'section';
+
+    // Use brand classes but with semantic HTML structure
+    return `<section class="${classNames} brand-section brand-${componentType}" data-brand-component="${componentType}">
+    <${headingTag} class="brand-heading">${this.escapeHtml(section.heading)}</${headingTag}>
+    <div class="brand-content">
+      ${section.content}
+    </div>
+  </section>`;
   }
 
   /**

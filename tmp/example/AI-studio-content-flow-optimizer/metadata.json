@@ -1,0 +1,5 @@
+{
+  "name": "Content Flow Optimizer",
+  "description": "Transforms long, text-heavy pages into structured, user-friendly layouts using Gemini API and modern CSS design patterns.",
+  "requestFramePermissions": []
+}

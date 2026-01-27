@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Totaal VvE Beheer Almere | MVGM</title>
+
+  <!-- Google Fonts - MVGM Brand Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+/* ============================================
+   MVGM Brand Design System
+   High-End Design Agency Quality Output
+   ============================================ */
+
+:root {
+  /* MVGM Brand Colors */
+  --brand-primary: #012d55;
+  --brand-primary-light: #1a4a7a;
+  --brand-primary-dark: #001a33;
+  --brand-secondary: #e0b15c;
+  --brand-secondary-light: #f0c97a;
+  --brand-accent: #7a9c59;
+  --brand-teal: rgba(162, 195, 195, 0.9);
+
+  /* Neutrals */
+  --neutral-900: #1a1a1a;
+  --neutral-700: #555555;
+  --neutral-500: #888888;
+  --neutral-300: #cccccc;
+  --neutral-100: #f5f5f5;
+  --white: #ffffff;
+
+  /* Typography */
+  --font-heading: 'Roboto Slab', Georgia, serif;
+  --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+
+  /* MVGM Signature Asymmetric Radii */
+  --radius-card: 10px 10px 50px 10px;
+  --radius-card-alt: 10px 50px 10px 10px;
+  --radius-button: 6px;
+  --radius-small: 8px;
+
+  /* Shadows */
+  --shadow-card: 0 0 10px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0 8px 30px rgba(1, 45, 85, 0.12);
+  --shadow-hover: 0 12px 40px rgba(1, 45, 85, 0.18);
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-medium: 0.3s ease;
+  --transition-slow: 0.6s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--neutral-700);
+  background: var(--white);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ============================================
+   HERO SECTION - Full Impact Opening
+   ============================================ */
+
+.hero {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+  padding: var(--space-4xl) 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(224, 177, 92, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(122, 156, 89, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 100px;
+  color: var(--brand-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-lg);
+  border: 1px solid rgba(224, 177, 92, 0.3);
+}
+
+.hero h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.15;
+  margin-bottom: var(--space-lg);
+}
+
+.hero h1 span {
+  color: var(--brand-secondary);
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.7;
+  margin-bottom: var(--space-xl);
+  max-width: 600px;
+}
+
+.hero-cta {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-button);
+  transition: all var(--transition-medium);
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--brand-secondary);
+  color: var(--brand-primary-dark);
+}
+
+.btn-primary:hover {
+  background: var(--brand-secondary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(224, 177, 92, 0.4);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--white);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================
+   KEY TAKEAWAYS - Premium Highlight Box
+   ============================================ */
+
+.key-takeaways {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-light) 100%);
+  border-radius: var(--radius-card);
+  padding: var(--space-2xl);
+  margin: calc(var(--space-3xl) * -1) var(--space-lg) var(--space-3xl);
+  position: relative;
+  z-index: 10;
+  box-shadow: var(--shadow-elevated);
+}
+
+.key-takeaways::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+}
+
+.key-takeaways-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.key-takeaways-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--brand-secondary);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(224, 177, 92, 0.3);
+}
+
+.key-takeaways h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: var(--white);
+  font-weight: 700;
+}
+
+.key-takeaways-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.key-takeaway-item {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: var(--space-lg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  transition: all var(--transition-medium);
+}
+
+.key-takeaway-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.key-takeaway-number {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: var(--white);
+  color: var(--brand-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.key-takeaway-text {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* ============================================
+   CONTENT SECTIONS
+   ============================================ */
+
+.content-section {
+  padding: var(--space-3xl) 0;
+}
+
+.content-section:nth-child(even) {
+  background: var(--neutral-100);
+}
+
+.section-header {
+  max-width: 700px;
+  margin-bottom: var(--space-2xl);
+}
+
+.section-header h2 {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: var(--brand-primary);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+  position: relative;
+}
+
+.section-header h2::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 4px;
+  background: var(--brand-secondary);
+  border-radius: 2px;
+  margin-top: var(--space-md);
+}
+
+.section-header p {
+  font-size: 1.125rem;
+  color: var(--neutral-700);
+  line-height: 1.8;
+}
+
+/* ============================================
+   THREE PILLARS - Feature Cards
+   ============================================ */
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--space-xl);
+  margin-top: var(--space-2xl);
+}
+
+.pillar-card {
+  background: var(--white);
+  border-radius: var(--radius-card);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-medium);
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.pillar-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+  opacity: 0;
+  transition: opacity var(--transition-medium);
+}
+
+.pillar-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+  border-color: rgba(1, 45, 85, 0.1);
+}
+
+.pillar-card:hover::before {
+  opacity: 1;
+}
+
+.pillar-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--brand-teal), rgba(162, 195, 195, 0.6));
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin-bottom: var(--space-lg);
+}
+
+.pillar-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.375rem;
+  color: var(--brand-primary);
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+}
+
+.pillar-card p {
+  color: var(--neutral-700);
+  line-height: 1.7;
+  margin-bottom: var(--space-md);
+}
+
+.pillar-features {
+  list-style: none;
+  margin-top: var(--space-lg);
+}
+
+.pillar-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  color: var(--neutral-700);
+  font-size: 0.9375rem;
+}
+
+.pillar-features li::before {
+  content: '✓';
+  color: var(--brand-accent);
+  font-weight: 700;
+  min-width: 20px;
+}
+
+/* ============================================
+   BENEFITS SECTION - Icon List
+   ============================================ */
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.benefit-item {
+  display: flex;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--white);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-medium);
+  border-left: 4px solid transparent;
+}
+
+.benefit-item:hover {
+  border-left-color: var(--brand-secondary);
+  box-shadow: var(--shadow-elevated);
+}
+
+.benefit-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-light));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: 1.25rem;
+}
+
+.benefit-content h4 {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  color: var(--brand-primary);
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+}
+
+.benefit-content p {
+  font-size: 0.9375rem;
+  color: var(--neutral-700);
+  line-height: 1.6;
+}
+
+/* ============================================
+   PROCESS TIMELINE
+   ============================================ */
+
+.process-timeline {
+  position: relative;
+  padding-left: var(--space-3xl);
+}
+
+.process-timeline::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--brand-primary), var(--brand-secondary));
+}
+
+.timeline-step {
+  position: relative;
+  padding-bottom: var(--space-2xl);
+}
+
+.timeline-step:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: calc(var(--space-3xl) * -1 + 8px);
+  width: 28px;
+  height: 28px;
+  background: var(--white);
+  border: 3px solid var(--brand-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  z-index: 1;
+}
+
+.timeline-content {
+  background: var(--white);
+  border-radius: var(--radius-card-alt);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-medium);
+}
+
+.timeline-content:hover {
+  box-shadow: var(--shadow-elevated);
+  transform: translateX(8px);
+}
+
+.timeline-content h4 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: var(--brand-primary);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.timeline-content p {
+  color: var(--neutral-700);
+  line-height: 1.7;
+}
+
+/* ============================================
+   COMPARISON TABLE
+   ============================================ */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--white);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.comparison-table thead {
+  background: var(--brand-primary);
+}
+
+.comparison-table th {
+  padding: var(--space-lg);
+  text-align: left;
+  color: var(--white);
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+.comparison-table td {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--neutral-100);
+}
+
+.comparison-table tr:hover td {
+  background: var(--neutral-100);
+}
+
+.comparison-table .highlight {
+  background: rgba(122, 156, 89, 0.1);
+  color: var(--brand-accent);
+  font-weight: 600;
+}
+
+/* ============================================
+   CTA SECTION
+   ============================================ */
+
+.cta-section {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+  padding: var(--space-4xl) 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.cta-content {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.cta-section h2 {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  color: var(--white);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.cta-section p {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: var(--space-xl);
+  line-height: 1.7;
+}
+
+/* ============================================
+   FAQ SECTION
+   ============================================ */
+
+.faq-list {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  background: var(--white);
+  border-radius: var(--radius-small);
+  margin-bottom: var(--space-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  border: 1px solid var(--neutral-100);
+}
+
+.faq-question {
+  width: 100%;
+  padding: var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  color: var(--brand-primary);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.faq-question:hover {
+  background: var(--neutral-100);
+}
+
+.faq-question span {
+  transform: rotate(0);
+  transition: transform var(--transition-fast);
+}
+
+.faq-item.open .faq-question span {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  padding: 0 var(--space-lg) var(--space-lg);
+  color: var(--neutral-700);
+  line-height: 1.7;
+  display: none;
+}
+
+.faq-item.open .faq-answer {
+  display: block;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--space-3xl) 0;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .key-takeaways {
+    margin: var(--space-xl);
+    padding: var(--space-xl);
+  }
+
+  .pillars-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .process-timeline {
+    padding-left: var(--space-2xl);
+  }
+
+  .comparison-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+  </style>
+</head>
+<body>
+
+<!-- HERO SECTION -->
+<header class="hero">
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span>MVGM Vastgoedbeheer</span>
+      </div>
+      <h1>Totaal VvE Beheer <span>Almere</span></h1>
+      <p class="hero-subtitle">
+        Complete ontzorging voor uw Vereniging van Eigenaren. Met 70 jaar ervaring
+        en lokale expertise in de polderstad combineren wij financieel, technisch
+        en administratief beheer tot één naadloos geheel.
+      </p>
+      <div class="hero-cta">
+        <a href="#contact" class="btn btn-primary">Vrijblijvende Offerte</a>
+        <a href="#pillars" class="btn btn-secondary">Ontdek Onze Aanpak</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- KEY TAKEAWAYS -->
+<div class="container">
+  <aside class="key-takeaways">
+    <div class="key-takeaways-header">
+      <div class="key-takeaways-icon">💡</div>
+      <h2>Belangrijkste Punten</h2>
+    </div>
+    <div class="key-takeaways-grid">
+      <div class="key-takeaway-item">
+        <div class="key-takeaway-number">1</div>
+        <div class="key-takeaway-text">
+          Integrale dienstverlening die financieel, technisch en administratief beheer combineert in één totaalpakket
+        </div>
+      </div>
+      <div class="key-takeaway-item">
+        <div class="key-takeaway-number">2</div>
+        <div class="key-takeaway-text">
+          Lokale expertise met diepgaande kennis van Almeerse bouwmethoden en polderbodem
+        </div>
+      </div>
+      <div class="key-takeaway-item">
+        <div class="key-takeaway-number">3</div>
+        <div class="key-takeaway-text">
+          24/7 calamiteitenservice en digitaal portaal voor real-time inzicht in financiën
+        </div>
+      </div>
+      <div class="key-takeaway-item">
+        <div class="key-takeaway-number">4</div>
+        <div class="key-takeaway-text">
+          SKW-gecertificeerd met volledige financiële transparantie en onafhankelijkheid
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- WHAT IS VVE BEHEER -->
+<section class="content-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Wat is Totaal VvE Beheer?</h2>
+      <p>
+        Totaal VvE Beheer Almere brengt technische, financiële en administratieve
+        expertise samen in één allesomvattende dienstverlening. Door deze centralisatie
+        bij één lokale specialist verbetert de woonkwaliteit in de polderstad aanzienlijk.
+      </p>
+    </div>
+
+    <p style="max-width: 800px; margin-bottom: var(--space-xl);">
+      Het samenvoegen van deze disciplines ontzorgt VvE-besturen en eigenaren volledig,
+      waardoor complexe vraagstukken en dagelijkse operationele lasten verleden tijd zijn.
+      Specifieke kennis van de Almeerse vastgoedmarkt en gemeentelijke regelgeving zorgt
+      voor een perfecte aansluiting op lokale eisen.
+    </p>
+  </div>
+</section>
+
+<!-- THREE PILLARS -->
+<section class="content-section" id="pillars">
+  <div class="container">
+    <div class="section-header">
+      <h2>De Drie Pijlers van MVGM Totaalpakket</h2>
+      <p>
+        Duurzaam waardebehoud van lokale appartementencomplexen vereist een naadloze
+        afstemming van economische, technische en bestuurlijke taken.
+      </p>
+    </div>
+
+    <div class="pillars-grid">
+      <!-- Financieel -->
+      <article class="pillar-card">
+        <div class="pillar-icon">💰</div>
+        <h3>Financieel VvE Beheer</h3>
+        <p>
+          Financiële stabiliteit vormt de basis voor een gezonde en toekomstbestendige
+          Vereniging van Eigenaren. Wij zorgen voor nauwkeurige uitvoering van
+          vergaderbesluiten en volledige boekhouding.
+        </p>
+        <ul class="pillar-features">
+          <li>Opstellen jaarrekeningen conform RvJ-richtlijnen</li>
+          <li>Deskundig beheer van reservefondsen</li>
+          <li>24/7 online portaal voor documenten en bankafschriften</li>
+          <li>Actief debiteurenbeheer en consequente inning</li>
+        </ul>
+      </article>
+
+      <!-- Technisch -->
+      <article class="pillar-card">
+        <div class="pillar-icon">🔧</div>
+        <h3>Technisch Beheer & MJOP</h3>
+        <p>
+          Structureel technisch toezicht waarborgt de bouwkundige staat van
+          wooncomplexen. Een sluitend Meerjarenonderhoudsplan (MJOP) vormt de
+          basis voor preventief en correctief onderhoud.
+        </p>
+        <ul class="pillar-features">
+          <li>15-jarig onderhoudsplan voor dakrenovaties en gevels</li>
+          <li>Expertise in Flevolandse bouwmethodieken</li>
+          <li>Strikte prijs-kwaliteitsselectie van lokale vaklieden</li>
+          <li>Preventieve inspecties voor maximale veiligheid</li>
+        </ul>
+      </article>
+
+      <!-- Administratief -->
+      <article class="pillar-card">
+        <div class="pillar-icon">📋</div>
+        <h3>Administratief Beheer</h3>
+        <p>
+          Administratieve regie vormt het juridische fundament voor correcte
+          besluitvorming. Het team organiseert de ALV stipt volgens wettelijke
+          termijnen en geldende statuten.
+        </p>
+        <ul class="pillar-features">
+          <li>Professionele technisch voorzitter bij vergaderingen</li>
+          <li>Toetsing aan splitsingsakte en huishoudelijk reglement</li>
+          <li>Juridisch gevalideerde correspondentie bij conflicten</li>
+          <li>Nauwkeurig bijhouden van eigenaarsregister</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- WAAROM MVGM -->
+<section class="content-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Waarom Kiezen voor MVGM?</h2>
+      <p>
+        MVGM combineert de slagkracht van een landelijke organisatie met
+        diepgewortelde betrokkenheid in de Flevopolder.
+      </p>
+    </div>
+
+    <div class="benefits-grid">
+      <div class="benefit-item">
+        <div class="benefit-icon">🏆</div>
+        <div class="benefit-content">
+          <h4>70+ Jaar Ervaring</h4>
+          <p>Ruim 3.700 complexen in beheer met een robuust fundament voor iedere VvE</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-icon">📍</div>
+        <div class="benefit-content">
+          <h4>Lokale Specialisten</h4>
+          <p>Kennis van wijken als Almere Poort en Almere Buiten tot in detail</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-icon">🛡️</div>
+        <div class="benefit-content">
+          <h4>SKW-Gecertificeerd</h4>
+          <p>Maximale financiële transparantie en onafhankelijkheid gewaarborgd</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-icon">📱</div>
+        <div class="benefit-content">
+          <h4>Digitaal Portaal</h4>
+          <p>Realtime inzicht in financiën en notulen, 24/7 toegankelijk</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-icon">🚨</div>
+        <div class="benefit-content">
+          <h4>24/7 Calamiteitendienst</h4>
+          <p>Directe actie bij acute storingen met korte lijnen naar leveranciers</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-icon">💼</div>
+        <div class="benefit-content">
+          <h4>Collectieve Inkoopkracht</h4>
+          <p>Premievoordelen op energie en verzekeringen door grootschalige inkoop</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TARIEVEN VERGELIJKEN -->
+<section class="content-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Tarieven en Kosten Vergelijken</h2>
+      <p>
+        De strategische balans tussen maandelijkse VvE-bijdrage en kwaliteit
+        van het integrale dienstenpakket bepaalt de werkelijke waarde.
+      </p>
+    </div>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Vergelijkingspunt</th>
+          <th>Budget Administratiekantoor</th>
+          <th>MVGM Totaalbeheer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Basisvergoeding</strong></td>
+          <td>Gereduceerd instaptarief per eenheid</td>
+          <td class="highlight">Marktconforme prijs inclusief alle kerntaken</td>
+        </tr>
+        <tr>
+          <td><strong>Meerwerk</strong></td>
+          <td>Hoge toeslagen voor standaard handelingen</td>
+          <td class="highlight">Strikt afgebakend en beperkt tot uitzonderingen</td>
+        </tr>
+        <tr>
+          <td><strong>MJOP Expertise</strong></td>
+          <td>Vaak extern of generiek van aard</td>
+          <td class="highlight">Interne bouwkunde specifiek voor Almeerse poldergrond</td>
+        </tr>
+        <tr>
+          <td><strong>Storingsdienst</strong></td>
+          <td>Beperkte bereikbaarheid in avonduren</td>
+          <td class="highlight">24/7 noodlijn voor lokale calamiteiten</td>
+        </tr>
+        <tr>
+          <td><strong>Financieel Inzicht</strong></td>
+          <td>Periodieke verantwoording achteraf</td>
+          <td class="highlight">Real-time dashboarding en liquiditeitsprognoses</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- VERDUURZAMING -->
+<section class="content-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Verduurzaming & Toekomstbestendig Beheer</h2>
+      <p>
+        Specialistisch verduurzamingsadvies gekoppeld aan subsidiebegeleiding
+        en realisatie van zonne-energiesystemen.
+      </p>
+    </div>
+
+    <div class="process-timeline">
+      <div class="timeline-step">
+        <div class="timeline-marker">1</div>
+        <div class="timeline-content">
+          <h4>Draagkracht Analyse</h4>
+          <p>
+            Technische inspecteurs analyseren nauwkeurig de draagkracht van
+            de dakconstructie voor zonnepanelen, specifiek voor platte daken
+            in de polderstad.
+          </p>
+        </div>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-marker">2</div>
+        <div class="timeline-content">
+          <h4>Financiële Berekening</h4>
+          <p>
+            Onze experts berekenen de specifieke terugverdientijd voor de VvE
+            en adviseren over noodzakelijke poliswijzigingen van de opstalverzekering.
+          </p>
+        </div>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-marker">3</div>
+        <div class="timeline-content">
+          <h4>Laadinfrastructuur</h4>
+          <p>
+            Maatwerk voor laadvoorzieningen in parkeergarages met strikte
+            brandveiligheidsprotocollen en capaciteitsanalyses van de hoofdaansluiting.
+          </p>
+        </div>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-marker">4</div>
+        <div class="timeline-content">
+          <h4>Subsidiebegeleiding</h4>
+          <p>
+            Actieve ondersteuning bij regelingen zoals de SVVE om het
+            investeringsbudget te verruimen voor structureel lagere energiekosten.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="content-section">
+  <div class="container">
+    <div class="section-header" style="text-align: center; max-width: 100%;">
+      <h2 style="display: inline-block;">Veelgestelde Vragen</h2>
+    </div>
+
+    <div class="faq-list">
+      <div class="faq-item open">
+        <button class="faq-question">
+          Wat zijn de contractvoorwaarden voor Totaal VvE Beheer?
+          <span>▼</span>
+        </button>
+        <div class="faq-answer">
+          Het integrale pakket schetst een heldere taakverdeling tussen de VvE en
+          de beheerder, inclusief duidelijke afspraken over de contractduur. Alle
+          kerntaken zijn inbegrepen met transparante prijsafspraken.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Hoe verloopt de overstap van een ander administratiekantoor?
+          <span>▼</span>
+        </button>
+        <div class="faq-answer">
+          Voor een soepele en rechtsgeldige overstap is een correct uitgevoerd
+          meerderheidsbesluit tijdens de Algemene Ledenvergadering essentieel.
+          Wij begeleiden dit proces volledig en zorgen voor een naadloze transitie.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Hoe is de kostenstructuur opgebouwd?
+          <span>▼</span>
+        </button>
+        <div class="faq-answer">
+          Financiële transparantie wordt gewaarborgd door volledig inzicht in de
+          opbouw van de beheervergoeding en de tarieven voor diensten buiten het
+          basiscontract. Geen verrassingen achteraf.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Wat is de meerwaarde van lokale expertise?
+          <span>▼</span>
+        </button>
+        <div class="faq-answer">
+          Diepgaande kennis van de Almeerse woningmarkt, polderbodem en lokale
+          regelgeving biedt aanzienlijke meerwaarde. We kennen de specifieke
+          uitdagingen van stadsverwarming en experimentele systeembouw in de regio.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-content">
+      <h2>Start Nu met Professioneel VvE Beheer</h2>
+      <p>
+        Vraag vandaag nog een vrijblijvende offerte aan of plan een
+        kennismakingsgesprek bij u op locatie.
+      </p>
+      <div class="hero-cta" style="justify-content: center;">
+        <a href="#contact" class="btn btn-primary">Vrijblijvende Offerte</a>
+        <a href="tel:+31889999999" class="btn btn-secondary">Bel Direct: 088 999 9999</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// FAQ Accordion
+document.querySelectorAll('.faq-question').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    const item = this.parentElement;
+    const wasOpen = item.classList.contains('open');
+
+    // Close all items
+    document.querySelectorAll('.faq-item').forEach(function(i) {
+      i.classList.remove('open');
+    });
+
+    // Toggle current
+    if (!wasOpen) {
+      item.classList.add('open');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

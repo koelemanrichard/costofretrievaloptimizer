@@ -1,0 +1,121 @@
+cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[vite] connecting...
+[vite] connected.
+%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[ConsoleLogger] Installed
+[App] Logging services initialized
+[App] Starting session check...
+[App] No stored session found, skipping getSession()
+[App] Setting up onAuthStateChange subscription (version: 0 )
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Unsubscribing from onAuthStateChange (version: 0 )
+[App] Logging services initialized
+[App] Setting up onAuthStateChange subscription (version: 0 )
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[VersionCheck] Initial version: 1.0.20260127.1347
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[AuthScreen] Starting auth process...
+[AuthScreen] Attempting login for: richard@kjenmarks.nl
+[AuthScreen] Login response received: {hasData: true, hasError: false}
+[AuthScreen] Login successful, dispatching user
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[Settings] API Key Sources: {envKeyPreview: sk-ant-api03-Zu..., dbKeyPreview: sk-ant-api03-Zu..., usingSource: DATABASE (overrides env), dbKeyLength: 108, envKeyLength: 108}
+[Telemetry] Billing context set: {organizationId: NOT SET, keySource: user_byok, billableTo: user}
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 3 user: true activeProject: true activeMap: false
+[App] Rendering step: 3 user: true activeProject: true activeMap: false
+[Telemetry] Billing context set: {organizationId: 02bedb11..., keySource: org_byok, billableTo: organization}
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[Anthropic STREAMING] Starting streaming request: {operation: generateContentBrief, model: claude-haiku-4-5-20251001, promptLength: 15920, expectJson: true}
+[Anthropic STREAMING] Making fetch request to: https://shtqshmmsrmtquuhyupl.supabase.co/functions/v1/anthropic-proxy
+[Anthropic STREAMING] Request body: {model: claude-haiku-4-5-20251001, max_tokens: 32768, stream: true, promptLength: 16144}
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[Anthropic STREAMING] Response received: {status: 200, statusText: , ok: true, headers: Object}
+[Anthropic STREAMING] Response content-type: text/event-stream
+[Anthropic STREAMING] Starting to read stream...
+[Anthropic STREAMING] Chunk 1 (766 bytes): event: message_start
+data: {"type":"message_start","message":{"model":"claude-haiku-4-5-20251001","id":"msg_01JiMz7Lgrt2cXE4XG43Qjzp","type":"message","role":"assistant","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":4902,"cache_creation_input_tokens":0,"cache_read_inpu
+[Anthropic STREAMING] Message started
+[Anthropic STREAMING] Chunk 2 (131 bytes): event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"d_outline\": ["}  }
+
+
+[Anthropic STREAMING] Chunk 3 (151 bytes): event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"\n    {\n      \"heading"}            }
+
+
+[Anthropic STREAMING] Chunk 4 (133 bytes): event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"\": \""}            }
+
+
+[Anthropic STREAMING] Chunk 5 (122 bytes): event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Wat"}    }
+
+
+[Anthropic STREAMING] Progress: 346 chars, 50 events
+[Anthropic STREAMING] Progress: 818 chars, 100 events
+[Anthropic STREAMING] Progress: 1234 chars, 150 events
+[Anthropic STREAMING] Progress: 1806 chars, 200 events
+[Anthropic STREAMING] Progress: 2449 chars, 250 events
+[Anthropic STREAMING] Progress: 2966 chars, 300 events
+[Anthropic STREAMING] Progress: 3689 chars, 350 events
+[Anthropic STREAMING] Progress: 4114 chars, 400 events
+[Anthropic STREAMING] Progress: 4813 chars, 450 events
+[Anthropic STREAMING] Progress: 5439 chars, 500 events
+[Anthropic STREAMING] Progress: 6054 chars, 550 events
+[Anthropic STREAMING] Progress: 6650 chars, 600 events
+[Anthropic STREAMING] Progress: 7252 chars, 650 events
+[Anthropic STREAMING] Progress: 7812 chars, 700 events
+[Anthropic STREAMING] Progress: 8249 chars, 750 events
+[Anthropic STREAMING] Progress: 8770 chars, 800 events
+[Anthropic STREAMING] Progress: 9344 chars, 850 events
+[Anthropic STREAMING] Progress: 9754 chars, 900 events
+[Anthropic STREAMING] Progress: 10346 chars, 950 events
+[Anthropic STREAMING] Progress: 10926 chars, 1000 events
+[Anthropic STREAMING] Progress: 11359 chars, 1050 events
+[Anthropic STREAMING] Progress: 11742 chars, 1100 events
+[Anthropic STREAMING] Progress: 12228 chars, 1150 events
+[Anthropic STREAMING] Progress: 12845 chars, 1200 events
+[Anthropic STREAMING] Progress: 13647 chars, 1250 events
+[Anthropic STREAMING] Progress: 14143 chars, 1300 events
+[Anthropic STREAMING] Progress: 14779 chars, 1350 events
+[Anthropic STREAMING] Progress: 15611 chars, 1400 events

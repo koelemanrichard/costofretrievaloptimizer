@@ -35,19 +35,37 @@ export const AnalysisResultStep: React.FC<AnalysisResultStepProps> = ({
   onContinue,
   onReanalyze,
 }) => {
-  const { crawlData, serpData, recommendations, siteSize, complexityScore, domain } = analysisResult;
+  const { crawlData, serpData, recommendations, siteSize, complexityScore, domain, isEstimate } = analysisResult;
 
   return (
     <div className="space-y-6">
+      {/* Estimate Warning Banner */}
+      {isEstimate && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 flex items-start gap-3">
+          <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <h4 className="text-yellow-400 font-medium">Quick Estimate Mode</h4>
+            <p className="text-gray-400 text-sm mt-1">
+              These results are <strong>estimates</strong> based on URL pattern analysis, not actual website data.
+              For accurate metrics, configure API keys in Settings and use "Analyze Website" for a full crawl.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Domain Header */}
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">{domain}</h2>
-            <p className="text-gray-400 text-sm mt-1">Analysis completed</p>
+            <p className="text-gray-400 text-sm mt-1">
+              {isEstimate ? 'Quick estimate completed' : 'Analysis completed'}
+            </p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-400">Site Classification</div>
+            <div className="text-sm text-gray-400">Site Classification {isEstimate && '(estimated)'}</div>
             <div className="text-lg font-semibold text-blue-400">{siteSizeLabels[siteSize]}</div>
           </div>
         </div>

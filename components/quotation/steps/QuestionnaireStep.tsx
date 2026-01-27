@@ -13,6 +13,7 @@ import {
   TargetMarket,
   BudgetRange,
 } from '../../../types/quotation';
+import { useQuotationSettings } from '../../../hooks/useQuotationSettings';
 
 interface QuestionnaireStepProps {
   responses: Partial<QuestionnaireResponses>;
@@ -37,13 +38,14 @@ const marketOptions: { value: TargetMarket; label: string; description: string }
   { value: 'international', label: 'International', description: 'Multiple countries/languages' },
 ];
 
-const budgetOptions: { value: BudgetRange; label: string; range: string }[] = [
-  { value: 'under_1000', label: 'Starter', range: 'Under $1,000/mo' },
-  { value: '1000_2500', label: 'Growth', range: '$1,000 - $2,500/mo' },
-  { value: '2500_5000', label: 'Professional', range: '$2,500 - $5,000/mo' },
-  { value: '5000_10000', label: 'Business', range: '$5,000 - $10,000/mo' },
-  { value: '10000_25000', label: 'Enterprise', range: '$10,000 - $25,000/mo' },
-  { value: 'over_25000', label: 'Custom', range: 'Over $25,000/mo' },
+// Budget ranges - values will be formatted with the user's currency
+const budgetRanges: { value: BudgetRange; label: string; minValue: number; maxValue: number | null }[] = [
+  { value: 'under_1000', label: 'Starter', minValue: 0, maxValue: 1000 },
+  { value: '1000_2500', label: 'Growth', minValue: 1000, maxValue: 2500 },
+  { value: '2500_5000', label: 'Professional', minValue: 2500, maxValue: 5000 },
+  { value: '5000_10000', label: 'Business', minValue: 5000, maxValue: 10000 },
+  { value: '10000_25000', label: 'Enterprise', minValue: 10000, maxValue: 25000 },
+  { value: 'over_25000', label: 'Custom', minValue: 25000, maxValue: null },
 ];
 
 export const QuestionnaireStep: React.FC<QuestionnaireStepProps> = ({
@@ -52,6 +54,20 @@ export const QuestionnaireStep: React.FC<QuestionnaireStepProps> = ({
   onContinue,
   onBack,
 }) => {
+  const { formatPrice, currencyInfo, currency } = useQuotationSettings();
+  const currencySymbol = currencyInfo[currency]?.symbol || '€';
+
+  // Format budget options with current currency
+  const budgetOptions = budgetRanges.map((range) => ({
+    value: range.value,
+    label: range.label,
+    range: range.maxValue === null
+      ? `Over ${formatPrice(range.minValue)}/mo`
+      : range.minValue === 0
+        ? `Under ${formatPrice(range.maxValue)}/mo`
+        : `${formatPrice(range.minValue)} - ${formatPrice(range.maxValue)}/mo`,
+  }));
+
   const isComplete =
     responses.primaryGoal && responses.targetMarket && responses.budgetRange;
 
@@ -137,7 +153,7 @@ export const QuestionnaireStep: React.FC<QuestionnaireStepProps> = ({
 
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-xs">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{currencySymbol}</span>
             <input
               type="number"
               value={responses.customerValue || ''}

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Excellence Prototype - Woningontruiming</title>
+    <!-- Modern Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,800;1,800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Brand Detected DNA (Example: Daadvracht Orange) */
+            --brand-primary: #EA580C;
+            --brand-primary-light: #FFedd5;
+            --brand-primary-dark: #9a3412;
+            --brand-secondary: #18181b;
+            
+            /* Design System Tokens */
+            --bg-canvas: #fcfcfc;
+            --bg-surface: #ffffff;
+            --text-main: #18181b;
+            --text-muted: #52525b;
+            --border-soft: #e4e4e7;
+            --radius-xl: 1.5rem;
+            --radius-lg: 1rem;
+            --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+            
+            /* Typography */
+            --font-display: 'Playfair Display', serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: var(--font-body); 
+            background: var(--bg-canvas); 
+            color: var(--text-main); 
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 0 2rem; }
+
+        /* HERO: High Contrast & Depth */
+        .hero {
+            padding: 8rem 0 6rem;
+            position: relative;
+            background: radial-gradient(circle at 80% 20%, var(--brand-primary-light) 0%, transparent 40%),
+                        radial-gradient(circle at 10% 80%, #f3f4f6 0%, transparent 30%);
+            border-bottom: 1px solid var(--border-soft);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "ONT";
+            position: absolute;
+            font-family: var(--font-display);
+            font-size: 30rem;
+            opacity: 0.03;
+            bottom: -5rem;
+            right: -10rem;
+            pointer-events: none;
+        }
+
+        .hero-label {
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--brand-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(3rem, 8vw, 4.5rem);
+            line-height: 1.1;
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero .intro-text {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+        }
+
+        /* KEY TAKEAWAYS: Premium Glassmorphism */
+        .card-takeaways {
+            margin-top: -4rem;
+            background: var(--bg-surface);
+            border-radius: var(--radius-xl);
+            padding: 3rem;
+            border: 1px solid var(--border-soft);
+            box-shadow: var(--shadow-float);
+            position: relative;
+            z-index: 10;
+        }
+
+        .card-takeaways h2 {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-takeaways h2::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, var(--border-soft), transparent);
+        }
+
+        .takeaway-list { list-style: none; display: grid; gap: 1.5rem; }
+        .takeaway-item {
+            display: flex;
+            gap: 1.25rem;
+            align-items: flex-start;
+        }
+        .takeaway-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--brand-primary-light);
+            color: var(--brand-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-weight: 800;
+        }
+
+        /* CONTENT SECTIONS */
+        .section { padding: 5rem 0; }
+        .section-header { margin-bottom: 3rem; }
+        .section h2 { 
+            font-family: var(--font-display); 
+            font-size: 2.25rem; 
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        /* MODERN STEPS / TIMELINE */
+        .steps { position: relative; padding-left: 2rem; }
+        .steps::before {
+            content: "";
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 2px;
+            background: var(--border-soft);
+        }
+        .step {
+            position: relative;
+            margin-bottom: 4rem;
+        }
+        .step::before {
+            content: "";
+            position: absolute;
+            left: -2rem; top: 0.5rem;
+            width: 1rem; height: 1rem;
+            background: var(--bg-canvas);
+            border: 2px solid var(--brand-primary);
+            border-radius: 50%;
+            transform: translateX(-50%);
+        }
+        .step-number {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--brand-primary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .step h3 { font-size: 1.5rem; margin-bottom: 1rem; }
+
+        /* THE "TRUST" UI FEEDBACK ELEMENT (Injected into Article) */
+        .ai-intelligence-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.7rem;
+            background: #fdf2f8;
+            color: #be185d;
+            width: fit-content;
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="hero">
+        <div class="container">
+            <span class="hero-label">Diensten in Noord-Brabant</span>
+            <h1>Woningontruiming met Zorg en <span style="font-style: italic; color: var(--brand-primary)">Daadkracht</span>.</h1>
+            <p class="intro-text">Van bezemschoon opleveren tot waardevolle inboedel taxeren. Wij regelen de volledige ontruiming van uw pand in Breda, Tilburg en omstreken.</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card-takeaways">
+            <h2>Snelle Blik</h2>
+            <ul class="takeaway-list">
+                <li class="takeaway-item">
+                    <div class="takeaway-icon">1</div>
+                    <div>
+                        <strong>Bezemschone oplevering</strong>
+                        <p style="font-size: 0.9rem; color: var(--text-muted)">Uw woning is direct klaar voor verkoop of verhuur.</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-icon">2</div>
+                    <div>
+                        <strong>Duurzame afvoer</strong>
+                        <p style="font-size: 0.9rem; color: var(--text-muted)">Hergebruik staat centraal bij bruikbare goederen.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <main class="container section">
+        <div class="ai-intelligence-label">✨ Visual elements matched to daadvracht.nl</div>
+        
+        <div class="section-header">
+            <h2>Onze Werkwijze</h2>
+            <p>Geen verrassingen achteraf. Wij werken met een helder 5-stappenplan om uw ontruiming soepel en respectvol te laten verlopen.</p>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <span class="step-number">Fase 01</span>
+                <h3>Gratis Inspectie</h3>
+                <p>Wij bezoeken de locatie om een exact beeld te krijgen van het volume en de staat van de inboedel.</p>
+            </div>
+            <div class="step">
+                <span class="step-number">Fase 02</span>
+                <h3>Bindende Offerte</h3>
+                <p>U ontvangt een transparante prijsopgave. Geen verborgen kosten, gewoon eerlijke afspraken.</p>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+</html>

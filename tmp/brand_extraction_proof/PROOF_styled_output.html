@@ -1,0 +1,289 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Security Best Practices - NFIR Style</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+
+    /* EXTRACTED BRAND CSS - LITERAL VALUES (NO TEMPLATES/VARIABLES) */
+    /* Auto-generated Brand Styles */
+
+/* Base tokens */
+:root {
+  --color-primary-dark: #1a2744;
+  --color-background-dark: #0d1829;
+  --color-accent-yellow: #f5a623;
+  --color-text-light: #ffffff;
+  --color-text-muted: #5a6a7e;
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-weight-heading: 700;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-weight-body: 400;
+  --line-height-body: 1.6;
+  --spacing-section: 80px;
+  --spacing-card: 32px;
+  --content-width: 1200px;
+  --shadow-card: 0 4px 20px rgba(26, 39, 68, 0.08);
+  --shadow-elevated: 0 8px 30px rgba(26, 39, 68, 0.12);
+  --radius-small: 4px;
+  --radius-medium: 8px;
+  --radius-large: 16px;
+  --border-color: #e8eaed;
+}
+
+/* Component: Hero section with dark blue gradient background, white text, yellow CTA button */
+
+      .nfir-hero, .brand-nfir-hero {
+        background: linear-gradient(135deg, #1a2744 0%, #0d1829 100%);
+        padding: 80px 40px;
+        min-height: 500px;
+        display: flex;
+        align-items: center;
+      }
+      .nfir-hero-content, .brand-nfir-hero-content {
+        max-width: 600px;
+      }
+      .nfir-hero-title, .brand-nfir-hero-title {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 48px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 20px;
+        line-height: 1.2;
+      }
+      .nfir-hero-subtitle, .brand-nfir-hero-subtitle {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 32px;
+        line-height: 1.6;
+      }
+      .nfir-cta-primary, .brand-nfir-cta-primary {
+        display: inline-block;
+        background-color: #f5a623;
+        color: #1a2744;
+        padding: 16px 32px;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+      }
+      .nfir-cta-primary:hover {
+        background-color: #e6951a;
+      }
+    
+
+/* Component: Service card with white background, dark blue text, subtle shadow */
+
+      .nfir-service-card, .brand-nfir-service-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 4px 20px rgba(26, 39, 68, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .nfir-service-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(26, 39, 68, 0.12);
+      }
+      .nfir-card-title, .brand-nfir-card-title {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a2744;
+        margin-bottom: 12px;
+      }
+      .nfir-card-description, .brand-nfir-card-description {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 16px;
+        color: #5a6a7e;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+      .nfir-card-link, .brand-nfir-card-link {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        color: #f5a623;
+        text-decoration: none;
+      }
+      .nfir-card-link:hover {
+        text-decoration: underline;
+      }
+    
+
+/* Component: FAQ accordion with clean borders and expand/collapse functionality */
+
+      .nfir-faq-section, .brand-nfir-faq-section {
+        max-width: 800px;
+        margin: 60px auto;
+        padding: 0 20px;
+      }
+      .nfir-faq-heading, .brand-nfir-faq-heading {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1a2744;
+        margin-bottom: 32px;
+        text-align: center;
+      }
+      .nfir-faq-item, .brand-nfir-faq-item {
+        border-bottom: 1px solid #e8eaed;
+        padding: 20px 0;
+      }
+      .nfir-faq-question, .brand-nfir-faq-question {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a2744;
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        padding: 0;
+      }
+      .nfir-faq-answer, .brand-nfir-faq-answer {
+        padding-top: 16px;
+      }
+      .nfir-faq-answer p {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 16px;
+        color: #5a6a7e;
+        line-height: 1.7;
+      }
+
+    /* Article-specific layout */
+    .article-container {
+      background-color: #f8f9fa;
+      min-height: 100vh;
+    }
+    .article-content {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+    .article-section {
+      margin-bottom: 48px;
+    }
+    .article-section h2 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a2744;
+      margin-bottom: 20px;
+    }
+    .article-section p {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 17px;
+      color: #3d4a5c;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="article-container">
+    <!-- HERO: Using extracted NFIR component -->
+    <section class="nfir-hero">
+      <div class="nfir-hero-content">
+        <h1 class="nfir-hero-title">Cyber Security Best Practices voor 2024</h1>
+        <p class="nfir-hero-subtitle">Bescherm uw organisatie tegen de nieuwste cyberdreigingen met bewezen strategieen en expert advies.</p>
+        <a href="#contact" class="nfir-cta-primary">Vraag een audit aan</a>
+      </div>
+    </section>
+
+    <div class="article-content">
+      <!-- Introduction -->
+      <div class="article-section">
+        <h2>Waarom Cyber Security Nu Belangrijker Is Dan Ooit</h2>
+        <p>In een wereld waar digitale transformatie versnelt, worden organisaties steeds vaker het doelwit van geavanceerde cyberaanvallen. Van ransomware tot supply chain attacks - de dreigingen evolueren continu.</p>
+        <p>Dit artikel biedt een compleet overzicht van de best practices die elke organisatie zou moeten implementeren om hun digitale assets te beschermen.</p>
+      </div>
+
+      <!-- Services Grid: Using extracted card components -->
+      <div class="article-section">
+        <h2>Onze Diensten</h2>
+        <div class="services-grid">
+          <div class="nfir-service-card">
+            <h3 class="nfir-card-title">Incident Response</h3>
+            <p class="nfir-card-description">24/7 beschikbaar voor security incidenten. Onze experts reageren snel en effectief.</p>
+            <a href="#" class="nfir-card-link">Meer informatie →</a>
+          </div>
+          <div class="nfir-service-card">
+            <h3 class="nfir-card-title">Penetration Testing</h3>
+            <p class="nfir-card-description">Ontdek kwetsbaarheden voordat aanvallers dat doen met onze ethische hackers.</p>
+            <a href="#" class="nfir-card-link">Meer informatie →</a>
+          </div>
+          <div class="nfir-service-card">
+            <h3 class="nfir-card-title">Security Awareness</h3>
+            <p class="nfir-card-description">Train uw medewerkers om de eerste verdedigingslinie te worden.</p>
+            <a href="#" class="nfir-card-link">Meer informatie →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ: Using extracted FAQ component -->
+      <div class="nfir-faq-section">
+        <h2 class="nfir-faq-heading">Veelgestelde Vragen</h2>
+        <div class="nfir-faq-item">
+          <button class="nfir-faq-question">Wat is het verschil tussen een vulnerability scan en een pentest?</button>
+          <div class="nfir-faq-answer">
+            <p>Een vulnerability scan is een geautomatiseerde tool die bekende kwetsbaarheden detecteert. Een pentest gaat verder door actief te proberen deze kwetsbaarheden te exploiteren, wat een realistischer beeld geeft van de daadwerkelijke risico's.</p>
+          </div>
+        </div>
+        <div class="nfir-faq-item">
+          <button class="nfir-faq-question">Hoe snel kunnen jullie reageren bij een incident?</button>
+          <div class="nfir-faq-answer">
+            <p>Ons Incident Response Team is 24/7 bereikbaar en kan binnen 1-4 uur on-site zijn, afhankelijk van de locatie. Remote ondersteuning is direct beschikbaar.</p>
+          </div>
+        </div>
+        <div class="nfir-faq-item">
+          <button class="nfir-faq-question">Wat kost een security assessment?</button>
+          <div class="nfir-faq-answer">
+            <p>De kosten zijn afhankelijk van de scope en complexiteit van uw omgeving. Neem contact met ons op voor een vrijblijvende offerte op maat.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer CTA -->
+    <section class="nfir-hero" style="min-height: 300px; padding: 60px 40px;">
+      <div class="nfir-hero-content">
+        <h2 class="nfir-hero-title" style="font-size: 36px;">Klaar om uw beveiliging te versterken?</h2>
+        <p class="nfir-hero-subtitle">Neem vandaag nog contact op voor een vrijblijvend adviesgesprek.</p>
+        <a href="#contact" class="nfir-cta-primary">Plan een gesprek</a>
+      </div>
+    </section>
+  </div>
+
+  <!-- Anti-Template Proof Comment -->
+  <!--
+    ANTI-TEMPLATE PROOF:
+    This HTML uses LITERAL CSS values extracted from nfir.nl
+    - Colors are hex values: #1a2744, #f5a623, #ffffff
+    - Fonts are literal: 'Inter', system-ui, sans-serif
+    - Shadows are literal: 0 4px 20px rgba(26, 39, 68, 0.08)
+    - NO var(--token) references
+    - NO {{placeholder}} syntax
+    - NO template variables
+
+    The class names (nfir-hero, nfir-service-card, etc.) are the ACTUAL
+    class names from the source site, preserving brand identity.
+  -->
+</body>
+</html>

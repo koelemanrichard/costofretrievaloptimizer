@@ -1,0 +1,53 @@
+═══════════════════════════════════════════════════════════════════════════════
+                        INTERNAL LINKING PLAN
+═══════════════════════════════════════════════════════════════════════════════
+
+Article: Naden en Aansluitingen Controleren
+Total Internal Links: 4
+
+─────────────────────────────────────────────────────────────────────────────────
+
+
+LINK 1
+────────
+Anchor Text: "daklekkage vroeg herkennen"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 2
+────────
+Anchor Text: "technische naadconstructie details"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 3
+────────
+Anchor Text: "periodieke inspectie planning"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 4
+────────
+Anchor Text: "kostenbesparende preventieve aanpak"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          SEO FACTS (EAVs)
+═══════════════════════════════════════════════════════════════════════════════
+
+Key facts and data points to include in the content:
+
+No EAV data available
+
+
+Generated: January 14, 2026

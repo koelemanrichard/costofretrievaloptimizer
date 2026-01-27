@@ -1,0 +1,1350 @@
+/**
+ * SEO Content Styles
+ *
+ * Styling for SEO-optimized articles with:
+ * - Hero section
+ * - Key Takeaways box
+ * - Section cards
+ * - FAQ accordion
+ * - Sticky ToC sidebar
+ * - CTA blocks
+ *
+ * @package Daadvracht
+ */
+
+/* ============================================
+   GLOBAL RESETS FOR SEO PAGES
+   ============================================ */
+
+/* Remove any embedded style tags that might leak through */
+.seo-page style,
+.seo-article style,
+.seo-article__content style,
+.article-content style {
+    display: none !important;
+}
+
+/* Ensure SEO page elements aren't affected by theme defaults */
+/* IMPORTANT: Exclude WordPress admin bar from all styling */
+.seo-page *:not(#wpadminbar):not(#wpadminbar *),
+.seo-page *:not(#wpadminbar):not(#wpadminbar *)::before,
+.seo-page *:not(#wpadminbar):not(#wpadminbar *)::after {
+    box-sizing: border-box;
+}
+
+/* Reset any inherited link styles within SEO components - exclude admin bar */
+.seo-page a:not(#wpadminbar a) {
+    text-decoration: none;
+}
+
+/* Ensure proper z-index stacking */
+.seo-page {
+    position: relative;
+    max-width: 100% !important;
+}
+
+/* Force main content to not have max-width constraints from embedded styles */
+.seo-page main,
+.seo-page article,
+.seo-page .seo-article-wrapper,
+.seo-page .seo-article {
+    max-width: none !important;
+}
+
+/* ============================================
+   WORDPRESS ADMIN BAR PROTECTION
+   ============================================ */
+/* Ensure the WordPress admin bar is never affected by our styles */
+#wpadminbar {
+    background: #1d2327 !important;
+    color: #c3c4c7 !important;
+}
+
+#wpadminbar a,
+#wpadminbar a:hover,
+#wpadminbar a:focus,
+#wpadminbar a:visited {
+    color: #c3c4c7 !important;
+}
+
+#wpadminbar a:hover {
+    color: #72aee6 !important;
+}
+
+#wpadminbar .ab-item,
+#wpadminbar .ab-empty-item {
+    color: #c3c4c7 !important;
+}
+
+#wpadminbar .ab-submenu,
+#wpadminbar ul#wp-admin-bar-root-default > li > .ab-item,
+#wpadminbar ul#wp-admin-bar-top-secondary > li > .ab-item {
+    color: #c3c4c7 !important;
+}
+
+#wpadminbar .quicklinks .menupop ul {
+    background: #2c3338 !important;
+}
+
+#wpadminbar .quicklinks .menupop ul li a,
+#wpadminbar .quicklinks .menupop ul li a strong {
+    color: #c3c4c7 !important;
+}
+
+#wpadminbar .quicklinks .menupop ul li a:hover {
+    color: #72aee6 !important;
+    background: #1d2327 !important;
+}
+
+/* ============================================
+   VARIABLES (inherit from main theme)
+   ============================================ */
+
+/* ============================================
+   SEO HERO SECTION
+   ============================================ */
+.seo-hero {
+    position: relative;
+    min-height: 450px;
+    display: flex;
+    align-items: flex-end;
+    padding: 100px 0 80px;
+    margin-bottom: 0;
+    overflow: hidden;
+    /* Solid background as fallback when no featured image */
+    background: linear-gradient(135deg, #18181b 0%, #27272a 50%, #3f3f46 100%);
+}
+
+.seo-hero__background {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.seo-hero__image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+.seo-hero__overlay {
+    position: absolute;
+    inset: 0;
+    /* Much stronger overlay for better text readability */
+    background: linear-gradient(
+        to top,
+        rgba(24, 24, 27, 0.95) 0%,
+        rgba(24, 24, 27, 0.85) 30%,
+        rgba(24, 24, 27, 0.65) 60%,
+        rgba(24, 24, 27, 0.4) 100%
+    );
+    z-index: 1;
+}
+
+.seo-hero__content {
+    position: relative;
+    z-index: 10;
+    max-width: 800px;
+}
+
+.seo-hero__category {
+    margin-bottom: 20px;
+}
+
+.seo-hero__category a {
+    display: inline-block;
+    padding: 8px 18px;
+    background: var(--daadvracht-primary, #ea580c);
+    color: #fff !important;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 9999px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.seo-hero__category a:hover {
+    background: var(--daadvracht-primary-hover, #c2410c);
+}
+
+.seo-hero__title {
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #ffffff !important;
+    margin: 0 0 24px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.seo-hero__description {
+    font-size: 20px;
+    line-height: 1.6;
+    color: #e4e4e7 !important;
+    margin: 0 0 28px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.seo-hero__meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 14px;
+    color: #a1a1aa !important;
+}
+
+.seo-hero__meta time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #a1a1aa !important;
+}
+
+.seo-hero__reading-time {
+    color: #a1a1aa !important;
+}
+
+.seo-hero__reading-time::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: #71717a;
+    border-radius: 50%;
+    margin-right: 16px;
+}
+
+@media (max-width: 1024px) {
+    .seo-hero {
+        min-height: 380px;
+        padding: 80px 0 60px;
+    }
+
+    .seo-hero__title {
+        font-size: 40px;
+    }
+
+    .seo-hero__description {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 767px) {
+    .seo-hero {
+        min-height: 320px;
+        padding: 60px 0 40px;
+    }
+
+    .seo-hero__title {
+        font-size: 32px;
+    }
+
+    .seo-hero__description {
+        font-size: 16px;
+    }
+}
+
+/* ============================================
+   SEO ARTICLE WRAPPER (with ToC sidebar)
+   ============================================ */
+.seo-article-wrapper {
+    display: grid !important;
+    grid-template-columns: 280px 1fr !important;
+    gap: 48px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 60px 24px !important;
+    background: transparent !important;
+    width: 100% !important;
+}
+
+/* Ensure proper order: sidebar first on desktop, content first on mobile */
+.seo-toc {
+    order: 1 !important;
+    width: 280px !important;
+    max-width: 280px !important;
+    flex-shrink: 0 !important;
+}
+
+.seo-article {
+    order: 2 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+@media (max-width: 1024px) {
+    .seo-article-wrapper {
+        grid-template-columns: 1fr !important;
+        gap: 32px !important;
+        padding: 40px 20px !important;
+    }
+
+    .seo-toc {
+        order: 2 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .seo-article {
+        order: 1 !important;
+    }
+}
+
+/* ============================================
+   STICKY TOC SIDEBAR
+   ============================================ */
+.seo-toc {
+    position: relative;
+}
+
+.seo-toc__inner {
+    position: sticky;
+    top: 100px;
+}
+
+.seo-toc__title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--daadvracht-zinc-400);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--daadvracht-zinc-200);
+}
+
+.seo-toc__list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+}
+
+.seo-toc__list li {
+    margin: 0;
+    padding: 0;
+}
+
+.seo-toc__list li::before {
+    display: none;
+}
+
+.seo-toc__link {
+    display: block;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--daadvracht-zinc-600);
+    text-decoration: none;
+    border-radius: var(--daadvracht-radius-sm);
+    border-left: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.seo-toc__link:hover {
+    background: var(--daadvracht-zinc-50);
+    color: var(--daadvracht-primary);
+}
+
+.seo-toc__link.active {
+    background: var(--daadvracht-orange-50);
+    color: var(--daadvracht-primary);
+    border-left-color: var(--daadvracht-primary);
+    font-weight: 600;
+}
+
+/* ToC CTA Box */
+.seo-toc__cta {
+    background: linear-gradient(135deg, #27272a, #3f3f46);
+    border-radius: 12px;
+    padding: 24px;
+    color: #fff;
+    margin-top: 24px;
+}
+
+.seo-toc__cta-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: #ffffff !important;
+}
+
+.seo-toc__cta-text {
+    font-size: 14px;
+    color: #d4d4d8 !important;
+    margin: 0 0 20px;
+    line-height: 1.6;
+}
+
+.seo-toc__cta-button {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    background: var(--daadvracht-primary, #ea580c);
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.seo-toc__cta-button:hover {
+    background: #c2410c;
+    transform: translateY(-2px);
+    color: #fff !important;
+}
+
+@media (max-width: 1024px) {
+    .seo-toc__inner {
+        position: relative;
+        top: 0;
+    }
+}
+
+/* ============================================
+   SEO ARTICLE CONTENT
+   ============================================ */
+.seo-article {
+    min-width: 0;
+    background: transparent !important;
+}
+
+/* Reset article-content styles to prevent nested boxes */
+.seo-article .seo-article__content,
+.seo-article .article-content,
+.seo-article__content,
+.article-content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+}
+
+/* Add spacing between direct children using margin */
+.seo-article__content > *,
+.article-content > * {
+    margin-bottom: 48px !important;
+}
+
+.seo-article__content > *:last-child,
+.article-content > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Reset ANY divs that might create nested boxes inside sections */
+.seo-article__content > div:not([class*="seo-"]),
+.article-content > div:not([class*="seo-"]),
+.seo-section > div:not(.seo-section__content):not(.seo-section__heading),
+.seo-section__content > div:not([class*="seo-"]) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* Reset any nested article or section wrappers */
+.seo-article .entry-content,
+.seo-article .post-content,
+.seo-article__content .entry-content,
+.seo-article__content .post-content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* ============================================
+   KEY TAKEAWAYS BOX
+   ============================================ */
+.seo-key-takeaways {
+    background: linear-gradient(135deg, var(--daadvracht-zinc-50), var(--daadvracht-orange-50));
+    border: 1px solid var(--daadvracht-orange-100);
+    border-radius: var(--daadvracht-radius-lg);
+    padding: 32px;
+    margin: 0 0 40px;
+}
+
+.seo-key-takeaways__title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--daadvracht-heading);
+    margin: 0 0 24px;
+}
+
+.seo-key-takeaways__icon {
+    color: var(--daadvracht-primary);
+}
+
+.seo-key-takeaways__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 32px;
+}
+
+@media (max-width: 767px) {
+    .seo-key-takeaways__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.seo-key-takeaways__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.seo-key-takeaways__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--daadvracht-text);
+}
+
+.seo-key-takeaways__item:last-child {
+    margin-bottom: 0;
+}
+
+.seo-key-takeaways__item::before {
+    display: none;
+}
+
+.seo-key-takeaways__check {
+    flex-shrink: 0;
+    color: var(--daadvracht-primary);
+    margin-top: 2px;
+}
+
+/* ============================================
+   CONTENT SECTIONS
+   ============================================ */
+.seo-section {
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 40px !important;
+    border: 1px solid #e4e4e7 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    transition: box-shadow 0.3s ease;
+    position: relative;
+}
+
+.seo-section:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+.seo-section--alt {
+    background: #fafafa !important;
+}
+
+/* Remove ANY nested box styling */
+.seo-section .seo-section,
+.seo-section > .seo-section {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.seo-section__heading {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: #18181b !important;
+    margin: 0 0 24px !important;
+    padding: 0 !important;
+    position: relative;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.seo-section__underline {
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: var(--daadvracht-primary, #ea580c);
+    border-radius: 2px;
+    margin-top: 12px;
+}
+
+.seo-section__content {
+    font-size: 16px;
+    line-height: 1.75;
+    color: #3f3f46;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* Ensure ALL content inside sections doesn't have extra backgrounds */
+.seo-section__content p,
+.seo-section__content ul,
+.seo-section__content ol,
+.seo-section__content blockquote,
+.seo-section__content div,
+.seo-section__content span,
+.seo-section__content article,
+.seo-section__content section {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.seo-section__content > *:last-child {
+    margin-bottom: 0;
+}
+
+/* Spacing between sections is handled by parent > * rule */
+
+@media (max-width: 767px) {
+    .seo-section {
+        padding: 24px !important;
+        margin-bottom: 32px !important;
+    }
+
+    .seo-section__heading {
+        font-size: 24px !important;
+    }
+
+    .seo-section + .seo-section {
+        margin-top: 32px !important;
+    }
+}
+
+/* ============================================
+   ENHANCED LISTS
+   ============================================ */
+.seo-list {
+    list-style: none;
+    padding: 0;
+    margin: 24px 0;
+}
+
+.seo-list li {
+    position: relative;
+    padding-left: 32px;
+    margin-bottom: 16px;
+    line-height: 1.7;
+}
+
+.seo-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 8px;
+    height: 8px;
+    background: var(--daadvracht-primary);
+    border-radius: 50%;
+}
+
+.seo-list--numbered {
+    counter-reset: list-counter;
+}
+
+.seo-list--numbered li {
+    padding-left: 48px;
+    counter-increment: list-counter;
+}
+
+.seo-list--numbered li::before {
+    content: counter(list-counter);
+    width: 28px;
+    height: 28px;
+    background: var(--daadvracht-orange-100);
+    color: var(--daadvracht-primary);
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 0;
+}
+
+.seo-list--benefits li::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ea580c' stroke-width='2'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") center/contain no-repeat;
+    border-radius: 0;
+    top: 2px;
+}
+
+/* ============================================
+   ENHANCED TABLES
+   ============================================ */
+.seo-table-wrapper {
+    overflow-x: auto;
+    margin: 32px 0;
+    border-radius: var(--daadvracht-radius-md);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.seo-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.seo-table thead {
+    background: var(--daadvracht-zinc-900);
+}
+
+.seo-table th {
+    padding: 16px 20px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #fff;
+}
+
+.seo-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--daadvracht-zinc-100);
+    color: var(--daadvracht-text);
+}
+
+.seo-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.seo-table tbody tr:hover {
+    background: var(--daadvracht-zinc-50);
+}
+
+.seo-table--comparison th:first-child,
+.seo-table--comparison td:first-child {
+    font-weight: 600;
+    color: var(--daadvracht-heading);
+}
+
+/* ============================================
+   ENHANCED BLOCKQUOTES
+   ============================================ */
+.seo-blockquote {
+    margin: 40px 0;
+    padding: 32px;
+    background: var(--daadvracht-orange-50);
+    border-left: 4px solid var(--daadvracht-primary);
+    border-radius: 0 var(--daadvracht-radius-md) var(--daadvracht-radius-md) 0;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--daadvracht-zinc-700);
+}
+
+.seo-blockquote p {
+    margin: 0;
+}
+
+/* ============================================
+   STEP CARDS
+   ============================================ */
+.seo-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.seo-step__number {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--daadvracht-primary), var(--daadvracht-orange-500));
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
+.seo-step__title {
+    margin: 8px 0 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* ============================================
+   FAQ ACCORDION
+   ============================================ */
+.seo-faq {
+    background: #f4f4f5 !important; /* Light gray instead of orange */
+    border-radius: 16px !important;
+    padding: 48px 40px !important;
+    margin: 48px 0 !important;
+}
+
+.seo-faq__heading {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: #18181b !important;
+    margin: 0 0 36px !important;
+    text-align: center !important;
+}
+
+.seo-faq__list {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.seo-faq__item {
+    background: #ffffff !important;
+    border: 1px solid #e4e4e7 !important;
+    border-radius: 12px !important;
+    margin-bottom: 16px !important;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.seo-faq__item:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+    border-color: #d4d4d8 !important;
+}
+
+.seo-faq__question {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    padding: 24px 28px !important;
+    background: transparent !important;
+    border: none !important;
+    font-family: inherit !important;
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+    color: #18181b !important; /* Dark text for good contrast */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    gap: 16px;
+}
+
+.seo-faq__question:hover {
+    color: #c2410c !important; /* Darker orange for better readability on white */
+    background: #fafafa !important;
+}
+
+.seo-faq__question[aria-expanded="true"] {
+    color: #18181b !important; /* Keep dark when active */
+    background: #fafafa !important;
+    border-bottom: 1px solid #e4e4e7;
+}
+
+/* Question text span */
+.seo-faq__question span {
+    color: inherit !important;
+}
+
+.seo-faq__icon {
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    color: #71717a !important;
+}
+
+.seo-faq__question:hover .seo-faq__icon {
+    color: #ea580c !important;
+}
+
+.seo-faq__question[aria-expanded="true"] .seo-faq__icon {
+    transform: rotate(180deg);
+    color: #ea580c !important;
+}
+
+.seo-faq__answer {
+    display: none;
+    padding: 20px 28px 28px 28px !important; /* Proper padding including top */
+    color: #3f3f46 !important; /* Readable dark gray text */
+    line-height: 1.75 !important;
+    background: #fafafa !important;
+    font-size: 15px !important;
+}
+
+.seo-faq__answer.open {
+    display: block;
+    animation: faq-slide-down 0.3s ease;
+}
+
+@keyframes faq-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.seo-faq__answer p {
+    margin: 0 0 16px !important;
+    color: #3f3f46 !important;
+}
+
+.seo-faq__answer p:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Inner content in FAQ answer */
+.seo-faq__answer div,
+.seo-faq__answer span {
+    color: #3f3f46 !important;
+}
+
+@media (max-width: 767px) {
+    .seo-faq {
+        padding: 32px 20px !important;
+    }
+
+    .seo-faq__question {
+        padding: 20px !important;
+        font-size: 15px !important;
+    }
+
+    .seo-faq__answer {
+        padding: 16px 20px 24px 20px !important;
+    }
+}
+
+/* ============================================
+   CTA BLOCKS
+   ============================================ */
+.seo-cta {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 32px !important;
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fb923c 100%) !important;
+    border-radius: 16px !important;
+    padding: 40px 48px !important;
+    margin: 48px 0 !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 8px 32px rgba(234, 88, 12, 0.25) !important;
+}
+
+.seo-cta__content {
+    flex: 1;
+}
+
+.seo-cta__title {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+    margin: 0 0 10px !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    background: transparent !important;
+    border: none !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* FORCE title to be white - override all theme styles */
+.seo-cta h3,
+.seo-cta h3.seo-cta__title,
+.seo-cta .seo-cta__title {
+    color: #ffffff !important;
+}
+
+.seo-cta__description {
+    font-size: 16px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    opacity: 0.9;
+    line-height: 1.5 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+/* FORCE description text to be white */
+.seo-cta p,
+.seo-cta p.seo-cta__description,
+.seo-cta .seo-cta__description {
+    color: #ffffff !important;
+}
+
+.seo-cta__button {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 16px 32px !important;
+    background: #ffffff !important;
+    color: #ea580c !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+    white-space: nowrap !important;
+    border: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+    flex-shrink: 0;
+}
+
+.seo-cta__button:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3) !important;
+    color: #c2410c !important;
+    background: #ffffff !important;
+}
+
+.seo-cta__button:visited {
+    color: #ea580c !important;
+    background: #ffffff !important;
+}
+
+.seo-cta__button:active,
+.seo-cta__button:focus {
+    color: #ea580c !important;
+    background: #ffffff !important;
+}
+
+.seo-cta__arrow {
+    transition: transform 0.3s ease;
+    color: #ea580c !important;
+    flex-shrink: 0;
+}
+
+.seo-cta__button:hover .seo-cta__arrow {
+    transform: translateX(4px);
+}
+
+/* Ensure SVG inside button inherits color properly */
+.seo-cta__button svg {
+    color: #ea580c !important;
+    stroke: #ea580c !important;
+}
+
+/* Explicitly show only the button - nothing else */
+.seo-cta > a.seo-cta__button {
+    display: inline-flex !important;
+    visibility: visible !important;
+}
+
+/* HIDE any extra elements inside CTA that might appear - ghost buttons */
+.seo-cta a:not(.seo-cta__button),
+.seo-cta button,
+.seo-cta input {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Keep only content div visible, reset any duplicates */
+.seo-cta .seo-cta__content {
+    display: block !important;
+    visibility: visible !important;
+    flex: 1 !important;
+}
+
+/* Prevent theme styles from adding pseudo-elements that look like buttons */
+.seo-cta__button::before,
+.seo-cta__button::after,
+.seo-cta::before,
+.seo-cta::after,
+.seo-cta__content::before,
+.seo-cta__content::after,
+.seo-cta a::before,
+.seo-cta a::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    box-shadow: none !important;
+}
+
+@media (max-width: 767px) {
+    .seo-cta {
+        flex-direction: column !important;
+        text-align: center !important;
+        padding: 32px 24px !important;
+        gap: 24px !important;
+    }
+
+    .seo-cta__button {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
+
+/* ============================================
+   FINAL CTA SECTION
+   ============================================ */
+.seo-final-cta {
+    background: #18181b;
+    padding: 80px 24px;
+    text-align: center;
+}
+
+.seo-final-cta__content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.seo-final-cta__title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ffffff !important;
+    margin: 0 0 16px;
+}
+
+.seo-final-cta__text {
+    font-size: 18px;
+    color: #a1a1aa !important;
+    margin: 0 0 32px;
+    line-height: 1.6;
+}
+
+.seo-final-cta__buttons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* Primary button in final CTA */
+.seo-final-cta .btn-primary,
+.seo-final-cta__buttons .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: #ea580c !important;
+    color: #ffffff !important;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 8px;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.seo-final-cta .btn-primary:hover {
+    background: #c2410c !important;
+    transform: translateY(-2px);
+    color: #ffffff !important;
+}
+
+.seo-final-cta .btn-primary svg {
+    color: #ffffff;
+}
+
+/* Secondary button in final CTA */
+.seo-final-cta .btn-secondary,
+.seo-final-cta__buttons .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: transparent !important;
+    color: #ffffff !important;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 8px;
+    border: 2px solid #52525b !important;
+    transition: all 0.3s ease;
+}
+
+.seo-final-cta .btn-secondary:hover {
+    background: #27272a !important;
+    border-color: #71717a !important;
+    color: #ffffff !important;
+}
+
+/* ============================================
+   READING PROGRESS BAR
+   ============================================ */
+.seo-reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--daadvracht-primary), var(--daadvracht-orange-400));
+    z-index: 9999;
+    transition: width 0.1s ease;
+}
+
+body.admin-bar .seo-reading-progress {
+    top: 32px;
+}
+
+@media screen and (max-width: 782px) {
+    body.admin-bar .seo-reading-progress {
+        top: 46px;
+    }
+}
+
+/* ============================================
+   ARTICLE FOOTER
+   ============================================ */
+.seo-article__footer {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--daadvracht-zinc-200);
+}
+
+.seo-article__tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.seo-article__tags-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--daadvracht-zinc-500);
+}
+
+.seo-article__tags a {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--daadvracht-zinc-100);
+    color: var(--daadvracht-zinc-600);
+    font-size: 13px;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.seo-article__tags a:hover {
+    background: var(--daadvracht-primary);
+    color: #fff;
+}
+
+/* Author Box */
+.seo-author-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 24px;
+    background: var(--daadvracht-zinc-50);
+    border-radius: var(--daadvracht-radius-lg);
+    margin-bottom: 32px;
+}
+
+.seo-author-box__avatar img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.seo-author-box__info {
+    flex: 1;
+}
+
+.seo-author-box__label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--daadvracht-zinc-400);
+    margin-bottom: 4px;
+}
+
+.seo-author-box__name {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--daadvracht-heading);
+    margin-bottom: 8px;
+}
+
+.seo-author-box__bio {
+    font-size: 14px;
+    color: var(--daadvracht-text);
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (max-width: 767px) {
+    .seo-author-box {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
+
+/* Post Navigation */
+.seo-article__footer .nav-links {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.seo-article__footer .nav-previous,
+.seo-article__footer .nav-next {
+    flex: 1;
+}
+
+.seo-article__footer .nav-next {
+    text-align: right;
+}
+
+.seo-article__footer a {
+    display: block;
+    text-decoration: none;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--daadvracht-zinc-200);
+    border-radius: var(--daadvracht-radius-md);
+    transition: all 0.3s ease;
+}
+
+.seo-article__footer a:hover {
+    border-color: var(--daadvracht-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.seo-article__footer .nav-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--daadvracht-zinc-400);
+    margin-bottom: 4px;
+}
+
+.seo-article__footer .nav-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--daadvracht-heading);
+}
+
+.seo-article__footer a:hover .nav-title {
+    color: var(--daadvracht-primary);
+}
+
+@media (max-width: 767px) {
+    .seo-article__footer .nav-links {
+        flex-direction: column;
+    }
+
+    .seo-article__footer .nav-next {
+        text-align: left;
+    }
+}

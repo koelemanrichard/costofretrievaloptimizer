@@ -1,0 +1,53 @@
+═══════════════════════════════════════════════════════════════════════════════
+                        INTERNAL LINKING PLAN
+═══════════════════════════════════════════════════════════════════════════════
+
+Article: Totaal VvE Beheer Almere
+Total Internal Links: 4
+
+─────────────────────────────────────────────────────────────────────────────────
+
+
+LINK 1
+────────
+Anchor Text: "financieel en administratief beheer"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 2
+────────
+Anchor Text: "technisch beheer en MJOP"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 3
+────────
+Anchor Text: "kosten VvE beheerder vergelijken"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+LINK 4
+────────
+Anchor Text: "voordelen MVGM totaalpakket"
+Target URL: To be determined
+Context: Not specified
+Placement: Natural placement in content
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          SEO FACTS (EAVs)
+═══════════════════════════════════════════════════════════════════════════════
+
+Key facts and data points to include in the content:
+
+No EAV data available
+
+
+Generated: January 27, 2026

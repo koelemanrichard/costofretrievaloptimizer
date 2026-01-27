@@ -508,14 +508,15 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         dispatch({ type: 'LOG_EVENT', payload: { service: 'MultiPass', message, status, timestamp: Date.now() }});
     }, [dispatch]);
 
-    // Handle completion - update local state with the generated draft and schema
-    const handleGenerationComplete = useCallback((draft: string, auditScore: number, schemaResult?: EnhancedSchemaResult) => {
+    // Handle completion - update local state AND database with the generated draft and schema
+    const handleGenerationComplete = useCallback(async (draft: string, auditScore: number, schemaResult?: EnhancedSchemaResult) => {
         console.log('[ContentBriefModal] handleGenerationComplete called:', {
             draftLength: draft?.length || 0,
             auditScore,
             hasSchema: !!schemaResult,
             activeBriefTopic: activeBriefTopic?.id,
-            activeMapId
+            activeMapId,
+            briefId: brief?.id
         });
 
         if (!draft) {
@@ -524,6 +525,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
         }
 
         if (activeBriefTopic && activeMapId) {
+            // Update React state
             dispatch({
                 type: 'UPDATE_BRIEF',
                 payload: {
@@ -534,11 +536,34 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
             });
             handleLog(`Draft synced to workspace (${draft.length} chars)`, 'success');
 
+            // CRITICAL: Also persist to database immediately so it's not lost on reload
+            // This ensures the new draft takes precedence over any old cached draft
+            if (brief?.id && effectiveBusinessInfo?.supabaseUrl && effectiveBusinessInfo?.supabaseAnonKey) {
+                try {
+                    const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+                    const { error } = await supabase
+                        .from('content_briefs')
+                        .update({
+                            article_draft: draft,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', brief.id);
+
+                    if (error) {
+                        console.error('[ContentBriefModal] Failed to persist draft to database:', error);
+                    } else {
+                        console.log('[ContentBriefModal] Draft persisted to content_briefs:', draft.length, 'chars');
+                    }
+                } catch (err) {
+                    console.error('[ContentBriefModal] Error persisting draft:', err);
+                }
+            }
+
             if (schemaResult) {
                 handleLog(`Schema generated: ${schemaResult.pageType} with ${schemaResult.resolvedEntities.length} entities`, 'success');
             }
         }
-    }, [activeBriefTopic, activeMapId, dispatch, handleLog]);
+    }, [activeBriefTopic, activeMapId, dispatch, handleLog, brief?.id, effectiveBusinessInfo?.supabaseUrl, effectiveBusinessInfo?.supabaseAnonKey]);
 
     // Multi-pass generation hook
     const {

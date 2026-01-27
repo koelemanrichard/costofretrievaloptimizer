@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Styled Article</title>
+  <!-- Tailwind CSS for utility classes used in components -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+/* ============================================
+   Brand Design System - Auto-Generated
+   Source: https://mvgm.com/nl/vastgoeddiensten/vve-beheer/
+   Brand: mvgm.com
+   Generated: 2026-01-27T09:38:51.249Z
+   ============================================ */
+
+/* ==========================================================================
+   Brand Design System - Auto-generated CSS
+   ========================================================================== */
+/* CSS Custom Properties */
+:root {
+  --ctc-primary: #004a7c;
+  --ctc-primary-light: #e0f2fe;
+  --ctc-primary-dark: #002642;
+  --ctc-secondary: #7b61ff;
+  --ctc-accent: #3b82f6;
+  --ctc-neutral-darkest: #111827;
+  --ctc-neutral-dark: #374151;
+  --ctc-neutral-medium: #6b7280;
+  --ctc-neutral-light: #d1d5db;
+  --ctc-neutral-lightest: #f9fafb;
+  --ctc-success: #10b981;
+  --ctc-warning: #f59e0b;
+  --ctc-error: #ef4444;
+  --ctc-info: #3b82f6;
+  --ctc-font-heading: Arial, sans-serif;
+  --ctc-font-body: Arial, sans-serif;
+  --ctc-font-size-base: 16px;
+  --ctc-font-scale-ratio: 1.2;
+  --ctc-heading-weight: 700;
+  --ctc-body-weight: 400;
+  --ctc-body-line-height: 1.5;
+  --ctc-font-size-xs: 11.11px;
+  --ctc-font-size-sm: 13.33px;
+  --ctc-font-size-md: 16px;
+  --ctc-font-size-lg: 19.20px;
+  --ctc-font-size-xl: 23.04px;
+  --ctc-font-size-2xl: 27.65px;
+  --ctc-font-size-3xl: 33.18px;
+  --ctc-spacing-unit: 8px;
+  --ctc-spacing-xs: 2px;
+  --ctc-spacing-sm: 4px;
+  --ctc-spacing-md: 8px;
+  --ctc-spacing-lg: 12px;
+  --ctc-spacing-xl: 16px;
+  --ctc-spacing-2xl: 24px;
+  --ctc-spacing-3xl: 32px;
+  --ctc-radius-sm: 4px;
+  --ctc-radius-md: 8px;
+  --ctc-radius-lg: 12px;
+  --ctc-radius-full: 9999px;
+  --ctc-shadow-card: 0 1px 3px rgba(0,0,0,0.05);
+  --ctc-shadow-button: 0 1px 2px rgba(0,0,0,0.05);
+  --ctc-shadow-elevated: 0 4px 6px rgba(0,0,0,0.05);
+  --ctc-transition-speed: 250ms;
+  --ctc-easing: ease;
+}
+/* ==========================================================================
+   Component Styles
+   ========================================================================== */
+
+/* Button Component */
+.ctc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-md);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ctc-neutral-darkest);
+  background-color: var(--ctc-neutral-lightest);
+  border: 1px solid var(--ctc-borders-dividers);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  cursor: pointer;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), color var(--ctc-transition-speed) var(--ctc-easing), border-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  text-decoration: none; /* Remove underline from links */
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.ctc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ctc-button--small {
+  padding: var(--ctc-spacing-xs) var(--ctc-spacing-sm);
+  font-size: var(--ctc-font-size-sm);
+}
+
+.ctc-button--large {
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-lg);
+  font-size: var(--ctc-font-size-lg);
+}
+.ctc-button--primary {
+  color: var(--ctc-neutral-lightest);
+  background-color: var(--ctc-primary);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-button--primary:hover {
+  background-color: var(--ctc-primary-dark);
+  border-color: var(--ctc-primary-dark);
+}
+
+.ctc-button--primary:active {
+  background-color: var(--ctc-primary-dark);
+  box-shadow: none;
+}
+.ctc-button--secondary {
+  color: var(--ctc-primary);
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary-light);
+}
+
+.ctc-button--secondary:hover {
+  background-color: #d0e9ff; /* Slightly darker shade of primary light */
+  border-color: #d0e9ff;
+}
+
+.ctc-button--secondary:active {
+  background-color: #c0e2ff; /* Even darker shade */
+  box-shadow: none;
+}
+.ctc-button--outline {
+  color: var(--ctc-primary);
+  background-color: transparent;
+  border-color: var(--ctc-primary);
+}
+
+.ctc-button--outline:hover {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary-light);
+}
+
+.ctc-button--outline:active {
+  background-color: #d0e9ff; /* Slightly darker shade of primary light */
+  box-shadow: none;
+}
+.ctc-button:hover {
+  background-color: #f0f2f5; /* Slightly darker background on hover */
+  border-color: #c6cdd4; /* Slightly darker border on hover */
+}
+.ctc-button:active {
+  box-shadow: none; /* Remove shadow on active state */
+  transform: translateY(1px); /* Subtle press effect */
+}
+.ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Card Component */
+.ctc-card {
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-md);
+  box-shadow: var(--ctc-shadow-card);
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing), transform var(--ctc-transition-speed) var(--ctc-easing);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ctc-spacing-sm);
+  border: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-card > *:first-child {
+  margin-top: 0;
+}
+
+.ctc-card > *:last-child {
+  margin-bottom: 0;
+}
+.ctc-card--elevated {
+  box-shadow: var(--ctc-shadow-elevated);
+  border: none;
+}
+.ctc-card--bordered {
+  border: 1px solid var(--ctc-borders-dividers);
+  box-shadow: none;
+}
+.ctc-card--flat {
+  box-shadow: none;
+  border: none;
+  background-color: transparent;
+}
+.ctc-card--primary {
+  background-color: var(--ctc-primary-light);
+  border: 1px solid var(--ctc-primary);
+  color: var(--ctc-neutral-darkest);
+}
+.ctc-card--secondary {
+  background-color: #f2f0ff;
+  border: 1px solid var(--ctc-secondary);
+  color: var(--ctc-neutral-darkest);
+}
+.ctc-card:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transform: translateY(-2px);
+}
+.ctc-card:active {
+  transform: translateY(0);
+  box-shadow: var(--ctc-shadow-card);
+}
+.ctc-card:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+/* Hero Component */
+.ctc-hero {
+  padding: var(--ctc-spacing-3xl) 0;
+  background-color: var(--ctc-neutral-lightest);
+  text-align: center;
+}
+
+.ctc-hero__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--ctc-spacing-lg);
+}
+
+.ctc-hero__title {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-3xl);
+  font-weight: 700;
+  color: var(--ctc-primary);
+  margin-bottom: var(--ctc-spacing-md);
+  line-height: 1.2;
+}
+
+.ctc-hero__subtitle {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-lg);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+  margin-bottom: var(--ctc-spacing-xl);
+}
+
+.ctc-hero__button {
+  display: inline-block;
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-xl);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 400;
+  color: white;
+  background-color: var(--ctc-accent);
+  border: none;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  cursor: pointer;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-hero__button:hover {
+  background-color: #2563eb; /* Darker shade of accent */
+  transform: translateY(-2px);
+}
+
+.ctc-hero__button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.ctc-hero__image {
+  margin-top: var(--ctc-spacing-xl);
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-hero--full-bleed {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ctc-hero--full-bleed .ctc-hero__container {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+}
+
+.ctc-hero--contained {
+  padding-left: var(--ctc-spacing-lg);
+  padding-right: var(--ctc-spacing-lg);
+}
+
+.ctc-hero--contained .ctc-hero__container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+.ctc-hero:hover {
+  /* Add a subtle hover effect to the entire hero if needed */
+}
+
+.ctc-hero__button:hover {
+  background-color: #2563eb; /* Darker shade of accent */
+  transform: translateY(-2px);
+}
+.ctc-hero:active {
+  /* Add a subtle active effect to the entire hero if needed */
+}
+
+.ctc-hero__button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+.ctc-hero:focus-visible {
+  outline: 2px solid var(--ctc-secondary);
+  outline-offset: 2px;
+}
+
+.ctc-hero__button:focus-visible {
+  outline: 2px solid var(--ctc-secondary);
+  outline-offset: 2px;
+}
+
+/* Timeline Component */
+.ctc-timeline {
+  position: relative;
+  padding-left: var(--ctc-spacing-xl);
+  list-style: none;
+}
+
+.ctc-timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--ctc-spacing-md);
+  width: 2px;
+  background-color: var(--ctc-neutral-light);
+}
+
+.ctc-timeline-item {
+  margin-bottom: var(--ctc-spacing-lg);
+  position: relative;
+}
+
+.ctc-timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-timeline-item-header {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-timeline-item-title {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  font-weight: 700;
+  color: var(--ctc-neutral-darkest);
+  margin-bottom: var(--ctc-spacing-xs);
+}
+
+.ctc-timeline-item-subtitle {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-neutral-medium);
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-timeline-item-content {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+}
+
+.ctc-timeline-item-marker {
+  position: absolute;
+  top: 0;
+  left: calc(var(--ctc-spacing-md) - 6px);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--ctc-neutral-light);
+  border: 2px solid var(--ctc-primary);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), border-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-timeline-item--active .ctc-timeline-item-marker {
+  background-color: var(--ctc-primary);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-timeline-item--future .ctc-timeline-item-marker {
+  background-color: var(--ctc-neutral-lightest);
+  border-color: var(--ctc-neutral-light);
+}
+
+.ctc-timeline-item--past .ctc-timeline-item-marker {
+  background-color: var(--ctc-primary-light);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-timeline-item-content p {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-timeline-item-content p:last-child {
+  margin-bottom: 0;
+}
+.ctc-timeline--minimal {
+  padding-left: var(--ctc-spacing-lg);
+}
+
+.ctc-timeline--minimal::before {
+  left: var(--ctc-spacing-sm);
+}
+
+.ctc-timeline--minimal .ctc-timeline-item-marker {
+  left: calc(var(--ctc-spacing-sm) - 4px);
+  width: 8px;
+  height: 8px;
+  border-width: 1px;
+}
+
+.ctc-timeline--minimal .ctc-timeline-item-title {
+  font-size: var(--ctc-font-size-md);
+}
+
+.ctc-timeline--minimal .ctc-timeline-item-content {
+  font-size: var(--ctc-font-size-sm);
+}
+.ctc-timeline--card .ctc-timeline-item-content {
+  background-color: white;
+  padding: var(--ctc-spacing-md);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.ctc-timeline--card .ctc-timeline-item-content:hover {
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-timeline-item:hover .ctc-timeline-item-marker {
+  transform: scale(1.1);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-timeline-item:active .ctc-timeline-item-marker {
+  background-color: var(--ctc-primary-dark);
+  border-color: var(--ctc-primary-dark);
+}
+.ctc-timeline-item:focus-visible .ctc-timeline-item-marker {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Testimonial Component */
+.ctc-testimonial {
+  background-color: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+  padding: var(--ctc-spacing-lg);
+  text-align: center;
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-testimonial:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-testimonial__quote {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-lg);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-testimonial__author {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-primary);
+  margin-bottom: var(--ctc-spacing-xs);
+}
+
+.ctc-testimonial__title {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-sm);
+  color: var(--ctc-neutral-medium);
+  font-style: italic;
+}
+
+.ctc-testimonial__quote::before, .ctc-testimonial__quote::after {
+  font-family: var(--ctc-font-heading);
+  font-size: 2em;
+  color: var(--ctc-secondary);
+  display: inline-block;
+  width: 0.5em;
+}
+
+.ctc-testimonial__quote::before {
+  content: '\201C'; /* Left double quotation mark */
+  margin-right: 0.25em;
+  vertical-align: top;
+}
+
+.ctc-testimonial__quote::after {
+  content: '\201D'; /* Right double quotation mark */
+  margin-left: 0.25em;
+  vertical-align: bottom;
+}
+
+.ctc-testimonial--alt {
+  background-color: var(--ctc-primary-light);
+  border: 1px solid var(--ctc-borders-dividers);
+}
+
+.ctc-testimonial--alt .ctc-testimonial__quote {
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-testimonial--alt .ctc-testimonial__author {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-testimonial--alt .ctc-testimonial__title {
+  color: var(--ctc-neutral-dark);
+}
+
+.ctc-testimonial--dark {
+  background-color: var(--ctc-primary-dark);
+  color: var(--ctc-neutral-lightest);
+}
+
+.ctc-testimonial--dark .ctc-testimonial__quote {
+  color: var(--ctc-neutral-light);
+}
+
+.ctc-testimonial--dark .ctc-testimonial__author {
+  color: var(--ctc-accent);
+}
+
+.ctc-testimonial--dark .ctc-testimonial__title {
+  color: var(--ctc-neutral-medium);
+}
+
+.ctc-testimonial--dark .ctc-testimonial__quote::before, .ctc-testimonial--dark .ctc-testimonial__quote::after {
+  color: var(--ctc-accent);
+}
+
+.ctc-testimonial:hover {
+  transform: translateY(-2px);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-testimonial:active {
+  transform: translateY(0);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-testimonial:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+
+/* Faq Component */
+.ctc-faq {
+  border: 1px solid var(--ctc-neutral-light);
+  border-radius: var(--ctc-radius-md);
+  margin-bottom: var(--ctc-spacing-md);
+  background-color: var(--ctc-neutral-lightest);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-faq__item {
+  border-bottom: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-faq__item:last-child {
+  border-bottom: none;
+}
+
+.ctc-faq__question {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  color: var(--ctc-text-darkest);
+  padding: var(--ctc-spacing-md);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-faq__question:hover {
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-faq__question::after {
+  content: '+';
+  font-size: var(--ctc-font-size-2xl);
+  color: var(--ctc-secondary);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-faq__question[aria-expanded='true']::after {
+  content: '-';
+  transform: rotate(45deg);
+}
+
+.ctc-faq__answer {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-text-medium);
+  padding: 0 var(--ctc-spacing-md);
+  overflow: hidden;
+  transition: max-height var(--ctc-transition-speed) var(--ctc-easing);
+  max-height: 0;
+}
+
+.ctc-faq__answer--open {
+  padding: var(--ctc-spacing-md);
+  max-height: 500px; /* Arbitrary large value, adjust as needed */
+}
+
+.ctc-faq__question:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+.ctc-faq--primary {
+  border-color: var(--ctc-primary-light);
+  background-color: var(--ctc-primary-light);
+}
+
+.ctc-faq--primary .ctc-faq__question {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-faq--primary .ctc-faq__question:hover {
+  background-color: #cce7ff; /* Slightly darker than --ctc-primary-light */
+}
+
+.ctc-faq--primary .ctc-faq__question::after {
+  color: var(--ctc-primary);
+}
+.ctc-faq--secondary {
+  border-color: var(--ctc-secondary);
+  background-color: #f0edff; /* Lighter shade of secondary */
+}
+
+.ctc-faq--secondary .ctc-faq__question {
+  color: var(--ctc-primary-dark);
+}
+
+.ctc-faq--secondary .ctc-faq__question:hover {
+  background-color: #e0daff; /* Slightly darker than background */
+}
+
+.ctc-faq--secondary .ctc-faq__question::after {
+  color: var(--ctc-secondary);
+}
+.ctc-faq:hover {
+  /* Add a subtle overall hover effect if needed */
+}
+
+.ctc-faq__question:hover::after {
+  /* Add a subtle hover effect to the icon */
+}
+.ctc-faq:active {
+  /* Add a subtle active effect if needed */
+}
+.ctc-faq:focus-visible {
+  /* The focus style is already defined in the base CSS */
+}
+
+/* Cta Component */
+.ctc-cta {
+  display: inline-block;
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-xl);
+  font-family: var(--ctc-font-body);
+  font-weight: 400;
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: #fff;
+  background-color: var(--ctc-accent);
+  border: none;
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-button);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+  user-select: none; /* Prevent text selection during clicks */
+  -webkit-tap-highlight-color: transparent; /* Remove mobile tap highlight */
+  outline: none; /* Remove default focus outline */
+}
+
+.ctc-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ctc-cta--primary {
+  background-color: var(--ctc-primary);
+  color: #fff;
+}
+
+.ctc-cta--primary:hover {
+  background-color: var(--ctc-primary-dark);
+}
+
+.ctc-cta--secondary {
+  background-color: var(--ctc-secondary);
+  color: #fff;
+}
+
+.ctc-cta--secondary:hover {
+  background-color: #5b43d9; /* Darken secondary color */
+}
+.ctc-cta--outline {
+  background-color: transparent;
+  color: var(--ctc-primary);
+  border: 1px solid var(--ctc-primary);
+  box-shadow: none;
+}
+
+.ctc-cta--outline:hover {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-primary);
+}
+
+.ctc-cta--outline:active {
+  background-color: var(--ctc-primary);
+  color: #fff;
+  border-color: var(--ctc-primary);
+}
+
+.ctc-cta:hover {
+  background-color: #2962ff; /* Slightly darken accent color */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+.ctc-cta:active {
+  background-color: #1e40af; /* Even darker accent color */
+  box-shadow: 0 0px 1px rgba(0,0,0,0.1);
+  transform: translateY(0); /* Reset position */
+}
+
+.ctc-cta:focus-visible {
+  outline: 2px solid var(--ctc-accent); /* Use accent color for focus */
+  outline-offset: 2px;
+}
+
+/* KeyTakeaways Component */
+.ctc-keyTakeaways {
+  background-color: var(--ctc-primary-light);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-md);
+  box-shadow: var(--ctc-shadow-card);
+  margin-bottom: var(--ctc-spacing-lg);
+  font-family: var(--ctc-font-body);
+  color: var(--ctc-neutral-dark);
+  line-height: 1.5;
+}
+
+.ctc-keyTakeaways ul {
+  list-style-type: disc;
+  padding-left: var(--ctc-spacing-lg);
+  margin-top: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways li {
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways li:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-keyTakeaways h3 {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  color: var(--ctc-primary-dark);
+  margin-bottom: var(--ctc-spacing-sm);
+}
+
+.ctc-keyTakeaways p {
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-keyTakeaways p:last-child {
+  margin-bottom: 0;
+}
+.ctc-keyTakeaways--primary {
+  background-color: #fff;
+  border: 1px solid var(--ctc-primary-light);
+}
+
+.ctc-keyTakeaways--primary h3 {
+  color: var(--ctc-primary);
+}
+
+.ctc-keyTakeaways--secondary {
+  background-color: var(--ctc-secondary);
+  color: #fff;
+}
+
+.ctc-keyTakeaways--secondary h3 {
+  color: #fff;
+}
+
+.ctc-keyTakeaways--secondary li {
+ color: #fff;
+}
+
+.ctc-keyTakeaways:hover {
+  box-shadow: var(--ctc-shadow-elevated);
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-keyTakeaways:active {
+  transform: scale(0.98);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-keyTakeaways:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+
+/* Prose Component */
+.ctc-prose {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--ctc-font-heading);
+    font-weight: 700;
+    color: var(--ctc-primary-dark);
+    margin-bottom: var(--ctc-spacing-sm);
+    margin-top: var(--ctc-spacing-lg);
+  }
+
+  h1 { font-size: var(--ctc-font-size-3xl); }
+  h2 { font-size: var(--ctc-font-size-2xl); }
+  h3 { font-size: var(--ctc-font-size-xl); }
+  h4 { font-size: var(--ctc-font-size-lg); }
+  h5 { font-size: var(--ctc-font-size-md); }
+  h6 { font-size: var(--ctc-font-size-sm); }
+
+  /* Paragraphs */
+  p {
+    margin-bottom: var(--ctc-spacing-md);
+  }
+
+  /* Links */
+  a {
+    color: var(--ctc-accent);
+    text-decoration: underline;
+    transition: color var(--ctc-transition-speed) var(--ctc-easing);
+  }
+
+  a:hover {
+    color: var(--ctc-primary);
+  }
+
+  /* Lists */
+  ul, ol {
+    margin-left: var(--ctc-spacing-lg);
+    margin-bottom: var(--ctc-spacing-md);
+  }
+
+  li {
+    margin-bottom: var(--ctc-spacing-xs);
+  }
+
+  /* Blockquotes */
+  blockquote {
+    border-left: 4px solid var(--ctc-borders-dividers);
+    padding-left: var(--ctc-spacing-md);
+    margin-bottom: var(--ctc-spacing-md);
+    font-style: italic;
+    color: var(--ctc-neutral-medium);
+  }
+
+  /* Code */
+  code {
+    font-family: monospace;
+    background-color: var(--ctc-primary-light);
+    padding: var(--ctc-spacing-xs);
+    border-radius: var(--ctc-radius-sm);
+  }
+
+  pre {
+    background-color: var(--ctc-primary-light);
+    padding: var(--ctc-spacing-md);
+    border-radius: var(--ctc-radius-md);
+    overflow-x: auto;
+  }
+
+  /* Horizontal Rule */
+  hr {
+    border: none;
+    border-top: 1px solid var(--ctc-borders-dividers);
+    margin: var(--ctc-spacing-lg) 0;
+  }
+
+  /* Images */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+.ctc-prose--narrow {
+    max-width: 70ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+.ctc-prose--wide {
+    max-width: 90ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+.ctc-prose a:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+  }
+.ctc-prose a:active {
+    color: var(--ctc-primary-dark);
+  }
+.ctc-prose a:focus-visible {
+    outline: 2px solid var(--ctc-secondary);
+    outline-offset: 2px;
+  }
+
+/* List Component */
+.ctc-list {
+  list-style-type: none;
+  padding-left: 0; /* Reset default padding */
+  margin: 0;
+}
+
+.ctc-list > li {
+  position: relative;
+  padding-left: 1.2em; /* Space for the custom marker */
+  margin-bottom: var(--ctc-spacing-sm);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+}
+
+.ctc-list > li:before {
+  content: "\2022"; /* Unicode bullet character */
+  position: absolute;
+  left: 0;
+  color: var(--ctc-accent);
+  font-size: 1em; /* Adjust bullet size as needed */
+  line-height: 1.5;
+}
+
+.ctc-list > li:last-child {
+  margin-bottom: 0;
+}
+.ctc-list--primary > li:before {
+  color: var(--ctc-primary);
+}
+.ctc-list--numbered {
+  counter-reset: list-counter;
+}
+
+.ctc-list--numbered > li {
+  padding-left: 2em; /* Adjust for number width */
+}
+
+.ctc-list--numbered > li:before {
+  content: counter(list-counter) ".";
+  counter-increment: list-counter;
+  color: var(--ctc-primary);
+  font-weight: bold;
+  font-size: 0.9em; /* Slightly smaller number */
+  position: absolute;
+  left: 0;
+  line-height: 1.5;
+}
+.ctc-list--no-bullets > li {
+  padding-left: 0;
+}
+
+.ctc-list--no-bullets > li:before {
+  content: none;
+}
+.ctc-list > li:hover {
+  background-color: var(--ctc-primary-light);
+  border-radius: var(--ctc-radius-sm);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+  padding-left: 1.2em; /* Maintain padding on hover */
+}
+.ctc-list > li:active {
+  background-color: #d0e9ff; /* Slightly darker shade of primary light */
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-list > li:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+  border-radius: var(--ctc-radius-sm);
+}
+
+/* Table Component */
+.ctc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  color: var(--ctc-neutral-dark);
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden; /* Ensures border-radius applies correctly */
+  box-shadow: var(--ctc-shadow-card);
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-table thead {
+  background-color: var(--ctc-primary-light);
+  color: var(--ctc-primary-dark);
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+}
+
+.ctc-table th, .ctc-table td {
+  padding: var(--ctc-spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--ctc-neutral-light);
+}
+
+.ctc-table th {
+  font-weight: bold;
+}
+
+.ctc-table tbody tr:nth-child(even) {
+  background-color: var(--ctc-neutral-lightest);
+}
+
+.ctc-table tbody tr:last-child td {
+  border-bottom: none; /* Remove border on last row */
+}
+
+.ctc-table a {
+  color: var(--ctc-accent);
+  text-decoration: none;
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-table a:hover {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+}
+
+.ctc-table .ctc-table__actions {
+  display: flex;
+  gap: var(--ctc-spacing-sm);
+  justify-content: flex-start; /* Or space-around, space-between, etc. */
+}
+
+.ctc-table .ctc-table__actions button {
+  padding: var(--ctc-spacing-xs) var(--ctc-spacing-sm);
+  background-color: var(--ctc-primary);
+  color: white;
+  border: none;
+  border-radius: var(--ctc-radius-sm);
+  cursor: pointer;
+  font-size: var(--ctc-font-size-sm);
+  box-shadow: var(--ctc-shadow-button);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-table .ctc-table__actions button:hover {
+  background-color: var(--ctc-primary-dark);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-table--striped tbody tr:nth-child(odd) {
+  background-color: white;
+}
+.ctc-table--compact th, .ctc-table--compact td {
+  padding: var(--ctc-spacing-sm);
+}
+.ctc-table--primaryHeader thead {
+  background-color: var(--ctc-primary);
+  color: white;
+}
+.ctc-table tbody tr:hover {
+  background-color: var(--ctc-primary-light);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-table tbody tr:active {
+  background-color: var(--ctc-primary-light);
+}
+.ctc-table tbody tr:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+}
+
+/* Blockquote Component */
+.ctc-blockquote {
+  position: relative;
+  padding: var(--ctc-spacing-lg);
+  padding-left: calc(var(--ctc-spacing-lg) * 2);
+  background-color: var(--ctc-neutral-lightest);
+  border-left: 4px solid var(--ctc-accent);
+  border-radius: var(--ctc-radius-md);
+  box-shadow: var(--ctc-shadow-card);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: 1.5;
+  color: var(--ctc-neutral-dark);
+  margin-bottom: var(--ctc-spacing-lg);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-blockquote::before {
+  content: '\201C'; /* Left double quotation mark */
+  position: absolute;
+  top: var(--ctc-spacing-md);
+  left: var(--ctc-spacing-lg);
+  font-size: var(--ctc-font-size-3xl);
+  color: var(--ctc-accent);
+  font-family: var(--ctc-font-heading);
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.ctc-blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.ctc-blockquote cite {
+  display: block;
+  margin-top: var(--ctc-spacing-sm);
+  font-size: var(--ctc-font-size-sm);
+  font-style: italic;
+  color: var(--ctc-neutral-medium);
+}
+
+.ctc-blockquote cite::before {
+  content: '- ';
+}
+
+.ctc-blockquote--primary {
+  border-left-color: var(--ctc-primary);
+}
+
+.ctc-blockquote--primary::before {
+  color: var(--ctc-primary);
+}
+.ctc-blockquote--secondary {
+  border-left-color: var(--ctc-secondary);
+}
+
+.ctc-blockquote--secondary::before {
+  color: var(--ctc-secondary);
+}
+.ctc-blockquote:hover {
+  background-color: var(--ctc-primary-light);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-blockquote:hover::before {
+  opacity: 1;
+}
+.ctc-blockquote:active {
+  background-color: var(--ctc-neutral-light);
+  box-shadow: var(--ctc-shadow-card);
+}
+.ctc-blockquote:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: -2px;
+  box-shadow: var(--ctc-shadow-elevated);
+}
+/* ==========================================================================
+   Decorative Elements
+   ========================================================================== */
+.ctc-divider {
+  border: none;
+  height: 1px;
+  background-color: var(--ctc-neutral-light);
+  margin: var(--ctc-spacing-lg) 0;
+}
+.ctc-divider--subtle {
+  background-color: var(--ctc-neutral-lightest);
+  margin: var(--ctc-spacing-md) 0;
+}
+.ctc-divider--decorative {
+  height: 2px;
+  background-color: var(--ctc-accent);
+  opacity: 0.3;
+  margin: var(--ctc-spacing-lg) 0;
+}
+.ctc-section {
+  background-color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-2xl) 0;
+}
+.ctc-section--accent {
+  background-color: rgba(var(--ctc-primary-rgb), 0.05); /* Very subtle tint */
+  padding: var(--ctc-spacing-2xl) 0;
+}
+.ctc-section--featured {
+  background: linear-gradient(to right, rgba(var(--ctc-primary-rgb), 0.03), rgba(var(--ctc-primary-rgb), 0.01));
+  padding: var(--ctc-spacing-2xl) 0;
+}
+/* ==========================================================================
+   Interactions & Animations
+   ========================================================================== */
+.ctc-button:hover {
+  background-color: var(--ctc-primary-dark);
+  transition: background-color var(--ctc-transition-speed) var(--ctc-easing);
+  box-shadow: var(--ctc-shadow-button);
+}
+.ctc-button:active {
+  background-color: var(--ctc-primary);
+  transform: scale(0.98);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+.ctc-button:focus-visible {
+  outline: 2px solid var(--ctc-accent);
+  outline-offset: 2px;
+}
+.ctc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--ctc-shadow-card);
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing), box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+a:hover {
+  text-decoration: underline;
+  transition: text-decoration var(--ctc-transition-speed) var(--ctc-easing);
+}
+:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* ==========================================================================
+   Typography Treatments
+   ========================================================================== */
+.ctc-pull-quote {
+  font-size: var(--ctc-font-size-lg);
+  font-style: italic;
+  color: var(--ctc-neutral-dark);
+  margin: var(--ctc-spacing-lg) 0;
+  padding: var(--ctc-spacing-md);
+  border-left: 4px solid var(--ctc-accent);
+}
+.ctc-list li::marker {
+  color: var(--ctc-primary);
+  font-size: var(--ctc-font-size-md);
+}
+a {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--ctc-primary-dark);
+}
+pre, code {
+  font-family: monospace;
+  background-color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-sm);
+  border-radius: var(--ctc-radius-sm);
+  overflow-x: auto;
+  color: var(--ctc-neutral-darkest);
+}
+/* ==========================================================================
+   Image Treatments
+   ========================================================================== */
+.ctc-image {
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden; /* Ensure image doesn't overflow rounded corners */
+  display: block; /* Prevents inline spacing issues */
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-image img {
+  display: block; /* Removes extra space below image */
+  width: 100%; /* Ensures image fills container */
+  height: auto; /* Maintains aspect ratio */
+}
+.ctc-image--featured {
+  border-radius: var(--ctc-radius-lg);
+  box-shadow: var(--ctc-shadow-card);
+  overflow: hidden;
+  display: block;
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-image--featured img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ctc-image--thumbnail {
+  border-radius: var(--ctc-radius-sm);
+  overflow: hidden;
+  display: block;
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-image--thumbnail img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ctc-image--gallery {
+  border-radius: var(--ctc-radius-md);
+  overflow: hidden;
+  display: block;
+  transition: box-shadow var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-image--gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+  </style>
+</head>
+<body>
+<div class="ctc-root ctc-styled ctc-personality-corporate-professional" data-ctc-version="2.0" data-blueprint-rendered="true">
+
+<header class="ctc-hero ctc-hero--solid" role="banner" style="background: var(--ctc-hero-bg, linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%)); color: white; position: relative; padding: 10rem 1.5rem 8rem; text-align: center; overflow: hidden">
+  <span style="position: absolute; top: 2rem; right: 2rem; font-size: 0.65rem; color: var(--ctc-text-muted); background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--ctc-border-subtle); z-index: 20">✨ Visual match: detected from site</span>
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0">
+    <div style="position: absolute; top: -100px; right: -50px; width: 500px; height: 500px; background: var(--ctc-primary); opacity: 0.08; border-radius: 50%; filter: blur(100px)"></div>
+    <div style="position: absolute; bottom: -50px; left: -50px; width: 400px; height: 400px; background: var(--ctc-secondary, var(--ctc-primary)); opacity: 0.05; border-radius: 50%; filter: blur(80px)"></div>
+  </div>
+  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 56rem; margin: 0 auto">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ctc-primary); background: white; padding: 0.5rem 1.25rem; border-radius: 100px; box-shadow: var(--ctc-shadow-sm); margin-bottom: 2.5rem; border: 1px solid var(--ctc-border-subtle); position: relative; z-index: 10">🛡️ Gecertificeerd Partner</div>
+    <h1 class="ctc-hero-title" style="color: var(--ctc-hero-text, white); font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.8rem, 8vw, 4.8rem); line-height: 1.05; margin-bottom: 2rem; letter-spacing: -0.03em; text-transform: capitalize">
+      Totaal VvE Beheer Almere
+    </h1>
+    <p class="ctc-hero-subtitle" style="color: var(--ctc-hero-subtitle, rgba(255,255,255,0.9)); font-size: 1.35rem; max-width: 42rem; margin: 0 auto 3.5rem; line-height: 1.7">
+      
+    </p>
+    
+    <div class="ctc-hero-actions" style="display: flex; gap: 1.5rem; justify-content: center">
+      <a href="#contact" style="background: var(--ctc-primary); color: white; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); padding: 1.25rem 3rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; transition: transform 0.2s ease; font-size: 1.125rem">
+        Meer Informatie
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="ctc-toc ctc-toc--inline" style="background: #ffffff; border-radius: var(--ctc-radius-lg); border: 1px solid var(--ctc-border-subtle); padding: 3rem; box-shadow: var(--ctc-shadow-float); z-index: 50; position: relative; margin: -6rem auto 6rem; width: 100%; max-width: 1100px;" aria-label="Inhoudsopgave">
+  <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--ctc-primary-light); display: inline-block">
+    <h2 style="font-family: var(--ctc-font-display); font-weight: 700; font-size: 1.5rem; color: var(--ctc-text); margin: 0; letter-spacing: -0.01em">Wat u kunt verwachten</h2>
+  </div>
+  <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem">
+    
+    <li>
+      <a href="#section-1" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Totaal VvE Beheer Almere: Een Overzicht</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-2" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Wat is Totaal VvE Beheer in Almere?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-3" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>De Drie Pijlers van MVGM Totaalpakket VvE Beheer</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-4" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Waarom Kiezen voor MVGM Totaal VvE Beheer in Almere?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-5" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Tarieven en Kosten VvE Beheer Almere Vergelijken</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-6" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Specifieke Voordelen voor VvE&#39;s in Almere</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-7" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Verduurzaming en Toekomstbestendig VvE Beheer</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-8" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Veelgestelde Vragen over Totaal VvE Beheer Almere</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-9" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Start Nu met Professioneel Totaal VvE Beheer</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-10" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Volgende Stappen voor Totaal VvE Beheer Almere</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<main class="ctc-main" role="main">
+<article class="ctc-article" itemscope itemtype="https://schema.org/Article">
+<meta itemprop="headline" content="Totaal VvE Beheer Almere">
+
+<div id="section-0" class="ctc-lead-paragraph py-12 md:py-16" style="position: relative">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px; opacity: 0.6"></div>
+  <div style="padding-left: var(--ctc-space-8); font-size: 1.25rem; line-height: 1.8; color: var(--ctc-text-secondary); font-weight: 400; letter-spacing: -0.01em">
+    # Totaal VvE Beheer Almere
+  </div>
+</div>
+
+<section id="section-1" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="totaal-vve-beheer-almere-een-overzicht" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Totaal VvE Beheer Almere: Een Overzicht</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Totaal VvE Beheer Almere omvat een integrale dienstverlening waarbij een professionele vastgoedmanager de volledige verantwoordelijkheid neemt voor alle administratieve, financiële, technische en bestuurlijke taken. Deze vorm van beheer ontzorgt Verenigingen van Eigenaren volledig door operationele expertise te combineren met diepgaande kennis van de lokale regelgeving in Almere.
+
+In dit artikel analyseren we de kernaspecten van totaalbeheer, met specifieke aandacht voor de drie pijlers van het MVGM-totaalpakket. Vervolgens lichten we de keuze voor deze beheerder toe, ondersteund door inzicht in lokale tariefstructuren en een kostenvergelijking binnen de regio. Daarnaast bespreken we de concrete voordelen voor Almeerse VvE's en de noodzaak van verduurzaming om wooncomplexen toekomstbestendig te maken. We sluiten af met antwoorden op veelgestelde vragen en praktische richtlijnen voor de implementatie van professioneel beheer.
+  </div>
+  
+</section>
+
+<section id="section-2" class="ctc-prose ctc-section--bg py-8 md:py-10" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: var(--ctc-space-12); border: 1px solid var(--ctc-border-subtle); box-shadow: var(--ctc-shadow-sm); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="wat-is-totaal-vve-beheer-in-almere" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Wat is Totaal VvE Beheer in Almere?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Totaal VvE Beheer Almere brengt technische, financiële en administratieve expertise samen in één allesomvattende dienstverlening. Door deze centralisatie bij één lokale specialist verbetert de woonkwaliteit in onze polderstad aanzienlijk. Het samenvoegen van deze disciplines ontzorgt VvE-besturen en eigenaren volledig, waardoor complexe vraagstukken en dagelijkse operationele lasten verleden tijd zijn. Bovendien zorgt specifieke kennis van de Almeerse vastgoedmarkt en gemeentelijke regelgeving voor een perfecte aansluiting op de lokale eisen.
+
+Binnen deze integrale aanpak vormt de administratieve ondersteuning de basis; van nauwkeurige ledenregistraties en het faciliteren van de Algemene Ledenvergadering tot het strikt handhaven van het splitsingsreglement. Tegelijkertijd garanderen financiële experts een transparante boekhouding, terwijl de technische divisie de bouwkundige staat waarborgt via een gedegen Meerjarenonderhoudsplan (MJOP) en snelle storingsopvolging. Dankzij korte lijnen wordt er bij calamiteiten in het complex direct geschakeld, wat resulteert in een gestructureerde werkwijze die naadloos past bij de dynamiek van wonen in Almere.
+  </div>
+  
+</section>
+
+<section id="section-3" class="ctc-prose ctc-card-grid-fallback ctc-section--featured py-12 md:py-16">
+  <h2 id="de-drie-pijlers-van-mvgm-totaalpakket-vve-beheer" class="ctc-section-heading" style="font-weight: var(--ctc-heading-weight); font-family: var(--ctc-font-display); font-size: var(--ctc-text-2xl); color: var(--ctc-text)">De Drie Pijlers van MVGM Totaalpakket VvE Beheer</h2>
+  <div class="ctc-prose-content">
+    <strong>Totaal VvE Beheer Almere</strong> integreert drie kernpijlers om vastgoedeigenaren in Flevoland volledig te ontzorgen. Duurzaam waardebehoud van lokale appartementencomplexen vereist een naadloze afstemming van economische, technische en bestuurlijke taken. Financiële dienstverlening vormt hierbij het fundament, waarbij direct inzicht in liquiditeit en begrotingen wordt verschaft. Een sluitende boekhouding financiert noodzakelijke investeringen en voorkomt onverwachte verhogingen van de periodieke ledenbijdrage.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Drieluik infographic met iconen voor euro, moersleutel en document die samenkomen bij een centraal logo, visualiserend de synergie tussen de kerntaken voor vastgoedbehoud.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: integrale dienstverlening flevoland vastgoed drie pijlers boekhouding onderhoud administratie servicepakket</p>
+    </figure>
+
+Technisch management fungeert als tweede cruciale steunpilaar, met een scherpe focus op de fysieke staat van objecten in de polderstad. De uitvoering van het Meerjarenonderhoudsplan (MJOP) verhelpt bouwkundige mankementen preventief en sluit achterstallig onderhoud uit. Administratieve en bestuurlijke ondersteuning completeert het totaalpakket door de juridische kaders te leveren, inclusief vakkundige begeleiding van de Algemene Ledenvergadering (ALV). De synergie tussen deze elementen maakt financiële gezondheid de basis voor succesvol beleid, met <strong>transparantie</strong> en <strong>zekerheid</strong> als resultaat.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Financieel VvE Beheer: Transparantie en Zekerheid</h3>
+
+Bij Totaal VvE Beheer Almere vormt financiële stabiliteit de basis voor een gezonde en toekomstbestendige Vereniging van Eigenaren. Wij zorgen voor een nauwkeurige uitvoering van vergaderbesluiten door de volledige boekhouding uit handen te nemen, variërend van het opstellen van jaarrekeningen tot het deskundig beheren van reservefondsen. De inrichting van onze administratie voldoet hierbij aan de strikte richtlijnen van de Raad voor de Jaarverslaggeving. Via een beveiligd online portaal hebben eigenaren bovendien 24/7 inzicht in alle relevante documenten, facturen en actuele bankafschriften.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Vergelijkende staafgrafiek die de kostenontwikkeling en besparingen toont over 5 jaar tussen eigen bestuur en professionele uitbesteding, inclusief ROI-indicator en liquiditeitsprognose.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: kostenanalyse vve-bijdrage rendement investering polderstad appartementencomplex begroting grafiek liquiditeit</p>
+    </figure>
+
+Deze transparantie wordt verder gewaarborgd door realistische conceptbegrotingen, die de ledenvergadering tijdig inzicht bieden in de verwachte kostenontwikkeling. De veiligheid van uw middelen staat voorop; bankrekeningen staan altijd op naam van de rechtspersoon, waardoor het verenigingsvermogen strikt gescheiden blijft van beheerdersgelden. Door actief debiteurenbeheer en consequente inning van bijdragen beschermen we de liquiditeitspositie van uw appartementencomplex in de polderstad. Dit solide financiële fundament stelt de VvE in staat om noodzakelijke investeringen en onderhoud vlot en zonder betalingsproblemen te realiseren.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Technisch Beheer en MJOP voor Almere VvE's</h3>
+
+Totaal VvE Beheer Almere waarborgt de bouwkundige staat van wooncomplexen door middel van structureel technisch toezicht. De basis hiervoor wordt gevormd door een sluitend Meerjarenonderhoudsplan (MJOP), dat de planning dicteert voor zowel preventief als correctief onderhoud. Dit strategische document brengt kapitaalintensieve posten, zoals dakrenovaties, liftvervangingen en gevelonderhoud, helder in kaart over een periode van vijftien jaar. Een adequate financiële reservering stelt de Vereniging van Eigenaars vervolgens in staat om noodzakelijk herstelwerk direct uit te voeren, wat essentieel is voor optimaal waardebehoud van het vastgoed.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Circulair procesdiagram van de meerjarenonderhoudscyclus: inspecteren, plannen, begroten, uitvoeren en evalueren, gecentreerd rond coördinatie en kwaliteitsbewaking.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: onderhoudsplan cyclus renovatie planning inspectie bouwkundige staat gebouwencomplex vastgoedbehoud</p>
+    </figure>
+
+Specifieke expertise omtrent Flevolandse bouwmethodieken en de kenmerkende polderbodem minimaliseert hierbij onvoorziene risico's tijdens bouwkundige projecten. De technisch manager selecteert offertes van lokale vaklieden op basis van strikte prijs-kwaliteitscriteria, wat bijdraagt aan een kostenefficiënte exploitatie. Door consequente inspecties voorkomen we achterstallig onderhoud en garanderen we de veiligheid van de bewoners. Deze technische besluitvorming wordt bovendien naadloos afgestemd op de administratieve organisatie, zodat ook de juridische verankering te allen tijde gewaarborgd is.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Administratief Beheer: Vergaderingen en Juridische Zaken</h3>
+
+Administratieve regie vormt het juridische fundament voor correcte besluitvorming binnen vastgoedcomplexen. <strong>Totaal VvE Beheer Almere</strong> versterkt de vastgoedwaarde door regelgeving strikt na te leven, hand in hand met het fysieke onderhoud. Het team in Flevoland organiseert de Algemene Ledenvergadering (ALV) stipt volgens de wettelijke termijnen en geldende statuten. Door de inzet van een technisch voorzitter verlopen deze bijeenkomsten gestructureerd, wat resulteert in efficiënte besluitvorming over cruciale zaken zoals de begroting en het MJOP.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Stroomschema van de administratieve besluitvorming, tonende de tijdlijn van uitnodiging, agendapunten en stemming tot officiële notulering voor een rechtsgeldige algemene ledenvergadering.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: organisatie ledenvergadering juridische kaders besluitvorming stappenplan wetgeving vastgoed notulen</p>
+    </figure>
+
+Daarnaast toetsen juridische specialisten complexe situaties direct aan de splitsingsakte en het huishoudelijk reglement van complexen in de polderstad. Bij wanbetalingen of interne conflicten wordt daadkrachtig opgetreden middels juridisch gevalideerde correspondentie. Het secretariaat houdt tevens het eigenaarsregister nauwgezet bij voor een foutloze verrekening van kosten bij eigendomsoverdrachten. Met deze integrale dienstverlening worden verenigingsbesturen volledig ontlast van arbeidsintensieve taken, waarmee deze lokale specialist zijn meerwaarde voor VvE's in de regio Almere bevestigt.
+  </div>
+</section>
+
+<section id="section-4" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="waarom-kiezen-voor-mvgm-totaal-vve-beheer-in-almer" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Waarom Kiezen voor MVGM Totaal VvE Beheer in Almere?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    MVGM Totaal VvE Beheer Almere combineert de slagkracht van een landelijke organisatie met een diepgewortelde betrokkenheid in de Flevopolder. Met ruim 70 jaar ervaring en een beheerportefeuille van 3.700 complexen bieden wij een robuust fundament voor iedere Vereniging van Eigenaren. Onze juridische specialisten vertalen complexe wetgeving moeiteloos naar een foutloze administratie, waarbij het SKW-productcertificaat maximale financiële transparantie en onafhankelijkheid waarborgt voor het bestuur.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Een gestileerde infographic die de &#39;Hybride Kracht&#39; van MVGM visualiseert. Centraal staat een landkaart van Almere met locatie-markers in wijken zoals Poort en Buiten, verbonden aan een centraal schild dat landelijke expertise symboliseert. Iconen rondom tonen de 24/7 calamiteitenservice, het SKW-kwaliteitsstempel en een tablet voor het digitale bewonersportaal.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Vakkundige vastgoedzorg, landelijke ondersteuning, gebiedskennis Flevoland, kwaliteitskeurmerk, digitale transparantie, calamiteitenservice, wijkgebonden specialisten</p>
+    </figure>
+
+Deze expertise wordt in de praktijk gebracht door lokale specialisten die de specifieke dynamiek van wijken als Almere Poort en Almere Buiten door en door kennen. U profiteert hierdoor direct van collectieve inkoopkracht, terwijl één vaste accountmanager fungeert als centrale spil voor zowel planmatig onderhoud als dagelijkse reparaties. Voor acute storingen staat onze calamiteitendienst 24/7 paraat en via het digitale portaal hebben bewoners altijd realtime inzicht in de financiën en notulen. Zo borgen wij de continuïteit van de vereniging en een zorgeloos woongenot in onze stad.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-5" class="ctc-prose ctc-section--featured py-8 md:py-10" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="tarieven-en-kosten-vve-beheer-almere-vergelijken" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Tarieven en Kosten VvE Beheer Almere Vergelijken</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Bij het selecteren van Totaal VvE Beheer in Almere draait alles om de strategische balans tussen de maandelijkse VvE-bijdrage en de kwaliteit van het integrale dienstenpakket. De tariefstelling voor dit complete beheerconcept hangt sterk af van de omvang van het complex, de bouwkundige staat en de gewenste intensiteit van de dienstverlening. Gevestigde vastgoedpartners, zoals MVGM, werken met modulaire prijsstructuren die naadloos aansluiten op de specifieke behoeften van vastgoed in onze polderstad. Volledige financiële transparantie over de vergoeding versus de geleverde expertise vormt daarbij het fundament voor een duurzame bestuurlijke samenwerking.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Een vergelijkend staafdiagram dat de &#39;Total Cost of Ownership&#39; over een periode van 5 jaar toont. De balk voor &#39;Budget Optie&#39; begint laag, maar toont hoge, onvoorspelbare pieken voor onvoorzien meerwerk en toeslagen. De balk voor &#39;Full Service&#39; toont een stabiel, voorspelbaar verloop zonder verrassingen. Een pijl met &#39;ROI&#39; wijst naar de lange termijn waardestijging bij de stabiele optie.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Prijsvergelijking vastgoedmanagement, operationele uitgaven, investeringsrendement, kostenplaatje meerjarenplan, budgetzekerheid, modulaire prijsopbouw, polderstad vastgoedwaarde</p>
+    </figure>
+
+Professionele beheerders in de regio Flevoland rekenen doorgaans vaste tarieven per appartementsrecht voor de reguliere werkzaamheden. De uiteindelijke investering kan echter variëren op basis van specifieke wensen, zoals de frequentie van vergaderingen en de behoefte aan intensief technisch toezicht. Waar budgetopties vaak essentiële taken uitsluiten – met onverwachte kostenposten als gevolg – biedt volledige ontzorging eigenaren juist directe financiële zekerheid. Onderstaand overzicht verduidelijkt het verschil in waardepropositie tussen prijsvechters en full-service dienstverleners:
+
+| Vergelijkingspunt | Budget Administratiekantoor | Professionele Totaalbeheerder (zoals MVGM) |
+| :--- | :--- | :--- |
+| <strong>Basisvergoeding</strong> | Gereduceerd instaptarief per eenheid | Marktconforme prijs inclusief alle kerntaken |
+| <strong>Meerwerk</strong> | Hoge toeslagen voor standaard handelingen | Strikt afgebakend en beperkt tot uitzonderingen |
+| <strong>MJOP Expertise</strong> | Vaak extern belegd of generiek van aard | Interne bouwkunde specifiek voor Almeerse poldergrond |
+| <strong>Storingsdienst</strong> | Beperkte bereikbaarheid in de avonduren | 24/7 noodlijn voor lokale calamiteiten |
+| <strong>Financieel Inzicht</strong> | Periodieke verantwoording achteraf | Real-time dashboarding en actuele liquiditeitsprognoses |
+
+Een kritische offerteanalyse kijkt verder dan de basisprijs en weegt ook de dekking van het meerjarenonderhoudsplan (MJOP) en de reactiesnelheid bij calamiteiten mee. Marktconforme tarieven garanderen de inzet van specialistische kennis, cruciaal om de vastgoedwaarde op lange termijn te beschermen tegen de risico's van achterstallig onderhoud. Lokale expertise is hierbij onmisbaar; specifieke kennis van de situatie in Almere voegt essentiële waarde toe aan een solide financiële basis en een hoogwaardig serviceniveau.
+  </div>
+  
+</section>
+
+<section id="section-6" class="ctc-card-grid ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle)">
+  <h2 style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-10); color: var(--ctc-text); position: relative; z-index: 1">Specifieke Voordelen voor VvE&#39;s in Almere</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ctc-space-6); position: relative; z-index: 1">
+    
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">✨</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Expertise Stadsverwarming</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Specialistisch inzicht in de technische exploitatie en administratieve afhandeling van het lokale warmtenet.</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🎯</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Geverifieerde Aannemers</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Toegang tot vakmensen met specifieke ervaring in de experimentele systeembouw van wijken als Almere Haven en Almere Stad.</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🚀</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Aansluiting op Gemeentebeleid</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Meerjarenonderhoudsplannen (MJOP) die naadloos aansluiten op de verordeningen en duurzaamheidsambities van de gemeente Almere.</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">💡</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Snelle Calamiteitenservice</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Korte lijnen met leveranciers in de regio garanderen directe actie bij spoedgevallen en inkoopvoordeel bij renovaties.</p>
+    </div>
+  </div>
+</section>
+
+<section id="section-7" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="verduurzaming-en-toekomstbestendig-vve-beheer" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Verduurzaming en Toekomstbestendig VvE Beheer</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Totaal VvE Beheer Almere koppelt specialistisch verduurzamingsadvies direct aan subsidiebegeleiding en de realisatie van zonne-energiesystemen. Deze methode transformeert noodzakelijk onderhoud in waardevermeerderende investeringen voor het complex, waarbij energie-efficiëntie en wooncomfort prioriteit krijgen boven reactief herstelwerk. Alle expertise omtrent deze energietransitie is binnen onze organisatie gebundeld.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Een isometrische 3D-visualisatie van een modern daklandschap in Almere. Te zien zijn zonnepanelen-opstellingen, groene dakbedekking (sedum) en laadpalen in de onderliggende parkeergarage. Pijlen geven de stroom aan van inspectie, naar installatie, tot aan de subsidieaanvraag.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Energietransitie verduurzamingsmaatregelen, zonnepanelen installatie, laadinfrastructuur, subsidiebegeleiding SVVE, energie-efficiëntie, wooncomfort verbetering, bouwkundige dakinspectie</p>
+    </figure>
+
+Gezien de vele platte daken in de polderstad analyseren onze technische inspecteurs nauwkeurig de draagkracht van de constructie voor zonnepanelen. Financiële experts berekenen vervolgens de specifieke terugverdientijd voor de Vereniging van Eigenaars, terwijl bouwkundigen adviseren over noodzakelijke poliswijzigingen van de opstalverzekering om volledige dekking te garanderen.
+
+Ook de installatie van laadvoorzieningen in parkeergarages vraagt om maatwerk, waaronder strikte brandveiligheidsprotocollen en capaciteitsanalyses van de hoofdaansluiting. Wij stellen een toekomstbestendig laadpaalbeleid op dat de netwerkstabiliteit waarborgt bij verdere expansie. Door actieve ondersteuning bij regelingen zoals de SVVE wordt het investeringsbudget verruimd, wat resulteert in structureel lagere energiekosten en een groener energielabel per wooneenheid.
+  </div>
+  
+</section>
+
+<section id="section-8" class="ctc-prose  py-8 md:py-10" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="veelgestelde-vragen-over-totaal-vve-beheer-almere" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Veelgestelde Vragen over Totaal VvE Beheer Almere</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    <strong>Totaal VvE Beheer Almere</strong> biedt de zekerheid en helderheid die VvE-besturen en eigenaren zoeken bij vastgoedbeheer. Tijdens de oriëntatie op een nieuwe beheerder spelen er vaak kritische vragen over contractdetails en overstapprocedures, zeker in vergelijking met grote landelijke partijen zoals MVGM. Transparantie is cruciaal, want goed beheer heeft direct invloed op de marktwaarde van appartementen in onze polderstad. Door afspraken over groot <strong>technisch</strong> onderhoud en de <strong>financiële</strong> opbouw van servicekosten contractueel vast te leggen, voorkomt u discussies en onduidelijkheid achteraf.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Een circulair procesdiagram dat de &#39;Service Cyclus&#39; verbeeldt. De stappen lopen van &#39;Contract Analyse&#39; naar &#39;Begroting&#39;, door naar &#39;Onderhoudsplanning&#39; en eindigend bij &#39;Evaluatie&#39;. Het centrale knooppunt is de Algemene Ledenvergadering (ALV) waar besluiten worden bekrachtigd.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: Besluitvormingsproces eigenaarsvereniging, overstapprocedure administratiekantoor, contractanalyse, vergaderstructuur, ledenservice, transparante communicatie, vastgoedzorg cyclus</p>
+    </figure>
+
+De informatiebehoefte binnen Almeerse verenigingen richt zich doorgaans op vier fundamentele pijlers van de <strong>administratieve</strong> ondersteuning:
+
+*   <strong>Contractvoorwaarden</strong>: Het <strong>integraal</strong> pakket schetst een heldere taakverdeling tussen de VvE en de beheerder, inclusief duidelijke afspraken over de contractduur.
+*   <strong>Overstapprocedures</strong>: Voor een soepele en rechtsgeldige overstap van administratiekantoor is een correct uitgevoerd meerderheidsbesluit tijdens de Algemene Ledenvergadering essentieel.
+*   <strong>Kostenstructuur</strong>: <strong>Financiële</strong> transparantie wordt gewaarborgd door volledig inzicht in de opbouw van de beheervergoeding en de tarieven voor diensten buiten het basiscontract.
+*   <strong>Lokale Expertise</strong>: Diepgaande kennis van de Almeerse woningmarkt en lokale regelgeving biedt aanzienlijke meerwaarde ten opzichte van generieke, landelijke aanbieders.
+
+Goed geïnformeerde eigenaren vormen de basis voor een daadkrachtige VvE en optimaal wooncomfort. Kiezen voor een professionele partner die volledige openheid biedt, is de eerste stap naar een zorgeloze en succesvolle samenwerking in Almere.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-9" class="ctc-prose  py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: 2rem; border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="start-nu-met-professioneel-totaal-vve-beheer" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Start Nu met Professioneel Totaal VvE Beheer</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Het activeren van <strong>Totaal VvE Beheer Almere</strong> begint eenvoudig met het aanvragen van een vrijblijvende offerte bij MVGM. Dit integrale dienstenpakket biedt onmiddellijke zekerheid door hoogwaardig vastgoedmanagement. Met ruim 70 jaar ervaring garandeert MVGM de stabiliteit die essentieel is voor het kwaliteitsbehoud van Flevolandse appartementencomplexen. Onze bewezen strategieën verankeren kostenbesparing en waardeoptimalisatie als fundamentele pijlers binnen uw VvE. Hierdoor worden besturen volledig ontzorgd op het gebied van administratie en technische coördinatie.
+
+De basis van onze samenwerking wordt gevormd door een strikte naleving van wetgeving en de correcte uitvoering van ALV-besluiten. Door onze fysieke aanwezigheid in de polderstad kunnen wij frequente inspecties uitvoeren en onderhoudsbehoeften aan gevels en daken snel signaleren. Voor maximale transparantie biedt ons geavanceerde digitale portaal 24/7 inzicht in de financiële status en de voortgang van reparaties. Daarnaast resulteert onze grootschalige inkoopkracht in directe premievoordelen op energie en verzekeringen. Wij starten het traject met een grondige analyse, die leidt tot een helder en toekomstbestendig meerjarenplan.
+  </div>
+  
+</section>
+
+<section id="section-10" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="volgende-stappen-voor-totaal-vve-beheer-almere" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Volgende Stappen voor Totaal VvE Beheer Almere</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Kies voor zekerheid en wacht niet tot achterstallig onderhoud de verenigingskas onder druk zet. Een proactieve overstap naar professioneel beheer garandeert direct inzicht in de financiële gezondheid en de technische staat van uw complex. Vraag vandaag nog een vrijblijvende offerte aan of plan een kennismakingsgesprek bij u op locatie. Laat Totaal VvE Beheer Almere de dagelijkse lasten dragen, zodat u ongestoord kunt genieten van uw woning in Flevoland.
+  </div>
+  
+</section>
+</article>
+</main>
+
+<aside class="ctc-cta-banner" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 25%, transparent); border-radius: var(--ctc-radius-2xl); padding: 3rem 2rem; text-align: center; margin: 3rem 0; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.12)">
+  
+    <div style="position: absolute; top: -80px; right: -80px; width: 250px; height: 250px; background: white; opacity: 0.1; border-radius: 50%; pointer-events: none"></div>
+    <div style="position: absolute; bottom: -60px; left: -60px; width: 180px; height: 180px; background: white; opacity: 0.08; border-radius: 50%; pointer-events: none"></div>
+  <div style="position: relative; z-index: 1">
+    <h2 class="ctc-cta-title" style="color: white; font-family: var(--ctc-font-display); font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1.5rem; letter-spacing: -0.02em">Klaar om te beginnen?</h2>
+    
+    <div class="ctc-cta-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap">
+      <a href="#contact" style="background: white; color: var(--ctc-primary); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2); font-weight: 800; padding: 1.25rem 3.5rem; font-size: 1.125rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Meer Informatie
+        <span style="font-size: 1.125rem">→</span>
+      </a>
+      
+      <a href="#" style="background: transparent; color: white; border: 2px solid rgba(255,255,255,0.8); display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Contact
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function() {
+  // FAQ Accordion Toggle
+  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+      var icon = trigger.querySelector('.ctc-faq-icon');
+      var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+      trigger.setAttribute('aria-expanded', !isExpanded);
+      if (answer) {
+        answer.hidden = isExpanded;
+      }
+      if (icon) {
+        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      }
+    });
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Add hover effects for cards and interactive elements
+  document.querySelectorAll('.ctc-toc a').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+      this.style.background = 'var(--ctc-surface)';
+    });
+    link.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+    });
+  });
+})();
+</script>
+</div>
+<script>
+// FAQ Accordion Toggle
+document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+  trigger.addEventListener('click', function() {
+    var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+    var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+    trigger.setAttribute('aria-expanded', !isExpanded);
+    if (answer) answer.hidden = isExpanded;
+  });
+});
+
+// Smooth scroll for TOC links
+document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>

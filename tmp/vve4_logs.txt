@@ -1,0 +1,103 @@
+cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[vite] connecting...
+[vite] connected.
+%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[ConsoleLogger] Installed
+[App] Logging services initialized
+[App] Starting session check...
+[App] No stored session found, skipping getSession()
+[App] Setting up onAuthStateChange subscription (version: 0 )
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Unsubscribing from onAuthStateChange (version: 0 )
+[App] Logging services initialized
+[App] Setting up onAuthStateChange subscription (version: 0 )
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[VersionCheck] Initial version: 1.0.20260127.1347
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[App] Rendering step: 0 user: false activeProject: false activeMap: false
+[AuthScreen] Starting auth process...
+[AuthScreen] Attempting login for: richard@kjenmarks.nl
+[AuthScreen] Login response received: {hasData: true, hasError: false}
+[AuthScreen] Login successful, dispatching user
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[Settings] API Key Sources: {envKeyPreview: sk-ant-api03-Zu..., dbKeyPreview: sk-ant-api03-Zu..., usingSource: DATABASE (overrides env), dbKeyLength: 108, envKeyLength: 108}
+[Telemetry] Billing context set: {organizationId: NOT SET, keySource: user_byok, billableTo: user}
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 1 user: true activeProject: false activeMap: false
+[App] Rendering step: 3 user: true activeProject: true activeMap: false
+[App] Rendering step: 3 user: true activeProject: true activeMap: false
+[Telemetry] Billing context set: {organizationId: 02bedb11..., keySource: org_byok, billableTo: organization}
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Console utilities available: window.repairBriefs(), window.forceRefreshTopics(), window.clearSerpCache(), window.clearAllCache(), window.getActiveMapId(), window.getActiveProjectId()
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[useFeatureGate] Feature "content_generation" not explicitly enabled for org 02bedb11-469a-4145-9286-03f49f18a032. Defaulting to enabled during billing transition period.
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[DraftingModal] State updated with new draft: 21408 chars
+[useContentGeneration] Completed job found, but database already has article_draft: 21408 chars
+[useContentGeneration] NOT syncing job content to preserve user's saved work (Polish/Flow/Audit)
+[assembleDraft] Language from map business_info: nl
+[assembleDraft] Fetched 1 briefs for 10 fallback topics
+[assembleDraft] Using 5 fallback links from map topics (brief had no contextualBridge)
+[assembleDraft] Content validation warnings: [9 unresolved IMAGE placeholder(s)]
+[useContentGeneration] FYI - job.draft_content: 21408 chars, assembled sections: 21801 chars, DB article_draft: 21408 chars
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[App] Rendering step: 9 user: true activeProject: true activeMap: true
+[DraftingModal] Fetch check - briefId: 61444ab6-226a-4189-81c0-209cbe3754ab loadedRef: null existingDraft: 21408
+[DraftingModal] Using existing draft from state: 21408 chars
+[DraftingModal] Loaded version history: 5 versions
+[DraftingModal] Assembled from 13 sections: 21380 chars
+[DraftingModal] Content lengths - job.draft_content: 21408 assembled sections: 21380 current display: 21408
+[DraftingModal] Timestamp check - job updated: 2026-01-27T09:36:57.184731+00:00 loaded at: 2026-01-27T13:12:39.969Z isJobNewer: false
+[DraftingModal] passes_status from DB: {
+  "pass_1_draft": "completed",
+  "pass_3_lists": "completed",
+  "pass_7_intro": "completed",
+  "pass_8_audit": "pending",
+  "pass_9_audit": "completed",
+  "pass_8_polish": "completed",
+  "pass_9_schema": "pending",
+  "pass_10_schema": "completed",
+  "pass_2_headers": "completed",
+  "pass_4_visuals": "pending",
+  "pass_6_visuals": "completed",
+  "pass_4_discourse": "completed",
+  "pass_6_discourse": "pending",
+  "pass_5_microsemantics": "completed"
+}
+[DraftingModal] Completed passes count: 10 from keys: [pass_1_draft=completed, pass_2_headers=completed, pass_3_lists=completed, pass_4_discourse=completed, pass_5_microsemantics=completed, pass_6_visuals=completed, pass_7_intro=completed, pass_8_polish=completed, pass_9_audit=completed, pass_10_schema=completed]
+[DraftingModal] Job status: completed current_pass: 10
+[DraftingModal] No newer/longer content found, current is already the best version

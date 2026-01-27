@@ -1,0 +1,423 @@
+/* ============================================
+   DAADVRACHT - Elementor Custom CSS
+   Paste this into Elementor > Site Settings > Custom CSS
+   ============================================ */
+
+/* Google Font Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* CSS Variables */
+:root {
+    --e-global-color-primary: #EA580C;
+    --e-global-color-secondary: #F97316;
+    --e-global-color-text: #52525B;
+    --e-global-color-accent: #FFF7ED;
+
+    /* Extended Palette */
+    --color-orange-50: #fff7ed;
+    --color-orange-100: #ffedd5;
+    --color-orange-200: #fed7aa;
+    --color-orange-400: #fb923c;
+    --color-orange-500: #f97316;
+    --color-orange-600: #ea580c;
+    --color-orange-700: #c2410c;
+    --color-orange-800: #9a3412;
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f4f4f5;
+    --color-zinc-200: #e4e4e7;
+    --color-zinc-300: #d4d4d8;
+    --color-zinc-400: #a1a1aa;
+    --color-zinc-500: #71717a;
+    --color-zinc-600: #52525b;
+    --color-zinc-700: #3f3f46;
+    --color-zinc-800: #27272a;
+    --color-zinc-900: #18181b;
+}
+
+/* Reset Elementor Defaults */
+.elementor-section.elementor-section-boxed > .elementor-container {
+    max-width: 1280px;
+}
+
+.elementor-section.elementor-section-full_width > .elementor-container {
+    max-width: 100%;
+}
+
+/* Typography Smoothing */
+body, .elementor-widget-text-editor {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+/* Primary Button */
+.elementor-button.btn-primary,
+.elementor-widget-button .elementor-button.btn-primary {
+    background: var(--color-orange-600) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    padding: 16px 32px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(249, 115, 22, 0.2) !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+}
+
+.elementor-button.btn-primary:hover {
+    background: var(--color-orange-700) !important;
+    box-shadow: 0 15px 35px rgba(249, 115, 22, 0.3) !important;
+    transform: translateY(-4px) !important;
+}
+
+/* Secondary Button */
+.elementor-button.btn-secondary {
+    background: #ffffff !important;
+    color: var(--color-zinc-700) !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    padding: 16px 32px !important;
+    border-radius: 12px !important;
+    border: 2px solid var(--color-zinc-200) !important;
+    transition: all 0.3s ease !important;
+}
+
+.elementor-button.btn-secondary:hover {
+    border-color: var(--color-orange-500) !important;
+    color: var(--color-orange-600) !important;
+}
+
+/* CTA Button (Pill) */
+.elementor-button.btn-cta {
+    background: var(--color-orange-600) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    padding: 10px 24px !important;
+    border-radius: 9999px !important;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.2) !important;
+    transition: all 0.3s ease !important;
+}
+
+.elementor-button.btn-cta:hover {
+    background: var(--color-orange-700) !important;
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ============================================
+   SECTION BACKGROUNDS
+   ============================================ */
+
+.section-light {
+    background-color: var(--color-zinc-50) !important;
+}
+
+.section-white {
+    background-color: #ffffff !important;
+}
+
+.section-dark {
+    background-color: var(--color-zinc-900) !important;
+}
+
+.section-dark h1, .section-dark h2, .section-dark h3,
+.section-dark h4, .section-dark h5, .section-dark h6 {
+    color: #ffffff !important;
+}
+
+.section-dark p, .section-dark .elementor-widget-text-editor {
+    color: var(--color-zinc-400) !important;
+}
+
+.section-accent {
+    background-color: var(--color-orange-50) !important;
+}
+
+.section-cta {
+    background-color: var(--color-orange-600) !important;
+}
+
+.section-cta h1, .section-cta h2, .section-cta h3,
+.section-cta h4, .section-cta h5, .section-cta h6 {
+    color: #ffffff !important;
+}
+
+.section-cta p {
+    color: var(--color-orange-100) !important;
+}
+
+/* ============================================
+   CARD STYLES
+   ============================================ */
+
+.card-service {
+    background: var(--color-zinc-50) !important;
+    border: 1px solid var(--color-zinc-100) !important;
+    border-radius: 16px !important;
+    padding: 32px !important;
+    transition: all 0.3s ease !important;
+}
+
+.card-service:hover {
+    background: #ffffff !important;
+    border-color: var(--color-orange-200) !important;
+    box-shadow: 0 25px 50px rgba(255, 237, 213, 0.5) !important;
+}
+
+.card-testimonial {
+    background: #ffffff !important;
+    border: 1px solid var(--color-orange-100) !important;
+    border-radius: 16px !important;
+    padding: 32px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ============================================
+   ICON BOX STYLES
+   ============================================ */
+
+.icon-box-orange .elementor-icon {
+    background: #ffffff !important;
+    color: var(--color-orange-600) !important;
+    border: 1px solid var(--color-orange-100) !important;
+    border-radius: 12px !important;
+    width: 56px !important;
+    height: 56px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.3s ease !important;
+}
+
+.icon-box-orange:hover .elementor-icon {
+    background: var(--color-orange-600) !important;
+    color: #ffffff !important;
+}
+
+/* ============================================
+   FORM STYLES
+   ============================================ */
+
+.elementor-field-textual {
+    background: var(--color-zinc-50) !important;
+    border: 2px solid var(--color-zinc-100) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    font-size: 18px !important;
+    font-family: 'Inter', sans-serif !important;
+    color: var(--color-zinc-800) !important;
+    transition: all 0.3s ease !important;
+}
+
+.elementor-field-textual:focus {
+    border-color: var(--color-orange-500) !important;
+    box-shadow: 0 0 0 4px var(--color-orange-100) !important;
+    outline: none !important;
+}
+
+.elementor-field-textual::placeholder {
+    color: var(--color-zinc-400) !important;
+}
+
+.elementor-field-label {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: var(--color-zinc-400) !important;
+    margin-bottom: 6px !important;
+}
+
+/* Form Submit Button */
+.elementor-button[type="submit"],
+.elementor-field-type-submit .elementor-button {
+    background: linear-gradient(135deg, var(--color-orange-600), var(--color-orange-500)) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    padding: 20px 32px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(249, 115, 22, 0.3) !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+}
+
+.elementor-button[type="submit"]:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 15px 35px rgba(249, 115, 22, 0.4) !important;
+}
+
+/* ============================================
+   SECTION LABEL (Above Titles)
+   ============================================ */
+
+.section-label {
+    color: var(--color-orange-600) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    font-size: 14px !important;
+    margin-bottom: 12px !important;
+    display: block !important;
+}
+
+.section-dark .section-label {
+    color: var(--color-orange-500) !important;
+}
+
+/* ============================================
+   BADGE STYLES
+   ============================================ */
+
+.badge-orange {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: var(--color-orange-100) !important;
+    color: var(--color-orange-800) !important;
+    padding: 6px 16px !important;
+    border-radius: 9999px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    border: 1px solid var(--color-orange-200) !important;
+}
+
+.region-tag {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    padding: 4px 16px !important;
+    border-radius: 9999px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ============================================
+   GRADIENT TEXT
+   ============================================ */
+
+.gradient-text {
+    background: linear-gradient(135deg, var(--color-orange-600), #f59e0b) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
+
+/* ============================================
+   STAR RATINGS
+   ============================================ */
+
+.star-rating {
+    color: var(--color-orange-400) !important;
+}
+
+.star-rating .elementor-star-full {
+    color: var(--color-orange-400) !important;
+}
+
+.star-rating .elementor-star-empty {
+    color: var(--color-zinc-200) !important;
+}
+
+/* ============================================
+   IMAGE STYLES
+   ============================================ */
+
+.image-rounded img {
+    border-radius: 16px !important;
+}
+
+.image-rounded-xl img {
+    border-radius: 24px !important;
+    border: 8px solid #ffffff !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ============================================
+   HEADER STYLES
+   ============================================ */
+
+.site-header-sticky {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    border-bottom: 1px solid var(--color-orange-100) !important;
+}
+
+/* ============================================
+   ANIMATIONS & TRANSITIONS
+   ============================================ */
+
+.hover-lift {
+    transition: all 0.3s ease !important;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px) !important;
+}
+
+.hover-shadow {
+    transition: all 0.3s ease !important;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .elementor-section.elementor-section-boxed > .elementor-container {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+}
+
+@media (max-width: 767px) {
+    .elementor-section.elementor-section-boxed > .elementor-container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .elementor-button.btn-primary,
+    .elementor-button.btn-secondary {
+        width: 100% !important;
+        text-align: center !important;
+    }
+}
+
+/* ============================================
+   FOOTER STYLES
+   ============================================ */
+
+.footer-widget h4 {
+    color: var(--color-zinc-900) !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    margin-bottom: 24px !important;
+}
+
+.footer-widget a {
+    color: var(--color-zinc-600) !important;
+    font-size: 14px !important;
+    transition: color 0.3s ease !important;
+}
+
+.footer-widget a:hover {
+    color: var(--color-orange-600) !important;
+}
+
+.footer-social a {
+    background: var(--color-zinc-100) !important;
+    padding: 8px !important;
+    border-radius: 50% !important;
+    color: var(--color-zinc-600) !important;
+    transition: all 0.3s ease !important;
+}
+
+.footer-social a:hover {
+    background: var(--color-orange-100) !important;
+    color: var(--color-orange-600) !important;
+}

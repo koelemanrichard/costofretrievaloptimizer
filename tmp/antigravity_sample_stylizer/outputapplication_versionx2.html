@@ -1,0 +1,1957 @@
+<style>
+/* ============================================
+   CTC Design System - CSS Custom Properties
+   Generated from design personality tokens
+   ============================================ */
+
+.ctc-root, .ctc-styled {
+  --ctc-primary: #18181B;
+  --ctc-primary-light: #4b4b4e;
+  --ctc-primary-dark: #000000;
+  --ctc-secondary: #000000;
+  --ctc-accent: #18181B;
+  --ctc-background: #ffffff;
+  --ctc-surface: #ffffff;
+  --ctc-surface-elevated: #ffffff;
+  --ctc-text: #000000;
+  --ctc-text-secondary: #4d4d4d;
+  --ctc-text-muted: rgba(0,0,0,0.6);
+  --ctc-text-inverse: #FFFFFF;
+  --ctc-border: rgba(0,0,0,0.1);
+  --ctc-border-subtle: #333333;
+  --ctc-success: #22C55E;
+  --ctc-warning: #EAB308;
+  --ctc-error: #EF4444;
+  --ctc-info: #06B6D4;
+  --ctc-font-display: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --ctc-font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --ctc-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --ctc-text-base: 1.0625rem;
+  --ctc-text-xs: 10.880px;
+  --ctc-text-sm: 13.600px;
+  --ctc-text-lg: 21.250px;
+  --ctc-text-xl: 26.563px;
+  --ctc-text-2xl: 33.203px;
+  --ctc-text-3xl: 41.504px;
+  --ctc-text-4xl: 51.880px;
+  --ctc-text-5xl: 64.850px;
+  --ctc-heading-weight: 700;
+  --ctc-heading-case: normal;
+  --ctc-heading-letter-spacing: -0.02em;
+  --ctc-line-height-body: 1.7;
+  --ctc-paragraph-spacing: 1.25em;
+  --ctc-radius-none: 0;
+  --ctc-radius-sm: 8px;
+  --ctc-radius-md: 12px;
+  --ctc-radius-lg: 16px;
+  --ctc-radius-xl: 24px;
+  --ctc-radius-2xl: 32px;
+  --ctc-radius-full: 9999px;
+  --ctc-shadow-none: none;
+  --ctc-shadow-sm: 0 2px 8px #F9731615;
+  --ctc-shadow-md: 0 4px 12px #F9731618;
+  --ctc-shadow-lg: 0 8px 24px #F9731620;
+  --ctc-shadow-xl: 0 16px 48px #F9731622;
+  --ctc-shadow-2xl: 0 24px 64px #F9731625;
+  --ctc-space-0: 0;
+  --ctc-space-1: 2px;
+  --ctc-space-2: 4px;
+  --ctc-space-3: 6px;
+  --ctc-space-4: 8px;
+  --ctc-space-5: 10px;
+  --ctc-space-6: 12px;
+  --ctc-space-8: 16px;
+  --ctc-space-10: 20px;
+  --ctc-space-12: 24px;
+  --ctc-space-16: 32px;
+  --ctc-space-20: 40px;
+  --ctc-space-24: 48px;
+  --ctc-duration-instant: 0ms;
+  --ctc-duration-fast: 200ms;
+  --ctc-duration-normal: 400ms;
+  --ctc-duration-slow: 600ms;
+  --ctc-duration-expressive: 800ms;
+  --ctc-ease-default: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ctc-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ctc-ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
+  --ctc-ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ctc-gradient-hero: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
+  --ctc-gradient-cta: linear-gradient(90deg, #14B8A6 0%, #EA580C 100%);
+  --ctc-gradient-subtle: linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%);
+  --ctc-gradient-overlay: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.50) 100%);
+}
+
+:root {
+  --ctc-primary: #18181B;
+  --ctc-primary-light: #4b4b4e;
+  --ctc-primary-dark: #000000;
+  --ctc-secondary: #000000;
+  --ctc-accent: #18181B;
+  --ctc-background: #ffffff;
+  --ctc-surface: #ffffff;
+  --ctc-surface-elevated: #ffffff;
+  --ctc-text: #000000;
+  --ctc-text-secondary: #4d4d4d;
+  --ctc-text-muted: rgba(0,0,0,0.6);
+  --ctc-text-inverse: #FFFFFF;
+  --ctc-border: rgba(0,0,0,0.1);
+  --ctc-border-subtle: #333333;
+  --ctc-success: #22C55E;
+  --ctc-warning: #EAB308;
+  --ctc-error: #EF4444;
+  --ctc-info: #06B6D4;
+  --ctc-font-display: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --ctc-font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --ctc-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --ctc-text-base: 1.0625rem;
+  --ctc-text-xs: 10.880px;
+  --ctc-text-sm: 13.600px;
+  --ctc-text-lg: 21.250px;
+  --ctc-text-xl: 26.563px;
+  --ctc-text-2xl: 33.203px;
+  --ctc-text-3xl: 41.504px;
+  --ctc-text-4xl: 51.880px;
+  --ctc-text-5xl: 64.850px;
+  --ctc-heading-weight: 700;
+  --ctc-heading-case: normal;
+  --ctc-heading-letter-spacing: -0.02em;
+  --ctc-line-height-body: 1.7;
+  --ctc-paragraph-spacing: 1.25em;
+  --ctc-radius-none: 0;
+  --ctc-radius-sm: 8px;
+  --ctc-radius-md: 12px;
+  --ctc-radius-lg: 16px;
+  --ctc-radius-xl: 24px;
+  --ctc-radius-2xl: 32px;
+  --ctc-radius-full: 9999px;
+  --ctc-shadow-none: none;
+  --ctc-shadow-sm: 0 2px 8px #F9731615;
+  --ctc-shadow-md: 0 4px 12px #F9731618;
+  --ctc-shadow-lg: 0 8px 24px #F9731620;
+  --ctc-shadow-xl: 0 16px 48px #F9731622;
+  --ctc-shadow-2xl: 0 24px 64px #F9731625;
+  --ctc-space-0: 0;
+  --ctc-space-1: 2px;
+  --ctc-space-2: 4px;
+  --ctc-space-3: 6px;
+  --ctc-space-4: 8px;
+  --ctc-space-5: 10px;
+  --ctc-space-6: 12px;
+  --ctc-space-8: 16px;
+  --ctc-space-10: 20px;
+  --ctc-space-12: 24px;
+  --ctc-space-16: 32px;
+  --ctc-space-20: 40px;
+  --ctc-space-24: 48px;
+  --ctc-duration-instant: 0ms;
+  --ctc-duration-fast: 200ms;
+  --ctc-duration-normal: 400ms;
+  --ctc-duration-slow: 600ms;
+  --ctc-duration-expressive: 800ms;
+  --ctc-ease-default: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ctc-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ctc-ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
+  --ctc-ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ctc-gradient-hero: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
+  --ctc-gradient-cta: linear-gradient(90deg, #14B8A6 0%, #EA580C 100%);
+  --ctc-gradient-subtle: linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%);
+  --ctc-gradient-overlay: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.50) 100%);
+}
+
+/* ============================================
+   Scoped Reset - Prevents style leakage
+   ============================================ */
+
+.ctc-root,
+.ctc-styled {
+  box-sizing: border-box;
+  line-height: var(--ctc-line-height-body, 1.6);
+  font-family: var(--ctc-font-body);
+  color: var(--ctc-text);
+  background-color: var(--ctc-background);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ctc-root *,
+.ctc-styled *,
+.ctc-root *::before,
+.ctc-styled *::before,
+.ctc-root *::after,
+.ctc-styled *::after {
+  box-sizing: inherit;
+}
+
+.ctc-root img,
+.ctc-styled img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ctc-root a,
+.ctc-styled a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.ctc-root button,
+.ctc-styled button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ============================================
+   Typography System
+   ============================================ */
+
+.ctc-styled {
+  font-size: var(--ctc-text-base);
+  line-height: var(--ctc-line-height-body);
+}
+
+/* Headings */
+.ctc-styled h1,
+.ctc-styled h2,
+.ctc-styled h3,
+.ctc-styled h4,
+.ctc-styled h5,
+.ctc-styled h6 {
+  font-family: var(--ctc-font-display);
+  font-weight: var(--ctc-heading-weight);
+  letter-spacing: var(--ctc-heading-letter-spacing);
+  text-transform: var(--ctc-heading-case);
+  line-height: 1.25;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: var(--ctc-text);
+}
+
+.ctc-styled h1 { font-size: var(--ctc-text-5xl); }
+.ctc-styled h2 { font-size: var(--ctc-text-3xl); }
+.ctc-styled h3 { font-size: var(--ctc-text-2xl); }
+.ctc-styled h4 { font-size: var(--ctc-text-xl); }
+.ctc-styled h5 { font-size: var(--ctc-text-lg); }
+.ctc-styled h6 { font-size: var(--ctc-text-base); }
+
+/* Paragraphs */
+.ctc-styled p {
+  margin-bottom: var(--ctc-paragraph-spacing);
+  color: var(--ctc-text-secondary);
+}
+
+/* Links */
+.ctc-styled a:not(.ctc-btn) {
+  color: var(--ctc-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--ctc-duration-fast) var(--ctc-ease-default);
+}
+
+.ctc-styled a:not(.ctc-btn):hover {
+  opacity: 0.8;
+}
+
+/* Lists */
+.ctc-styled ul,
+.ctc-styled ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.ctc-styled li {
+  margin-bottom: 0.5em;
+  color: var(--ctc-text-secondary);
+}
+
+.ctc-styled ul > li {
+  list-style-type: disc;
+}
+
+.ctc-styled ol > li {
+  list-style-type: decimal;
+}
+
+/* Blockquotes */
+.ctc-styled blockquote:not(.ctc-testimonial) {
+  border-left: 4px solid var(--ctc-primary);
+  padding-left: 1.5em;
+  margin: 1.5em 0;
+  font-style: italic;
+  color: var(--ctc-text-muted);
+}
+
+/* Code */
+.ctc-styled code:not(pre code) {
+  font-family: var(--ctc-font-mono);
+  font-size: 0.875em;
+  background: var(--ctc-surface);
+  padding: 0.125em 0.375em;
+  border-radius: var(--ctc-radius-sm);
+}
+
+.ctc-styled pre {
+  font-family: var(--ctc-font-mono);
+  font-size: 0.875em;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1em;
+  border-radius: var(--ctc-radius-lg);
+  overflow-x: auto;
+  margin: 1.5em 0;
+}
+
+.ctc-styled pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tables */
+.ctc-styled table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.875em;
+}
+
+.ctc-styled th,
+.ctc-styled td {
+  padding: 0.75em 1em;
+  border-bottom: 1px solid var(--ctc-border);
+  text-align: left;
+}
+
+.ctc-styled th {
+  font-weight: 600;
+  background: var(--ctc-surface);
+  color: var(--ctc-text);
+}
+
+.ctc-styled tr:hover td {
+  background: var(--ctc-surface);
+}
+
+/* Horizontal rule */
+.ctc-styled hr {
+  border: none;
+  height: 1px;
+  background: var(--ctc-border);
+  margin: 2em 0;
+}
+
+/* Main content area */
+.ctc-styled .ctc-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--ctc-space-8) var(--ctc-space-6);
+}
+
+.ctc-styled .ctc-article {
+  background: var(--ctc-background);
+}
+
+/* Section styling */
+.ctc-styled .ctc-section,
+.ctc-styled [class^="ctc-prose"],
+.ctc-styled [class^="ctc-bullet-list"],
+.ctc-styled [class^="ctc-numbered-list"],
+.ctc-styled [class^="ctc-checklist"],
+.ctc-styled [class^="ctc-icon-list"],
+.ctc-styled [class^="ctc-card-grid"],
+.ctc-styled [class^="ctc-feature-list"],
+.ctc-styled [class^="ctc-stat-cards"],
+.ctc-styled [class^="ctc-timeline"],
+.ctc-styled [class^="ctc-steps"],
+.ctc-styled [class^="ctc-faq"],
+.ctc-styled [class^="ctc-key-takeaways"],
+.ctc-styled [class^="ctc-summary-box"],
+.ctc-styled [class^="ctc-callout"],
+.ctc-styled [class^="ctc-highlight-box"],
+.ctc-styled [class^="ctc-sources-section"],
+.ctc-styled [class^="ctc-cta"],
+.ctc-styled [class^="ctc-author-box"] {
+  margin-bottom: var(--ctc-space-10);
+}
+
+/* Prose content improvements */
+.ctc-styled .ctc-prose-content {
+  font-size: var(--ctc-text-lg);
+  line-height: 1.8;
+}
+
+.ctc-styled .ctc-prose-content p {
+  margin-bottom: 1.5em;
+}
+
+/* Better section headings */
+.ctc-styled .ctc-section-heading {
+  position: relative;
+  padding-bottom: var(--ctc-space-4);
+  margin-bottom: var(--ctc-space-6);
+}
+
+.ctc-styled .ctc-section-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 60px;
+  height: 3px;
+  background: var(--ctc-primary);
+  border-radius: var(--ctc-radius-full);
+}
+
+/* ============================================
+   Layout Utilities
+   ============================================ */
+
+/* Container */
+.ctc-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--ctc-space-4);
+}
+
+.ctc-container--narrow {
+  max-width: 768px;
+}
+
+.ctc-container--wide {
+  max-width: 1400px;
+}
+
+/* Layout with sidebar */
+.ctc-layout--with-sidebar,
+.ctc-layout-sidebar {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--ctc-space-8);
+  align-items: start;
+  position: relative;
+}
+
+.ctc-sidebar {
+  position: sticky;
+  top: 1rem;
+  height: fit-content;
+}
+
+.ctc-sidebar .ctc-toc--sidebar {
+  position: relative;
+  top: 0;
+  width: 100%;
+}
+
+.ctc-content-wrapper {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .ctc-layout--with-sidebar,
+  .ctc-layout-sidebar {
+    grid-template-columns: 1fr;
+    display: block;
+  }
+
+  .ctc-layout--with-sidebar > .ctc-toc--sidebar,
+  .ctc-sidebar {
+    display: none;
+  }
+}
+
+/* Section spacing */
+.ctc-section {
+  margin-bottom: var(--ctc-space-12);
+}
+
+/* Grid utilities */
+.ctc-grid {
+  display: grid;
+  gap: var(--ctc-space-6);
+}
+
+.ctc-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.ctc-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.ctc-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 768px) {
+  .ctc-grid-2,
+  .ctc-grid-3,
+  .ctc-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .ctc-grid-3,
+  .ctc-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Flexbox utilities */
+.ctc-flex { display: flex; }
+.ctc-flex-col { flex-direction: column; }
+.ctc-items-center { align-items: center; }
+.ctc-items-start { align-items: flex-start; }
+.ctc-justify-center { justify-content: center; }
+.ctc-justify-between { justify-content: space-between; }
+.ctc-gap-2 { gap: var(--ctc-space-2); }
+.ctc-gap-4 { gap: var(--ctc-space-4); }
+.ctc-gap-6 { gap: var(--ctc-space-6); }
+.ctc-gap-8 { gap: var(--ctc-space-8); }
+.ctc-flex-wrap { flex-wrap: wrap; }
+
+/* ============================================
+   Component Styles
+   ============================================ */
+
+/* ========== BUTTONS ========== */
+.ctc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ctc-space-2);
+  font-weight: 600;
+  transition: all var(--ctc-duration-fast) var(--ctc-ease-default);
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+}
+
+.ctc-btn:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+
+.ctc-btn--primary {
+  background: var(--ctc-primary);
+  color: var(--ctc-text-inverse);
+}
+
+.ctc-btn--primary:hover {
+  background: var(--ctc-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--ctc-shadow-md);
+}
+
+.ctc-btn--secondary {
+  background: transparent;
+  color: var(--ctc-primary);
+  border: 2px solid var(--ctc-primary);
+}
+
+.ctc-btn--secondary:hover {
+  background: var(--ctc-primary);
+  color: var(--ctc-text-inverse);
+}
+
+.ctc-btn--ghost {
+  background: transparent;
+  color: var(--ctc-primary);
+}
+
+.ctc-btn--ghost:hover {
+  background: color-mix(in srgb, var(--ctc-primary) 10%, transparent);
+}
+
+.ctc-btn--white {
+  background: white;
+  color: var(--ctc-primary);
+}
+
+.ctc-btn--white:hover {
+  background: var(--ctc-surface);
+  transform: translateY(-1px);
+}
+
+.ctc-btn--outline {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+
+.ctc-btn--outline:hover {
+  background: currentColor;
+  color: var(--ctc-background);
+}
+
+/* ========== HERO ========== */
+.ctc-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.ctc-hero--gradient {
+  background: var(--ctc-gradient-hero);
+  color: var(--ctc-text-inverse);
+}
+
+.ctc-hero--gradient .ctc-hero-title {
+  color: white;
+}
+
+.ctc-hero-bg-effects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ctc-hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+}
+
+.ctc-hero-orb--1 {
+  width: 400px;
+  height: 400px;
+  background: white;
+  top: -100px;
+  left: 10%;
+}
+
+.ctc-hero-orb--2 {
+  width: 300px;
+  height: 300px;
+  background: white;
+  bottom: -100px;
+  right: 20%;
+  opacity: 0.2;
+}
+
+.ctc-hero--solid {
+  background: var(--ctc-surface);
+}
+
+.ctc-hero-image-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.ctc-hero--image-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.8));
+}
+
+/* ========== CARDS ========== */
+.ctc-card {
+  background: var(--ctc-surface);
+  border-radius: var(--ctc-radius-xl);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--ctc-border-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative corner accent */
+.ctc-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, transparent 40%, var(--ctc-primary) 200%);
+  opacity: 0.06;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.ctc-card:hover::before {
+  opacity: 0.12;
+}
+
+.ctc-card--flat {
+  border: 1px solid var(--ctc-border);
+}
+
+.ctc-card--raised {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.ctc-card--raised:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-4px);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-card--floating {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+}
+
+.ctc-card--floating:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2), 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-6px);
+  border-color: var(--ctc-primary);
+}
+
+.ctc-card--outlined {
+  border: 1px solid var(--ctc-border);
+}
+
+.ctc-card--glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Card icon styling */
+.ctc-card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--ctc-radius-lg);
+  background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: var(--ctc-space-5);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ctc-card:hover .ctc-card-icon {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ctc-primary) 40%, transparent);
+}
+
+/* Card grid container */
+.ctc-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--ctc-space-6);
+}
+
+/* ========== HIGHLIGHT BOX ========== */
+.ctc-highlight-box {
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid var(--ctc-secondary, var(--ctc-primary));
+  border-radius: 0 var(--ctc-radius-lg) var(--ctc-radius-lg) 0;
+  padding: var(--ctc-space-6) var(--ctc-space-8);
+  margin: var(--ctc-space-8) 0;
+}
+
+.ctc-highlight-box::after {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 100px;
+  height: 100px;
+  background: var(--ctc-secondary, var(--ctc-primary));
+  opacity: 0.05;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ctc-highlight-box--warning {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  border-left-color: #F59E0B;
+}
+
+.ctc-highlight-box--success {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border-left-color: #10B981;
+}
+
+.ctc-highlight-box--tip {
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  border-left-color: #8B5CF6;
+}
+
+/* ========== CALLOUT ========== */
+.ctc-callout {
+  background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%);
+  padding: var(--ctc-space-8);
+  border-radius: var(--ctc-radius-xl);
+  border: 1px solid var(--ctc-border);
+  margin: var(--ctc-space-10) 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.ctc-callout::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  background: var(--ctc-primary);
+  opacity: 0.04;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ctc-callout-content {
+  display: flex;
+  gap: var(--ctc-space-5);
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+}
+
+.ctc-callout-icon {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: var(--ctc-radius-xl);
+  background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent);
+}
+
+/* ========== KEY TAKEAWAYS ========== */
+.ctc-key-takeaways {
+  background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%);
+  color: white;
+  padding: var(--ctc-space-10);
+  border-radius: var(--ctc-radius-2xl);
+  margin: var(--ctc-space-10) 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--ctc-primary) 50%, transparent);
+}
+
+.ctc-key-takeaways::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 300px;
+  height: 300px;
+  background: white;
+  opacity: 0.08;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ctc-key-takeaways::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  left: 5%;
+  width: 150px;
+  height: 150px;
+  background: white;
+  opacity: 0.06;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ctc-takeaways--box {
+  background: var(--ctc-surface);
+  border-left: 4px solid var(--ctc-primary);
+  padding: var(--ctc-space-6);
+  border-radius: var(--ctc-radius-lg);
+}
+
+.ctc-takeaways--cards {
+  background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%);
+  color: white;
+  padding: var(--ctc-space-8);
+  border-radius: var(--ctc-radius-2xl);
+}
+
+/* ========== FIGURES ========== */
+.ctc-figure {
+  margin: var(--ctc-space-10) 0;
+  border-radius: var(--ctc-radius-xl);
+  overflow: hidden;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  background: var(--ctc-surface);
+}
+
+.ctc-figure img {
+  width: 100%;
+  display: block;
+}
+
+.ctc-figure figcaption {
+  padding: var(--ctc-space-4) var(--ctc-space-6);
+  background: var(--ctc-surface);
+  font-size: var(--ctc-text-sm);
+  color: var(--ctc-text-muted);
+  text-align: center;
+  border-top: 1px solid var(--ctc-border-subtle);
+}
+
+/* ========== TIMELINE ========== */
+.ctc-timeline-vertical {
+  position: relative;
+  padding-left: var(--ctc-space-12);
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.ctc-timeline-vertical::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light));
+  border-radius: 2px;
+}
+
+.ctc-timeline-step {
+  position: relative;
+  padding-bottom: var(--ctc-space-8);
+}
+
+.ctc-timeline-step:last-child {
+  padding-bottom: 0;
+}
+
+.ctc-timeline-step-number {
+  position: absolute;
+  left: calc(-1 * var(--ctc-space-12) + 4px);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ctc-primary) 30%, transparent);
+}
+
+.ctc-timeline-step-content {
+  background: var(--ctc-surface);
+  padding: var(--ctc-space-5) var(--ctc-space-6);
+  border-radius: var(--ctc-radius-lg);
+  border: 1px solid var(--ctc-border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.ctc-timeline-step-content:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-color: var(--ctc-border);
+}
+
+.ctc-timeline-step-title {
+  font-weight: 600;
+  font-size: var(--ctc-text-lg);
+  color: var(--ctc-text);
+  margin-bottom: var(--ctc-space-2);
+}
+
+.ctc-timeline-step-desc {
+  color: var(--ctc-text-secondary);
+  line-height: 1.6;
+}
+
+.ctc-timeline--zigzag .ctc-timeline-line::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light));
+  transform: translateX(-50%);
+}
+
+.ctc-timeline-node {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+@media (max-width: 768px) {
+  .ctc-timeline--zigzag .ctc-timeline-line::before {
+    left: 24px;
+  }
+
+  .ctc-timeline--zigzag .ctc-timeline-step {
+    flex-direction: row !important;
+  }
+
+  .ctc-timeline--zigzag .ctc-timeline-card {
+    margin-left: var(--ctc-space-16) !important;
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+    text-align: left !important;
+  }
+
+  .ctc-timeline--zigzag .ctc-timeline-node {
+    left: 24px;
+  }
+}
+
+/* ========== TESTIMONIALS ========== */
+.ctc-testimonial--card {
+  background: var(--ctc-surface);
+  padding: var(--ctc-space-8);
+  border-radius: var(--ctc-radius-xl);
+  box-shadow: var(--ctc-shadow-lg);
+  border-left: 4px solid var(--ctc-primary);
+}
+
+.ctc-testimonial--minimal {
+  padding-left: var(--ctc-space-6);
+  border-left: 4px solid color-mix(in srgb, var(--ctc-primary) 30%, transparent);
+  font-style: italic;
+}
+
+.ctc-testimonial--featured {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ctc-primary) 5%, transparent), transparent);
+  padding: var(--ctc-space-8);
+  border-radius: var(--ctc-radius-2xl);
+}
+
+.ctc-quote-mark {
+  font-family: Georgia, serif;
+}
+
+/* ========== FAQ ========== */
+.ctc-faq--accordion {
+  border-top: 1px solid var(--ctc-border);
+}
+
+.ctc-faq-trigger {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  padding: var(--ctc-space-5) 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: var(--ctc-text-lg);
+  font-weight: 600;
+  color: var(--ctc-text);
+  transition: color var(--ctc-duration-fast);
+}
+
+.ctc-faq-trigger:hover {
+  color: var(--ctc-primary);
+}
+
+.ctc-faq-icon {
+  font-size: var(--ctc-text-2xl);
+  font-weight: 300;
+  color: var(--ctc-primary);
+  transition: transform var(--ctc-duration-fast);
+}
+
+.ctc-faq-item[open] .ctc-faq-icon,
+.ctc-faq-trigger[aria-expanded="true"] .ctc-faq-icon {
+  transform: rotate(45deg);
+}
+
+.ctc-faq-answer {
+  color: var(--ctc-text-secondary);
+  line-height: 1.7;
+}
+
+.ctc-faq-answer[hidden] {
+  display: none;
+}
+
+/* ========== CTA SECTIONS ========== */
+.ctc-cta-section {
+  text-align: center;
+}
+
+.ctc-cta--gradient {
+  background: var(--ctc-gradient-cta);
+  color: white;
+  padding: var(--ctc-space-12) var(--ctc-space-8);
+}
+
+.ctc-cta--solid {
+  background: var(--ctc-primary);
+  color: var(--ctc-text-inverse);
+}
+
+.ctc-cta--outlined {
+  background: transparent;
+  border: 2px solid var(--ctc-primary);
+  color: var(--ctc-text);
+}
+
+.ctc-cta--bold-contrast {
+  background: var(--ctc-text);
+  color: var(--ctc-background);
+}
+
+.ctc-cta--gradient-glow {
+  background: var(--ctc-gradient-hero);
+  color: white;
+  box-shadow: 0 0 60px color-mix(in srgb, var(--ctc-primary) 50%, transparent);
+}
+
+.ctc-cta--warm-gradient {
+  background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%);
+  color: white;
+}
+
+/* CTA Title and Text Contrast */
+.ctc-cta-title {
+  color: inherit;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.ctc-cta-text {
+  color: inherit;
+  opacity: 0.95;
+}
+
+/* Buttons on gradient backgrounds */
+.ctc-cta-section .ctc-btn--white {
+  background: white;
+  color: var(--ctc-primary);
+  font-weight: 600;
+  box-shadow: var(--ctc-shadow-md);
+}
+
+.ctc-cta-section .ctc-btn--white:hover {
+  background: var(--ctc-surface);
+  box-shadow: var(--ctc-shadow-lg);
+  transform: translateY(-2px);
+}
+
+.ctc-cta-section .ctc-btn--outline {
+  color: white;
+  border-color: white;
+  background: transparent;
+}
+
+.ctc-cta-section .ctc-btn--outline:hover {
+  background: white;
+  color: var(--ctc-primary);
+}
+
+/* ========== AUTHOR BOX ========== */
+.ctc-author--horizontal {
+  display: flex;
+  gap: var(--ctc-space-4);
+  align-items: center;
+  padding: var(--ctc-space-6);
+  background: var(--ctc-surface);
+  border-radius: var(--ctc-radius-xl);
+}
+
+.ctc-author--vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--ctc-space-6);
+  background: var(--ctc-surface);
+  border-radius: var(--ctc-radius-xl);
+}
+
+.ctc-author--compact {
+  display: flex;
+  gap: var(--ctc-space-3);
+  align-items: center;
+}
+
+/* ========== TABLE OF CONTENTS ========== */
+.ctc-toc--sidebar {
+  position: sticky;
+  top: var(--ctc-space-4);
+  max-height: calc(100vh - var(--ctc-space-8));
+  overflow-y: auto;
+  background: var(--ctc-surface);
+  padding: var(--ctc-space-4);
+  border-radius: var(--ctc-radius-lg);
+}
+
+.ctc-toc--inline {
+  background: var(--ctc-surface);
+  padding: var(--ctc-space-6);
+  border-radius: var(--ctc-radius-lg);
+  margin-bottom: var(--ctc-space-8);
+}
+
+.ctc-toc--floating {
+  position: fixed;
+  right: var(--ctc-space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ctc-surface);
+  padding: var(--ctc-space-4);
+  border-radius: var(--ctc-radius-lg);
+  box-shadow: var(--ctc-shadow-xl);
+  z-index: 50;
+}
+
+.ctc-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ctc-toc-link {
+  color: var(--ctc-text-secondary);
+  text-decoration: none;
+  transition: color var(--ctc-duration-fast);
+  display: block;
+  padding: var(--ctc-space-1) 0;
+  font-size: var(--ctc-text-sm);
+}
+
+.ctc-toc-link:hover,
+.ctc-toc-link.active {
+  color: var(--ctc-primary);
+}
+
+.ctc-toc-list--collapsed {
+  display: none;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (max-width: 768px) {
+  .ctc-styled h1 { font-size: var(--ctc-text-4xl); }
+  .ctc-styled h2 { font-size: var(--ctc-text-2xl); }
+  .ctc-styled h3 { font-size: var(--ctc-text-xl); }
+
+  .ctc-hero--centered {
+    padding: var(--ctc-space-12) var(--ctc-space-4);
+  }
+
+  .ctc-hero-title {
+    font-size: var(--ctc-text-3xl) !important;
+  }
+
+  .ctc-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ctc-hero-actions .ctc-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ctc-cta-section {
+    padding: var(--ctc-space-8) var(--ctc-space-4);
+  }
+
+  .ctc-testimonials-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ctc-benefits-grid .ctc-card {
+    text-align: left;
+  }
+
+  .ctc-toc--floating {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .ctc-hero--split {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes ctc-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ctc-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ctc-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ctc-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.ctc-animate-fade-in {
+  animation: ctc-fade-in var(--ctc-duration-normal) var(--ctc-ease-enter) forwards;
+}
+
+.ctc-animate-scale-in {
+  animation: ctc-scale-in var(--ctc-duration-normal) var(--ctc-ease-emphasis) forwards;
+}
+
+.ctc-animate-slide-up {
+  animation: ctc-slide-up var(--ctc-duration-slow) var(--ctc-ease-enter) forwards;
+}
+
+/* Staggered animations */
+.ctc-stagger > * {
+  opacity: 0;
+  animation: ctc-fade-in var(--ctc-duration-normal) var(--ctc-ease-enter) forwards;
+}
+
+.ctc-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.ctc-stagger > *:nth-child(2) { animation-delay: 100ms; }
+.ctc-stagger > *:nth-child(3) { animation-delay: 200ms; }
+.ctc-stagger > *:nth-child(4) { animation-delay: 300ms; }
+.ctc-stagger > *:nth-child(5) { animation-delay: 400ms; }
+.ctc-stagger > *:nth-child(6) { animation-delay: 500ms; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Interactive Element Styles
+   ============================================ */
+
+/* Progress Bar */
+.ctc-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ctc-border);
+  z-index: 1000;
+}
+
+.ctc-progress-fill {
+  height: 100%;
+  background: var(--ctc-primary);
+  width: 0%;
+  transition: width 100ms ease;
+}
+
+/* Focus styles */
+.ctc-styled *:focus-visible {
+  outline: 2px solid var(--ctc-primary);
+  outline-offset: 2px;
+}
+
+/* Selection */
+.ctc-styled ::selection {
+  background: color-mix(in srgb, var(--ctc-primary) 20%, transparent);
+  color: var(--ctc-text);
+}
+
+/* Smooth scrolling */
+.ctc-styled {
+  scroll-behavior: smooth;
+}
+
+/* Skip link */
+.ctc-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ctc-primary);
+  color: var(--ctc-text-inverse);
+  padding: var(--ctc-space-2) var(--ctc-space-4);
+  border-radius: var(--ctc-radius-md);
+  z-index: 9999;
+  transition: top var(--ctc-duration-fast);
+}
+
+.ctc-skip-link:focus {
+  top: var(--ctc-space-2);
+}
+</style>
+<div class="ctc-root ctc-styled ctc-personality-warm-friendly" data-ctc-version="2.0" data-blueprint-rendered="true">
+
+<header class="ctc-hero ctc-hero--solid" role="banner" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, #ffffff 100%); position: relative; padding: 10rem 1.5rem 8rem; text-align: center; overflow: hidden">
+  <span style="position: absolute; top: 2rem; right: 2rem; font-size: 0.65rem; color: var(--ctc-text-muted); background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--ctc-border-subtle); z-index: 20">✨ Visual match: detected from site</span>
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0">
+    <div style="position: absolute; top: -100px; right: -50px; width: 500px; height: 500px; background: var(--ctc-primary); opacity: 0.08; border-radius: 50%; filter: blur(100px)"></div>
+    <div style="position: absolute; bottom: -50px; left: -50px; width: 400px; height: 400px; background: var(--ctc-secondary, var(--ctc-primary)); opacity: 0.05; border-radius: 50%; filter: blur(80px)"></div>
+  </div>
+  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 56rem; margin: 0 auto">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ctc-primary); background: white; padding: 0.5rem 1rem; border-radius: 100px; box-shadow: var(--ctc-shadow-sm); margin-bottom: 2.5rem; border: 1px solid var(--ctc-border-subtle)">🛡️ Gecertificeerd Partner</div>
+    <h1 class="ctc-hero-title" style="color: var(--ctc-text); font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1.05; margin-bottom: 2rem; letter-spacing: -0.03em">
+      ontruimingen
+    </h1>
+    <p class="ctc-hero-subtitle" style="color: var(--ctc-text-secondary); font-size: 1.35rem; max-width: 42rem; margin: 0 auto 3.5rem; line-height: 1.7">
+      Een woningontruiming in Noord-Brabant omvat het verwijderen van alle persoonlijke bezittingen, meubilair en huishoudelijke voorwerpen uit uw pand
+    </p>
+    
+    <div class="ctc-hero-actions" style="display: flex; gap: 1.5rem; justify-content: center">
+      <a href="#contact" style="background: var(--ctc-primary); color: white; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); padding: 1.25rem 3rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; transition: transform 0.2s ease; font-size: 1.125rem">
+        Offerte Aanvragen
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="ctc-toc ctc-toc--inline" style="background: #ffffff; border-radius: var(--ctc-radius-lg); border: 1px solid var(--ctc-border-subtle); padding: 3rem; box-shadow: var(--ctc-shadow-float); z-index: 20; margin: -5rem auto 5rem; width: 100%; max-width: 1100px; position: relative;" aria-label="Inhoudsopgave">
+  <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--ctc-primary-light); display: inline-block">
+    <h2 style="font-family: var(--ctc-font-display); font-weight: 700; font-size: 1.5rem; color: var(--ctc-text); margin: 0; letter-spacing: -0.01em">Wat u kunt verwachten</h2>
+  </div>
+  <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem">
+    
+    <li>
+      <a href="#key-takeaways" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Belangrijkste Punten</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-1" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Ontruimingen: Een Overzicht</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-2" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Wat is een woningontruiming in Noord-Brabant?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-3" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Wanneer heeft u een ontruimingsservice nodig?</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-4" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>De werkwijze van Daadvracht: Geen gedoe, gewoon goed geregeld</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-5" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Stappen van een professionele woningontruiming</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-6" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Ontruiming na overlijden: Emotionele ondersteuning en praktische hulp</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-7" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Woningontruiming door makelaars en woningbouwcorporaties</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-8" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Kleine verhuizingen: Aanvullende service van Daadvracht</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-9" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Woningontruiming Breda, Tilburg en Oosterhout: Regionale dekking</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-10" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Volgende Stappen voor ontruimingen</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-11" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Ontdek Meer over Ontruimingsservice en kleine verhuizingen</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<main class="ctc-main" role="main">
+<article class="ctc-article" itemscope itemtype="https://schema.org/Article">
+<meta itemprop="headline" content="ontruimingen">
+
+<section id="key-takeaways" class="ctc-prose ctc-section--hero py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; padding: var(--ctc-space-16) var(--ctc-space-12); border-radius: var(--ctc-radius-2xl); position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+    <h2 id="belangrijkste-punten" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: white;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Belangrijkste Punten</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: rgba(255,255,255,0.9); line-height: 1.8; font-size: 1.0625rem">
+    <h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Wat Is Een Woningontruiming in Noord-Brabant</h3>
+Een woningontruiming in Noord-Brabant omvat het verwijderen van alle persoonlijke bezittingen, meubilair en huishoudelijke voorwerpen uit uw pand
+  </div>
+  
+</section>
+
+<div id="section-0" class="ctc-lead-paragraph py-12 md:py-16" style="position: relative">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px; opacity: 0.6"></div>
+  <div style="padding-left: var(--ctc-space-8); font-size: 1.25rem; line-height: 1.8; color: var(--ctc-text-secondary); font-weight: 400; letter-spacing: -0.01em">
+    # ontruimingen
+  </div>
+</div>
+
+<section id="section-1" class="ctc-prose ctc-card-grid-fallback ctc-section--featured py-8 md:py-10">
+  <h2 id="ontruimingen-een-overzicht" class="ctc-section-heading" style="font-weight: var(--ctc-heading-weight); font-family: var(--ctc-font-display); font-size: var(--ctc-text-2xl); color: var(--ctc-text)">Ontruimingen: Een Overzicht</h2>
+  <div class="ctc-prose-content">
+    <h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Wat Is Een Woningontruiming in Noord-Brabant?</h3>
+
+Een woningontruiming is een professionele dienst waarbij alle inboedel, huishoudelijke goederen en puin uit een woning worden verwijderd en verantwoord verwerkt. Het proces omvat inventarisatie van objecten, transport, recycling en eindschoonmaak van de lege ruimte.
+
+Dit artikel licht toe wanneer u een ontruimingsservice nodig heeft—bij verhuizing, erfafwikkeling, schuldsanering of renovatie. U maakt kennis met de werkwijze van Daadvracht: transparant, zonder verstopte kosten en met vooraf vastgestelde tarieven. We beschrijven alle stappen van een professionele woningontruiming, van intake tot oplevering.
+
+Bijzondere aandacht besteden we aan ontruimingen na overlijden. In deze gevoelige situaties biedt Daadvracht zowel praktische hulp als emotionele ondersteuning. Daarnaast bespreken we hoe makelaars en woningbouwcorporaties ontruimingsprojecten aanpakken, de mogelijkheid van kleine verhuizingen als aanvullende service, en onze regionale dekking in Breda, Tilburg en Oosterhout.
+
+Daadvracht werkt uitsluitend met erkende verwerkingsbedrijven om maximale duurzaamheid te garanderen. U ontvangt steeds een bindend kostenoverzicht voordat het eigenlijke werk begint.
+  </div>
+</section>
+
+<section id="section-2" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="wat-is-een-woningontruiming-in-noord-brabant" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Wat is een woningontruiming in Noord-Brabant?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Een woningontruiming in Noord-Brabant omvat het verwijderen van alle persoonlijke bezittingen, meubilair en huishoudelijke voorwerpen uit uw pand. Het proces gaat echter veel verder dan alleen spullen weghalen: het transformeert uw ruimte volledig door alle oppervlakken grondig schoon te maken en de woning bezemschoon op te leveren.
+
+Tijdens de ontruiming worden verschillende soorten materialen volgens wettelijke vereisten verwerkt. Waardevolle items worden ingeschat en eventueel verkocht, bruikbare goederen geschikt gemaakt voor hergebruik of donatie, en afval correct verwerkt of gerecycled. Dit zorgvuldige sorteerproces zorgt ervoor dat niets onnodig verloren gaat en alles conform geldende regelgeving gebeurt.
+
+Na afloop staat uw woning volledig leeg en bezemschoon. De vloeren, wanden en alle hoeken zijn vrij van restafval, vlekken of achterblijvers. U ontvangt een propereen pand terug dat direct klaar staat voor verhuring, verkoop of renovatie.
+
+Door professionele ontruimingsservices in te schakelen, bespaard u aanzienlijk tijd en inspanning. Een ervaren team regelt het volledige proces, van sortering tot afvoer, wat garanteert dat niets wordt vergeten en alles volgens planning verloopt. Dit stelt u in staat uw aandacht op andere zaken te richten in plaats van zelf alles uit te zoeken, in te pakken en weg te brengen.
+  </div>
+  
+</section>
+
+<section id="section-3" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="wanneer-heeft-u-een-ontruimingsservice-nodig" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Wanneer heeft u een ontruimingsservice nodig?</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Ontruimingen worden noodzakelijk in verschillende levensomstandigheden die professionele aanpak vereisen. Deze situaties komen regelmatig voor en vraagt om deskundige behandeling van uw woning of bedrijfsruimte in Noord-Brabant.
+
+Erfenissen vereisen vakkundige en respectvolle verwerking van bezittingen van overledenen. Verhuizingen maken ontruiming essentieel wanneer een woning volledig leeg moet worden achtergelaten. Bij scheidingsprocedures faciliteert ontruiming een vreedzame verdeling van gemeenschappelijke spullen zonder conflicten. Bedrijfsbeëindigingen vragen ontruiming van kantoren, magazijnen en werklocaties voor vrijgave van de ruimte. Sloopprojecten starten onveranderlijk met volledige ontruiming voordat werkzaamheden van start gaan.
+
+Ook langdurige voorraadopbouw door jaren van verzameling vormt een veelgehoorde reden voor ontruiming. Woningen die volgelopen zijn met spullen maken professionele leeggmaak urgent wanneer deze items alleen maar in de weg staan. Senioren die hun huis vrijmaken voor verkoop of verhuur hebben ontruimingsservice nodig. Daarnaast vereisen huurwisselingen en renovaties volledige ontruiming voordat nieuw gebruik kan starten.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Vergelijkingstabel met vier scenario&#39;s voor ruimteleegmaak (erfenis, verhuizing, bedrijfsbeëindiging, renovatie) met per situatie de specifieke voordelen en tijdsbesparing van professionele aanpak</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: scenario&#39;s waarbij volledig legen noodzakelijk is, vergeleken op efficiëntie en kostenbesparing</p>
+    </figure>
+
+Daadvracht voert deze ruimteleegmaakingen vakkundig en snel uit, zodat uw locatie direct bruikbaar is voor het volgende doel. Hoe verloopt zo'n ontruiming in de praktijk?
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-4" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="de-werkwijze-van-daadvracht-geen-gedoe-gewoon-goed" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">De werkwijze van Daadvracht: Geen gedoe, gewoon goed geregeld</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Ontruimingen in Noord-Brabant verlopen bij Daadvracht zonder gedoe omdat fysieke klussen en emotionele ondersteuning naadloos samengaan. Dit begint met begrip in plaats van haastig handelen. Een helder gesprek vormt het fundament: u vertelt wat u wegwilt en wat behouden blijft. Vervolgens inventariseert het team uw spullen zorgvuldig, sorteert deze in categorieën en bepaalt wat geschonken, verkocht of verwijderd wordt.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Infografische weergave van het stapsgewijze ontruimingsproces met controlepunten: eerste inspectie met checklist, inventarisatie met documentatie, categorisering naar waarde en bestemming, fysieke verwijdering met voorzichtigheid, grondige schoonmaak met kwaliteitszegels, en definitieve oplevering met handtekeningformulier</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: gestructureerd afloopmechanisme met communicatiepunten en kwaliteitscontrole-momenten</p>
+    </figure>
+
+Gevoelige zaken krijgen de aandacht die zij verdienen. Familiefoto's, belangrijke documenten en waardevol erfgoed blijven onder uw toezicht totdat zij de woning verlaten. Door de samenwerking tussen vrijwilligers en professionele opruimers verloopt alles efficiënt en zonder haast. U voelt zich ondersteund terwijl elk detail correct wordt aangepakt.
+
+Na de fysieke verwijdering schoonmaakt het team de lege kamers tot bezemschoon, zodat uw woning direct klaar staat voor verhuur, verkoop of een nieuw begin. Duidelijke communicatie en transparante kosten vanaf het eerste moment voorkomen stress en onzekerheid. Dit is professionele ontruiming in Noord-Brabant: een complete dienst waarbij u volledig kunt ontspannen.
+  </div>
+  
+</section>
+
+<section id="section-5" class="ctc-steps-numbered ctc-section--featured py-12 md:py-16" itemscope itemtype="https://schema.org/HowTo">
+  <h2 class="text-xl font-semibold mb-4" itemprop="name">Stappen van een professionele woningontruiming</h2>
+  <div class="ctc-steps-intro" style="color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem; margin-bottom: var(--ctc-space-6)">Professionele ontruimingen volgen een gestructureerd proces dat volledige transparantie biedt. Het proces bestaat uit vijf concrete fasen die elkaar logisch opvolgen, zodat u precies weet wat u kunt verwachten. Deze aanpak zorgt ervoor dat elke fase duidelijk is afgebakend en geen verrassingen ontstaan tijdens de ontruiming.</div>
+  <ol class="ctc-steps-list space-y-4">
+    
+    <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="1">
+      <span class="ctc-step-num w-8 h-8 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center font-bold flex-shrink-0">1</span>
+      <div>
+        <h4 class="ctc-step-title font-semibold" itemprop="name"><strong>Inspectie ter plekke</strong></h4>
+        <p class="ctc-step-desc text-sm text-[var(--ctc-text-secondary)] mt-1" itemprop="text">Een vakspecialist bezoekt uw woning en inventariseert de inhoud volledig. Deze fase bepaalt het volume, de soort materialen en mogelijke bijzondere situaties die invloed hebben op de ontruiming. De specialist maakt foto's en notities om een volledig beeld te krijgen van wat moet worden verwijderd.</p>
+      </div>
+    </li>
+    <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="2">
+      <span class="ctc-step-num w-8 h-8 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center font-bold flex-shrink-0">2</span>
+      <div>
+        <h4 class="ctc-step-title font-semibold" itemprop="name"><strong>Gedetailleerde offerteuitwerking</strong></h4>
+        <p class="ctc-step-desc text-sm text-[var(--ctc-text-secondary)] mt-1" itemprop="text">Op basis van de inspectie volgt een kostenbegroting. U ontvangt een bindend voorstel zonder verborgen toeslagen, zodat u precies weet wat de ontruiming kost. Deze offerte geeft u volledige zekerheid over uw financiële verplichting.</p>
+      </div>
+    </li>
+    <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="3">
+      <span class="ctc-step-num w-8 h-8 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center font-bold flex-shrink-0">3</span>
+      <div>
+        <h4 class="ctc-step-title font-semibold" itemprop="name"><strong>Planning en voorbereiding</strong></h4>
+        <p class="ctc-step-desc text-sm text-[var(--ctc-text-secondary)] mt-1" itemprop="text">De ontruiming krijgt een concrete datum. Alle nodige vergunningen worden geregeld en de logistiek wordt gecoördineerd met betrokken partijen, zoals parkeervergunningen en containerplaatsen waar nodig.</p>
+      </div>
+    </li>
+    <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="4">
+      <span class="ctc-step-num w-8 h-8 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center font-bold flex-shrink-0">4</span>
+      <div>
+        <h4 class="ctc-step-title font-semibold" itemprop="name"><strong>Uitvoering van de ontruiming</strong></h4>
+        <p class="ctc-step-desc text-sm text-[var(--ctc-text-secondary)] mt-1" itemprop="text">Professionele medewerkers verwijderen alle spullen, sorteren herbruikbare items en regelen verantwoorde afvoer of verwerking. Het team werkt efficiënt en voorzichtig met uw woning en omgeving om.</p>
+      </div>
+    </li>
+    <li class="ctc-step flex items-start gap-4 p-4 rounded-lg bg-[var(--ctc-surface)]" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="5">
+      <span class="ctc-step-num w-8 h-8 rounded-full bg-[var(--ctc-primary)] text-white flex items-center justify-center font-bold flex-shrink-0">5</span>
+      <div>
+        <h4 class="ctc-step-title font-semibold" itemprop="name"><strong>Bezemschoon oplevering</strong></h4>
+        <p class="ctc-step-desc text-sm text-[var(--ctc-text-secondary)] mt-1" itemprop="text">Na afronding wordt de woning grondig schoongemaakt en formeel als leeg opgeleverd, klaar voor verhuur of verkoop. Dit eindresultaat voldoet aan de hoogste schoonmaakstandaarden.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<aside id="section-6" class="ctc-callout  py-12 md:py-16">
+  <div class="ctc-callout-content">
+    <div class="ctc-callout-icon" aria-hidden="true">💡</div>
+    <div style="flex: 1">
+      <h2 style="font-weight: 600; font-size: 1.125rem; margin-bottom: var(--ctc-space-3); color: var(--ctc-text)">Ontruiming na overlijden: Emotionele ondersteuning en praktische hulp</h2>
+      <div style="color: var(--ctc-text-secondary); line-height: 1.7">Ontruimingen na overlijden vereisen meer dan louter logistieke coördinatie – zij vergen ook gevoelige begeleiding van nabestaanden. Wanneer een woning moet worden leeggehaald na verlies van een dierbare, staat de familie voor een complexe combinatie van uitdagingen: zowel emotioneel als praktisch.
+
+Gedurende dit traject ervaren nabestaanden intense gevoelens van verlies, stress en onzekerheid. De rouwverwerking vermengt zich onlosmakelijk met de praktische boedelafwikkeling, wat families aanzienlijk belast. Professionele ontruimingsbedrijven in Noord-Brabant erkennen deze dubbelbelasting en pakken beide dimensies gelijktijdig aan.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Venn-diagram dat het overlap-gebied tussen volledige leegruiming en emotionele steunverlening toont, met in het centraal snijvlak &#39;vertrouwen-gebaseerde samenwerking&#39; en &#39;gevoelsmatig veilige begeleiding&#39;, omgeven door aan beide zijden specifieke aspecten als sortering, transport, rouwbegeleiding en communicatie</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: conceptueel model van praktische hulpverlening en emotionele ondersteuning met gezamenlijke doelen</p>
+    </figure>
+
+Een gestructureerde aanpak vormt het fundament voor deze ondersteuning. Inventarisatie van bezittingen, sortering naar bestemming, transport en aflevering worden stap voor stap uitgevoerd. Deze fasering ontlast nabestaanden van logistieke verantwoordelijkheden, zodat zij hun aandacht op rouwverwerking kunnen richten. Tegelijkertijd biedt transparante communicatie over timing, kosten en voortgang houvast en controle in wat anders een chaotische periode zou zijn.
+
+Persoonlijk contact, schriftelijke verslaglegging en telefonische beschikbaarheid vormen de pijlers van echte emotionele competentie. Deze mengeling van procedurele professionaliteit en menselijke aandacht maakt boedelverwerking wezenlijk draagbaarder voor families. Huisontruimingen na overlijden onderscheiden zich fundamental van commerciële ontruimingsprojecten – hier gaat het om levensgebeurtenissen die bijzondere, respectvolle begeleiding rechtvaardigen.</div>
+    </div>
+  </div>
+</aside>
+
+<section id="section-7" class="ctc-prose  py-8 md:py-10" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="woningontruiming-door-makelaars-en-woningbouwcorpo" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Woningontruiming door makelaars en woningbouwcorporaties</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Ontruimingen voor zakelijke partners vereisen een fundamenteel ander aanpak dan persoonlijke situaties. Makelaars en woningbouwcorporaties werken met strikte deadlines waarin vertragingen directe financiële consequenties hebben en eisen volledige ontzorging van het gehele proces.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Vergelijkingstabel met vier scenario&#39;s waarin ontruimingsservice essentieel is voor vastgoedprofessionals: overlijdensfallen met erfenis-complicaties, spoedige verhuizingen met korte termijnen, woningcorporatie-renovaties met meerdere eenheden, en makelaarsmakingsprojecten met directe inhuurbehoefte. Elke scenario toont specifieke voordelen zoals snelle leegmaking, bezemschone oplevering, parallelle projectcoördinatie en contractuele garanties.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: vergelijking vastgoedscenario&#39;s met service-voordelen voor professionele leegmakingen</p>
+    </figure>
+
+Deze vastgoedpartners vertrouwen op snelle leegmaking met bezemschone oplevering binnen afgesproken termijnen. Hierdoor worden panden onmiddellijk beschikbaar voor verhuur of verkoop, zonder vertragingen die rendement kosten. De diensten bestaan uit volledige leegmaking, schoonmaken en afvoer van restmaterialen, zodat projectmanagers zich kunnen concentreren op kernactiviteiten terwijl de coördinatie volledig wordt overgenomen.
+
+Woningbouwcorporaties profiteren extra van expertise in massale leegmakingen. Door meerdere woningen parallel te ontruimen, bereikt u efficiënt portefeuillebeheer en verkorte verhuurcycli. De samenwerking elimineert administratieve overhead en garandeert naleving van contractuele verplichtingen. Op deze manier worden vastgoedportefeuilles optimaal beheerd en klaargesteld voor volgende bewoners.
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<section id="section-8" class="ctc-prose  py-12 md:py-16" style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); padding: 2rem; border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="kleine-verhuizingen-aanvullende-service-van-daadvr" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Kleine verhuizingen: Aanvullende service van Daadvracht</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Bij Daadvracht zijn kleine verhuizingen een gespecialiseerde aanvullende service binnen ons ontruimingspakket voor Noord-Brabant. Onze teams voeren beide diensten uit met identieke contractuele voorwaarden en kwaliteitsnormen, resulterend in bezemschone oplevering: de woning wordt volledig leeggemaakt en gereinigd.
+
+<figure class="ctc-image-placeholder" style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border: 2px dashed var(--ctc-border); border-radius: var(--ctc-radius-lg); text-align: center">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5">🖼️</div>
+      <p style="color: var(--ctc-text-secondary); font-size: 0.875rem; margin: 0">Venn-diagram waarin twee overlappende cirkels de relatie illustreren tussen &#39;Leegmakingsservice&#39; (grote cirkel links) en &#39;Compacte verhuizingen&#39; (kleine cirkel rechts). Het overlappende gebied benadrukt de kernzone &#39;Volledige ontzorging&#39; met gedeelde kenmerken als eenmalig aanspreekpunt, uniforme kwaliteitsnormen, bezemschone inlevering en naadloze coördinatie. De illustratie toont hoe beide services nauw verweven zijn binnen het Daadvracht-aanbod.</p>
+      <p style="color: var(--ctc-text-muted); font-size: 0.75rem; margin-top: 0.25rem; font-style: italic">Alt: relatie tussen leegmaak- en verhuisservices met gemeenschappelijke ontzorgingsvoordelen</p>
+    </figure>
+
+Deze integrale aanpak biedt aantoonbare voordelen. Eén aanspreekpunt coördineert ontruiming en verhuizing zonder communicatiebreuken tussen verschillende partijen. Daadvracht verwerkt deze werkzaamheden zonder administratieve splitsing, wat de efficiëntie verhoogt en kosten vermindert. Bovendien garanderen identieke kwaliteitsnormen dat contractuele garanties volledig voor kleine verhuizingen gelden. Dit sluit juridische hiaten en verzekert volledige dekking van uw verplichtingen, ongeacht de urgentie van uw handeling.
+  </div>
+  
+</section>
+
+<section id="section-9" class="ctc-prose  py-12 md:py-16" style="; position: relative; overflow: hidden">
+  
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="woningontruiming-breda-tilburg-en-oosterhout-regio" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Woningontruiming Breda, Tilburg en Oosterhout: Regionale dekking</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Daadvracht biedt gespecialiseerde woningontruimingen in Breda, Tilburg en Oosterhout met lokale expertise en korte responstijden. Deze drie kerngebieden in Noord-Brabant garanderen directe beschikbaarheid voor zowel particuliere als bedrijfsmatige ruimingen. Met lokale teams ter plekke worden uw ontruimingen snel en efficiënt uitgevoerd, volledig afgestemd op regionale vereisten.
+
+In Breda concentreert Daadvracht zich op efficiënte logistieke oplossingen voor particuliere en zakelijke ruimingen. Tilburg profiteert van diepgaande kennis van de lokale woonmarkt en regelgeving, die direct toepasbaar is op elke opdracht. Oosterhout beschikt over het volledige servicepakket, inclusief erfgoedafvoer en recyclingcoördinatie. Dit gespecialiseerde aanbod zorgt ervoor dat elke ontruiming perfect aansluit bij de specifieke situatie en behoeften van uw gebied.
+
+De operationele aanwezigheid van Daadvracht in deze drie steden resulteert in aanzienlijk kortere responstijden en betrouwbare uitvoering. Omdat lokale teams dicht bij uw locatie werkzaam zijn, verloopt elke ruiming volgens Noord-Brabantse normen en geldende richtlijnen. Met gespecialiseerde logistieke infrastructuur in elk gebied garandeert Daadvracht snelle, betrouwbare woningontruimingen in Noord-Brabant.
+  </div>
+  
+</section>
+
+<section id="section-10" class="ctc-prose ctc-section--featured py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, color-mix(in srgb, var(--ctc-primary) 10%, transparent) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+      <div style="width: 60px; height: 4px; background: var(--ctc-primary); border-radius: 100px; margin-bottom: 1.5rem"></div>
+    
+    <h2 id="volgende-stappen-voor-ontruimingen" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: var(--ctc-text);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Volgende Stappen voor ontruimingen</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: var(--ctc-text-secondary); line-height: 1.8; font-size: 1.0625rem">
+    Bent u klaar om uw ruimte leeg te laten maken? Neem vandaag nog contact op met een ontruimingsbedrijf in uw regio. U ontvangt een vrijblijvende inspectie waarbij een deskundige ter plaatse bepaalt wat nodig is, u een duidelijk kostenoverzicht geeft en uw ontruiming inplant. Dankzij professionele begeleiding verloopt het hele proces snel, respectvol en zonder gedoe—zodat u uw woning of ruimte meteen daarna opnieuw kunt gebruiken.
+  </div>
+  
+</section>
+
+<div id="section-11" class="ctc-icon-list  py-12 md:py-16">
+  <h2 style="font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 2.5rem; font-weight: 700;">Ontdek Meer over Ontruimingsservice en kleine verhuizingen</h2>
+  <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 1.5rem;">
+    
+    <li class="ctc-icon-list-item" style="display: flex; align-items: flex-start; gap: 1.25rem;">
+      <span class="ctc-icon" style="width: 2.5rem; height: 2.5rem; background: var(--ctc-primary-light); color: var(--ctc-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 0.9rem;">1</span>
+      <div style="padding-top: 0.25rem;"><strong>Waardevolle spullen herkennen en bewaren tijdens ontruiming</strong>: Ontdek hoe een professionele ontruimingsservice waardevolle spullen herkent en veilig bewaart tijdens woningontruiming in regio Breda-Tilburg. Zorgvuldige identificatie, systematische opslag en transparante communicatie voor volledige ontzorging van nabestaanden en opdrachtgevers. <a href="/topics/waardevolle-spullen-herkennen-en-bewaren-tijdens-ontruiming" class="ctc-link text-[var(--ctc-primary)] hover:underline">Lees meer over Waardevolle spullen herkennen en bewa...</a>.</div>
+    </li>
+    <li class="ctc-icon-list-item" style="display: flex; align-items: flex-start; gap: 1.25rem;">
+      <span class="ctc-icon" style="width: 2.5rem; height: 2.5rem; background: var(--ctc-primary-light); color: var(--ctc-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 0.9rem;">2</span>
+      <div style="padding-top: 0.25rem;"><strong>Subsidies en financiële ondersteuning bij ontruiming</strong>: Ontdek welke subsidies en financiële ondersteuning beschikbaar zijn voor ontruimingsservice in Breda-Tilburg. Van gemeentelijke bijstand tot woningcorporatie-regelingen voor bezemschone oplevering. <a href="/topics/subsidies-en-financile-ondersteuning-bij-ontruiming" class="ctc-link text-[var(--ctc-primary)] hover:underline">Lees meer over Subsidies en financiële ondersteuning...</a>.</div>
+    </li>
+    <li class="ctc-icon-list-item" style="display: flex; align-items: flex-start; gap: 1.25rem;">
+      <span class="ctc-icon" style="width: 2.5rem; height: 2.5rem; background: var(--ctc-primary-light); color: var(--ctc-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 0.9rem;">3</span>
+      <div style="padding-top: 0.25rem;"><strong>Vrijwaringsclausule en aansprakelijkheid bij ontruiming</strong>: Begrijp vrijwaringsclausules en aansprakelijkheid bij woningontruiming in Noord-Brabant. Ontruimingsservice DaadVracht legt uit welke schade gedekt is, verzekeringen en uw rechten bij ontruiming na overlijden of voor corporaties. <a href="/topics/vrijwaringsclausule-en-aansprakelijkheid-bij-ontruiming" class="ctc-link text-[var(--ctc-primary)] hover:underline">Lees meer over Vrijwaringsclausule en aansprakelijkh...</a>.</div>
+    </li>
+    <li class="ctc-icon-list-item" style="display: flex; align-items: flex-start; gap: 1.25rem;">
+      <span class="ctc-icon" style="width: 2.5rem; height: 2.5rem; background: var(--ctc-primary-light); color: var(--ctc-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 0.9rem;">4</span>
+      <div style="padding-top: 0.25rem;"><strong>Hoarding en verwijdering extreme vervuiling</strong>: Gespecialiseerde hoardingontruiming en verwijdering van extreme vervuiling in Breda, Tilburg en Oosterhout. Discrete, zorgvuldige aanpak met desinfectie en bezemschone oplevering. Direct hulp inschakelen. <a href="/topics/hoarding-en-verwijdering-extreme-vervuiling" class="ctc-link text-[var(--ctc-primary)] hover:underline">Lees meer over Hoarding en verwijdering extreme verv...</a>.</div>
+    </li>
+    <li class="ctc-icon-list-item" style="display: flex; align-items: flex-start; gap: 1.25rem;">
+      <span class="ctc-icon" style="width: 2.5rem; height: 2.5rem; background: var(--ctc-primary-light); color: var(--ctc-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 0.9rem;">5</span>
+      <div style="padding-top: 0.25rem;"><strong>Ontruiming huurwoning: Verplichtingen huurder en verhuurder</strong>: Ontdek de wettelijke verplichtingen van huurder en verhuurder bij ontruiming van een huurwoning. Bezemschoon opleveren, herstelwerkzaamheden, kosten en geschillenbeslechting uitgelegd voor Noord-Brabant. <a href="/topics/ontruiming-huurwoning-verplichtingen-huurder-en-verhuurder" class="ctc-link text-[var(--ctc-primary)] hover:underline">Lees meer over Ontruiming huurwoning: Verplichtingen...</a>.</div>
+    </li>
+  </ul>
+</div>
+</article>
+</main>
+
+<aside class="ctc-cta-banner" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 25%, transparent); border-radius: var(--ctc-radius-2xl); padding: 3rem 2rem; text-align: center; margin: 3rem 0; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.12)">
+  
+    <div style="position: absolute; top: -80px; right: -80px; width: 250px; height: 250px; background: white; opacity: 0.1; border-radius: 50%; pointer-events: none"></div>
+    <div style="position: absolute; bottom: -60px; left: -60px; width: 180px; height: 180px; background: white; opacity: 0.08; border-radius: 50%; pointer-events: none"></div>
+  <div style="position: relative; z-index: 1">
+    <h2 class="ctc-cta-title" style="color: white; font-family: var(--ctc-font-display); font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1.5rem; letter-spacing: -0.02em">Klaar om te beginnen?</h2>
+    
+    <div class="ctc-cta-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap">
+      <a href="#contact" style="background: white; color: var(--ctc-primary); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2); font-weight: 800; padding: 1.25rem 3.5rem; font-size: 1.125rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Offerte Aanvragen
+        <span style="font-size: 1.125rem">→</span>
+      </a>
+      
+      <a href="#" style="background: transparent; color: white; border: 2px solid rgba(255,255,255,0.8); display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Meer Informatie
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function() {
+  // FAQ Accordion Toggle
+  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+      var icon = trigger.querySelector('.ctc-faq-icon');
+      var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+      trigger.setAttribute('aria-expanded', !isExpanded);
+      if (answer) {
+        answer.hidden = isExpanded;
+      }
+      if (icon) {
+        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      }
+    });
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Add hover effects for cards and interactive elements
+  document.querySelectorAll('.ctc-toc a').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+      this.style.background = 'var(--ctc-surface)';
+    });
+    link.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+    });
+  });
+})();
+</script>
+</div>

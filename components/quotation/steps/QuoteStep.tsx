@@ -12,7 +12,7 @@ import {
   RoiCalculation,
   QuotationWizardState,
 } from '../../../types/quotation';
-import { QuoteTotalResult } from '../../../services/quotation';
+import { QuoteTotalResult, openQuoteForPrint, downloadQuoteHtml } from '../../../services/quotation';
 import { getPackageById } from '../../../config/quotation/packages';
 import { CATEGORY_INFO } from '../../../config/quotation/modules';
 import { useQuotationSettings } from '../../../hooks/useQuotationSettings';
@@ -43,8 +43,10 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
   onStartOver,
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null);
-  const { formatPrice, formatPriceRange } = useQuotationSettings();
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
+  const { formatPrice, formatPriceRange, currency } = useQuotationSettings();
 
   const pkg = wizardState.selectedPackageId
     ? getPackageById(wizardState.selectedPackageId)
@@ -61,15 +63,66 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
 
   const handleSaveQuote = async () => {
     setIsSaving(true);
+    setExportSuccess(null);
     try {
       const quote = onGenerateQuote();
       if (quote) {
         setSavedQuote(quote);
-        // TODO: Save to database
+        // Download as HTML file (can be opened in browser and printed as PDF)
+        downloadQuoteHtml(quote, { currency, includeAnalysis: true, includeKpiProjections: true, includeRoi: true, includeTerms: true });
+        setExportSuccess('Quote saved as HTML file');
       }
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    setExportSuccess(null);
+    try {
+      const quote = onGenerateQuote();
+      if (quote) {
+        // Open in new window for printing to PDF
+        openQuoteForPrint(quote, { currency, includeAnalysis: true, includeKpiProjections: true, includeRoi: true, includeTerms: true });
+        setExportSuccess('Quote opened for print/PDF');
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleEmailQuote = () => {
+    const quote = onGenerateQuote();
+    if (!quote) return;
+
+    const subject = encodeURIComponent(`SEO Service Quote for ${quote.clientCompany || quote.clientDomain}`);
+    const domain = quote.clientDomain || 'your website';
+    const totalRange = quoteTotal ? `${formatPriceRange(quoteTotal.totalMin, quoteTotal.totalMax)}` : 'See attached';
+
+    const body = encodeURIComponent(
+`Dear ${clientInfo.name || 'Client'},
+
+Thank you for your interest in our SEO services. Please find below a summary of your customized quote:
+
+Website: ${domain}
+Total Investment: ${totalRange}
+
+${pkg ? `Selected Package: ${pkg.name}
+${pkg.description}` : 'Custom Service Selection'}
+
+Services Include:
+${lineItems.slice(0, 5).map(item => `- ${item.moduleName}`).join('\n')}
+${lineItems.length > 5 ? `... and ${lineItems.length - 5} more services` : ''}
+
+To view the full quote with detailed breakdown, please visit our portal or reply to this email.
+
+Best regards,
+SEO Services Team`
+    );
+
+    window.open(`mailto:${clientInfo.email || ''}?subject=${subject}&body=${body}`, '_blank');
+    setExportSuccess('Email draft opened');
   };
 
   return (
@@ -166,9 +219,14 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
         {/* KPI Projections */}
         {kpiProjections.length > 0 && (
           <Card className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Projected Outcomes</h3>
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Projected Outcomes</h3>
+              <span className="text-xs text-blue-400 bg-blue-400/10 px-2 py-1 rounded">
+                Industry-based estimates
+              </span>
+            </div>
             <p className="text-gray-400 text-sm mb-4">
-              Estimated results within 6-12 months based on selected services
+              Estimated results within 6-12 months based on selected services and industry benchmarks
             </p>
             <div className="grid grid-cols-2 gap-4">
               {kpiProjections.slice(0, 4).map((projection) => (
@@ -189,8 +247,13 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
 
         {/* ROI Calculator */}
         {roiCalculation && (
-          <Card className="p-6 bg-green-500/5 border-green-500/20">
-            <h3 className="text-lg font-semibold text-white mb-4">ROI Projection</h3>
+          <Card className={`p-6 ${roiCalculation.roiMin >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-yellow-500/5 border-yellow-500/20'}`}>
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">ROI Projection</h3>
+              <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
+                Estimates based on provided data
+              </span>
+            </div>
             <div className="grid grid-cols-3 gap-6">
               <div>
                 <div className="text-sm text-gray-400">Projected Additional Leads</div>
@@ -201,21 +264,24 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
               </div>
               <div>
                 <div className="text-sm text-gray-400">Projected Revenue</div>
-                <div className="text-2xl font-bold text-green-400">
+                <div className={`text-2xl font-bold ${roiCalculation.projectedRevenueMin > 0 ? 'text-green-400' : 'text-gray-400'}`}>
                   {formatPriceRange(roiCalculation.projectedRevenueMin, roiCalculation.projectedRevenueMax)}
                 </div>
                 <div className="text-xs text-gray-500">per year</div>
               </div>
               <div>
                 <div className="text-sm text-gray-400">Estimated ROI</div>
-                <div className="text-2xl font-bold text-green-400">
+                <div className={`text-2xl font-bold ${roiCalculation.roiMin >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {roiCalculation.roiMin}% - {roiCalculation.roiMax}%
                 </div>
                 <div className="text-xs text-gray-500">
-                  Payback: {roiCalculation.paybackMonthsMin}-{roiCalculation.paybackMonthsMax} months
+                  Payback: {roiCalculation.paybackMonthsMin >= 36 ? '36+' : roiCalculation.paybackMonthsMin}-{roiCalculation.paybackMonthsMax >= 36 ? '36+' : roiCalculation.paybackMonthsMax} months
                 </div>
               </div>
             </div>
+            <p className="text-xs text-gray-500 mt-4 italic">
+              * ROI projections are estimates based on industry averages and your provided customer value. Actual results may vary.
+            </p>
           </Card>
         )}
       </div>
@@ -272,17 +338,29 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
             <Button className="w-full" onClick={handleSaveQuote} disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save Quote'}
             </Button>
-            <Button variant="outline" className="w-full">
-              Export PDF
+            <Button variant="outline" className="w-full" onClick={handleExportPdf} disabled={isExporting}>
+              {isExporting ? 'Opening...' : 'Export PDF'}
+            </Button>
+            <Button variant="outline" className="w-full" onClick={handleEmailQuote}>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Email Quote
             </Button>
             <Button variant="ghost" className="w-full" onClick={onBack}>
               Edit Selection
             </Button>
           </div>
 
-          {savedQuote && (
+          {exportSuccess && (
             <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <div className="text-green-400 text-sm font-medium">Quote saved!</div>
+              <div className="text-green-400 text-sm font-medium">{exportSuccess}</div>
+            </div>
+          )}
+
+          {savedQuote && (
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="text-blue-400 text-sm font-medium">Quote generated</div>
               <div className="text-gray-400 text-xs mt-1">ID: {savedQuote.id.slice(0, 8)}...</div>
             </div>
           )}

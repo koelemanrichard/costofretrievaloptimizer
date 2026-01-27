@@ -489,37 +489,137 @@ export async function analyzeUrlForQuotation(
 // =============================================================================
 
 /**
- * Quick analysis without API calls - uses heuristics
- * Useful for public calculator mode
+ * Analyze URL patterns to estimate site characteristics
+ */
+function analyzeUrlPatterns(domain: string): {
+  likelySize: SiteSize;
+  likelyCorporate: boolean;
+  likelyEcommerce: boolean;
+  likelyLocal: boolean;
+  estimatedCompetition: CompetitionLevel;
+} {
+  const domainLower = domain.toLowerCase();
+  const tld = domain.split('.').pop() || '';
+
+  // Large enterprise indicators
+  const enterpriseTlds = ['com', 'net', 'org', 'io', 'co'];
+  const enterprisePatterns = ['bank', 'insurance', 'finance', 'corp', 'inc', 'holdings', 'group'];
+  const likelyCorporate = enterprisePatterns.some(p => domainLower.includes(p)) ||
+                          (domainLower.length <= 10 && enterpriseTlds.includes(tld));
+
+  // E-commerce indicators
+  const ecommercePatterns = ['shop', 'store', 'buy', 'cart', 'market', 'outlet', 'deals'];
+  const likelyEcommerce = ecommercePatterns.some(p => domainLower.includes(p));
+
+  // Local business indicators
+  const localTlds = ['local', 'city', 'town'];
+  const localPatterns = ['local', 'city', 'area', 'region', 'plumber', 'dentist', 'lawyer', 'restaurant'];
+  const likelyLocal = localPatterns.some(p => domainLower.includes(p)) ||
+                      localTlds.some(t => tld === t) ||
+                      /[a-z]+-[a-z]+\.(nl|de|be|fr|uk|es|it)$/.test(domainLower); // e.g., loodgieter-amsterdam.nl
+
+  // Estimate site size based on domain characteristics
+  let likelySize: SiteSize = 'small';
+  if (likelyCorporate || likelyEcommerce) {
+    likelySize = 'medium';
+    if (domainLower.length <= 8 && enterpriseTlds.includes(tld)) {
+      likelySize = 'large'; // Short, premium domain likely indicates larger company
+    }
+  }
+  if (likelyLocal) {
+    likelySize = 'small';
+  }
+
+  // Estimate competition based on domain type
+  let estimatedCompetition: CompetitionLevel = 'medium';
+  if (likelyCorporate) estimatedCompetition = 'high';
+  if (likelyLocal) estimatedCompetition = 'medium';
+  if (likelyEcommerce) estimatedCompetition = 'high';
+
+  return {
+    likelySize,
+    likelyCorporate,
+    likelyEcommerce,
+    likelyLocal,
+    estimatedCompetition,
+  };
+}
+
+/**
+ * Quick analysis without API calls - uses intelligent heuristics
+ * Based on URL patterns and domain characteristics
+ *
+ * IMPORTANT: Results are ESTIMATES and should be clearly marked as such
  */
 export function quickAnalyzeUrl(url: string): UrlAnalysisResult {
   const domain = extractDomain(url);
+  const patterns = analyzeUrlPatterns(domain);
 
-  // Default values for quick mode
-  const crawlData: CrawlData = {
-    pageCount: 50, // Assume medium-small site
-    technicalIssues: { critical: 0, warnings: 3, notices: 5 },
-    hasSchema: false,
-    sslValid: true,
-    mobileOptimized: true,
+  // Estimate page counts based on likely site type
+  const pageCounts: Record<SiteSize, number> = {
+    small: 25,
+    medium: 100,
+    large: 500,
+    enterprise: 2000,
   };
+  const estimatedPageCount = pageCounts[patterns.likelySize];
+
+  // Assume typical technical state for a site that hasn't been optimized
+  const crawlData: CrawlData = {
+    pageCount: estimatedPageCount,
+    technicalIssues: {
+      critical: 0,
+      warnings: patterns.likelyCorporate ? 5 : 3,
+      notices: patterns.likelyCorporate ? 8 : 5,
+    },
+    hasSchema: patterns.likelyCorporate, // Larger companies more likely to have schema
+    sslValid: true, // Most modern sites have SSL
+    mobileOptimized: true, // Most modern sites are responsive
+  };
+
+  // Estimate SERP visibility based on patterns
+  const visibilityByType = {
+    corporate: 50,
+    ecommerce: 40,
+    local: 35,
+    default: 30,
+  };
+  let visibilityScore = visibilityByType.default;
+  if (patterns.likelyCorporate) visibilityScore = visibilityByType.corporate;
+  else if (patterns.likelyEcommerce) visibilityScore = visibilityByType.ecommerce;
+  else if (patterns.likelyLocal) visibilityScore = visibilityByType.local;
 
   const serpData: SerpData = {
-    visibilityScore: 40,
-    keywordsRanking: 10,
+    visibilityScore,
+    keywordsRanking: Math.round(estimatedPageCount * 0.2), // Rough estimate
     topKeywords: [],
-    competitionLevel: 'medium',
+    competitionLevel: patterns.estimatedCompetition,
   };
+
+  // Calculate complexity
+  const complexityScore = calculateComplexityScore(crawlData, serpData);
+
+  // Generate recommendations
+  const recommendations = generateRecommendations(crawlData, serpData);
+
+  // Add estimate disclaimer to recommendations
+  recommendations.unshift({
+    category: 'semantic_seo',
+    priority: 'low',
+    description: 'Note: These results are estimates based on URL analysis. Full website crawl recommended for accurate data.',
+    estimatedImpact: 'More accurate quote with full analysis',
+  });
 
   return {
     domain,
     crawlData,
     serpData,
-    recommendations: generateRecommendations(crawlData, serpData),
-    siteSize: 'small',
-    complexityScore: 1.2,
+    recommendations,
+    siteSize: patterns.likelySize,
+    complexityScore,
     analyzedAt: new Date().toISOString(),
-  };
+    isEstimate: true, // Flag to indicate this is an estimate
+  } as UrlAnalysisResult;
 }
 
 // =============================================================================

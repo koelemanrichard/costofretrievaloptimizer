@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VVE Beheer - Design Agency Quality Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    
+/* MVGM Brand Design System */
+:root {
+  --ctc-primary: #012d55;
+  --ctc-primary-light: #1a4a73;
+  --ctc-primary-dark: #001f3d;
+  --ctc-secondary: #e0b15c;
+  --ctc-secondary-light: #f0c87a;
+  --ctc-accent: #7a9c59;
+  --ctc-background: #ffffff;
+  --ctc-surface: #f8fafc;
+  --ctc-text: #1f2937;
+  --ctc-text-secondary: #4b5563;
+  --ctc-text-muted: #6b7280;
+  --ctc-border: #e5e7eb;
+  --ctc-border-subtle: #f3f4f6;
+  --ctc-font-display: 'Roboto Slab', Georgia, serif;
+  --ctc-font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ctc-radius-sm: 4px;
+  --ctc-radius-md: 8px;
+  --ctc-radius-lg: 12px;
+  --ctc-radius-xl: 16px;
+  --ctc-radius-2xl: 24px;
+  --ctc-space-1: 4px;
+  --ctc-space-2: 8px;
+  --ctc-space-4: 16px;
+  --ctc-space-8: 32px;
+  --ctc-space-12: 48px;
+  --ctc-space-16: 64px;
+  --ctc-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --ctc-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --ctc-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --ctc-shadow-float: 0 25px 50px -12px rgba(0,0,0,0.15);
+
+  /* Hero customization */
+  --ctc-hero-bg: linear-gradient(135deg, #012d55 0%, #001f3d 100%);
+  --ctc-hero-text: white;
+  --ctc-hero-subtitle: rgba(255,255,255,0.9);
+}
+
+body {
+  font-family: var(--ctc-font-body);
+  color: var(--ctc-text);
+  line-height: 1.7;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ctc-font-display);
+}
+
+    /* ============================================
+   Brand Design System - Auto-Generated
+   Source: Unknown
+   Brand: MVGM VVE Beheer
+   Generated: Unknown
+   ============================================ */
+
+
+/* MVGM Brand Design System - Auto-Generated */
+.ctc-root, .ctc-styled {
+  --ctc-primary: #012d55;
+  --ctc-primary-light: #1a4a73;
+  --ctc-primary-dark: #001f3d;
+  --ctc-secondary: #e0b15c;
+  --ctc-secondary-light: #f0c87a;
+  --ctc-accent: #7a9c59;
+  --ctc-background: #ffffff;
+  --ctc-surface: #f8fafc;
+  --ctc-surface-elevated: #ffffff;
+  --ctc-text: #1f2937;
+  --ctc-text-secondary: #4b5563;
+  --ctc-text-muted: #6b7280;
+  --ctc-border: #e5e7eb;
+  --ctc-border-subtle: #f3f4f6;
+  --ctc-font-display: 'Roboto Slab', Georgia, serif;
+  --ctc-font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ctc-radius-sm: 4px;
+  --ctc-radius-md: 8px;
+  --ctc-radius-lg: 12px;
+  --ctc-radius-xl: 16px;
+  --ctc-radius-2xl: 24px;
+  --ctc-space-1: 4px;
+  --ctc-space-2: 8px;
+  --ctc-space-4: 16px;
+  --ctc-space-8: 32px;
+  --ctc-space-12: 48px;
+  --ctc-space-16: 64px;
+  --ctc-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --ctc-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --ctc-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --ctc-shadow-float: 0 25px 50px -12px rgba(0,0,0,0.15);
+
+  /* Hero customization for MVGM brand */
+  --ctc-hero-bg: linear-gradient(135deg, #012d55 0%, #001f3d 100%);
+  --ctc-hero-text: white;
+  --ctc-hero-subtitle: rgba(255,255,255,0.9);
+}
+
+/* MVGM Hero Section */
+.ctc-hero {
+  background: linear-gradient(135deg, #012d55 0%, #001f3d 100%);
+  color: white;
+  padding: 4rem 2rem;
+  border-radius: 0 0 2rem 2rem;
+}
+
+.ctc-hero-title {
+  font-family: 'Roboto Slab', serif;
+  font-weight: 800;
+}
+
+.ctc-hero-title span {
+  color: #e0b15c;
+}
+
+/* MVGM Key Takeaways */
+.ctc-prose.ctc-section--hero {
+  background: linear-gradient(135deg, #012d55 0%, #0a3d6e 100%);
+}
+
+/* MVGM Card Grid */
+.ctc-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ctc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+}
+
+.ctc-card-icon {
+  background: linear-gradient(135deg, #012d55 0%, #1a4a73 100%);
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+/* MVGM Timeline */
+.ctc-timeline-vertical {
+  position: relative;
+}
+
+.ctc-timeline-step-number {
+  background: #012d55;
+  color: white;
+  font-weight: 700;
+}
+
+/* MVGM FAQ Accordion */
+.ctc-faq-accordion {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ctc-faq-trigger {
+  background: #f8fafc;
+  padding: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #012d55;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ctc-faq-trigger:hover {
+  background: #f1f5f9;
+}
+
+/* MVGM CTA Banner */
+.ctc-cta-banner {
+  background: linear-gradient(135deg, #012d55 0%, #001f3d 100%);
+  color: white;
+  padding: 3rem 2rem;
+  border-radius: 1.5rem;
+  text-align: center;
+}
+
+.ctc-cta-title {
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+  </style>
+</head>
+<body>
+  <main class="max-w-4xl mx-auto py-12 px-4">
+    <div class="ctc-root ctc-styled ctc-personality-corporate-professional" data-ctc-version="2.0" data-blueprint-rendered="true">
+
+<header class="ctc-hero ctc-hero--solid" role="banner" style="background: var(--ctc-hero-bg, var(--ctc-background)); border-bottom: 1px solid var(--ctc-border-subtle); position: relative; padding: 10rem 1.5rem 8rem; text-align: center; overflow: hidden">
+  <span style="position: absolute; top: 2rem; right: 2rem; font-size: 0.65rem; color: var(--ctc-text-muted); background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--ctc-border-subtle); z-index: 20">✨ Visual match: detected from site</span>
+  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0">
+    <div style="position: absolute; top: -100px; right: -50px; width: 500px; height: 500px; background: var(--ctc-primary); opacity: 0.08; border-radius: 50%; filter: blur(100px)"></div>
+    <div style="position: absolute; bottom: -50px; left: -50px; width: 400px; height: 400px; background: var(--ctc-secondary, var(--ctc-primary)); opacity: 0.05; border-radius: 50%; filter: blur(80px)"></div>
+  </div>
+  <div class="ctc-hero-content" style="position: relative; z-index: 10; max-width: 56rem; margin: 0 auto">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ctc-primary); background: white; padding: 0.5rem 1.25rem; border-radius: 100px; box-shadow: var(--ctc-shadow-sm); margin-bottom: 2.5rem; border: 1px solid var(--ctc-border-subtle); position: relative; z-index: 10">🛡️ Gecertificeerd Partner</div>
+    <h1 class="ctc-hero-title" style="color: var(--ctc-hero-text, var(--ctc-text)); font-weight: 800; font-family: var(--ctc-font-display); font-size: clamp(2.8rem, 8vw, 4.8rem); line-height: 1.05; margin-bottom: 2rem; letter-spacing: -0.03em; text-transform: capitalize">
+      VVE Beheer - Professioneel Beheer voor uw Vereniging
+    </h1>
+    <p class="ctc-hero-subtitle" style="color: var(--ctc-hero-subtitle, var(--ctc-text-secondary)); font-size: 1.35rem; max-width: 42rem; margin: 0 auto 3.5rem; line-height: 1.7">
+      Volledig administratief beheer van uw VVE
+Financiële administratie en jaarrekeningen
+    </p>
+    
+    <div class="ctc-hero-actions" style="display: flex; gap: 1.5rem; justify-content: center">
+      <a href="#contact" style="background: var(--ctc-primary); color: white; box-shadow: 0 4px 12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); padding: 1.25rem 3rem; border-radius: var(--ctc-radius-full); font-weight: 800; text-decoration: none; transition: transform 0.2s ease; font-size: 1.125rem">
+        Get a quote
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="ctc-toc ctc-toc--inline" style="background: #ffffff; border-radius: var(--ctc-radius-lg); border: 1px solid var(--ctc-border-subtle); padding: 3rem; box-shadow: var(--ctc-shadow-float); z-index: 50; position: relative; margin: -6rem auto 6rem; width: 100%; max-width: 1100px;" aria-label="Inhoudsopgave">
+  <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--ctc-primary-light); display: inline-block">
+    <h2 style="font-family: var(--ctc-font-display); font-weight: 700; font-size: 1.5rem; color: var(--ctc-text); margin: 0; letter-spacing: -0.01em">Wat u kunt verwachten</h2>
+  </div>
+  <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem">
+    
+    <li>
+      <a href="#key-takeaways" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Belangrijkste Punten</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-1" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Wat Bieden Wij</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-2" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Drie Pijlers van Ons VVE Beheer</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-3" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Onze Werkwijze</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-4" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Voordelen van Professioneel VVE Beheer</span>
+      </a>
+    </li>
+    <li>
+      <a href="#section-5" style="display: flex; align-items: center; gap: 0.75rem; color: var(--ctc-text-secondary); text-decoration: none; font-size: 1rem; font-weight: 500; transition: color 0.2s ease">
+        <span style="color: var(--ctc-primary); opacity: 0.7; font-weight: 800">→</span>
+        <span>Veelgestelde Vragen</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<main class="ctc-main" role="main">
+<article class="ctc-article" itemscope itemtype="https://schema.org/Article">
+<meta itemprop="headline" content="VVE Beheer - Professioneel Beheer voor uw Vereniging">
+
+<section id="key-takeaways" class="ctc-prose ctc-section--hero py-12 md:py-16" style="background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%); color: white; padding: var(--ctc-space-16) var(--ctc-space-12); border-radius: var(--ctc-radius-2xl); position: relative; overflow: hidden; box-shadow: 0 30px 60px -12px color-mix(in srgb, var(--ctc-primary) 30%, transparent); position: relative; overflow: hidden">
+  
+      <div style="position: absolute; top: -30%; right: -15%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none; z-index: 0"></div>
+    
+  
+  <div style="position: relative; z-index: 1">
+    
+    <h2 id="belangrijkste-punten" class="ctc-section-heading" style="
+      font-weight: 800;
+      font-family: var(--ctc-font-display);
+      font-size: 2.25rem;
+      letter-spacing: -0.02em;
+      color: white;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    ">Belangrijkste Punten</h2>
+  </div>
+  <div class="ctc-prose-content" style="position: relative; z-index: 1; color: rgba(255,255,255,0.9); line-height: 1.8; font-size: 1.0625rem">
+    Volledig administratief beheer van uw VVE
+Financiële administratie en jaarrekeningen
+  </div>
+  <hr class="ctc-divider" style="border: 0; height: 1px; background: linear-gradient(to right, var(--ctc-border), transparent); margin-top: 2.5rem">
+</section>
+
+<div id="section-0" class="ctc-lead-paragraph py-12 md:py-16" style="position: relative">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px; opacity: 0.6"></div>
+  <div style="padding-left: var(--ctc-space-8); font-size: 1.25rem; line-height: 1.8; color: var(--ctc-text-secondary); font-weight: 400; letter-spacing: -0.01em">
+    # VVE Beheer - Professioneel Beheer voor uw Vereniging
+
+VVE beheer is essentieel voor het onderhoud en beheer van uw appartementencomplex. Een professionele VVE beheerder zorgt voor technisch beheer, administratief beheer en financieel beheer. Dit zorgt voor een zorgeloze woonomgeving.
+  </div>
+</div>
+
+<section id="section-1" class="ctc-card-grid ctc-section--featured py-8 md:py-10" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle)">
+  <h2 style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-10); color: var(--ctc-text); position: relative; z-index: 1">Wat Bieden Wij</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ctc-space-6); position: relative; z-index: 1">
+    
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">✨</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">Volledig administratief beheer van uw VVE</h3>
+      
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🎯</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">Financiële administratie en jaarrekeningen</h3>
+      
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🚀</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">Technisch onderhoud en inspectie</h3>
+      
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">💡</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">Begeleiding vergaderingen en besluitvorming</h3>
+      
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">⭐</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3">24/7 storingsmeldpunt</h3>
+      
+    </div>
+  </div>
+</section>
+
+<section id="section-2" class="ctc-prose ctc-card-grid-fallback ctc-section--featured py-8 md:py-10">
+  <h2 id="drie-pijlers-van-ons-vve-beheer" class="ctc-section-heading" style="font-weight: var(--ctc-heading-weight); font-family: var(--ctc-font-display); font-size: var(--ctc-text-2xl); color: var(--ctc-text)">Drie Pijlers van Ons VVE Beheer</h2>
+  <div class="ctc-prose-content">
+    <h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Administratief Beheer</h3>
+Volledige administratieve ondersteuning inclusief ledenadministratie, correspondentie en archivering.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Financieel Beheer</h3>
+Professionele financiële administratie met maandelijkse rapportages, begroting en jaarrekening.
+
+<h3 class="ctc-h3 text-xl font-semibold mt-6 mb-3">Technisch Beheer</h3>
+Technische inspecties, onderhoudsplannen en coördinatie van reparaties en renovaties.
+  </div>
+</section>
+
+<section id="section-3" class="ctc-timeline-vertical ctc-section--featured py-12 md:py-16" itemscope itemtype="https://schema.org/HowTo">
+  <h2 class="ctc-section-heading" style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-6); color: var(--ctc-text)" itemprop="name">Onze Werkwijze</h2>
+  
+  <div class="ctc-timeline-track" style="position: relative; padding-left: var(--ctc-space-12); max-width: 700px; margin: 0 auto">
+    <div class="ctc-timeline-line" style="position: absolute; left: 16px; top: 8px; bottom: 8px; width: 3px; background: linear-gradient(to bottom, var(--ctc-primary), var(--ctc-primary-light)); border-radius: 2px"></div>
+    
+    <div class="ctc-timeline-step" style="" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="1">
+      <span class="ctc-timeline-step-number">1</span>
+      <div class="ctc-timeline-step-content">
+        <h3 class="ctc-timeline-step-title" itemprop="name">Intake gesprek en inventarisatie van uw VVE</h3>
+        <p class="ctc-timeline-step-desc" itemprop="text">Stap 2: Opstellen beheersovereenkomst op maat</p>
+      </div>
+    </div>
+    <div class="ctc-timeline-step" style="padding-bottom: 0" itemscope itemprop="step" itemtype="https://schema.org/HowToStep">
+      <meta itemprop="position" content="2">
+      <span class="ctc-timeline-step-number">2</span>
+      <div class="ctc-timeline-step-content">
+        <h3 class="ctc-timeline-step-title" itemprop="name">Overdracht en implementatie van het beheer</h3>
+        <p class="ctc-timeline-step-desc" itemprop="text">Stap 4: Lopend beheer en kwartaalrapportage</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="section-4" class="ctc-card-grid ctc-section--featured py-8 md:py-10" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 3%, var(--ctc-surface)) 100%); border-radius: var(--ctc-radius-2xl); padding: var(--ctc-space-12); box-shadow: var(--ctc-shadow-float); border: 1px solid var(--ctc-border-subtle)">
+  <h2 style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: var(--ctc-text-2xl); text-align: center; margin-bottom: var(--ctc-space-10); color: var(--ctc-text); position: relative; z-index: 1">Voordelen van Professioneel VVE Beheer</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--ctc-space-6); position: relative; z-index: 1">
+    
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">✨</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Ontzorging</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">U hoeft zich nergens zorgen over te maken</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🎯</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Expertise</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Jarenlange ervaring in VVE beheer</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">🚀</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Transparantie</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Altijd inzicht in financiën en werkzaamheden</p>
+    </div>
+    <div class="ctc-card ctc-card--raised" style="padding: var(--ctc-space-8); ">
+      <div class="ctc-card-icon" aria-hidden="true">💡</div>
+      <h3 style="font-weight: 600; font-size: var(--ctc-text-lg); margin-bottom: var(--ctc-space-3); color: var(--ctc-text); line-height: 1.3"><strong>Bereikbaarheid</strong></h3>
+      <p style="font-size: var(--ctc-text-sm); color: var(--ctc-text-secondary); line-height: 1.7">Altijd een aanspreekpunt beschikbaar</p>
+    </div>
+  </div>
+</section>
+
+<section id="section-5" class="ctc-faq-accordion  py-12 md:py-16" itemscope itemtype="https://schema.org/FAQPage">
+  
+  <div style="text-align: center; margin-bottom: 2.5rem">
+    <span style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; padding: 0.5rem 1rem; border-radius: var(--ctc-radius-full); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem">
+      <span>❓</span> FAQ
+    </span>
+    <h2 style="font-family: var(--ctc-font-display); font-weight: var(--ctc-heading-weight); font-size: 1.75rem; color: var(--ctc-text); margin: 0">Veelgestelde Vragen</h2>
+  </div>
+  <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem">
+    
+    <div style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border-subtle); overflow: hidden; transition: all 0.2s ease" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 style="margin: 0">
+        <button type="button" aria-expanded="false" aria-controls="faq-answer-section-5-0" class="ctc-faq-trigger" style="width: 100%; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 1.25rem 1.5rem; background: transparent; border: none; cursor: pointer; font-size: 1.0625rem; font-weight: 600; color: var(--ctc-text); transition: all 0.2s ease; gap: 1rem">
+          <span style="display: flex; align-items: center; gap: 0.75rem">
+            <span style="width: 28px; height: 28px; min-width: 28px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-surface), var(--ctc-background)); border: 1px solid var(--ctc-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: var(--ctc-text-muted)">1</span>
+            <span itemprop="name">Wat kost VVE beheer per maand?</span>
+          </span>
+          <span class="ctc-faq-icon" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 300; transition: transform 0.2s ease" aria-hidden="true">+</span>
+        </button>
+      </h3>
+      <div id="faq-answer-section-5-0" class="ctc-faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" hidden>
+        <div style="padding: 0 1.5rem 1.5rem 4rem; color: var(--ctc-text-secondary); line-height: 1.7; font-size: 0.9375rem" itemprop="text">De kosten variëren afhankelijk van de grootte van de VVE en de gewenste diensten.</div>
+      </div>
+    </div>
+    <div style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border-subtle); overflow: hidden; transition: all 0.2s ease" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 style="margin: 0">
+        <button type="button" aria-expanded="false" aria-controls="faq-answer-section-5-1" class="ctc-faq-trigger" style="width: 100%; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 1.25rem 1.5rem; background: transparent; border: none; cursor: pointer; font-size: 1.0625rem; font-weight: 600; color: var(--ctc-text); transition: all 0.2s ease; gap: 1rem">
+          <span style="display: flex; align-items: center; gap: 0.75rem">
+            <span style="width: 28px; height: 28px; min-width: 28px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-surface), var(--ctc-background)); border: 1px solid var(--ctc-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: var(--ctc-text-muted)">2</span>
+            <span itemprop="name">Hoe lang duurt de overdracht van het beheer?</span>
+          </span>
+          <span class="ctc-faq-icon" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 300; transition: transform 0.2s ease" aria-hidden="true">+</span>
+        </button>
+      </h3>
+      <div id="faq-answer-section-5-1" class="ctc-faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" hidden>
+        <div style="padding: 0 1.5rem 1.5rem 4rem; color: var(--ctc-text-secondary); line-height: 1.7; font-size: 0.9375rem" itemprop="text">Een overdracht duurt gemiddeld 4-6 weken na ondertekening van de overeenkomst.</div>
+      </div>
+    </div>
+    <div style="background: var(--ctc-surface); border-radius: var(--ctc-radius-xl); border: 1px solid var(--ctc-border-subtle); overflow: hidden; transition: all 0.2s ease" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <h3 style="margin: 0">
+        <button type="button" aria-expanded="false" aria-controls="faq-answer-section-5-2" class="ctc-faq-trigger" style="width: 100%; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 1.25rem 1.5rem; background: transparent; border: none; cursor: pointer; font-size: 1.0625rem; font-weight: 600; color: var(--ctc-text); transition: all 0.2s ease; gap: 1rem">
+          <span style="display: flex; align-items: center; gap: 0.75rem">
+            <span style="width: 28px; height: 28px; min-width: 28px; border-radius: var(--ctc-radius-md); background: linear-gradient(135deg, var(--ctc-surface), var(--ctc-background)); border: 1px solid var(--ctc-border); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: var(--ctc-text-muted)">3</span>
+            <span itemprop="name">Kunnen we tussentijds opzeggen?</span>
+          </span>
+          <span class="ctc-faq-icon" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 300; transition: transform 0.2s ease" aria-hidden="true">+</span>
+        </button>
+      </h3>
+      <div id="faq-answer-section-5-2" class="ctc-faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer" hidden>
+        <div style="padding: 0 1.5rem 1.5rem 4rem; color: var(--ctc-text-secondary); line-height: 1.7; font-size: 0.9375rem" itemprop="text">Ja, met inachtneming van de opzegtermijn zoals vermeld in de beheersovereenkomst.</div>
+      </div>
+    </div>
+  </div>
+</section>
+</article>
+</main>
+
+<aside class="ctc-cta-banner" style="background: linear-gradient(135deg, var(--ctc-surface) 0%, color-mix(in srgb, var(--ctc-primary) 5%, var(--ctc-surface)) 100%); border: 1px solid var(--ctc-border); position: relative; overflow: hidden; border-radius: var(--ctc-radius-2xl); padding: 3rem 2rem; text-align: center; margin: 3rem 0; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.12)">
+  
+    <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: var(--ctc-primary); opacity: 0.05; border-radius: 50%; pointer-events: none"></div>
+    <div style="position: absolute; bottom: -40px; left: -40px; width: 100px; height: 100px; background: var(--ctc-primary); opacity: 0.03; border-radius: 50%; pointer-events: none"></div>
+  <div style="position: relative; z-index: 1">
+    <h2 class="ctc-cta-title" style="color: var(--ctc-text); font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin-bottom: 1rem">Ready to get started?</h2>
+    
+    <div class="ctc-cta-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap">
+      <a href="#contact" style="background: linear-gradient(135deg, var(--ctc-primary), var(--ctc-primary-light)); color: white; box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--ctc-primary) 40%, transparent); display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Get a quote
+        <span style="font-size: 1.125rem">→</span>
+      </a>
+      
+      <a href="#" style="background: transparent; color: var(--ctc-primary); border: 2px solid var(--ctc-primary); display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: var(--ctc-radius-full); font-weight: 600; text-decoration: none; transition: all 0.2s ease; font-size: 1rem">
+        Learn more
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function() {
+  // FAQ Accordion Toggle
+  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+    trigger.addEventListener('click', function() {
+      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
+      var icon = trigger.querySelector('.ctc-faq-icon');
+      var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+
+      trigger.setAttribute('aria-expanded', !isExpanded);
+      if (answer) {
+        answer.hidden = isExpanded;
+      }
+      if (icon) {
+        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      }
+    });
+  });
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Add hover effects for cards and interactive elements
+  document.querySelectorAll('.ctc-toc a').forEach(function(link) {
+    link.addEventListener('mouseenter', function() {
+      this.style.background = 'var(--ctc-surface)';
+    });
+    link.addEventListener('mouseleave', function() {
+      this.style.background = 'transparent';
+    });
+  });
+})();
+</script>
+</div>
+  </main>
+</body>
+</html>

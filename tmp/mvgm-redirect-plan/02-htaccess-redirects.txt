@@ -1,0 +1,178 @@
+# =============================================================================
+# MVGM VvE Beheer Redirect Rules - Apache .htaccess
+# =============================================================================
+#
+# INSTRUCTIONS:
+# 1. Add these rules to the .htaccess file on mvgm.com
+# 2. Place BEFORE any existing rewrite rules
+# 3. Implement in phases as indicated by comments
+# 4. Test each phase before proceeding to the next
+#
+# =============================================================================
+
+RewriteEngine On
+
+# =============================================================================
+# PHASE 1: Legal, Contact & News Pages (09-02-2026)
+# =============================================================================
+
+# Legal pages
+RewriteRule ^nl/privacybeleid/?$ https://mvgm-vvebeheer.nl/privacybeleid/ [R=301,L]
+RewriteRule ^nl/disclaimer/?$ https://mvgm-vvebeheer.nl/disclaimer/ [R=301,L]
+RewriteRule ^nl/cookiebeleid/?$ https://mvgm-vvebeheer.nl/cookiebeleid/ [R=301,L]
+
+# Contact & Service pages
+RewriteRule ^nl/contact/?$ https://mvgm-vvebeheer.nl/over-ons/contact/ [R=301,L]
+RewriteRule ^nl/storing-melden/?$ https://mvgm-vvebeheer.nl/storing-melden/ [R=301,L]
+
+# News articles
+RewriteRule ^nl/mvgm-vve-biedt-trainees-een-veelzijdige-kick-start-van-hun-carriere-in-het-vastgoed/?$ https://mvgm-vvebeheer.nl/nieuws/kickstart-carriere-in-vastgoed/ [R=301,L]
+RewriteRule ^nl/mvgm-neemt-het-vve-beheer-van-ruijters-vastgoed-over/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-neemt-het-vve-beheer-van-ruijters-vastgoed-over/ [R=301,L]
+RewriteRule ^nl/mvgm-vve-op-de-vve-beurs-haaglanden/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-vve-op-de-vve-beurs-haaglanden/ [R=301,L]
+RewriteRule ^nl/mvgm-neemt-vve-beheer-van-marsaki-over/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-neemt-vve-beheer-van-marsaki-over/ [R=301,L]
+RewriteRule ^nl/mvgm-vve-in-middelburg-nu-ook-lokaal-aanwezig-middelburg/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-vve-in-middelburg-nu-ook-lokaal-aanwezig-middelburg/ [R=301,L]
+RewriteRule ^nl/wel-of-geen-inboedelverzekering/?$ https://mvgm-vvebeheer.nl/nieuws/wel-of-geen-inboedelverzekering/ [R=301,L]
+RewriteRule ^nl/mvgm-vve-lanceert-nieuwe-beheerpakketten-en-biedt-hiermee-altijd-een-pakket-aan-die-het-beste-bij-de-wensen-van-een-vve-past/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-vve-lanceert-nieuwe-beheerpakketten-en-biedt-hiermee-altijd-een-pakket-aan-die-het-beste-bij-de-wensen-van-een-vve-past/ [R=301,L]
+RewriteRule ^nl/mvgm-vve-behaalt-opnieuw-het-prestigieuze-skg-ikob-certificaat/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-vve-behaalt-opnieuw-het-prestigieuze-skg-ikob-certificaat/ [R=301,L]
+RewriteRule ^nl/mvgm-kondigt-samenwerking-vvemanager-aan/?$ https://mvgm-vvebeheer.nl/nieuws/mvgm-kondigt-samenwerking-vvemanager-aan/ [R=301,L]
+RewriteRule ^nl/efficienter-overzichtelijker-vve-beheer-overstap-naar-softwarepakket-twinq/?$ https://mvgm-vvebeheer.nl/nieuws/overstap-naar-softwarepakket-twinq/ [R=301,L]
+RewriteRule ^nl/40-procent-energiebesparing-voor-vve/?$ https://mvgm-vvebeheer.nl/nieuws/40-procent-energiebesparing-voor-vve/ [R=301,L]
+RewriteRule ^nl/passend-vve-beheer/?$ https://mvgm-vvebeheer.nl/nieuws/passend-vve-beheer/ [R=301,L]
+RewriteRule ^nl/wet-verbetering-functioneren-vve-voor-kleine-vves-wat-te-doen/?$ https://mvgm-vvebeheer.nl/nieuws/wet-verbetering-functioneren-vve-voor-kleine-vves/ [R=301,L]
+
+
+# =============================================================================
+# PHASE 2: Core Product & Conversion Pages (16-02-2026)
+# =============================================================================
+
+# --- OFFERTE PAGES WITH QUERY STRINGS (must come FIRST) ---
+# These use RewriteCond to match query parameters
+
+RewriteCond %{QUERY_STRING} vve-keuzes=VvE%20Beheer%20Excellent [NC]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/pakket/excellent/offerte/? [R=301,L]
+
+RewriteCond %{QUERY_STRING} vve-keuzes=VvE%20Beheer%20Start [NC]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/pakket/start/offerte/? [R=301,L]
+
+RewriteCond %{QUERY_STRING} vve-keuzes=VvE%20Beheer%20Premium [NC]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/pakket/premium/offerte/? [R=301,L]
+
+RewriteCond %{QUERY_STRING} vve-keuzes=VvE%20Beheer%20Plus [NC]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/pakket/plus/offerte/? [R=301,L]
+
+RewriteCond %{QUERY_STRING} vve-keuzes=VvE%20Beheer%20Selectief [NC]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/pakket/selectief/offerte/? [R=301,L]
+
+RewriteCond %{QUERY_STRING} vve-keuzes=VvE%20Beheer%20Klein%20Compleet [NC]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/pakket/? [R=301,L]
+
+# --- MAIN VVE-BEHEER HOMEPAGE (exact match first) ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/?$ https://mvgm-vvebeheer.nl/ [R=301,L]
+
+# --- PACKAGE PAGES ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/vve-beheer-premium/?$ https://mvgm-vvebeheer.nl/pakket/premium/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/vve-beheer-plus/?$ https://mvgm-vvebeheer.nl/pakket/plus/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/vve-beheer-start/?$ https://mvgm-vvebeheer.nl/pakket/start/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/vve-beheer-excellent/?$ https://mvgm-vvebeheer.nl/pakket/excellent/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/vve-beheer-selectief/?$ https://mvgm-vvebeheer.nl/pakket/selectief/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/compacte-vve-pakketten/?$ https://mvgm-vvebeheer.nl/pakket/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/compacte-vve-pakketten/?$ https://mvgm-vvebeheer.nl/pakket/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/extra-producten/?$ https://mvgm-vvebeheer.nl/pakket/additionele-diensten/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/vve-beheer-klein-compleet/?$ https://mvgm-vvebeheer.nl/pakket/ [R=301,L]
+
+# --- CONVERSION PAGES ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/offerte-aanvraag/?$ https://mvgm-vvebeheer.nl/offerte-aanvraag/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/bedankt-voor-uw-interesse/?$ https://mvgm-vvebeheer.nl/bedankt/ [R=301,L]
+
+# --- CUSTOMER SERVICE PAGES ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/ik-ben-al-klant-mijn-vve/?$ https://mvgm-vvebeheer.nl/ik-ben-al-klant-mijn-vve/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/automatische-incasso/?$ https://mvgm-vvebeheer.nl/automatische-incasso/ [R=301,L]
+
+# --- TEAM/ABOUT PAGES ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/managementteam-mvgm-vve/?$ https://mvgm-vvebeheer.nl/over-ons/managementteam-mvgm-vve/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/team-bankzaken-crediteuren/?$ https://mvgm-vvebeheer.nl/over-ons/team-bankzaken-crediteuren/ [R=301,L]
+
+# --- FAQ PAGES ---
+RewriteRule ^vve-faq/ik-wil-mijn-automatisch-incasso-stopzetten/?$ https://mvgm-vvebeheer.nl/faq/automatisch-incasso-stopzetten/ [R=301,L]
+RewriteRule ^vve-faq/ik-wil-mijn-vve-bijdrage-automatisch-laten-incasseren/antwoord-ik-wil-mijn-vve-bijdrage-automatisch-laten-incasseren/?$ https://mvgm-vvebeheer.nl/faq/vve-bijdrage-automatisch-incasseren/ [R=301,L]
+RewriteRule ^vve-faq/ik-wil-mijn-vve-bijdrage-automatisch-laten-incasseren/?$ https://mvgm-vvebeheer.nl/faq/vve-bijdrage-automatisch-incasseren/ [R=301,L]
+
+
+# =============================================================================
+# PHASE 3: Location & Regional Pages (23-02-2026)
+# =============================================================================
+
+# --- TEAM PAGE ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/team-schade/?$ https://mvgm-vvebeheer.nl/over-ons/team-schade/ [R=301,L]
+
+# --- SUSTAINABILITY ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/verduurzaming/stappenplan-verduurzamen-van-uw-vve/?$ https://mvgm-vvebeheer.nl/vve/duurzaamheid-esg/ [R=301,L]
+RewriteRule ^nl/esg-vve/?$ https://mvgm-vvebeheer.nl/vve/duurzaamheid-esg/ [R=301,L]
+
+# --- NEWBUILD VVE ---
+RewriteRule ^nl/opstarten-nieuwbouw-vve/?$ https://mvgm-vvebeheer.nl/opstarten-nieuwbouw-vve/ [R=301,L]
+RewriteRule ^nl/vve-beheer/vve-beheer-voor-nieuwbouwprojecten/?$ https://mvgm-vvebeheer.nl/opstarten-nieuwbouw-vve/ [R=301,L]
+
+# --- REGION PAGES ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/mvgm-vve-regio-noord-west/?$ https://mvgm-vvebeheer.nl/noord-west/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/mvgm-vve-regio-zuid-west/?$ https://mvgm-vvebeheer.nl/zuid-west/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/mvgm-vve-regio-midden-west/?$ https://mvgm-vvebeheer.nl/midden-west/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/mvgm-vve-regio-zuid-oost/?$ https://mvgm-vvebeheer.nl/zuid-oost/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/mvgm-vve-regio-noord-oost/?$ https://mvgm-vvebeheer.nl/noord-oost/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/mvgm-vve-regio-midden-oost/?$ https://mvgm-vvebeheer.nl/midden-oost/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/rijnmond/?$ https://mvgm-vvebeheer.nl/rijnmond/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/zeeland/?$ https://mvgm-vvebeheer.nl/zeeland/ [R=301,L]
+
+# --- CITY PAGES (from /vastgoeddiensten/vve-beheer/ path) ---
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/amsterdam/?$ https://mvgm-vvebeheer.nl/amsterdam/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/rotterdam/?$ https://mvgm-vvebeheer.nl/rotterdam/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/utrecht/?$ https://mvgm-vvebeheer.nl/utrecht/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/den-haag/?$ https://mvgm-vvebeheer.nl/den-haag/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/den-haag-rijswijk/?$ https://mvgm-vvebeheer.nl/den-haag-rijswijk/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/eindhoven/?$ https://mvgm-vvebeheer.nl/eindhoven/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/tilburg/?$ https://mvgm-vvebeheer.nl/tilburg/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/breda/?$ https://mvgm-vvebeheer.nl/breda/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/groningen/?$ https://mvgm-vvebeheer.nl/groningen/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/almere/?$ https://mvgm-vvebeheer.nl/almere/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/nijmegen/?$ https://mvgm-vvebeheer.nl/nijmegen/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/arnhem/?$ https://mvgm-vvebeheer.nl/arnhem/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/arnhem-2/?$ https://mvgm-vvebeheer.nl/arnhem/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/enschede/?$ https://mvgm-vvebeheer.nl/enschede/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/apeldoorn/?$ https://mvgm-vvebeheer.nl/apeldoorn/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/amersfoort/?$ https://mvgm-vvebeheer.nl/amersfoort/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/zwolle/?$ https://mvgm-vvebeheer.nl/zwolle/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/deventer/?$ https://mvgm-vvebeheer.nl/deventer/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/leeuwarden/?$ https://mvgm-vvebeheer.nl/leeuwarden/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/maastricht/?$ https://mvgm-vvebeheer.nl/maastricht/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/leiden/?$ https://mvgm-vvebeheer.nl/leiden/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/den-bosch/?$ https://mvgm-vvebeheer.nl/den-bosch/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/dordrecht/?$ https://mvgm-vvebeheer.nl/dordrecht/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/limmen/?$ https://mvgm-vvebeheer.nl/limmen/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/emmen/?$ https://mvgm-vvebeheer.nl/emmen/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/assen/?$ https://mvgm-vvebeheer.nl/assen/ [R=301,L]
+RewriteRule ^nl/vastgoeddiensten/vve-beheer/lelystad/?$ https://mvgm-vvebeheer.nl/lelystad/ [R=301,L]
+
+# --- CITY PAGES (from /vve-beheer/ alternative path) ---
+RewriteRule ^nl/vve-beheer/amsterdam/?$ https://mvgm-vvebeheer.nl/amsterdam/ [R=301,L]
+RewriteRule ^nl/vve-beheer/rotterdam/?$ https://mvgm-vvebeheer.nl/rotterdam/ [R=301,L]
+RewriteRule ^nl/vve-beheer/utrecht/?$ https://mvgm-vvebeheer.nl/utrecht/ [R=301,L]
+RewriteRule ^nl/vve-beheer/eindhoven/?$ https://mvgm-vvebeheer.nl/eindhoven/ [R=301,L]
+RewriteRule ^nl/vve-beheer/tilburg/?$ https://mvgm-vvebeheer.nl/tilburg/ [R=301,L]
+RewriteRule ^nl/vve-beheer/breda/?$ https://mvgm-vvebeheer.nl/breda/ [R=301,L]
+RewriteRule ^nl/vve-beheer/groningen/?$ https://mvgm-vvebeheer.nl/groningen/ [R=301,L]
+RewriteRule ^nl/vve-beheer/almere/?$ https://mvgm-vvebeheer.nl/almere/ [R=301,L]
+RewriteRule ^nl/vve-beheer/nijmegen/?$ https://mvgm-vvebeheer.nl/nijmegen/ [R=301,L]
+RewriteRule ^nl/vve-beheer/arnhem/?$ https://mvgm-vvebeheer.nl/arnhem/ [R=301,L]
+RewriteRule ^nl/vve-beheer/zwolle/?$ https://mvgm-vvebeheer.nl/zwolle/ [R=301,L]
+RewriteRule ^nl/vve-beheer/deventer/?$ https://mvgm-vvebeheer.nl/deventer/ [R=301,L]
+RewriteRule ^nl/vve-beheer/leeuwarden/?$ https://mvgm-vvebeheer.nl/leeuwarden/ [R=301,L]
+RewriteRule ^nl/vve-beheer/maastricht/?$ https://mvgm-vvebeheer.nl/maastricht/ [R=301,L]
+RewriteRule ^nl/vve-beheer/leiden/?$ https://mvgm-vvebeheer.nl/leiden/ [R=301,L]
+RewriteRule ^nl/vve-beheer/den-bosch/?$ https://mvgm-vvebeheer.nl/den-bosch/ [R=301,L]
+RewriteRule ^nl/vve-beheer/limmen/?$ https://mvgm-vvebeheer.nl/limmen/ [R=301,L]
+RewriteRule ^nl/vve-beheer/middelburg/?$ https://mvgm-vvebeheer.nl/middelburg/ [R=301,L]
+
+
+# =============================================================================
+# END OF MVGM VVE BEHEER REDIRECTS
+# =============================================================================

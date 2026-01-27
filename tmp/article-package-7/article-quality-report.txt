@@ -1,0 +1,90 @@
+═══════════════════════════════════════════════════════════════════════════════
+                         CONTENT QUALITY REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+Article: Naden en Aansluitingen Controleren
+Generated: January 14, 2026
+
+─────────────────────────────────────────────────────────────────────────────────
+                            OVERVIEW
+─────────────────────────────────────────────────────────────────────────────────
+
+Overall Quality Score: 80/100
+Word Count: 3.007
+Character Count: 27.674
+Optimization Passes Completed: 10
+
+─────────────────────────────────────────────────────────────────────────────────
+                         AUDIT CHECKS
+─────────────────────────────────────────────────────────────────────────────────
+
+No detailed audit available. Run the audit to see specific checks.
+
+EAV Coverage: Not checked
+Link Coverage: Not checked
+Linguistic Score: N/A/100
+
+─────────────────────────────────────────────────────────────────────────────────
+                           IMAGES
+─────────────────────────────────────────────────────────────────────────────────
+
+Total Images: 8
+
+
+Image 1: HERO
+  Description: Technische close-up fotoreeks van vier inspectietechnieken voor verticale lasverbindingen: handmatige adhesietest met schroevendraaier langs randzones, infraroodcamera heatmap overlay die temperatuurafwijkingen toont in geel-oranje spectrum, digitale schuifmaat die overlapbreedte meet op 82mm, en close-up van bladdervorming met duimdruktest. Rechterkolom toont correcte versus incorrecte lasnaad in dwarsdoorsnede.
+  Alt Text: Visuele en tactiele testmethoden voor longitudinale verbindingspunten tussen dakbaanstroken met meetinstrumenten en thermografische detectieapparatuur
+  Status: placeholder
+  Not yet generated
+
+
+Image 2: SECTION
+  Description: Gedetailleerde anatomie-illustratie van een wandovergang in exploded view met zes genummerde componenten: (1) opstaande dakbedekking 250mm hoogte met gele markering, (2) aluminium afsluitprofiel met schroefbevestiging, (3) primaire kleefverbinding zone in blauw gearceerd, (4) elastische primer laag, (5) secundaire sealant afdichting, (6) voegvulling. Linker helft toont correcte installatie, rechter helft toont drie veelvoorkomende gebreken: onvoldoende opstandhoogte (185mm in rood), loslatende kleefverbinding met luchtspleet, ontbrekende afsluitlat met opkrullende dakbedekking.
+  Alt Text: Dwarsdoorsnede wandovergang met gelabelde lagen en vergelijking tussen correcte installatie en typische constructiefouten bij verticale transitiezones
+  Status: placeholder
+  Not yet generated
+
+
+Image 3: DIAGRAM
+  Description: Isometrisch diagram van zes verschillende doorvoertypes op plat dak met cutaway views: ventilatiebuizen 110mm en 160mm diameter met rubber afdichtingskraag en kleefflens, elektrische kabeldoorvoer met manchet en spanbanden, hemelwaterafvoer met metalen klemflens, HVAC-leiding met multi-diameter adapter, antenne-doorvoer met flexibele basis, en zonne-energie kabelgoot. Elk element heeft kleurcode (groen=correct geïnstalleerd, oranje=inspectie vereist, rood=vervangen). Detailcirkels tonen overlapping-zones met millimeter-aanduidingen (150mm, 180mm, 200mm).
+  Alt Text: Verschillende penetratiepunten met afdichtingsmantels en overlappingszones inclusief ventilatiebuizen en leidingdoorvoeren met materiaalspecificaties
+  Status: placeholder
+  Not yet generated
+
+
+Image 4: SECTION
+  Description: Bovenaanzicht schema van hemelwaterafvoer-installatie met vier concentrische zones: binnenste cirkel toont afvoerkraag met acht mechanische ankerpunten in sterpatroon (rood gemarkeerd), tweede ring illustreert bitumineuze aansluitstrook met adhesie-indicatoren (groen=2,8 N/mm², oranje=2,2 N/mm², rood=1,8 N/mm²), derde zone toont overloopvoorziening op 50mm hoogte met pijlsymbolen voor waterstroom, buitenste ring bevat bladvangerrooster met sediment-ophopingvisualisatie. Zijaanzicht detail toont laagopbouw met diktemeting 200-250 micrometer laklaag op metaal.
+  Alt Text: Drainage-interfacepunt met mechanische bevestigingsconfiguratie, overloopvoorziening en adhesie-metingen voor waterdicht systeem
+  Status: placeholder
+  Not yet generated
+
+
+Image 5: SECTION
+  Description: Driedimensionale stress-analyse visualisatie van hoekpunt en T-naad met kleurgecodeerde spanningsgradiënten: donkerrood toont maximale trekspanning 2,5x standaardwaarde bij 90-graden hoek, oranje-geel gradient toont spanningsdistributie over versterkingslagen, groen markeert lage-stress zones. Boven: hoekversterking dwarsdoorsnede met drie bitumenlagen (buitenste 250mm breed, middelste 300mm, binnenste 250mm). Onder: T-naad configuratie met drielaagse overlap waarbij middelste laag 100mm breder uitvoert. Pijliconen tonen thermische expansierichting bij -15°C en +70°C. GPS-coördinaat marker in hoek. Klein inzetvenster toont ijskristalvorming in microfissuren met 40x vergroting.
+  Alt Text: Geometrische stresszones met spanningsdistributie en versterkingsdetails bij convergentiepunten van meerdere dakbaanstroken met laagopbouw specificaties
+  Status: placeholder
+  Not yet generated
+
+
+Image 6: SECTION
+  Description: Vergelijkende kalendermatrix met vier seizoenskwadranten voor dakbedekking in Brabant: lente-kolom toont neerslagpatronen en vochtdetectiekansen, zomer-kolom illustreert UV-stralingsimpact en thermische belasting, herfst-kolom presenteert temperatuurschommelingen en condensatierisico's, winter-kolom markeert vriescycli en beperkingen. Elke kwadrant bevat klimaatgegevens (temperatuurgrafieken, neerslaghistogrammen), inspectie-focus-iconen (voegwerk, overgangszones, hemelwaterafvoer) en aanbevolen frequentie-indicatoren met regionale weerstatistieken
+  Alt Text: jaarlijks klimaatschema inspectiecyclus dakbedekking met regionale weerdata en risico-indicatoren per periode
+  Status: placeholder
+  Not yet generated
+
+
+Image 7: SECTION
+  Description: Geïllustreerde vergelijkingstabel met split-screen visualisatie: linkerzijde toont vakspecialist met infraroodcamera die verborgen vochtplekken detecteert onder daklaag, elektronische meetapparatuur met digitale displays en gedetailleerd inspectierapport met fotodocumentatie; rechterzijde toont gebouweigenaar met visuele checklist, verrekijker en basisnotitieblok die oppervlaktegebreken waarneemt. Grafische verbindingslijnen tonen detectiediepte-verschil met doorsnede-illustratie van dakopbouw
+  Alt Text: methodevergelijking vakkundige tegenover zelfuitgevoerde dakinspectie met apparatuur en resultaatdiepte visualisatie
+  Status: placeholder
+  Not yet generated
+
+
+Image 8: DIAGRAM
+  Description: Gedetailleerd documentatieproces-stroomdiagram met vier fasen: fase 1 toont smartphone met GPS-locatiebepaling en tijdstempel-interface, fase 2 illustreert drievoudige fotografietechniek (overzichtsfoto 3 meter afstand, close-up detailopname, contextbeeld met referentiepunten), fase 3 presenteert classificatiesysteem met kleurgecodeerde urgentie-badges (A-rood direct, B-oranje 14 dagen, C-geel 3 maanden, D-groen cosmetisch), fase 4 toont digitaal inspectierapport met fotogalerij en technische specificaties volgens NEN 6000-norm
+  Alt Text: systematisch registratieprotocol dakgebreken met GPS-localisatie fotografiedocumentatie en ernst-categorisering workflow
+  Status: placeholder
+  Not yet generated
+
+
+═══════════════════════════════════════════════════════════════════════════════

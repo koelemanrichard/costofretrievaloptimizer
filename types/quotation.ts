@@ -134,6 +134,8 @@ export interface UrlAnalysisResult {
   siteSize: SiteSize;
   complexityScore: number;
   analyzedAt: string;
+  /** Indicates this analysis is based on URL pattern heuristics, not actual crawl data */
+  isEstimate?: boolean;
 }
 
 // =============================================================================

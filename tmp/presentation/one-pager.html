@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Holistic SEO Workbench - One Pager</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.4;
+      color: #1E293B;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 12mm;
+      background: white;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8mm;
+      padding-bottom: 4mm;
+      border-bottom: 3px solid #667EEA;
+    }
+    .logo-section h1 {
+      font-size: 22pt;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667EEA, #764BA2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo-section p {
+      font-size: 9pt;
+      color: #64748B;
+    }
+    .header-stats {
+      display: flex;
+      gap: 15px;
+    }
+    .stat-box {
+      text-align: center;
+      padding: 6px 12px;
+      background: #F8FAFC;
+      border-radius: 6px;
+      border: 1px solid #E2E8F0;
+    }
+    .stat-box .num {
+      font-size: 16pt;
+      font-weight: 700;
+      color: #667EEA;
+    }
+    .stat-box .label {
+      font-size: 7pt;
+      color: #64748B;
+      text-transform: uppercase;
+    }
+
+    .tagline {
+      background: linear-gradient(135deg, #667EEA, #764BA2);
+      color: white;
+      padding: 8mm;
+      border-radius: 8px;
+      margin-bottom: 6mm;
+      text-align: center;
+    }
+    .tagline h2 {
+      font-size: 13pt;
+      margin-bottom: 2mm;
+    }
+    .tagline p {
+      font-size: 9pt;
+      opacity: 0.9;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+      margin-bottom: 5mm;
+    }
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4mm;
+      margin-bottom: 5mm;
+    }
+
+    .section {
+      background: #F8FAFC;
+      padding: 4mm;
+      border-radius: 6px;
+      border-left: 3px solid #667EEA;
+    }
+    .section.accent { border-left-color: #F97316; }
+    .section.success { border-left-color: #10B981; }
+    .section h3 {
+      font-size: 10pt;
+      color: #667EEA;
+      margin-bottom: 2mm;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .section.accent h3 { color: #F97316; }
+    .section.success h3 { color: #10B981; }
+    .section ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .section li {
+      font-size: 8.5pt;
+      margin-bottom: 1mm;
+      padding-left: 12px;
+      position: relative;
+    }
+    .section li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #10B981;
+      font-size: 8pt;
+    }
+
+    .passes-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 2mm;
+      margin-bottom: 5mm;
+    }
+    .pass-item {
+      background: #667EEA;
+      color: white;
+      padding: 3mm;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .pass-item .num {
+      font-size: 12pt;
+      font-weight: 700;
+    }
+    .pass-item .name {
+      font-size: 6pt;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .roi-section {
+      background: #1A1A2E;
+      color: white;
+      padding: 5mm;
+      border-radius: 8px;
+      margin-bottom: 5mm;
+    }
+    .roi-section h3 {
+      color: #F97316;
+      font-size: 10pt;
+      margin-bottom: 3mm;
+      text-align: center;
+    }
+    .roi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm;
+    }
+    .roi-box {
+      background: rgba(255,255,255,0.1);
+      padding: 3mm;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .roi-box .title {
+      font-size: 8pt;
+      opacity: 0.8;
+      margin-bottom: 1mm;
+    }
+    .roi-box .value {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #F97316;
+    }
+    .roi-box .detail {
+      font-size: 7pt;
+      opacity: 0.7;
+    }
+
+    .features-compact {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3mm;
+      margin-bottom: 5mm;
+    }
+    .feature-item {
+      background: #F8FAFC;
+      padding: 3mm;
+      border-radius: 4px;
+      text-align: center;
+      border: 1px solid #E2E8F0;
+    }
+    .feature-item .icon {
+      font-size: 14pt;
+      margin-bottom: 1mm;
+    }
+    .feature-item .name {
+      font-size: 7.5pt;
+      font-weight: 600;
+      color: #1E293B;
+    }
+
+    .footer {
+      margin-top: 4mm;
+      padding-top: 4mm;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-left {
+      font-size: 8pt;
+      color: #64748B;
+    }
+    .footer-cta {
+      background: linear-gradient(135deg, #667EEA, #764BA2);
+      color: white;
+      padding: 3mm 8mm;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 9pt;
+    }
+    .footer-contact {
+      text-align: right;
+      font-size: 8pt;
+    }
+    .footer-contact strong {
+      color: #667EEA;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-section">
+      <h1>Holistic SEO Workbench</h1>
+      <p>Next-Gen SEO Strategy & Content Generation Platform</p>
+    </div>
+    <div class="header-stats">
+      <div class="stat-box">
+        <div class="num">9</div>
+        <div class="label">Passes</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">129+</div>
+        <div class="label">Audit Rules</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">17+</div>
+        <div class="label">API Services</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">5</div>
+        <div class="label">AI Providers</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tagline">
+    <h2>Entity-Focused SEO. Not Keyword-Focused.</h2>
+    <p>Build topical authority with semantic relationships using the proven Holistic SEO methodology by Koray Tugberk GUBUR</p>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <h3>The Problem We Solve</h3>
+      <ul>
+        <li>No clear content strategy or topic prioritization</li>
+        <li>Missing semantic relationships and topical authority</li>
+        <li>No systematic approach to featured snippets</li>
+        <li>AI-generated content feels generic and robotic</li>
+      </ul>
+    </div>
+    <div class="section accent">
+      <h3>Our Solution</h3>
+      <ul>
+        <li>Entity-Attribute-Value framework for semantic SEO</li>
+        <li>9-pass AI content generation with quality audits</li>
+        <li>Featured snippet optimization built-in</li>
+        <li>Multi-provider AI support (OpenAI, Anthropic, Gemini)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="passes-grid">
+    <div class="pass-item"><div class="num">1</div><div class="name">Draft</div></div>
+    <div class="pass-item"><div class="num">2</div><div class="name">Headers</div></div>
+    <div class="pass-item"><div class="num">3</div><div class="name">Intro</div></div>
+    <div class="pass-item"><div class="num">4</div><div class="name">Lists</div></div>
+    <div class="pass-item"><div class="num">5</div><div class="name">Flow</div></div>
+    <div class="pass-item"><div class="num">6</div><div class="name">Micro</div></div>
+    <div class="pass-item"><div class="num">7</div><div class="name">Visual</div></div>
+    <div class="pass-item"><div class="num">8</div><div class="name">Audit</div></div>
+    <div class="pass-item"><div class="num">9</div><div class="name">Schema</div></div>
+  </div>
+
+  <div class="roi-section">
+    <h3>ROI Calculator</h3>
+    <div class="roi-grid">
+      <div class="roi-box">
+        <div class="title">Medium Business (20 articles/mo)</div>
+        <div class="value">$4,500/mo saved</div>
+        <div class="detail">75% cost reduction • 80 hours saved</div>
+      </div>
+      <div class="roi-box">
+        <div class="title">Enterprise (100+ articles/mo)</div>
+        <div class="value">$25,000/mo saved</div>
+        <div class="detail">83% cost reduction • 400 hours saved</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="three-col">
+    <div class="section">
+      <h3>Strategy Features</h3>
+      <ul>
+        <li>Business Info & SEO Pillars Wizard</li>
+        <li>EAV (Entity-Attribute-Value) Discovery</li>
+        <li>Topical Map Generation (50-100+ topics)</li>
+        <li>Knowledge Graph Visualization</li>
+        <li>Competitor Gap Analysis</li>
+      </ul>
+    </div>
+    <div class="section accent">
+      <h3>Content Creation</h3>
+      <ul>
+        <li>Content Brief Generation with SERP data</li>
+        <li>9-Pass AI Content Generation</li>
+        <li>Batch Generation (50+ articles)</li>
+        <li>AI Strategist Context Assistant</li>
+        <li>WordPress Direct Publishing</li>
+      </ul>
+    </div>
+    <div class="section success">
+      <h3>Quality & Analysis</h3>
+      <ul>
+        <li>129+ Content Audit Rules</li>
+        <li>Entity Authority Scoring</li>
+        <li>Internal Link Audit (Neo4j)</li>
+        <li>E-A-T Scanner</li>
+        <li>Migration Workbench</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="features-compact">
+    <div class="feature-item"><div class="icon">🎯</div><div class="name">Featured Snippet Targeting</div></div>
+    <div class="feature-item"><div class="icon">🔗</div><div class="name">Internal Link Suggestions</div></div>
+    <div class="feature-item"><div class="icon">📊</div><div class="name">Schema JSON-LD Generator</div></div>
+    <div class="feature-item"><div class="icon">🖼️</div><div class="name">AI Image Placeholders</div></div>
+    <div class="feature-item"><div class="icon">📝</div><div class="name">5 Draft Editor Views</div></div>
+    <div class="feature-item"><div class="icon">🔒</div><div class="name">Encrypted API Keys</div></div>
+    <div class="feature-item"><div class="icon">⚡</div><div class="name">Real-time Progress</div></div>
+    <div class="feature-item"><div class="icon">🌐</div><div class="name">Multi-language Support</div></div>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <h3>Integrated API Services</h3>
+      <ul>
+        <li><strong>AI:</strong> Gemini, OpenAI, Anthropic, Perplexity, OpenRouter</li>
+        <li><strong>SERP:</strong> DataForSEO, Wikidata Entity Resolution</li>
+        <li><strong>Scraping:</strong> Jina.ai, Apify, Firecrawl</li>
+        <li><strong>Publishing:</strong> WordPress API, Cloudinary, MarkupGo</li>
+        <li><strong>Analysis:</strong> Neo4j Graph Database</li>
+      </ul>
+    </div>
+    <div class="section success">
+      <h3>Perfect For</h3>
+      <ul>
+        <li><strong>SEO Agencies:</strong> Scale across multiple clients</li>
+        <li><strong>In-House Teams:</strong> Build topical authority systematically</li>
+        <li><strong>Content Writers:</strong> AI that understands SEO</li>
+        <li><strong>Enterprise:</strong> Team collaboration & white-label</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">
+      Bring your own AI API keys • No markup on AI costs • Enterprise-grade security
+    </div>
+    <div class="footer-cta">GET STARTED FREE</div>
+    <div class="footer-contact">
+      <strong>holistic-seo-workbench.com</strong><br>
+      Based on Koray Tugberk GUBUR's methodology
+    </div>
+  </div>
+</body>
+</html>
