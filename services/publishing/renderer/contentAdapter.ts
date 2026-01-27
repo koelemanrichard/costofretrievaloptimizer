@@ -112,6 +112,28 @@ function flattenBriefSection(
 export function htmlToArticleContent(html: string, title: string): ArticleContent {
   const sections: ArticleContent['sections'] = [];
 
+  // Detect content format: HTML vs Markdown
+  const hasHtmlHeadings = /<h[2-6][^>]*>/i.test(html);
+  const hasMarkdownHeadings = /^#{2,6}\s+/m.test(html);
+
+  // DEBUG: Log the incoming content to diagnose parsing issues
+  console.log('[htmlToArticleContent] INPUT:', {
+    title,
+    contentLength: html.length,
+    contentFirst500: html.substring(0, 500),
+    format: hasHtmlHeadings ? 'HTML' : hasMarkdownHeadings ? 'MARKDOWN' : 'UNKNOWN',
+    hasHtmlHeadings,
+    hasMarkdownHeadings,
+  });
+
+  // If content is in Markdown format, use markdown parser
+  if (hasMarkdownHeadings && !hasHtmlHeadings) {
+    console.log('[htmlToArticleContent] Using MARKDOWN parser');
+    return markdownToArticleContent(html, title);
+  }
+
+  console.log('[htmlToArticleContent] Using HTML parser');
+
   // Regex to match heading tags (h2-h6) with their content
   const headingRegex = /<h([2-6])([^>]*)>([\s\S]*?)<\/h\1>/gi;
 
@@ -182,12 +204,21 @@ export function htmlToArticleContent(html: string, title: string): ArticleConten
 
   // Handle case where there are no headings - entire content is one section
   if (headings.length === 0 && html.trim()) {
+    console.warn('[htmlToArticleContent] NO HEADINGS FOUND - treating entire content as single section');
+    console.warn('[htmlToArticleContent] This means all styled components (hero, cards, FAQ, etc.) will NOT be applied!');
     sections.push({
       id: 'section-0',
       content: html.trim(),
       type: 'section',
     });
   }
+
+  // DEBUG: Log the parsing result
+  console.log('[htmlToArticleContent] OUTPUT:', {
+    sectionCount: sections.length,
+    headingsFound: headings.length,
+    sectionTypes: sections.map(s => ({ id: s.id, type: s.type, headingLevel: s.headingLevel, heading: s.heading?.substring(0, 50) })),
+  });
 
   return {
     title,
@@ -203,6 +234,103 @@ export function htmlToArticleContent(html: string, title: string): ArticleConten
  */
 function stripHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, '');
+}
+
+// ============================================================================
+// MARKDOWN TO ARTICLE CONTENT
+// ============================================================================
+
+/**
+ * Convert Markdown content to ArticleContent format by parsing markdown headings (## and ###).
+ *
+ * @param markdown - The markdown string to parse
+ * @param title - The article title
+ * @returns ArticleContent ready for rendering
+ */
+function markdownToArticleContent(markdown: string, title: string): ArticleContent {
+  const sections: ArticleContent['sections'] = [];
+
+  // Regex to match markdown headings (## to ######)
+  const headingRegex = /^(#{2,6})\s+(.+)$/gm;
+
+  // Collect all heading positions
+  const headings: Array<{
+    level: number;
+    text: string;
+    index: number;
+    endIndex: number;
+  }> = [];
+
+  let match: RegExpExecArray | null;
+  while ((match = headingRegex.exec(markdown)) !== null) {
+    const level = match[1].length; // Number of # characters
+    const headingText = match[2].trim();
+
+    headings.push({
+      level,
+      text: headingText,
+      index: match.index,
+      endIndex: match.index + match[0].length,
+    });
+  }
+
+  console.log('[markdownToArticleContent] Found', headings.length, 'markdown headings');
+
+  // Find content before the first heading (intro section)
+  if (headings.length > 0 && headings[0].index > 0) {
+    const introContent = markdown.substring(0, headings[0].index).trim();
+    if (introContent) {
+      sections.push({
+        id: 'section-intro',
+        content: introContent,
+        type: 'intro',
+      });
+    }
+  }
+
+  // Create sections from headings
+  for (let i = 0; i < headings.length; i++) {
+    const heading = headings[i];
+    const nextHeading = headings[i + 1];
+
+    // Content starts after the heading line and ends at the next heading (or end of markdown)
+    const contentStart = heading.endIndex;
+    const contentEnd = nextHeading ? nextHeading.index : markdown.length;
+    const content = markdown.substring(contentStart, contentEnd).trim();
+
+    const sectionId = `section-${i}`;
+    const type = inferSectionTypeFromHeading(heading.text);
+
+    sections.push({
+      id: sectionId,
+      heading: heading.text,
+      headingLevel: heading.level,
+      content,
+      type,
+    });
+  }
+
+  // Handle case where there are no headings - entire content is one section
+  if (headings.length === 0 && markdown.trim()) {
+    console.warn('[markdownToArticleContent] NO HEADINGS FOUND - treating entire content as single section');
+    sections.push({
+      id: 'section-0',
+      content: markdown.trim(),
+      type: 'section',
+    });
+  }
+
+  // DEBUG: Log the parsing result
+  console.log('[markdownToArticleContent] OUTPUT:', {
+    sectionCount: sections.length,
+    headingsFound: headings.length,
+    sectionTypes: sections.map(s => ({ id: s.id, type: s.type, headingLevel: s.headingLevel, heading: s.heading?.substring(0, 50) })),
+  });
+
+  return {
+    title,
+    sections,
+  };
 }
 
 // ============================================================================
