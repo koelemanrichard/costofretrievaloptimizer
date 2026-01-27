@@ -52,23 +52,26 @@ describe('Button Component', () => {
   it('renders medium size by default', () => {
     render(<Button>Medium</Button>);
     const button = screen.getByText('Medium');
-    expect(button).toHaveClass('px-6');
-    expect(button).toHaveClass('py-3');
+    // Mobile-first responsive classes: px-4 base, sm:px-6 for larger screens
+    expect(button).toHaveClass('px-4');
+    expect(button).toHaveClass('py-2.5');
+    expect(button).toHaveClass('min-h-[44px]');
   });
 
   it('renders small size correctly', () => {
     render(<Button size="sm">Small</Button>);
     const button = screen.getByText('Small');
     expect(button).toHaveClass('px-3');
-    expect(button).toHaveClass('py-1.5');
+    expect(button).toHaveClass('py-2');
     expect(button).toHaveClass('text-sm');
   });
 
   it('renders large size correctly', () => {
     render(<Button size="lg">Large</Button>);
     const button = screen.getByText('Large');
-    expect(button).toHaveClass('px-8');
-    expect(button).toHaveClass('py-4');
+    // Mobile-first responsive classes: px-6 base, sm:px-8 for larger screens
+    expect(button).toHaveClass('px-6');
+    expect(button).toHaveClass('py-3');
     expect(button).toHaveClass('text-lg');
   });
 

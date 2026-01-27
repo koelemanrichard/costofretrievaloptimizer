@@ -15,9 +15,9 @@ describe('EAVDensityValidator', () => {
     expect(violations.length).toBeGreaterThan(0);
   });
 
-  it('should provide EAV density score', () => {
+  it('should provide EAV density score', async () => {
     const content = 'German Shepherds have a double coat. The outer coat is dense.';
-    const score = EAVDensityValidator.calculateDensity(content);
+    const score = await EAVDensityValidator.calculateDensity(content);
 
     expect(score).toBeGreaterThan(0);
     expect(score).toBeLessThanOrEqual(100);

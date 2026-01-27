@@ -45,7 +45,6 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      description={typeof message === 'string' ? message : undefined}
       maxWidth="max-w-lg"
       zIndex="z-[60]"
       showHeader={false}
