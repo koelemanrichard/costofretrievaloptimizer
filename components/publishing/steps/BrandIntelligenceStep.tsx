@@ -176,8 +176,9 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
   // and every time the parent updated state, the callback reference changed,
   // triggering this effect again even though the detection.result was the same.
   const lastNotifiedResultRef = useRef<typeof detection.result>(null);
+  const lastNotifiedExtractionPhaseRef = useRef<string | null>(null);
 
-  // Notify parent when detection completes (only once per unique result)
+  // Notify parent when Quick Detection completes (only once per unique result)
   useEffect(() => {
     if (detection.result && detection.result !== lastNotifiedResultRef.current) {
       lastNotifiedResultRef.current = detection.result;
@@ -189,6 +190,222 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onDetectionComplete intentionally excluded to prevent infinite loops
   }, [detection.result]);
+
+  // Notify parent when Full Extraction completes - convert tokens to DesignDNA
+  useEffect(() => {
+    const processFullExtraction = async () => {
+      // Only process once when phase becomes 'complete'
+      if (
+        brandExtraction.phase === 'complete' &&
+        brandExtraction.extractedTokens &&
+        lastNotifiedExtractionPhaseRef.current !== 'complete'
+      ) {
+        lastNotifiedExtractionPhaseRef.current = 'complete';
+        console.log('[BrandIntelligenceStep] Full Extraction complete, converting tokens to DesignDNA...');
+
+        const tokens = brandExtraction.extractedTokens;
+
+        // Convert extracted tokens to DesignDNA format
+        const designDna: DesignDNA = {
+          colors: {
+            primary: {
+              hex: tokens.colors?.values?.[0]?.hex || '#3b82f6',
+              usage: tokens.colors?.values?.[0]?.usage || 'primary',
+              confidence: 0.9
+            },
+            primaryLight: {
+              hex: tokens.colors?.values?.[1]?.hex || '#60a5fa',
+              usage: 'primary light variant',
+              confidence: 0.8
+            },
+            primaryDark: {
+              hex: tokens.colors?.values?.[2]?.hex || '#2563eb',
+              usage: 'primary dark variant',
+              confidence: 0.8
+            },
+            secondary: {
+              hex: tokens.colors?.values?.[3]?.hex || '#1f2937',
+              usage: 'secondary',
+              confidence: 0.8
+            },
+            accent: {
+              hex: tokens.colors?.values?.[4]?.hex || '#f59e0b',
+              usage: 'accent',
+              confidence: 0.7
+            },
+            neutrals: {
+              darkest: '#111827',
+              dark: '#374151',
+              medium: '#6b7280',
+              light: '#e5e7eb',
+              lightest: '#f9fafb'
+            },
+            semantic: {
+              success: '#10b981',
+              warning: '#f59e0b',
+              error: '#ef4444',
+              info: '#3b82f6'
+            },
+            harmony: 'complementary',
+            dominantMood: 'corporate',
+            contrastLevel: 'medium'
+          },
+          typography: {
+            headingFont: {
+              family: tokens.typography?.headings?.fontFamily || 'system-ui',
+              fallback: 'sans-serif',
+              weight: tokens.typography?.headings?.fontWeight || 700,
+              style: 'sans-serif',
+              character: 'modern'
+            },
+            bodyFont: {
+              family: tokens.typography?.body?.fontFamily || 'system-ui',
+              fallback: 'sans-serif',
+              weight: tokens.typography?.body?.fontWeight || 400,
+              style: 'sans-serif',
+              lineHeight: tokens.typography?.body?.lineHeight || 1.6
+            },
+            scaleRatio: 1.25,
+            baseSize: '16px',
+            headingCase: 'none',
+            headingLetterSpacing: '-0.02em',
+            usesDropCaps: false,
+            headingUnderlineStyle: 'none',
+            linkStyle: 'underline'
+          },
+          spacing: {
+            baseUnit: 8,
+            density: 'comfortable',
+            sectionGap: 'moderate',
+            contentWidth: 'medium',
+            whitespacePhilosophy: 'balanced'
+          },
+          shapes: {
+            borderRadius: {
+              style: 'subtle',
+              small: tokens.borders?.radiusSmall || '4px',
+              medium: tokens.borders?.radiusMedium || '8px',
+              large: tokens.borders?.radiusLarge || '16px',
+              full: '9999px'
+            },
+            buttonStyle: 'soft',
+            cardStyle: 'subtle-shadow',
+            inputStyle: 'bordered'
+          },
+          effects: {
+            shadows: {
+              style: 'subtle',
+              cardShadow: tokens.shadows?.card || '0 1px 3px rgba(0,0,0,0.1)',
+              buttonShadow: tokens.shadows?.button || 'none',
+              elevatedShadow: tokens.shadows?.elevated || '0 4px 6px rgba(0,0,0,0.1)'
+            },
+            gradients: {
+              usage: tokens.gradients ? 'subtle' : 'none',
+              primaryGradient: tokens.gradients?.hero || 'none',
+              heroGradient: tokens.gradients?.hero || 'none',
+              ctaGradient: tokens.gradients?.cta || 'none'
+            },
+            backgrounds: {
+              usesPatterns: false,
+              usesTextures: false,
+              usesOverlays: false
+            },
+            borders: {
+              style: 'subtle',
+              defaultColor: tokens.borders?.defaultColor || '#e5e7eb',
+              accentBorderUsage: false
+            }
+          },
+          decorative: {
+            dividerStyle: 'line',
+            usesFloatingShapes: false,
+            usesCornerAccents: false,
+            usesWaveShapes: false,
+            usesGeometricPatterns: false,
+            iconStyle: 'outline',
+            decorativeAccentColor: tokens.colors?.values?.[0]?.hex || '#3b82f6'
+          },
+          layout: {
+            gridStyle: 'strict-12',
+            alignment: 'left',
+            heroStyle: 'contained',
+            cardLayout: 'grid',
+            ctaPlacement: 'section-end',
+            navigationStyle: 'standard'
+          },
+          motion: {
+            overall: 'subtle',
+            transitionSpeed: 'normal',
+            easingStyle: 'ease',
+            hoverEffects: {
+              buttons: 'darken',
+              cards: 'lift',
+              links: 'color'
+            },
+            scrollAnimations: false,
+            parallaxEffects: false
+          },
+          images: {
+            treatment: 'natural',
+            frameStyle: 'rounded',
+            hoverEffect: 'none',
+            aspectRatioPreference: '16:9'
+          },
+          componentPreferences: {
+            preferredListStyle: 'bullets',
+            preferredCardStyle: 'bordered',
+            testimonialStyle: 'card',
+            faqStyle: 'accordion',
+            ctaStyle: 'button'
+          },
+          personality: {
+            overall: 'corporate',
+            formality: 4,
+            energy: 3,
+            warmth: 3,
+            trustSignals: 'moderate'
+          },
+          confidence: {
+            overall: 75,
+            colorsConfidence: 85,
+            typographyConfidence: 80,
+            layoutConfidence: 70
+          },
+          analysisNotes: ['Extracted via Full Brand Extraction from multiple pages']
+        };
+
+        // Generate BrandDesignSystem from DesignDNA
+        try {
+          const generator = new BrandDesignSystemGenerator({
+            provider: 'gemini',
+            apiKey: geminiApiKey || '',
+          });
+
+          const designSystem = await generator.generate(
+            designDna,
+            'Extracted Brand',
+            brandExtraction.selectedUrls[0] || ''
+          );
+
+          console.log('[BrandIntelligenceStep] Generated design system, CSS length:', designSystem.compiledCss?.length);
+
+          // Notify parent with the converted data
+          onDetectionComplete({
+            designDna,
+            designSystem,
+            screenshotBase64: brandExtraction.screenshotBase64 || '',
+          });
+
+          console.log('[BrandIntelligenceStep] Full Extraction flow complete, notified parent');
+        } catch (err) {
+          console.error('[BrandIntelligenceStep] Failed to generate design system from tokens:', err);
+        }
+      }
+    };
+
+    processFullExtraction();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onDetectionComplete intentionally excluded to prevent infinite loops
+  }, [brandExtraction.phase, brandExtraction.extractedTokens, brandExtraction.screenshotBase64, brandExtraction.selectedUrls, geminiApiKey]);
 
   // Personality slider handler
   const handlePersonalityChange = useCallback(

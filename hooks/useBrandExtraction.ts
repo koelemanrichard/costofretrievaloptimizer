@@ -13,7 +13,7 @@ import { useState, useCallback } from 'react';
 import type { UrlSuggestion } from '../services/brand-extraction/UrlDiscoveryService';
 import { ExtractionAnalyzer } from '../services/brand-extraction/ExtractionAnalyzer';
 import { ComponentLibrary } from '../services/brand-extraction/ComponentLibrary';
-import type { ExtractedComponent } from '../types/brandExtraction';
+import type { ExtractedComponent, ExtractedTokens } from '../types/brandExtraction';
 import { useSupabase } from '../services/supabaseClient';
 
 // ============================================================================
@@ -44,6 +44,8 @@ export interface UseBrandExtractionResult {
   suggestions: UrlSuggestion[];
   selectedUrls: string[];
   extractedComponents: ExtractedComponent[];
+  extractedTokens: Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> | null;
+  screenshotBase64: string | null;
   error: string | null;
 
   // Actions
@@ -82,6 +84,8 @@ export function useBrandExtraction(
   const [suggestions, setSuggestions] = useState<UrlSuggestion[]>([]);
   const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
   const [extractedComponents, setExtractedComponents] = useState<ExtractedComponent[]>([]);
+  const [extractedTokens, setExtractedTokens] = useState<Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> | null>(null);
+  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -188,10 +192,16 @@ export function useBrandExtraction(
     setPhase('extracting');
     setError(null);
     setExtractedComponents([]);
+    setExtractedTokens(null);
+    setScreenshotBase64(null);
 
     const totalUrls = selectedUrls.length;
     const analyzer = new ExtractionAnalyzer({ provider: aiProvider, apiKey });
     const library = new ComponentLibrary(projectId);
+
+    // Track tokens across all extractions - we'll merge them
+    let mergedTokens: Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> | null = null;
+    let firstScreenshot: string | null = null;
 
     try {
       // Update progress - extracting (batch mode)
@@ -245,11 +255,24 @@ export function useBrandExtraction(
 
         // If we have a screenshot, analyze with AI for component extraction
         if (extraction.screenshotBase64) {
+          // Save first screenshot for preview
+          if (!firstScreenshot) {
+            firstScreenshot = extraction.screenshotBase64;
+            setScreenshotBase64(extraction.screenshotBase64);
+          }
+
           try {
             const analysisResult = await analyzer.analyze({
               screenshotBase64: extraction.screenshotBase64,
               rawHtml: '' // HTML not available from edge function
             });
+
+            // Track tokens from first successful AI analysis
+            if (analysisResult.tokens && !mergedTokens) {
+              mergedTokens = analysisResult.tokens;
+              setExtractedTokens(analysisResult.tokens);
+              console.log('[useBrandExtraction] Extracted tokens:', analysisResult.tokens);
+            }
 
             // Save components to ComponentLibrary
             const extractionId = crypto.randomUUID();
@@ -272,7 +295,7 @@ export function useBrandExtraction(
               setExtractedComponents(prev => [...prev, fullComponent]);
             }
 
-            // Save tokens from AI analysis
+            // Save tokens from AI analysis to database
             if (analysisResult.tokens) {
               const tokensId = crypto.randomUUID();
               await useSupabase().from('brand_tokens').upsert({
@@ -316,6 +339,8 @@ export function useBrandExtraction(
         totalUrls: extractions.length,
         message: `Extraction complete! Processed ${extractions.length} pages.`
       });
+
+      console.log('[useBrandExtraction] Extraction complete, tokens:', mergedTokens ? 'present' : 'none');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Extraction failed';
       setError(message);
@@ -338,6 +363,8 @@ export function useBrandExtraction(
     setSuggestions([]);
     setSelectedUrls([]);
     setExtractedComponents([]);
+    setExtractedTokens(null);
+    setScreenshotBase64(null);
     setError(null);
   }, []);
 
@@ -348,6 +375,8 @@ export function useBrandExtraction(
     suggestions,
     selectedUrls,
     extractedComponents,
+    extractedTokens,
+    screenshotBase64,
     error,
 
     // Actions
