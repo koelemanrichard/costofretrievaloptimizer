@@ -190,7 +190,15 @@ function generateBridgeTitle(
 ): string {
   // Extract Central Entity and CSI from pillars (CRITICAL for Semantic SEO)
   const centralEntity = pillars?.centralEntity?.trim() || '';
-  const csiVerbs = (pillars?.centralSearchIntent || []).filter(Boolean);
+  // CSI verbs: use primary_verb and auxiliary_verb, or extract from centralSearchIntent string
+  const csiVerbs: string[] = [];
+  if (pillars?.primary_verb) csiVerbs.push(pillars.primary_verb);
+  if (pillars?.auxiliary_verb) csiVerbs.push(pillars.auxiliary_verb);
+  // Fallback: try to extract verb from centralSearchIntent if it's a string
+  if (csiVerbs.length === 0 && pillars?.centralSearchIntent && typeof pillars.centralSearchIntent === 'string') {
+    const words = pillars.centralSearchIntent.split(/\s+/);
+    if (words.length > 0) csiVerbs.push(words[words.length - 1]); // Last word is often the verb
+  }
 
   // Get human-readable names for clusters
   const clusterANames = clusterA.map(humanizeNodeId).filter(Boolean);
