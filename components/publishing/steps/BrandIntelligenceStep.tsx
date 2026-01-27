@@ -56,6 +56,8 @@ interface BrandIntelligenceStepProps {
     designDna: DesignDNA;
     designSystem: BrandDesignSystem;
     screenshotBase64: string;
+    /** Extracted components with literal HTML/CSS from the target site */
+    extractedComponents?: import('../../../types/brandExtraction').ExtractedComponent[];
   }) => void;
   onDesignDnaChange?: (dna: DesignDNA) => void;
   onRegenerate?: () => void;
@@ -388,12 +390,14 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
           );
 
           console.log('[BrandIntelligenceStep] Generated design system, CSS length:', designSystem.compiledCss?.length);
+          console.log('[BrandIntelligenceStep] Extracted components count:', brandExtraction.extractedComponents.length);
 
-          // Notify parent with the converted data
+          // Notify parent with the converted data AND extracted components
           onDetectionComplete({
             designDna,
             designSystem,
             screenshotBase64: brandExtraction.screenshotBase64 || '',
+            extractedComponents: brandExtraction.extractedComponents,
           });
 
           console.log('[BrandIntelligenceStep] Full Extraction flow complete, notified parent');
@@ -454,6 +458,7 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
             designDna,
             designSystem: fallbackDesignSystem,
             screenshotBase64: brandExtraction.screenshotBase64 || '',
+            extractedComponents: brandExtraction.extractedComponents,
           });
 
           console.log('[BrandIntelligenceStep] Fallback design system passed to parent');
@@ -677,8 +682,8 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
             </div>
           </div>
 
-          {/* Render based on phase */}
-          {brandExtraction.phase === 'idle' || brandExtraction.phase === 'discovering' || brandExtraction.phase === 'selecting' ? (
+          {/* Render based on phase - include 'error' phase with URL discovery so users can retry */}
+          {brandExtraction.phase === 'idle' || brandExtraction.phase === 'discovering' || brandExtraction.phase === 'selecting' || brandExtraction.phase === 'error' ? (
             <BrandUrlDiscovery
               suggestions={brandExtraction.suggestions}
               selectedUrls={brandExtraction.selectedUrls}

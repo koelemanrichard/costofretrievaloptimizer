@@ -151,13 +151,23 @@ export class BrandAwareComposer {
    * Compose article content into brand-styled HTML.
    *
    * @param content - The article content to compose
+   * @param directComponents - Optional: components passed directly (bypasses database)
    * @returns Brand-styled HTML with standalone CSS
    */
-  async compose(content: ArticleContent): Promise<BrandReplicationOutput> {
+  async compose(
+    content: ArticleContent,
+    directComponents?: ExtractedComponent[]
+  ): Promise<BrandReplicationOutput> {
     const startTime = Date.now();
 
-    // Load components from the library
-    const components = await this.componentLibrary.getAll();
+    // Use direct components if provided, otherwise load from database
+    const components = directComponents && directComponents.length > 0
+      ? directComponents
+      : await this.componentLibrary.getAll();
+
+    console.log('[BrandAwareComposer] Using', components.length, 'components',
+      directComponents ? '(DIRECT)' : '(from database)');
+
     const contentMatcher = new ContentMatcher(components);
 
     // Track components used and extractions

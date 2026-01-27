@@ -115,6 +115,8 @@ export interface RenderContentOptions {
   generatedImages?: ImagePlaceholder[];
   /** Brand-extracted images (priority 2 for injection) */
   brandImages?: InjectableImage[];
+  /** Extracted components with literal HTML/CSS (bypass database lookup) */
+  extractedComponents?: import('../../../types/brandExtraction').ExtractedComponent[];
 }
 
 // ============================================================================
@@ -223,17 +225,21 @@ export async function renderContent(
     }
   }
 
-  // 1. Check if project has brand extraction
+  // 1. Check if extracted components are provided directly (BYPASS DATABASE)
   console.log('-'.repeat(80));
   console.log('[STYLING PIPELINE] STEP 2: Checking for brand extraction components...');
-  const hasExtraction = await hasBrandExtraction(options.projectId);
-  console.log('[STYLING PIPELINE] Brand extraction check result:', hasExtraction);
+  const hasDirectComponents = options.extractedComponents && options.extractedComponents.length > 0;
+  console.log('[STYLING PIPELINE] Direct components provided:', hasDirectComponents ? options.extractedComponents!.length : 0);
 
-  if (hasExtraction && options.aiApiKey) {
-    // PRIMARY PATH: Brand-aware rendering
+  // Also check database as fallback
+  const hasDbExtraction = !hasDirectComponents ? await hasBrandExtraction(options.projectId) : false;
+  console.log('[STYLING PIPELINE] Database extraction check result:', hasDbExtraction);
+
+  if ((hasDirectComponents || hasDbExtraction) && options.aiApiKey) {
+    // PRIMARY PATH: Brand-aware rendering using LITERAL HTML from target site
     console.log('-'.repeat(80));
     console.log('[STYLING PIPELINE] STEP 3A: ROUTING TO BrandAwareComposer (PRIMARY PATH)');
-    console.log('[STYLING PIPELINE] Reason: Project has brand extraction AND AI API key provided');
+    console.log('[STYLING PIPELINE] Reason: Extracted components available' + (hasDirectComponents ? ' (DIRECT)' : ' (DATABASE)'));
     console.log('[Renderer] Using BrandAwareComposer for project:', options.projectId);
 
     const composer = new BrandAwareComposer({
@@ -253,7 +259,8 @@ export async function renderContent(
       }))
     };
 
-    const result = await composer.compose(normalizedContent);
+    // Pass direct components to compose method (they'll be used instead of DB lookup)
+    const result = await composer.compose(normalizedContent, options.extractedComponents);
 
     // Convert BrandReplicationOutput to StyledContentOutput format
     return {
@@ -272,7 +279,7 @@ export async function renderContent(
         schemaPreserved: true,
         metaPreserved: true
       },
-      template: 'blog-article',
+      template: 'brand-aware', // New template type to indicate BrandAwareComposer was used
       renderMetadata: {
         unresolvedImageCount: imageInjectionResult?.unresolvedCount || 0,
       },

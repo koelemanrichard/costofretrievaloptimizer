@@ -182,6 +182,8 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [detectedDesignDna, setDetectedDesignDna] = useState<DesignDNA | null>(null);
   const [detectedDesignSystem, setDetectedDesignSystem] = useState<BrandDesignSystem | null>(null);
   const [detectedScreenshot, setDetectedScreenshot] = useState<string | null>(null);
+  // Extracted components with literal HTML/CSS from target site (for BrandAwareComposer)
+  const [extractedComponents, setExtractedComponents] = useState<import('../../types/brandExtraction').ExtractedComponent[]>([]);
 
   // Saved brand data state (persistence)
   const [savedBrandDataLoaded, setSavedBrandDataLoaded] = useState(false);
@@ -606,13 +608,20 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
     designDna: DesignDNA;
     designSystem: BrandDesignSystem;
     screenshotBase64: string;
+    extractedComponents?: import('../../types/brandExtraction').ExtractedComponent[];
   }) => {
     console.log('[Style & Publish] Brand detection complete:', result);
+    console.log('[Style & Publish] Extracted components received:', result.extractedComponents?.length || 0);
 
     // Store the detection results
     setDetectedDesignDna(result.designDna);
     setDetectedDesignSystem(result.designSystem);
     setDetectedScreenshot(result.screenshotBase64);
+    // Store extracted components for BrandAwareComposer
+    if (result.extractedComponents && result.extractedComponents.length > 0) {
+      setExtractedComponents(result.extractedComponents);
+      console.log('[Style & Publish] Stored', result.extractedComponents.length, 'extracted components for rendering');
+    }
 
     // Convert DesignDNA to DesignTokens for the style
     const dna = result.designDna;
@@ -1151,6 +1160,8 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
               brandDesignSystem: detectedDesignSystem || undefined,
               // Pass generated images for injection
               generatedImages: generatedImages as any,
+              // Pass extracted components directly (bypass database lookup)
+              extractedComponents: extractedComponents.length > 0 ? extractedComponents : undefined,
             });
 
             console.log('[Style & Publish] Unified renderer succeeded');
@@ -1431,6 +1442,15 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const apifyToken = state.businessInfo?.apifyToken || '';
   const geminiApiKey = state.businessInfo?.geminiApiKey || localStorage.getItem('gemini_api_key') || '';
   const anthropicApiKey = state.businessInfo?.anthropicApiKey || localStorage.getItem('anthropic_api_key') || '';
+
+  // Debug: Log API key status
+  console.log('[Style & Publish] API Keys status:', {
+    hasApifyToken: !!apifyToken,
+    apifyTokenLength: apifyToken?.length || 0,
+    hasGeminiKey: !!geminiApiKey,
+    hasAnthropicKey: !!anthropicApiKey,
+    businessInfoKeys: Object.keys(state.businessInfo || {}),
+  });
 
   // Render step content
   const renderStepContent = () => {
