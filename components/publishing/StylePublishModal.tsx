@@ -1119,6 +1119,8 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
               topic,
               topicalMap,
               personalityId,
+              // Pass DesignDNA for CleanArticleRenderer (NO TEMPLATES)
+              designDna: detectedDesignDna || undefined,
               designTokens: style?.designTokens ? {
                 colors: {
                   primary: style.designTokens.colors.primary,
@@ -1153,12 +1155,16 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
 
             console.log('[Style & Publish] Unified renderer succeeded');
             setPreview(unifiedOutput);
-            // Set metadata - unified renderer uses BrandAwareComposer when brand extraction exists
+            // Set metadata - determine which renderer was actually used
+            const rendererUsed = (unifiedOutput as any).template === 'clean-article'
+              ? 'CleanArticleRenderer'
+              : 'BrandAwareComposer';
             setRenderingMetadata({
-              rendererUsed: 'BrandAwareComposer',
+              rendererUsed,
               brandScore: brandMatchScore,
               unresolvedImageCount: (unifiedOutput as any).renderMetadata?.unresolvedImageCount || 0,
             });
+            console.log('[Style & Publish] Renderer used:', rendererUsed);
             return;
           } catch (error) {
             console.log('[Style & Publish] Unified renderer failed, falling back:', error);

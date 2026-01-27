@@ -1,15 +1,19 @@
 /**
  * Unified Renderer Entry Point
  *
- * Routes rendering to BrandAwareComposer when brand extraction exists,
- * otherwise falls back to the existing BlueprintRenderer.
+ * Routes rendering to:
+ * 1. BrandAwareComposer when brand extraction exists
+ * 2. CleanArticleRenderer when DesignDNA is provided (NO TEMPLATES)
+ * 3. BlueprintRenderer as last resort fallback
  *
  * @module services/publishing/renderer
  */
 
 import { BrandAwareComposer } from '../../brand-composer/BrandAwareComposer';
 import { ComponentLibrary } from '../../brand-extraction/ComponentLibrary';
+import { renderCleanArticle, type CleanRenderOutput } from './CleanArticleRenderer';
 import type { ContentBrief, EnrichedTopic, TopicalMap, ImagePlaceholder } from '../../../types';
+import type { DesignDNA } from '../../../types/designDna';
 import type { LayoutBlueprint } from '../architect/blueprintTypes';
 import type { StyledContentOutput, CssVariables } from '../../../types/publishing';
 import {
@@ -105,6 +109,8 @@ export interface RenderContentOptions {
     compiledCss?: string;
     designDnaHash?: string;
   };
+  /** Brand DesignDNA for CleanArticleRenderer (NO templates) */
+  designDna?: DesignDNA;
   /** Generated images from content generation (priority 1 for injection) */
   generatedImages?: ImagePlaceholder[];
   /** Brand-extracted images (priority 2 for injection) */
@@ -273,13 +279,83 @@ export async function renderContent(
     };
   }
 
-  // FALLBACK: Use existing blueprint renderer
+  // ============================================================================
+  // PATH B: CleanArticleRenderer - NO TEMPLATES, design-agency quality output
+  // ============================================================================
+  if (options.designDna) {
+    console.log('-'.repeat(80));
+    console.log('[STYLING PIPELINE] STEP 3B: ROUTING TO CleanArticleRenderer (CLEAN PATH)');
+    console.log('[STYLING PIPELINE] Reason: DesignDNA provided - generating template-free HTML');
+    console.log('[Renderer] Using CleanArticleRenderer for project:', options.projectId);
+    console.log('[STYLING PIPELINE] DesignDNA summary:', {
+      hasPrimaryColor: !!options.designDna.colors?.primary,
+      hasTypography: !!options.designDna.typography,
+      brandName: options.brandDesignSystem?.brandName || 'Brand',
+    });
+
+    // Prepare article content for clean renderer
+    const articleInput = {
+      title: processedContent.title,
+      sections: processedContent.sections.map(section => ({
+        id: section.id,
+        heading: section.heading,
+        headingLevel: section.headingLevel,
+        content: section.content,
+      })),
+    };
+
+    // Render using CleanArticleRenderer - NO TEMPLATES
+    const cleanResult = renderCleanArticle(
+      articleInput,
+      options.designDna,
+      options.brandDesignSystem?.brandName || 'Brand'
+    );
+
+    console.log('-'.repeat(80));
+    console.log('[STYLING PIPELINE] STEP 4: CleanArticleRenderer OUTPUT');
+    console.log('[STYLING PIPELINE] Output summary:', {
+      htmlLength: cleanResult.html.length,
+      cssLength: cleanResult.css.length,
+      fullDocumentLength: cleanResult.fullDocument.length,
+      hasNoCtcClasses: !cleanResult.html.includes('ctc-'),
+    });
+    console.log('='.repeat(80));
+    console.log('[STYLING PIPELINE] COMPLETE - Clean template-free output');
+    console.log('='.repeat(80));
+
+    return {
+      html: cleanResult.fullDocument, // Return complete standalone document
+      css: cleanResult.css,
+      cssVariables: {} as CssVariables,
+      components: [],
+      seoValidation: {
+        isValid: true,
+        warnings: [],
+        headingStructure: {
+          hasH1: true,
+          hierarchy: [],
+          issues: []
+        },
+        schemaPreserved: true,
+        metaPreserved: true
+      },
+      template: 'clean-article', // New template type
+      renderMetadata: {
+        unresolvedImageCount: imageInjectionResult?.unresolvedCount || 0,
+      },
+    };
+  }
+
+  // ============================================================================
+  // PATH C: BlueprintRenderer - Legacy template fallback (DEPRECATED)
+  // ============================================================================
   console.log('-'.repeat(80));
-  console.log('[STYLING PIPELINE] STEP 3B: ROUTING TO BlueprintRenderer (FALLBACK PATH)');
+  console.log('[STYLING PIPELINE] STEP 3C: ROUTING TO BlueprintRenderer (LEGACY FALLBACK)');
+  console.log('[STYLING PIPELINE] WARNING: Using template-based renderer');
   console.log('[STYLING PIPELINE] Reason:', !hasExtraction
-    ? 'No brand extraction components found for project'
-    : 'No AI API key provided');
-  console.log('[Renderer] Using BlueprintRenderer fallback for project:', options.projectId);
+    ? 'No brand extraction components AND no DesignDNA'
+    : 'No AI API key and no DesignDNA');
+  console.log('[Renderer] Using BlueprintRenderer legacy fallback for project:', options.projectId);
 
   // DEBUG: Log what brand data we're passing to the renderer
   console.log('[STYLING PIPELINE] Brand data being passed to BlueprintRenderer:', {
@@ -296,11 +372,21 @@ export async function renderContent(
   });
 
   if (!options.blueprint) {
-    throw new Error('No brand extraction and no blueprint provided');
+    throw new Error('No brand extraction, no DesignDNA, and no blueprint provided');
   }
 
   // Import and call renderBlueprint
   const { renderBlueprint } = await import('./blueprintRenderer');
+
+  // THE KEY FIX: Pass processedContent (with injected images) to renderBlueprint
+  // Without this, the blueprint uses brief summaries instead of actual article content
+  console.log('[STYLING PIPELINE] Passing articleContent to renderBlueprint:', {
+    hasProcessedContent: !!processedContent,
+    sectionCount: processedContent.sections.length,
+    firstSectionContentLength: processedContent.sections[0]?.content?.length || 0,
+    hasImages: processedContent.sections.some(s => s.content?.includes('<img') || s.content?.includes('!['))
+  });
+
   const blueprintResult = renderBlueprint(options.blueprint, processedContent.title, {
     brief: options.brief,
     topic: options.topic,
@@ -314,7 +400,10 @@ export async function renderContent(
     ctaConfig: options.ctaConfig,
     author: options.author,
     // Pass brandDesignSystem for AI-generated CSS
-    brandDesignSystem: options.brandDesignSystem
+    brandDesignSystem: options.brandDesignSystem,
+    // THE KEY FIX: Pass actual article content with injected images
+    // This ensures the REAL article is rendered, not brief summaries
+    articleContent: processedContent,
   });
 
   // DEBUG: Log the output CSS info
@@ -378,10 +467,22 @@ async function hasBrandExtraction(projectId: string): Promise<boolean> {
 }
 
 // ============================================================================
-// BACKWARD COMPATIBILITY RE-EXPORTS
+// RE-EXPORTS
 // ============================================================================
 
-// Blueprint Renderer (for direct usage when needed)
+// Clean Article Renderer (NO TEMPLATES - preferred path)
+export {
+  CleanArticleRenderer,
+  renderCleanArticle,
+} from './CleanArticleRenderer';
+
+export type {
+  ArticleSection,
+  ArticleInput,
+  CleanRenderOutput,
+} from './CleanArticleRenderer';
+
+// Blueprint Renderer (legacy template-based fallback)
 export {
   renderBlueprint,
   mapVisualStyleToPersonality,
