@@ -235,24 +235,137 @@ export class BrandAwareComposer {
   }
 
   /**
-   * Render a section using an extracted component.
-   * Preserves SEO semantic markup from the content.
+   * Render a section using LITERAL HTML from extracted component.
+   * This is the key to design-agency quality output - we use the ACTUAL
+   * HTML structure from the target website, not a template.
    */
   private renderWithComponent(section: ArticleSection, component: ExtractedComponent): string {
-    // Get the heading tag
+    // CRITICAL: Use the literal HTML from the extracted component
+    // This preserves the exact structure and styling from the target site
+    let html = component.literalHtml;
+
+    if (!html || html.trim() === '') {
+      // Fallback if no literal HTML available
+      return this.renderWithFallback(section);
+    }
+
+    // Inject content into the literal HTML structure
+    // Strategy: Find the content areas and replace them
+    html = this.injectContentIntoLiteralHtml(html, section, component);
+
+    // Add SEO semantic layer (wrap in semantic element if not already)
+    if (!html.includes('<section') && !html.includes('<article')) {
+      const classNames = component.theirClassNames.join(' ');
+      html = `<section class="${classNames} brand-section" data-brand-component="${component.componentType}">\n${html}\n</section>`;
+    }
+
+    return html;
+  }
+
+  /**
+   * Inject article content into literal HTML structure.
+   * Uses multiple strategies to find and replace content areas.
+   */
+  private injectContentIntoLiteralHtml(html: string, section: ArticleSection, component: ExtractedComponent): string {
     const headingTag = `h${section.headingLevel}`;
 
-    // Build class names (their classes + brand-prefixed)
-    const classNames = [
-      ...component.theirClassNames,
-      ...component.theirClassNames.map(c => `brand-${c}`)
-    ].join(' ');
+    // Strategy 1: Use content slots if defined
+    if (component.contentSlots && component.contentSlots.length > 0) {
+      html = this.injectUsingSlots(html, section, component.contentSlots);
+    }
 
-    // Render the section preserving SEO markup in content
-    return `  <section class="${classNames} brand-section">
-    <${headingTag}>${this.escapeHtml(section.heading)}</${headingTag}>
-    ${section.content}
-  </section>`;
+    // Strategy 2: Replace heading patterns
+    // Match any h1-h6 and replace with our heading (preserving the tag level from original)
+    const headingPattern = /<h([1-6])([^>]*)>([^<]*)<\/h\1>/gi;
+    let headingReplaced = false;
+
+    html = html.replace(headingPattern, (match, level, attrs, _text) => {
+      if (!headingReplaced) {
+        headingReplaced = true;
+        // Use the component's heading level for structure, our content
+        return `<h${level}${attrs}>${this.escapeHtml(section.heading)}</h${level}>`;
+      }
+      // Remove subsequent headings (they're from the source page's content)
+      return '';
+    });
+
+    // If no heading was found, prepend one
+    if (!headingReplaced) {
+      const firstTag = html.match(/^(\s*<[^>]+>)/);
+      if (firstTag) {
+        html = html.replace(firstTag[0], `${firstTag[0]}\n    <${headingTag}>${this.escapeHtml(section.heading)}</${headingTag}>`);
+      }
+    }
+
+    // Strategy 3: Replace paragraph content
+    // Find the main content area (after heading) and inject our content
+    const paragraphPattern = /<p([^>]*)>[\s\S]*?<\/p>/gi;
+    let contentInjected = false;
+
+    html = html.replace(paragraphPattern, (match, attrs) => {
+      if (!contentInjected) {
+        contentInjected = true;
+        // Replace first paragraph with our content
+        // Our content may contain multiple paragraphs, preserve structure
+        return section.content;
+      }
+      // Remove subsequent paragraphs (they're from the source page's content)
+      return '';
+    });
+
+    // If no paragraph was replaced, append content before closing tag
+    if (!contentInjected) {
+      const closingTag = html.match(/<\/(section|div|article)>\s*$/i);
+      if (closingTag) {
+        html = html.replace(closingTag[0], `  ${section.content}\n${closingTag[0]}`);
+      } else {
+        html += `\n${section.content}`;
+      }
+    }
+
+    return html;
+  }
+
+  /**
+   * Inject content using defined content slots.
+   */
+  private injectUsingSlots(html: string, section: ArticleSection, slots: import('../../types/brandExtraction').ContentSlot[]): string {
+    for (const slot of slots) {
+      // Find the slot selector in HTML and inject content
+      if (slot.selector && slot.selector !== '*') {
+        // If slot has a specific selector, try to find and fill it
+        const selectorPattern = new RegExp(
+          `(<[^>]*class="[^"]*${this.escapeRegex(slot.selector)}[^"]*"[^>]*>)([\\s\\S]*?)(<\\/[^>]+>)`,
+          'i'
+        );
+
+        html = html.replace(selectorPattern, (match, openTag, _content, closeTag) => {
+          let replacement = '';
+          switch (slot.name) {
+            case 'heading':
+            case 'title':
+              replacement = this.escapeHtml(section.heading);
+              break;
+            case 'content':
+            case 'body':
+            case 'text':
+              replacement = section.content;
+              break;
+            default:
+              replacement = section.content;
+          }
+          return `${openTag}${replacement}${closeTag}`;
+        });
+      }
+    }
+    return html;
+  }
+
+  /**
+   * Escape regex special characters.
+   */
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**

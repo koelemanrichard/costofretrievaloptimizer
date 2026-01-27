@@ -390,20 +390,49 @@ Deno.serve(async (req: Request) => {
           getEnvVar('SERVICE_ROLE_KEY')!
         );
 
-        // Save extractions to brand_extractions table
+        // Save extractions to brand_extractions table (matching migration schema)
+        // Schema: source_url, page_type, screenshot_base64, raw_html, computed_styles
         for (const extraction of extractions) {
-          await supabase.from('brand_extractions').upsert({
-            project_id: projectId,
-            url: extraction.url,
-            screenshot_base64: extraction.screenshotBase64?.substring(0, 100000), // Limit size
-            colors: extraction.colors,
-            color_sources: extraction.colorSources,
-            typography: extraction.typography,
-            components: extraction.components,
-            images: extraction.images,
-            extracted_at: new Date().toISOString(),
-            error: extraction.error,
-          }, { onConflict: 'project_id,url' });
+          // Detect page type from URL or content
+          let pageType = 'generic';
+          const urlLower = extraction.url.toLowerCase();
+          if (urlLower.includes('/about') || urlLower.includes('/over-ons')) pageType = 'about';
+          else if (urlLower.includes('/contact')) pageType = 'contact';
+          else if (urlLower.includes('/service') || urlLower.includes('/dienst')) pageType = 'service';
+          else if (urlLower.includes('/blog') || urlLower.includes('/news') || urlLower.includes('/nieuws')) pageType = 'blog';
+          else if (urlLower === new URL(extraction.url).origin + '/' || urlLower.endsWith('.com') || urlLower.endsWith('.nl')) pageType = 'homepage';
+
+          // Upsert the extraction record (returns the ID for component linking)
+          const { data: savedExtraction, error: extractionError } = await supabase
+            .from('brand_extractions')
+            .upsert({
+              project_id: projectId,
+              source_url: extraction.url,
+              page_type: pageType,
+              screenshot_base64: extraction.screenshotBase64?.substring(0, 100000), // Limit size
+              raw_html: extraction.rawHtml?.substring(0, 500000) || '', // Required field
+              computed_styles: {
+                colors: extraction.colors,
+                colorSources: extraction.colorSources,
+                typography: extraction.typography,
+                components: extraction.components,
+                images: extraction.images,
+              },
+              extracted_at: new Date().toISOString(),
+            }, {
+              onConflict: 'project_id,source_url',
+              ignoreDuplicates: false, // Update existing
+            })
+            .select('id')
+            .single();
+
+          if (extractionError) {
+            console.error('[BrandExtractPages] Failed to save extraction:', extractionError);
+          } else if (savedExtraction) {
+            // Add extraction ID to response for component linking
+            (extraction as any).extractionId = savedExtraction.id;
+            console.log('[BrandExtractPages] Saved extraction:', savedExtraction.id);
+          }
         }
 
         console.log('[BrandExtractPages] Saved extractions to database');

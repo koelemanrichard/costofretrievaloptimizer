@@ -277,24 +277,33 @@ export function useBrandExtraction(
             }
 
             // Save components to ComponentLibrary
-            const extractionId = crypto.randomUUID();
-            for (const component of analysisResult.components) {
-              const fullComponent: ExtractedComponent = {
-                id: crypto.randomUUID(),
-                extractionId,
-                projectId,
-                visualDescription: component.visualDescription,
-                componentType: component.componentType,
-                literalHtml: component.literalHtml,
-                literalCss: component.literalCss,
-                theirClassNames: component.theirClassNames,
-                contentSlots: component.contentSlots,
-                boundingBox: component.boundingBox,
-                createdAt: new Date().toISOString()
-              };
+            // Use extractionId from edge function (required for FK constraint)
+            const extractionId = (extraction as unknown as { extractionId?: string }).extractionId;
+            if (!extractionId) {
+              console.warn('[useBrandExtraction] No extractionId from edge function, skipping component save');
+            } else {
+              for (const component of analysisResult.components) {
+                const fullComponent: ExtractedComponent = {
+                  id: crypto.randomUUID(),
+                  extractionId,
+                  projectId,
+                  visualDescription: component.visualDescription,
+                  componentType: component.componentType,
+                  literalHtml: component.literalHtml,
+                  literalCss: component.literalCss,
+                  theirClassNames: component.theirClassNames,
+                  contentSlots: component.contentSlots,
+                  boundingBox: component.boundingBox,
+                  createdAt: new Date().toISOString()
+                };
 
-              await library.saveComponent(fullComponent);
-              setExtractedComponents(prev => [...prev, fullComponent]);
+                try {
+                  await library.saveComponent(fullComponent);
+                  setExtractedComponents(prev => [...prev, fullComponent]);
+                } catch (saveErr) {
+                  console.warn(`[useBrandExtraction] Failed to save component:`, saveErr);
+                }
+              }
             }
 
             // Save tokens from AI analysis to database
@@ -321,43 +330,85 @@ export function useBrandExtraction(
             if (extraction.rawHtml) {
               console.log('[useBrandExtraction] Using fallback HTML extraction');
 
-              // Extract style content from HTML
-              const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
-              let extractedCss = '';
-              let match;
-              while ((match = styleRegex.exec(extraction.rawHtml)) !== null) {
-                extractedCss += match[1] + '\n';
-              }
+              // Use the extractionId returned from edge function if available
+              // The edge function now saves to brand_extractions and returns the ID
+              const extractionId = (extraction as unknown as { extractionId?: string }).extractionId;
 
-              // Extract major sections as components (header, main, sections, footer)
-              const sectionSelectors = [
-                { regex: /<header[^>]*>([\s\S]*?)<\/header>/i, type: 'header' },
-                { regex: /<main[^>]*>([\s\S]*?)<\/main>/i, type: 'main' },
-                { regex: /<section[^>]*class="[^"]*hero[^"]*"[^>]*>([\s\S]*?)<\/section>/i, type: 'hero' },
-                { regex: /<footer[^>]*>([\s\S]*?)<\/footer>/i, type: 'footer' },
-              ];
+              if (!extractionId) {
+                console.warn('[useBrandExtraction] No extractionId from edge function, skipping fallback component extraction');
+                // Edge function didn't return ID, can't save components due to FK constraint
+                // Components will be saved on next extraction when edge function returns ID
+              } else {
+                // Extract style content from HTML
+                const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+                let extractedCss = '';
+                let match;
+                while ((match = styleRegex.exec(extraction.rawHtml)) !== null) {
+                  extractedCss += match[1] + '\n';
+                }
 
-              const extractionId = crypto.randomUUID();
+                // Also try to extract linked stylesheets' content (if available in rawHtml)
+                // For now, use what we have
 
-              for (const sel of sectionSelectors) {
-                const sectionMatch = extraction.rawHtml.match(sel.regex);
-                if (sectionMatch) {
-                  const fullComponent: ExtractedComponent = {
-                    id: crypto.randomUUID(),
-                    extractionId,
-                    projectId,
-                    visualDescription: `${sel.type} section extracted from ${url}`,
-                    componentType: sel.type,
-                    literalHtml: sectionMatch[0],
-                    literalCss: extractedCss, // Full CSS for now
-                    theirClassNames: [],
-                    contentSlots: [{ name: 'content', selector: '*', type: 'html', required: true }],
-                    createdAt: new Date().toISOString()
-                  };
+                // Extract class names from the HTML
+                const classRegex = /class="([^"]+)"/gi;
+                const allClasses = new Set<string>();
+                let classMatch;
+                while ((classMatch = classRegex.exec(extraction.rawHtml)) !== null) {
+                  classMatch[1].split(/\s+/).forEach(cls => {
+                    if (cls && !cls.startsWith('js-') && cls.length > 2) {
+                      allClasses.add(cls);
+                    }
+                  });
+                }
 
-                  await library.saveComponent(fullComponent);
-                  setExtractedComponents(prev => [...prev, fullComponent]);
-                  console.log(`[useBrandExtraction] Saved fallback ${sel.type} component`);
+                // Extract major sections as components (header, main, sections, footer)
+                const sectionSelectors = [
+                  { regex: /<header[^>]*>([\s\S]*?)<\/header>/i, type: 'header' },
+                  { regex: /<main[^>]*>([\s\S]*?)<\/main>/i, type: 'main' },
+                  { regex: /<section[^>]*class="[^"]*hero[^"]*"[^>]*>([\s\S]*?)<\/section>/i, type: 'hero' },
+                  { regex: /<nav[^>]*>([\s\S]*?)<\/nav>/i, type: 'navigation' },
+                  { regex: /<footer[^>]*>([\s\S]*?)<\/footer>/i, type: 'footer' },
+                  { regex: /<article[^>]*>([\s\S]*?)<\/article>/i, type: 'article' },
+                  { regex: /<aside[^>]*>([\s\S]*?)<\/aside>/i, type: 'sidebar' },
+                ];
+
+                for (const sel of sectionSelectors) {
+                  const sectionMatch = extraction.rawHtml.match(sel.regex);
+                  if (sectionMatch) {
+                    // Extract class names from this specific section
+                    const sectionClasses: string[] = [];
+                    const sectionClassRegex = /class="([^"]+)"/gi;
+                    let scMatch;
+                    while ((scMatch = sectionClassRegex.exec(sectionMatch[0])) !== null) {
+                      scMatch[1].split(/\s+/).forEach(cls => {
+                        if (cls && !sectionClasses.includes(cls)) {
+                          sectionClasses.push(cls);
+                        }
+                      });
+                    }
+
+                    const fullComponent: ExtractedComponent = {
+                      id: crypto.randomUUID(),
+                      extractionId,
+                      projectId,
+                      visualDescription: `${sel.type} section extracted from ${url}`,
+                      componentType: sel.type,
+                      literalHtml: sectionMatch[0],
+                      literalCss: extractedCss,
+                      theirClassNames: sectionClasses.slice(0, 20), // Limit class names
+                      contentSlots: [{ name: 'content', selector: '*', type: 'html', required: true }],
+                      createdAt: new Date().toISOString()
+                    };
+
+                    try {
+                      await library.saveComponent(fullComponent);
+                      setExtractedComponents(prev => [...prev, fullComponent]);
+                      console.log(`[useBrandExtraction] Saved fallback ${sel.type} component`);
+                    } catch (saveErr) {
+                      console.warn(`[useBrandExtraction] Failed to save ${sel.type} component:`, saveErr);
+                    }
+                  }
                 }
               }
             }
