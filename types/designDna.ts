@@ -195,6 +195,56 @@ export interface DesignDNAExtractionResult {
 }
 
 // ============================================================================
+// BRAND HTML TEMPLATES (AI-Generated per brand personality)
+// ============================================================================
+
+/**
+ * HTML template for a component type - AI generates UNIQUE structures per brand
+ * Corporate brands get structured layouts, creative brands get dynamic ones, etc.
+ */
+export interface ComponentHtmlTemplate {
+  /** The HTML template string with {{content}}, {{heading}}, {{items}} placeholders */
+  template: string;
+  /** CSS classes used in this template (for validation) */
+  cssClasses: string[];
+  /** Slots that can receive content */
+  slots: ('content' | 'heading' | 'items' | 'icon' | 'badge' | 'image' | 'cta')[];
+  /** Variants of this template (e.g., 'featured', 'minimal') */
+  variants?: Record<string, string>;
+}
+
+/**
+ * Complete set of HTML templates for a brand
+ * Each brand gets UNIQUE HTML structures based on their personality
+ */
+export interface BrandHtmlTemplates {
+  /** Hero/header section template */
+  hero: ComponentHtmlTemplate;
+  /** Regular prose/content section */
+  prose: ComponentHtmlTemplate;
+  /** Card grid layout */
+  cardGrid: ComponentHtmlTemplate;
+  /** Timeline/process steps */
+  timeline: ComponentHtmlTemplate;
+  /** FAQ/accordion section */
+  faq: ComponentHtmlTemplate;
+  /** Call-to-action section */
+  cta: ComponentHtmlTemplate;
+  /** Key takeaways/summary box */
+  keyTakeaways: ComponentHtmlTemplate;
+  /** Bullet/feature list */
+  bulletList: ComponentHtmlTemplate;
+  /** Highlight/callout box */
+  highlightBox: ComponentHtmlTemplate;
+  /** Table of contents */
+  toc: ComponentHtmlTemplate;
+  /** Comparison table */
+  comparisonTable: ComponentHtmlTemplate;
+  /** Testimonial/quote section */
+  testimonial: ComponentHtmlTemplate;
+}
+
+// ============================================================================
 // BRAND DESIGN SYSTEM (Generated from Design DNA)
 // ============================================================================
 
@@ -308,4 +358,18 @@ export interface BrandDesignSystem {
     button: Record<string, string>;
     cta: Record<string, string>;
   };
+
+  // ============================================================================
+  // AI-GENERATED HTML TEMPLATES (The key to brand-unique output)
+  // ============================================================================
+
+  /**
+   * AI-generated HTML templates unique to this brand's personality
+   * Corporate brands → structured, professional layouts
+   * Creative brands → dynamic, asymmetric layouts
+   * Minimal brands → sparse, clean layouts
+   *
+   * If not present, falls back to generic semantic HTML
+   */
+  htmlTemplates?: BrandHtmlTemplates;
 }

@@ -45,6 +45,8 @@ function json(body: any, status = 200, origin = "*") {
 interface PageExtraction {
   url: string;
   screenshotBase64?: string;
+  /** RAW HTML of the page - needed for literal component extraction */
+  rawHtml?: string;
   colors: {
     primary: string;
     secondary: string;
@@ -160,6 +162,9 @@ async function extractBrandFromPages(urls: string[], apifyToken: string): Promis
         // Capture screenshot
         const screenshot = await page.screenshot({ type: 'jpeg', quality: 80, fullPage: false });
         const screenshotBase64 = screenshot.toString('base64');
+
+        // CRITICAL: Capture raw HTML for literal component extraction
+        const rawHtml = await page.content();
 
         // Extract design data
         const designData = await page.evaluate(() => {
@@ -293,6 +298,7 @@ async function extractBrandFromPages(urls: string[], apifyToken: string): Promis
         return {
           url: request.url,
           screenshotBase64,
+          rawHtml: rawHtml.substring(0, 500000), // Limit to 500KB to avoid payload issues
           ...designData
         };
       } catch (error) {
@@ -332,6 +338,7 @@ async function extractBrandFromPages(urls: string[], apifyToken: string): Promis
   return results.map(item => ({
     url: item.url,
     screenshotBase64: item.screenshotBase64,
+    rawHtml: item.rawHtml, // CRITICAL: Include raw HTML for literal component extraction
     colors: item.colors || { primary: '#ea580c', secondary: '#18181b', accent: '#ea580c', background: '#ffffff' },
     colorSources: item.colorSources || {},
     typography: item.typography || { heading: 'system-ui, sans-serif', body: 'system-ui, sans-serif', baseSize: '16px' },

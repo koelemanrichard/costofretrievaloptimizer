@@ -262,10 +262,12 @@ export function useBrandExtraction(
           }
 
           try {
+            // Pass raw HTML for literal component extraction (critical for BrandAwareComposer)
             const analysisResult = await analyzer.analyze({
               screenshotBase64: extraction.screenshotBase64,
-              rawHtml: '' // HTML not available from edge function
+              rawHtml: extraction.rawHtml || '' // Use HTML from edge function if available
             });
+            console.log('[useBrandExtraction] AI analysis complete, components:', analysisResult.components.length);
 
             // Track tokens from first successful AI analysis
             if (analysisResult.tokens && !mergedTokens) {
@@ -313,7 +315,52 @@ export function useBrandExtraction(
             }
           } catch (analyzeErr) {
             console.warn(`[useBrandExtraction] AI analysis failed for ${url}:`, analyzeErr);
-            // Continue with next extraction
+
+            // FALLBACK: Extract components directly from raw HTML when AI fails
+            // This ensures BrandAwareComposer has components to work with
+            if (extraction.rawHtml) {
+              console.log('[useBrandExtraction] Using fallback HTML extraction');
+
+              // Extract style content from HTML
+              const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+              let extractedCss = '';
+              let match;
+              while ((match = styleRegex.exec(extraction.rawHtml)) !== null) {
+                extractedCss += match[1] + '\n';
+              }
+
+              // Extract major sections as components (header, main, sections, footer)
+              const sectionSelectors = [
+                { regex: /<header[^>]*>([\s\S]*?)<\/header>/i, type: 'header' },
+                { regex: /<main[^>]*>([\s\S]*?)<\/main>/i, type: 'main' },
+                { regex: /<section[^>]*class="[^"]*hero[^"]*"[^>]*>([\s\S]*?)<\/section>/i, type: 'hero' },
+                { regex: /<footer[^>]*>([\s\S]*?)<\/footer>/i, type: 'footer' },
+              ];
+
+              const extractionId = crypto.randomUUID();
+
+              for (const sel of sectionSelectors) {
+                const sectionMatch = extraction.rawHtml.match(sel.regex);
+                if (sectionMatch) {
+                  const fullComponent: ExtractedComponent = {
+                    id: crypto.randomUUID(),
+                    extractionId,
+                    projectId,
+                    visualDescription: `${sel.type} section extracted from ${url}`,
+                    componentType: sel.type,
+                    literalHtml: sectionMatch[0],
+                    literalCss: extractedCss, // Full CSS for now
+                    theirClassNames: [],
+                    contentSlots: [{ name: 'content', selector: '*', type: 'html', required: true }],
+                    createdAt: new Date().toISOString()
+                  };
+
+                  await library.saveComponent(fullComponent);
+                  setExtractedComponents(prev => [...prev, fullComponent]);
+                  console.log(`[useBrandExtraction] Saved fallback ${sel.type} component`);
+                }
+              }
+            }
           }
         }
 
