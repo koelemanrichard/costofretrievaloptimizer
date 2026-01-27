@@ -1024,7 +1024,7 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
         if (projectId) {
           try {
             // Fetch generated images from content_generation_jobs
-            const supabase = getSupabaseClient();
+            const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
             let generatedImages: Array<{
               id: string;
               type: string;
