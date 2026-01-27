@@ -26,6 +26,40 @@ import type { LayoutBlueprint } from '../../../services/publishing';
 // Types
 // ============================================================================
 
+/**
+ * Blueprint quality analysis result
+ */
+interface BlueprintQuality {
+  coherence: {
+    score: number;
+    issues: {
+      type: 'spacing' | 'background' | 'emphasis' | 'weight' | 'divider';
+      severity: 'warning' | 'error';
+      message: string;
+      sectionIndex: number;
+    }[];
+    suggestions: {
+      sectionIndex: number;
+      property: string;
+      currentValue: unknown;
+      suggestedValue: unknown;
+      reason: string;
+    }[];
+  };
+  report: string;
+  overallScore: number;
+}
+
+/**
+ * Rendering metadata about how content was rendered
+ */
+interface RenderingMetadata {
+  rendererUsed: 'BrandAwareComposer' | 'BlueprintRenderer';
+  fallbackReason?: string;
+  brandScore?: number;
+  unresolvedImageCount?: number;
+}
+
 interface PreviewStepProps {
   preview: StyledContentOutput | null;
   isGenerating: boolean;
@@ -46,6 +80,9 @@ interface PreviewStepProps {
   brandMatchScore?: number;
   brandAssessment?: string;
   onShowBrandDetails?: () => void;
+  // Quality/fallback notifications
+  blueprintQuality?: BlueprintQuality | null;
+  renderingMetadata?: RenderingMetadata | null;
 }
 
 interface DeviceFrameProps {
@@ -153,6 +190,9 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
   brandMatchScore,
   brandAssessment,
   onShowBrandDetails,
+  // Quality/fallback props
+  blueprintQuality,
+  renderingMetadata,
 }) => {
   const [device, setDevice] = useState<DevicePreview>('desktop');
   const [showRawHtml, setShowRawHtml] = useState(false);
@@ -292,6 +332,67 @@ document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
           assessmentText={brandAssessment}
           onShowDetails={onShowBrandDetails}
         />
+      )}
+
+      {/* Rendering Fallback Warning */}
+      {renderingMetadata?.rendererUsed === 'BlueprintRenderer' && renderingMetadata.fallbackReason && (
+        <div className="p-3 bg-yellow-900/30 rounded-lg border border-yellow-500/30">
+          <div className="flex items-start gap-2">
+            <span className="text-yellow-400">⚠️</span>
+            <div>
+              <p className="text-sm font-medium text-yellow-300">Brand styling limited</p>
+              <p className="text-xs text-yellow-400/80 mt-0.5">
+                {renderingMetadata.fallbackReason || 'Full brand extraction not available. Using design tokens instead.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unresolved Images Warning */}
+      {renderingMetadata?.unresolvedImageCount && renderingMetadata.unresolvedImageCount > 0 && (
+        <div className="p-3 bg-blue-900/30 rounded-lg border border-blue-500/30">
+          <div className="flex items-start gap-2">
+            <span className="text-blue-400">🖼️</span>
+            <div>
+              <p className="text-sm font-medium text-blue-300">
+                {renderingMetadata.unresolvedImageCount} image placeholder{renderingMetadata.unresolvedImageCount > 1 ? 's' : ''} need attention
+              </p>
+              <p className="text-xs text-blue-400/80 mt-0.5">
+                Generate images in the Image Management panel to replace placeholders.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blueprint Quality Warning */}
+      {blueprintQuality && blueprintQuality.overallScore < 70 && (
+        <div className="p-3 bg-amber-900/30 rounded-lg border border-amber-500/30">
+          <div className="flex items-start gap-2">
+            <span className="text-amber-400">📐</span>
+            <div>
+              <p className="text-sm font-medium text-amber-300">
+                Layout coherence: {blueprintQuality.overallScore}%
+              </p>
+              {blueprintQuality.coherence.issues.length > 0 && (
+                <ul className="mt-1 space-y-0.5">
+                  {blueprintQuality.coherence.issues.slice(0, 3).map((issue, idx) => (
+                    <li key={idx} className="text-xs text-amber-400/80 flex items-start gap-1">
+                      <span>{issue.severity === 'error' ? '•' : '○'}</span>
+                      <span>{issue.message}</span>
+                    </li>
+                  ))}
+                  {blueprintQuality.coherence.issues.length > 3 && (
+                    <li className="text-xs text-amber-400/60 ml-3">
+                      +{blueprintQuality.coherence.issues.length - 3} more issues
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* SEO Validation */}

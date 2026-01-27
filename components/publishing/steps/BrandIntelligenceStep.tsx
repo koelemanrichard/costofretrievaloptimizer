@@ -368,7 +368,7 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
                 disabled={isRegeneratingStyles || !geminiApiKey}
                 className="text-xs bg-blue-600 hover:bg-blue-500"
               >
-                {isRegeneratingStyles ? 'Regenerating...' : '&#x1F3A8; Regenerate Styling'}
+                {isRegeneratingStyles ? 'Regenerating...' : '🎨 Regenerate Styling'}
               </Button>
               <Button
                 variant="secondary"
@@ -377,7 +377,7 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
                 disabled={isRegenerating || !apifyToken}
                 className="text-xs"
               >
-                {isRegenerating ? 'Clearing...' : '&#x21BB; Re-analyze'}
+                {isRegenerating ? 'Clearing...' : '↻ Re-analyze'}
               </Button>
             </div>
           </div>

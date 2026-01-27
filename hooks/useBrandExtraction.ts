@@ -2,27 +2,19 @@
  * useBrandExtraction Hook
  *
  * Orchestrates the full brand extraction flow from URL discovery
- * through component extraction.
+ * through component extraction using server-side edge functions.
+ *
+ * Uses Apify via edge functions to avoid CORS issues:
+ * - brand-url-discovery: Discovers URLs from a domain
+ * - brand-extract-pages: Extracts design data from multiple pages
  */
 
 import { useState, useCallback } from 'react';
-import { UrlDiscoveryService, type UrlSuggestion } from '../services/brand-extraction/UrlDiscoveryService';
-// NOTE: PageCrawler uses Playwright (Node.js only) - must be dynamically imported
-// import { PageCrawler } from '../services/brand-extraction/PageCrawler';
+import type { UrlSuggestion } from '../services/brand-extraction/UrlDiscoveryService';
 import { ExtractionAnalyzer } from '../services/brand-extraction/ExtractionAnalyzer';
 import { ComponentLibrary } from '../services/brand-extraction/ComponentLibrary';
-import type { ExtractedComponent, BrandExtraction, PageCaptureResult } from '../types/brandExtraction';
+import type { ExtractedComponent } from '../types/brandExtraction';
 import { supabase } from '../lib/supabase';
-
-// Browser-compatible stub - actual crawling must happen server-side
-const PageCrawlerStub = {
-  async capturePage(url: string): Promise<PageCaptureResult> {
-    throw new Error(
-      'PageCrawler requires server-side execution (Playwright). ' +
-      'Use the /api/brand-extraction endpoint instead.'
-    );
-  }
-};
 
 // ============================================================================
 // TYPES
@@ -81,7 +73,8 @@ const initialProgress: ExtractionProgress = {
 export function useBrandExtraction(
   projectId: string,
   aiProvider: 'gemini' | 'anthropic',
-  apiKey: string
+  apiKey: string,
+  apifyToken?: string
 ): UseBrandExtractionResult {
   // State
   const [phase, setPhase] = useState<ExtractionPhase>('idle');
@@ -92,7 +85,7 @@ export function useBrandExtraction(
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Discover URLs from a domain
+   * Discover URLs from a domain using server-side edge function
    * Auto-selects top 5 suggestions after discovery
    */
   const discoverUrls = useCallback(async (domain: string) => {
@@ -106,8 +99,24 @@ export function useBrandExtraction(
     });
 
     try {
-      const discoveryService = new UrlDiscoveryService();
-      const discovered = await discoveryService.discoverUrls(domain);
+      if (!apifyToken) {
+        throw new Error('Apify token is required for URL discovery');
+      }
+
+      // Call edge function for URL discovery (avoids CORS)
+      const { data, error: fnError } = await supabase.functions.invoke('brand-url-discovery', {
+        body: { domain, apifyToken }
+      });
+
+      if (fnError) {
+        throw new Error(fnError.message || 'URL discovery failed');
+      }
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'URL discovery returned no results');
+      }
+
+      const discovered: UrlSuggestion[] = data.urls || [];
 
       setSuggestions(discovered);
 
@@ -133,7 +142,7 @@ export function useBrandExtraction(
         message: `Error: ${message}`
       });
     }
-  }, []);
+  }, [apifyToken]);
 
   /**
    * Toggle URL selection
@@ -163,11 +172,16 @@ export function useBrandExtraction(
   }, []);
 
   /**
-   * Start extraction process for selected URLs
+   * Start extraction process for selected URLs using server-side edge function
    */
   const startExtraction = useCallback(async () => {
     if (selectedUrls.length === 0) {
       setError('No URLs selected');
+      return;
+    }
+
+    if (!apifyToken) {
+      setError('Apify token is required for extraction');
       return;
     }
 
@@ -176,51 +190,42 @@ export function useBrandExtraction(
     setExtractedComponents([]);
 
     const totalUrls = selectedUrls.length;
-    // PageCrawler uses Playwright (Node.js only) - must call server-side API
-    // const crawler = new PageCrawler({ headless: true, timeout: 30000 });
     const analyzer = new ExtractionAnalyzer({ provider: aiProvider, apiKey });
     const library = new ComponentLibrary(projectId);
 
     try {
-      for (let i = 0; i < selectedUrls.length; i++) {
-        const url = selectedUrls[i];
+      // Update progress - extracting (batch mode)
+      setProgress({
+        phase: 'extracting',
+        completedUrls: 0,
+        totalUrls,
+        message: `Extracting design data from ${totalUrls} pages via Apify...`
+      });
 
-        // Update progress - extracting
-        setProgress({
-          phase: 'extracting',
-          currentUrl: url,
-          completedUrls: i,
-          totalUrls,
-          message: `Capturing page ${i + 1}/${totalUrls}: ${url}`
-        });
+      // Call edge function for batch extraction (uses Apify)
+      const { data, error: fnError } = await supabase.functions.invoke('brand-extract-pages', {
+        body: {
+          urls: selectedUrls,
+          apifyToken,
+          projectId
+        }
+      });
 
-        // Capture page via server-side API (PageCrawler requires Playwright/Node.js)
-        const captureResult = await PageCrawlerStub.capturePage(url);
+      if (fnError) {
+        throw new Error(fnError.message || 'Extraction failed');
+      }
 
-        // Save extraction to database
-        const extractionId = crypto.randomUUID();
-        const extraction: BrandExtraction = {
-          id: extractionId,
-          projectId,
-          sourceUrl: captureResult.sourceUrl,
-          pageType: captureResult.pageType,
-          screenshotBase64: captureResult.screenshotBase64,
-          rawHtml: captureResult.rawHtml,
-          computedStyles: captureResult.computedStyles,
-          extractedAt: captureResult.capturedAt
-        };
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Extraction returned no results');
+      }
 
-        // Store extraction in database
-        await supabase.from('brand_extractions').upsert({
-          id: extraction.id,
-          project_id: extraction.projectId,
-          source_url: extraction.sourceUrl,
-          page_type: extraction.pageType,
-          screenshot_base64: extraction.screenshotBase64,
-          raw_html: extraction.rawHtml,
-          computed_styles: extraction.computedStyles,
-          extracted_at: extraction.extractedAt
-        });
+      const extractions = data.extractions || [];
+      console.log('[useBrandExtraction] Received', extractions.length, 'extractions');
+
+      // Process each extraction with AI analysis
+      for (let i = 0; i < extractions.length; i++) {
+        const extraction = extractions[i];
+        const url = extraction.url;
 
         // Update progress - analyzing
         setPhase('analyzing');
@@ -228,62 +233,88 @@ export function useBrandExtraction(
           phase: 'analyzing',
           currentUrl: url,
           completedUrls: i,
-          totalUrls,
-          message: `Analyzing design ${i + 1}/${totalUrls}: ${url}`
+          totalUrls: extractions.length,
+          message: `Analyzing design ${i + 1}/${extractions.length}: ${url}`
         });
 
-        // Analyze with ExtractionAnalyzer
-        const analysisResult = await analyzer.analyze({
-          screenshotBase64: captureResult.screenshotBase64,
-          rawHtml: captureResult.rawHtml
-        });
-
-        // Save components to ComponentLibrary
-        for (const component of analysisResult.components) {
-          const fullComponent: ExtractedComponent = {
-            id: crypto.randomUUID(),
-            extractionId,
-            projectId,
-            visualDescription: component.visualDescription,
-            componentType: component.componentType,
-            literalHtml: component.literalHtml,
-            literalCss: component.literalCss,
-            theirClassNames: component.theirClassNames,
-            contentSlots: component.contentSlots,
-            boundingBox: component.boundingBox,
-            createdAt: new Date().toISOString()
-          };
-
-          await library.saveComponent(fullComponent);
-          setExtractedComponents(prev => [...prev, fullComponent]);
+        // Skip if extraction had an error
+        if (extraction.error) {
+          console.warn(`[useBrandExtraction] Skipping failed extraction: ${url}`, extraction.error);
+          continue;
         }
 
-        // Save tokens to database
-        const tokensId = crypto.randomUUID();
-        await supabase.from('brand_tokens').upsert({
-          id: tokensId,
-          project_id: projectId,
-          colors: analysisResult.tokens.colors,
-          typography: analysisResult.tokens.typography,
-          spacing: analysisResult.tokens.spacing,
-          shadows: analysisResult.tokens.shadows,
-          borders: analysisResult.tokens.borders,
-          gradients: analysisResult.tokens.gradients,
-          extracted_from: analysisResult.tokens.extractedFrom,
-          extracted_at: new Date().toISOString()
-        });
+        // If we have a screenshot, analyze with AI for component extraction
+        if (extraction.screenshotBase64) {
+          try {
+            const analysisResult = await analyzer.analyze({
+              screenshotBase64: extraction.screenshotBase64,
+              rawHtml: '' // HTML not available from edge function
+            });
 
-        // Back to extracting phase for next URL
-        setPhase('extracting');
+            // Save components to ComponentLibrary
+            const extractionId = crypto.randomUUID();
+            for (const component of analysisResult.components) {
+              const fullComponent: ExtractedComponent = {
+                id: crypto.randomUUID(),
+                extractionId,
+                projectId,
+                visualDescription: component.visualDescription,
+                componentType: component.componentType,
+                literalHtml: component.literalHtml,
+                literalCss: component.literalCss,
+                theirClassNames: component.theirClassNames,
+                contentSlots: component.contentSlots,
+                boundingBox: component.boundingBox,
+                createdAt: new Date().toISOString()
+              };
+
+              await library.saveComponent(fullComponent);
+              setExtractedComponents(prev => [...prev, fullComponent]);
+            }
+
+            // Save tokens from AI analysis
+            if (analysisResult.tokens) {
+              const tokensId = crypto.randomUUID();
+              await supabase.from('brand_tokens').upsert({
+                id: tokensId,
+                project_id: projectId,
+                colors: analysisResult.tokens.colors,
+                typography: analysisResult.tokens.typography,
+                spacing: analysisResult.tokens.spacing,
+                shadows: analysisResult.tokens.shadows,
+                borders: analysisResult.tokens.borders,
+                gradients: analysisResult.tokens.gradients,
+                extracted_from: analysisResult.tokens.extractedFrom,
+                extracted_at: new Date().toISOString()
+              });
+            }
+          } catch (analyzeErr) {
+            console.warn(`[useBrandExtraction] AI analysis failed for ${url}:`, analyzeErr);
+            // Continue with next extraction
+          }
+        }
+
+        // Also save the basic tokens from edge function extraction
+        if (extraction.colors) {
+          const tokensId = crypto.randomUUID();
+          await supabase.from('brand_tokens').upsert({
+            id: tokensId,
+            project_id: projectId,
+            colors: extraction.colors,
+            typography: extraction.typography,
+            extracted_from: [url],
+            extracted_at: new Date().toISOString()
+          }, { onConflict: 'project_id' }); // Merge with existing
+        }
       }
 
       // Complete
       setPhase('complete');
       setProgress({
         phase: 'complete',
-        completedUrls: totalUrls,
-        totalUrls,
-        message: `Extraction complete! Extracted components from ${totalUrls} pages.`
+        completedUrls: extractions.length,
+        totalUrls: extractions.length,
+        message: `Extraction complete! Processed ${extractions.length} pages.`
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Extraction failed';
@@ -296,7 +327,7 @@ export function useBrandExtraction(
         message: `Error: ${message}`
       });
     }
-  }, [selectedUrls, projectId, aiProvider, apiKey, progress.completedUrls]);
+  }, [selectedUrls, projectId, aiProvider, apiKey, apifyToken, progress.completedUrls]);
 
   /**
    * Reset to idle state

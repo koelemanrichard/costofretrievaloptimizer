@@ -199,6 +199,14 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
   const [brandMatchScore, setBrandMatchScore] = useState<number | undefined>(undefined);
   const [brandAssessment, setBrandAssessment] = useState<string | undefined>(undefined);
 
+  // Rendering metadata state (for Preview step notifications)
+  const [renderingMetadata, setRenderingMetadata] = useState<{
+    rendererUsed: 'BrandAwareComposer' | 'BlueprintRenderer';
+    fallbackReason?: string;
+    brandScore?: number;
+    unresolvedImageCount?: number;
+  } | null>(null);
+
   // Design inheritance - load project/map level settings
   const supabaseClient = useMemo(
     () => getSupabaseClient(supabaseUrl, supabaseAnonKey),
@@ -1015,6 +1023,60 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
         // NEW: Try unified renderer first (routes to BrandAwareComposer when extractions exist)
         if (projectId) {
           try {
+            // Fetch generated images from content_generation_jobs
+            const supabase = getSupabaseClient();
+            let generatedImages: Array<{
+              id: string;
+              type: string;
+              description: string;
+              altTextSuggestion: string;
+              generatedUrl?: string;
+              userUploadUrl?: string;
+              status: string;
+              specs?: { width: number; height: number };
+            }> = [];
+
+            if (topic.id) {
+              // Images are stored in content_generation_jobs.image_placeholders
+              const { data: jobData } = await supabase
+                .from('content_generation_jobs')
+                .select('image_placeholders')
+                .eq('topic_id', topic.id)
+                .eq('status', 'completed')
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .single();
+
+              if (jobData?.image_placeholders && Array.isArray(jobData.image_placeholders)) {
+                // Filter to only include generated or uploaded images
+                const placeholders = jobData.image_placeholders as Array<{
+                  id: string;
+                  type?: string;
+                  description?: string;
+                  altTextSuggestion?: string;
+                  generatedUrl?: string;
+                  userUploadUrl?: string;
+                  status?: string;
+                  specs?: { width: number; height: number };
+                }>;
+
+                generatedImages = placeholders
+                  .filter(img => img.status === 'generated' || img.status === 'uploaded')
+                  .map(img => ({
+                    id: img.id,
+                    type: img.type || 'SECTION',
+                    description: img.description || '',
+                    altTextSuggestion: img.altTextSuggestion || img.description || '',
+                    generatedUrl: img.generatedUrl,
+                    userUploadUrl: img.userUploadUrl,
+                    status: img.status || 'placeholder',
+                    specs: img.specs,
+                  }));
+
+                console.log('[Style & Publish] Found', generatedImages.length, 'generated/uploaded images for topic');
+              }
+            }
+
             const articleContent = htmlToArticleContent(articleDraft, topic.title);
             const unifiedOutput = await renderContent(articleContent, {
               projectId,
@@ -1052,14 +1114,27 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
                 secondaryUrl: '#',
               },
               // Pass brandDesignSystem for AI-generated CSS injection
-              brandDesignSystem: detectedDesignSystem || undefined
+              brandDesignSystem: detectedDesignSystem || undefined,
+              // Pass generated images for injection
+              generatedImages: generatedImages as any,
             });
 
             console.log('[Style & Publish] Unified renderer succeeded');
             setPreview(unifiedOutput);
+            // Set metadata - unified renderer uses BrandAwareComposer when brand extraction exists
+            setRenderingMetadata({
+              rendererUsed: 'BrandAwareComposer',
+              brandScore: brandMatchScore,
+              unresolvedImageCount: (unifiedOutput as any).renderMetadata?.unresolvedImageCount || 0,
+            });
             return;
           } catch (error) {
             console.log('[Style & Publish] Unified renderer failed, falling back:', error);
+            // Set fallback metadata
+            setRenderingMetadata({
+              rendererUsed: 'BlueprintRenderer',
+              fallbackReason: error instanceof Error ? error.message : 'Unified renderer unavailable',
+            });
             // Fall through to direct renderBlueprint
           }
         }
@@ -1135,6 +1210,16 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
           sectionsRendered: output.metadata.sectionsRendered,
           componentsUsed: output.metadata.componentsUsed,
           visualStyle: output.metadata.blueprint.visualStyle,
+        });
+
+        // Set rendering metadata for fallback path
+        const hasBrandDesignSystem = !!detectedDesignSystem?.compiledCss;
+        setRenderingMetadata({
+          rendererUsed: 'BlueprintRenderer',
+          fallbackReason: hasBrandDesignSystem
+            ? undefined
+            : 'No brand extraction available. Using design tokens for styling.',
+          brandScore: brandMatchScore,
         });
       } else {
         // Fallback to old assemblePage if no blueprint (shouldn't happen normally)
@@ -1368,6 +1453,9 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
             brandMatchScore={brandMatchScore}
             brandAssessment={brandAssessment}
             onShowBrandDetails={() => setCurrentStep('brand')}
+            // Quality/fallback notifications
+            blueprintQuality={blueprintQuality}
+            renderingMetadata={renderingMetadata}
           />
         );
 

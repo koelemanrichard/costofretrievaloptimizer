@@ -9,9 +9,16 @@
 
 import { BrandAwareComposer } from '../../brand-composer/BrandAwareComposer';
 import { ComponentLibrary } from '../../brand-extraction/ComponentLibrary';
-import type { ContentBrief, EnrichedTopic, TopicalMap } from '../../../types';
+import type { ContentBrief, EnrichedTopic, TopicalMap, ImagePlaceholder } from '../../../types';
 import type { LayoutBlueprint } from '../architect/blueprintTypes';
 import type { StyledContentOutput, CssVariables } from '../../../types/publishing';
+import {
+  injectImagesIntoContent,
+  placeholdersToInjectableImages,
+  countUnresolvedPlaceholders,
+  type InjectableImage,
+  type ImageInjectionResult,
+} from './imageInjector';
 
 // ============================================================================
 // TYPES
@@ -98,6 +105,10 @@ export interface RenderContentOptions {
     compiledCss?: string;
     designDnaHash?: string;
   };
+  /** Generated images from content generation (priority 1 for injection) */
+  generatedImages?: ImagePlaceholder[];
+  /** Brand-extracted images (priority 2 for injection) */
+  brandImages?: InjectableImage[];
 }
 
 // ============================================================================
@@ -117,7 +128,56 @@ export interface RenderContentOptions {
 export async function renderContent(
   content: ArticleContent,
   options: RenderContentOptions
-): Promise<StyledContentOutput> {
+): Promise<StyledContentOutput & { renderMetadata?: { unresolvedImageCount: number } }> {
+  // 0. Inject images into content if available
+  let processedContent = content;
+  let imageInjectionResult: ImageInjectionResult | null = null;
+
+  if (options.generatedImages || options.brandImages) {
+    const generatedInjectables = options.generatedImages
+      ? placeholdersToInjectableImages(options.generatedImages)
+      : [];
+    const brandInjectables = options.brandImages || [];
+
+    // Only inject if we have images to inject
+    if (generatedInjectables.length > 0 || brandInjectables.length > 0) {
+      // Inject into each section's content
+      const injectedSections = content.sections.map(section => {
+        const result = injectImagesIntoContent(section.content, {
+          generated: generatedInjectables,
+          brand: brandInjectables,
+        });
+        return {
+          ...section,
+          content: result.content,
+        };
+      });
+
+      processedContent = {
+        ...content,
+        sections: injectedSections,
+      };
+
+      // Count total unresolved across all sections
+      const totalUnresolved = injectedSections.reduce((sum, section) => {
+        return sum + countUnresolvedPlaceholders(section.content);
+      }, 0);
+
+      imageInjectionResult = {
+        content: '', // Not used at this level
+        injectedCount: generatedInjectables.length - totalUnresolved,
+        unresolvedCount: totalUnresolved,
+        unresolvedPlaceholders: [],
+      };
+
+      console.log('[Renderer] Image injection result:', {
+        generatedImagesAvailable: generatedInjectables.length,
+        brandImagesAvailable: brandInjectables.length,
+        unresolvedCount: totalUnresolved,
+      });
+    }
+  }
+
   // 1. Check if project has brand extraction
   const hasExtraction = await hasBrandExtraction(options.projectId);
 
@@ -133,8 +193,8 @@ export async function renderContent(
 
     // Normalize sections to match BrandAwareComposer's expected format
     const normalizedContent = {
-      title: content.title,
-      sections: content.sections.map(section => ({
+      title: processedContent.title,
+      sections: processedContent.sections.map(section => ({
         id: section.id,
         heading: section.heading || '',
         headingLevel: section.headingLevel || 2,
@@ -161,7 +221,10 @@ export async function renderContent(
         schemaPreserved: true,
         metaPreserved: true
       },
-      template: 'blog-article'
+      template: 'blog-article',
+      renderMetadata: {
+        unresolvedImageCount: imageInjectionResult?.unresolvedCount || 0,
+      },
     };
   }
 
@@ -174,7 +237,7 @@ export async function renderContent(
 
   // Import and call renderBlueprint
   const { renderBlueprint } = await import('./blueprintRenderer');
-  const blueprintResult = renderBlueprint(options.blueprint, content.title, {
+  const blueprintResult = renderBlueprint(options.blueprint, processedContent.title, {
     brief: options.brief,
     topic: options.topic,
     topicalMap: options.topicalMap,
@@ -207,7 +270,10 @@ export async function renderContent(
       schemaPreserved: true,
       metaPreserved: true
     },
-    template: 'blog-article'
+    template: 'blog-article',
+    renderMetadata: {
+      unresolvedImageCount: imageInjectionResult?.unresolvedCount || 0,
+    },
   };
 }
 
@@ -260,3 +326,16 @@ export type {
   RenderedComponent,
   ComponentRenderer,
 } from './componentLibrary';
+
+// Image Injector
+export {
+  injectImagesIntoContent,
+  placeholdersToInjectableImages,
+  countUnresolvedPlaceholders,
+} from './imageInjector';
+
+export type {
+  InjectableImage,
+  ImagePool,
+  ImageInjectionResult,
+} from './imageInjector';
