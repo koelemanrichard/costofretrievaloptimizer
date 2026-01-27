@@ -205,6 +205,16 @@ export class BrandDesignSystemGenerator {
     json['--ctc-error'] = semantic?.error || '#ef4444';
     json['--ctc-info'] = semantic?.info || '#3b82f6';
 
+    // CRITICAL: Alias tokens that AI-generated CSS references but weren't defined
+    // These map semantic names to the neutral palette
+    json['--ctc-borders-dividers'] = json['--ctc-neutral-light'];
+    json['--ctc-backgrounds'] = json['--ctc-neutral-lightest'];
+    json['--ctc-surface'] = json['--ctc-neutral-lightest'];
+    json['--ctc-text-darkest'] = json['--ctc-neutral-darkest'];
+    json['--ctc-text-dark'] = json['--ctc-neutral-dark'];
+    json['--ctc-text-medium'] = json['--ctc-neutral-medium'];
+    json['--ctc-text-light'] = json['--ctc-neutral-light'];
+
     // Typography (with fallbacks for all nested properties)
     const typography = designDna.typography || {} as DesignDNA['typography'];
     const headingFont = typography.headingFont || { family: 'system-ui', fallback: 'sans-serif', weight: 700, lineHeight: 1.2 };
@@ -1258,6 +1268,34 @@ CRITICAL: Return ONLY valid JSON.`;
     if (imageTreatments.mask) sections.push(imageTreatments.mask);
     if (imageTreatments.overlay) sections.push(imageTreatments.overlay);
 
+    // ========================================================================
+    // CRITICAL: Base Layout & Missing Component Styles
+    // These are used by BlueprintRenderer but weren't being generated
+    // ========================================================================
+    sections.push('');
+    sections.push('/* ==========================================================================');
+    sections.push('   Base Layout (CRITICAL - was missing!)');
+    sections.push('   ========================================================================== */');
+    sections.push(this.generateBaseLayoutCSS());
+
+    sections.push('');
+    sections.push('/* ==========================================================================');
+    sections.push('   Table of Contents (CRITICAL - was missing!)');
+    sections.push('   ========================================================================== */');
+    sections.push(this.generateTocCSS());
+
+    sections.push('');
+    sections.push('/* ==========================================================================');
+    sections.push('   CTA Banner (CRITICAL - was missing!)');
+    sections.push('   ========================================================================== */');
+    sections.push(this.generateCtaBannerCSS());
+
+    sections.push('');
+    sections.push('/* ==========================================================================');
+    sections.push('   Lead Paragraph (CRITICAL - was missing!)');
+    sections.push('   ========================================================================== */');
+    sections.push(this.generateLeadParagraphCSS());
+
     return sections.filter(Boolean).join('\n');
   }
 
@@ -1807,5 +1845,398 @@ ${hoverEffect === 'zoom' ? '.ctc-image--featured:hover { transform: scale(1.05);
         floating: 'ctc-cta ctc-cta--floating'
       }
     };
+  }
+
+  // ============================================================================
+  // CRITICAL: Missing CSS Generator Methods
+  // These generate styles for components used by BlueprintRenderer that were
+  // previously missing from the output, causing broken/unstyled layouts.
+  // ============================================================================
+
+  /**
+   * Generate base layout CSS (body, container, main, article)
+   * CRITICAL: Without this, text has no readable size and no max-width
+   */
+  private generateBaseLayoutCSS(): string {
+    return `
+/* Base Reset & Typography */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  line-height: var(--ctc-body-line-height);
+  color: var(--ctc-text-dark);
+  background-color: var(--ctc-backgrounds);
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container & Layout */
+.ctc-root {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: var(--ctc-backgrounds);
+}
+
+.ctc-styled {
+  min-height: 100vh;
+}
+
+.ctc-main {
+  padding: var(--ctc-spacing-xl);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ctc-article {
+  background-color: var(--ctc-backgrounds);
+}
+
+/* Responsive Container */
+@media (max-width: 768px) {
+  .ctc-main {
+    padding: var(--ctc-spacing-md);
+  }
+}
+
+/* Image Defaults */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ctc-injected-image {
+  border-radius: var(--ctc-radius-md);
+  margin: var(--ctc-spacing-lg) 0;
+  box-shadow: var(--ctc-shadow-card);
+}
+`;
+  }
+
+  /**
+   * Generate Table of Contents CSS
+   * CRITICAL: TOC was rendering as unstyled list
+   */
+  private generateTocCSS(): string {
+    return `
+/* Table of Contents */
+.ctc-toc {
+  background: var(--ctc-backgrounds);
+  border: 1px solid var(--ctc-borders-dividers);
+  border-radius: var(--ctc-radius-md);
+  padding: var(--ctc-spacing-lg);
+  margin-bottom: var(--ctc-spacing-2xl);
+  box-shadow: var(--ctc-shadow-card);
+}
+
+.ctc-toc--inline {
+  margin-top: calc(-1 * var(--ctc-spacing-2xl));
+  position: relative;
+  z-index: 10;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ctc-toc-header {
+  margin-bottom: var(--ctc-spacing-md);
+  padding-bottom: var(--ctc-spacing-sm);
+  border-bottom: 2px solid var(--ctc-primary-light);
+}
+
+.ctc-toc-title {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-lg);
+  font-weight: var(--ctc-heading-weight);
+  color: var(--ctc-primary-dark);
+  margin: 0;
+}
+
+.ctc-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--ctc-spacing-sm);
+}
+
+.ctc-toc-item {
+  margin: 0;
+}
+
+.ctc-toc-link {
+  display: flex;
+  align-items: center;
+  gap: var(--ctc-spacing-sm);
+  padding: var(--ctc-spacing-sm) var(--ctc-spacing-md);
+  border-radius: var(--ctc-radius-sm);
+  color: var(--ctc-text-dark);
+  text-decoration: none;
+  font-size: var(--ctc-font-size-sm);
+  transition: all var(--ctc-transition-speed) var(--ctc-easing);
+  background: var(--ctc-neutral-lightest);
+}
+
+.ctc-toc-link:hover {
+  background: var(--ctc-primary);
+  color: var(--ctc-neutral-lightest);
+  transform: translateX(4px);
+}
+
+.ctc-toc-arrow {
+  color: var(--ctc-primary);
+  font-weight: bold;
+  transition: color var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-toc-link:hover .ctc-toc-arrow {
+  color: var(--ctc-neutral-lightest);
+}
+
+@media (max-width: 768px) {
+  .ctc-toc-list {
+    grid-template-columns: 1fr;
+  }
+
+  .ctc-toc--inline {
+    margin-top: var(--ctc-spacing-md);
+    margin-left: var(--ctc-spacing-md);
+    margin-right: var(--ctc-spacing-md);
+  }
+}
+`;
+  }
+
+  /**
+   * Generate CTA Banner CSS
+   * CRITICAL: CTA banner was rendering without any styling
+   */
+  private generateCtaBannerCSS(): string {
+    return `
+/* CTA Banner */
+.ctc-cta-banner {
+  background: linear-gradient(135deg, var(--ctc-primary) 0%, var(--ctc-primary-dark) 100%);
+  color: var(--ctc-neutral-lightest);
+  padding: var(--ctc-spacing-3xl) var(--ctc-spacing-xl);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.ctc-cta-banner--prominent {
+  margin-top: var(--ctc-spacing-2xl);
+}
+
+.ctc-cta-banner-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.ctc-cta-banner-title {
+  font-family: var(--ctc-font-heading);
+  font-size: var(--ctc-font-size-2xl);
+  font-weight: var(--ctc-heading-weight);
+  color: var(--ctc-neutral-lightest);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-cta-banner-text {
+  font-size: var(--ctc-font-size-lg);
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: var(--ctc-spacing-lg);
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ctc-cta-banner-actions {
+  display: flex;
+  gap: var(--ctc-spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctc-cta-banner-decor {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.ctc-cta-banner-decor--1 {
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  right: -100px;
+}
+
+.ctc-cta-banner-decor--2 {
+  width: 200px;
+  height: 200px;
+  bottom: -50px;
+  left: -50px;
+}
+
+/* Button styles for CTA */
+.ctc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ctc-spacing-sm);
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-xl);
+  border-radius: var(--ctc-radius-md);
+  font-family: var(--ctc-font-body);
+  font-size: var(--ctc-font-size-md);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--ctc-transition-speed) var(--ctc-easing);
+  border: 2px solid transparent;
+}
+
+.ctc-btn-primary {
+  background: var(--ctc-accent);
+  color: var(--ctc-neutral-darkest);
+}
+
+.ctc-btn-primary:hover {
+  background: var(--ctc-neutral-lightest);
+  transform: translateY(-2px);
+  box-shadow: var(--ctc-shadow-elevated);
+}
+
+.ctc-btn-secondary {
+  background: transparent;
+  color: var(--ctc-neutral-lightest);
+  border-color: var(--ctc-neutral-lightest);
+}
+
+.ctc-btn-secondary:hover {
+  background: var(--ctc-neutral-lightest);
+  color: var(--ctc-primary);
+}
+
+.ctc-btn-lg {
+  padding: var(--ctc-spacing-md) var(--ctc-spacing-2xl);
+  font-size: var(--ctc-font-size-lg);
+}
+
+.ctc-btn-arrow {
+  transition: transform var(--ctc-transition-speed) var(--ctc-easing);
+}
+
+.ctc-btn:hover .ctc-btn-arrow {
+  transform: translateX(4px);
+}
+`;
+  }
+
+  /**
+   * Generate Lead Paragraph CSS
+   * CRITICAL: Lead paragraph was rendering without styling
+   */
+  private generateLeadParagraphCSS(): string {
+    return `
+/* Lead Paragraph */
+.ctc-lead-paragraph {
+  border-left: 4px solid var(--ctc-primary);
+  padding-left: var(--ctc-spacing-lg);
+  margin: var(--ctc-spacing-xl) 0;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ctc-lead-paragraph-accent {
+  display: none;
+}
+
+.ctc-lead-paragraph-content {
+  font-size: var(--ctc-font-size-lg);
+  line-height: 1.7;
+  color: var(--ctc-text-medium);
+}
+
+.ctc-lead-paragraph-content h1,
+.ctc-lead-paragraph-content h2 {
+  font-family: var(--ctc-font-heading);
+  font-weight: var(--ctc-heading-weight);
+  color: var(--ctc-primary-dark);
+  margin: 0 0 var(--ctc-spacing-md) 0;
+  font-size: var(--ctc-font-size-2xl);
+}
+
+/* Hero Badge styling */
+.ctc-hero-badge-match {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: var(--ctc-spacing-xs) var(--ctc-spacing-md);
+  border-radius: var(--ctc-radius-full);
+  font-size: var(--ctc-font-size-sm);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+/* Section Header styling */
+.ctc-section-header {
+  margin-bottom: var(--ctc-spacing-lg);
+}
+
+.ctc-section-heading-accent {
+  display: none;
+}
+
+/* Prose content improvements */
+.ctc-prose-content {
+  max-width: 75ch;
+}
+
+.ctc-prose-content p {
+  margin-bottom: var(--ctc-spacing-md);
+  line-height: 1.7;
+}
+
+.ctc-prose-content ul,
+.ctc-prose-content ol {
+  padding-left: var(--ctc-spacing-xl);
+  margin-bottom: var(--ctc-spacing-md);
+}
+
+.ctc-prose-content li {
+  margin-bottom: var(--ctc-spacing-sm);
+  line-height: 1.6;
+}
+
+.ctc-prose-content strong {
+  font-weight: 600;
+  color: var(--ctc-primary-dark);
+}
+
+/* Card Grid Fallback */
+.ctc-card-grid-fallback {
+  padding: var(--ctc-spacing-xl);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Section backgrounds */
+.ctc-section--bg {
+  background: var(--ctc-neutral-lightest);
+}
+
+.ctc-prose--has-bg {
+  padding: var(--ctc-spacing-xl);
+  background: var(--ctc-neutral-lightest);
+  border-radius: var(--ctc-radius-md);
+  max-width: 900px;
+  margin: var(--ctc-spacing-lg) auto;
+}
+`;
   }
 }

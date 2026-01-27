@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Totaal VvE Beheer Almere | MVGM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================
+       IDEAL MVGM-BRANDED OUTPUT
+       This is what design-agency quality looks like
+       ============================================ */
+
+    /* Reset & Base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* MVGM Brand Colors - Extracted from actual site */
+      --mvgm-navy: #012d55;
+      --mvgm-navy-light: #0a4a7c;
+      --mvgm-cyan: #6fc3ef;
+      --mvgm-teal: #aacac8;
+      --mvgm-white: #ffffff;
+      --mvgm-gray-light: #f7f9fa;
+      --mvgm-gray: #f1f1f1;
+      --mvgm-gray-medium: #ddd;
+      --mvgm-text: #333333;
+      --mvgm-text-light: #666666;
+
+      /* Typography - MVGM uses Roboto Slab + Open Sans */
+      --font-heading: 'Roboto Slab', Georgia, serif;
+      --font-body: 'Open Sans', Arial, sans-serif;
+
+      /* Spacing */
+      --container-width: 1080px;
+      --section-padding: 60px;
+      --content-gap: 30px;
+
+      /* MVGM's signature border-radius pattern */
+      --radius-card: 10px 10px 50px 10px;
+      --radius-button: 5px 5px 10px 5px;
+      --radius-small: 8px;
+
+      /* Shadows */
+      --shadow-soft: 0px 0px 50px 0px rgba(0,0,0,0.08);
+      --shadow-card: 0 4px 20px rgba(1,45,85,0.1);
+
+      /* Transitions */
+      --transition: 0.3s ease;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 1rem;
+      line-height: 1.75;
+      color: var(--mvgm-text);
+      background-color: var(--mvgm-white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Container */
+    .container {
+      max-width: var(--container-width);
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      color: var(--mvgm-navy);
+      line-height: 1.3;
+      margin-bottom: 1rem;
+    }
+
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 2rem; margin-top: 2rem; }
+    h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+    p {
+      margin-bottom: 1.25rem;
+      max-width: 75ch;
+    }
+
+    a {
+      color: var(--mvgm-navy);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    a:hover {
+      color: var(--mvgm-cyan);
+    }
+
+    strong {
+      font-weight: 600;
+      color: var(--mvgm-navy);
+    }
+
+    /* ==========================================
+       HERO SECTION - MVGM Style
+       ========================================== */
+    .hero {
+      background: linear-gradient(135deg, var(--mvgm-navy) 0%, var(--mvgm-navy-light) 100%);
+      color: var(--mvgm-white);
+      padding: 80px 0 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: var(--mvgm-cyan);
+      opacity: 0.1;
+      border-radius: 50%;
+    }
+
+    .hero .container {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(111, 195, 239, 0.2);
+      color: var(--mvgm-cyan);
+      padding: 8px 20px;
+      border-radius: var(--radius-small);
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .hero h1 {
+      color: var(--mvgm-white);
+      font-size: 3rem;
+      margin-bottom: 1.5rem;
+      max-width: 800px;
+    }
+
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: rgba(255,255,255,0.9);
+      max-width: 600px;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--mvgm-cyan);
+      color: var(--mvgm-navy);
+      padding: 14px 28px;
+      border-radius: var(--radius-button);
+      font-weight: 600;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all var(--transition);
+      box-shadow: 0 4px 15px rgba(111, 195, 239, 0.3);
+    }
+
+    .hero-cta:hover {
+      background: var(--mvgm-white);
+      color: var(--mvgm-navy);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(111, 195, 239, 0.4);
+    }
+
+    /* ==========================================
+       TABLE OF CONTENTS - Elevated Card Style
+       ========================================== */
+    .toc {
+      background: var(--mvgm-white);
+      margin-top: -50px;
+      position: relative;
+      z-index: 10;
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 40px;
+      margin-bottom: var(--section-padding);
+    }
+
+    .toc h2 {
+      font-size: 1.25rem;
+      color: var(--mvgm-navy);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--mvgm-gray);
+    }
+
+    .toc-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .toc-item a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-small);
+      background: var(--mvgm-gray-light);
+      transition: all var(--transition);
+      font-size: 0.95rem;
+    }
+
+    .toc-item a:hover {
+      background: var(--mvgm-navy);
+      color: var(--mvgm-white);
+      transform: translateX(5px);
+    }
+
+    .toc-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--mvgm-cyan);
+      color: var(--mvgm-navy);
+      border-radius: 50%;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .toc-item a:hover .toc-number {
+      background: var(--mvgm-white);
+    }
+
+    /* ==========================================
+       CONTENT SECTIONS
+       ========================================== */
+    .section {
+      padding: var(--section-padding) 0;
+    }
+
+    .section--gray {
+      background: var(--mvgm-gray-light);
+    }
+
+    .section--navy {
+      background: var(--mvgm-navy);
+      color: var(--mvgm-white);
+    }
+
+    .section--navy h2,
+    .section--navy h3 {
+      color: var(--mvgm-white);
+    }
+
+    .section--navy strong {
+      color: var(--mvgm-cyan);
+    }
+
+    /* Lead/Intro Text */
+    .lead {
+      font-size: 1.2rem;
+      color: var(--mvgm-text-light);
+      border-left: 4px solid var(--mvgm-cyan);
+      padding-left: 1.5rem;
+      margin: 2rem 0;
+      max-width: 800px;
+    }
+
+    /* ==========================================
+       FEATURE CARDS - 3 Pillars
+       ========================================== */
+    .pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin: 40px 0;
+    }
+
+    @media (max-width: 900px) {
+      .pillars {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pillar-card {
+      background: var(--mvgm-white);
+      border-radius: var(--radius-card);
+      padding: 40px 30px;
+      box-shadow: var(--shadow-soft);
+      transition: all var(--transition);
+      border: 1px solid transparent;
+    }
+
+    .pillar-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-card);
+      border-color: var(--mvgm-cyan);
+    }
+
+    .pillar-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, var(--mvgm-cyan) 0%, var(--mvgm-teal) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    .pillar-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      margin-top: 0;
+    }
+
+    .pillar-card p {
+      color: var(--mvgm-text-light);
+      margin-bottom: 0;
+    }
+
+    /* ==========================================
+       COMPARISON TABLE - MVGM Style
+       ========================================== */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 30px 0;
+      border-radius: var(--radius-small);
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .comparison-table th {
+      background: var(--mvgm-navy);
+      color: var(--mvgm-white);
+      padding: 16px 20px;
+      text-align: left;
+      font-family: var(--font-heading);
+      font-size: 0.95rem;
+    }
+
+    .comparison-table td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--mvgm-gray);
+      font-size: 0.95rem;
+    }
+
+    .comparison-table tr:nth-child(even) {
+      background: var(--mvgm-gray-light);
+    }
+
+    .comparison-table tr:hover td {
+      background: rgba(111, 195, 239, 0.1);
+    }
+
+    /* ==========================================
+       BENEFITS LIST
+       ========================================== */
+    .benefits-list {
+      list-style: none;
+      margin: 30px 0;
+    }
+
+    .benefits-list li {
+      position: relative;
+      padding-left: 35px;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .benefits-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 24px;
+      height: 24px;
+      background: var(--mvgm-cyan);
+      color: var(--mvgm-navy);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* ==========================================
+       ARTICLE IMAGES
+       ========================================== */
+    .article-image {
+      width: 100%;
+      border-radius: var(--radius-card);
+      margin: 30px 0;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .image-caption {
+      font-size: 0.875rem;
+      color: var(--mvgm-text-light);
+      text-align: center;
+      margin-top: -20px;
+      margin-bottom: 30px;
+    }
+
+    /* ==========================================
+       CTA BANNER
+       ========================================== */
+    .cta-banner {
+      background: linear-gradient(135deg, var(--mvgm-navy) 0%, var(--mvgm-navy-light) 100%);
+      color: var(--mvgm-white);
+      padding: 60px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: var(--mvgm-cyan);
+      opacity: 0.1;
+      border-radius: 50%;
+    }
+
+    .cta-banner h2 {
+      color: var(--mvgm-white);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .cta-banner p {
+      color: rgba(255,255,255,0.9);
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-button);
+      font-weight: 600;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all var(--transition);
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--mvgm-cyan);
+      color: var(--mvgm-navy);
+    }
+
+    .btn-primary:hover {
+      background: var(--mvgm-white);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--mvgm-white);
+      border: 2px solid var(--mvgm-white);
+    }
+
+    .btn-secondary:hover {
+      background: var(--mvgm-white);
+      color: var(--mvgm-navy);
+    }
+
+    /* ==========================================
+       FAQ SECTION
+       ========================================== */
+    .faq-list {
+      max-width: 800px;
+      margin: 30px auto;
+    }
+
+    .faq-item {
+      background: var(--mvgm-white);
+      border-radius: var(--radius-small);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      padding: 20px 24px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      color: var(--mvgm-navy);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background var(--transition);
+    }
+
+    .faq-question:hover {
+      background: var(--mvgm-gray-light);
+    }
+
+    .faq-answer {
+      padding: 0 24px 20px;
+      color: var(--mvgm-text-light);
+    }
+
+    /* ==========================================
+       RESPONSIVE
+       ========================================== */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      h2 { font-size: 1.5rem; }
+      .toc { padding: 24px; margin-top: -30px; }
+      .toc-list { grid-template-columns: 1fr; }
+      .section { padding: 40px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO - MVGM Branded -->
+<header class="hero">
+  <div class="container">
+    <span class="hero-badge">VvE Beheer Specialist</span>
+    <h1>Totaal VvE Beheer Almere</h1>
+    <p class="hero-subtitle">
+      Integrale dienstverlening voor uw Vereniging van Eigenaren.
+      Financieel, technisch én administratief beheer door lokale experts.
+    </p>
+    <a href="#contact" class="hero-cta">
+      Vraag een offerte aan
+      <span>→</span>
+    </a>
+  </div>
+</header>
+
+<!-- TABLE OF CONTENTS -->
+<div class="container">
+  <nav class="toc">
+    <h2>In dit artikel</h2>
+    <ul class="toc-list">
+      <li class="toc-item">
+        <a href="#overzicht">
+          <span class="toc-number">1</span>
+          <span>Wat is Totaal VvE Beheer?</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#pijlers">
+          <span class="toc-number">2</span>
+          <span>De Drie Pijlers van Totaalbeheer</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#financieel">
+          <span class="toc-number">3</span>
+          <span>Financieel Beheer</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#technisch">
+          <span class="toc-number">4</span>
+          <span>Technisch Beheer & MJOP</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#administratief">
+          <span class="toc-number">5</span>
+          <span>Administratief Beheer</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#tarieven">
+          <span class="toc-number">6</span>
+          <span>Tarieven Vergelijken</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#voordelen">
+          <span class="toc-number">7</span>
+          <span>Voordelen voor Almere</span>
+        </a>
+      </li>
+      <li class="toc-item">
+        <a href="#faq">
+          <span class="toc-number">8</span>
+          <span>Veelgestelde Vragen</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</div>
+
+<!-- SECTION: Overview -->
+<section id="overzicht" class="section">
+  <div class="container">
+    <h2>Wat is Totaal VvE Beheer in Almere?</h2>
+
+    <p class="lead">
+      Totaal VvE Beheer Almere brengt technische, financiële en administratieve expertise
+      samen in één allesomvattende dienstverlening voor uw appartementencomplex.
+    </p>
+
+    <p>
+      Door deze centralisatie bij één lokale specialist verbetert de woonkwaliteit in onze
+      polderstad aanzienlijk. Het samenvoegen van deze disciplines ontzorgt VvE-besturen en
+      eigenaren volledig, waardoor complexe vraagstukken en dagelijkse operationele lasten
+      verleden tijd zijn. Bovendien zorgt specifieke kennis van de Almeerse vastgoedmarkt
+      en gemeentelijke regelgeving voor een perfecte aansluiting op de lokale eisen.
+    </p>
+
+    <p>
+      Binnen deze integrale aanpak vormt de administratieve ondersteuning de basis; van
+      nauwkeurige ledenregistraties en het faciliteren van de Algemene Ledenvergadering
+      tot het strikt handhaven van het splitsingsreglement. Tegelijkertijd garanderen
+      financiële experts een transparante boekhouding, terwijl de technische divisie de
+      bouwkundige staat waarborgt via een gedegen Meerjarenonderhoudsplan (MJOP) en snelle
+      storingsopvolging.
+    </p>
+  </div>
+</section>
+
+<!-- SECTION: Three Pillars -->
+<section id="pijlers" class="section section--gray">
+  <div class="container">
+    <h2>De Drie Pijlers van MVGM Totaalpakket VvE Beheer</h2>
+
+    <p>
+      <strong>Totaal VvE Beheer Almere</strong> integreert drie kernpijlers om vastgoedeigenaren
+      in Flevoland volledig te ontzorgen. Duurzaam waardebehoud van lokale appartementencomplexen
+      vereist een naadloze afstemming van economische, technische en bestuurlijke taken.
+    </p>
+
+    <div class="pillars">
+      <article class="pillar-card">
+        <div class="pillar-icon">💰</div>
+        <h3>Financieel Beheer</h3>
+        <p>
+          Direct inzicht in liquiditeit en begrotingen. Een sluitende boekhouding financiert
+          noodzakelijke investeringen en voorkomt onverwachte verhogingen van de periodieke
+          ledenbijdrage.
+        </p>
+      </article>
+
+      <article class="pillar-card">
+        <div class="pillar-icon">🔧</div>
+        <h3>Technisch Beheer</h3>
+        <p>
+          Scherpe focus op de fysieke staat van objecten. De uitvoering van het MJOP verhelpt
+          bouwkundige mankementen preventief en sluit achterstallig onderhoud uit.
+        </p>
+      </article>
+
+      <article class="pillar-card">
+        <div class="pillar-icon">📋</div>
+        <h3>Administratief Beheer</h3>
+        <p>
+          Juridische kaders en vakkundige begeleiding van de ALV. De synergie tussen alle
+          elementen zorgt voor transparantie en zekerheid.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION: Financial -->
+<section id="financieel" class="section">
+  <div class="container">
+    <h3>Financieel VvE Beheer: Transparantie en Zekerheid</h3>
+
+    <p>
+      Bij Totaal VvE Beheer Almere vormt financiële stabiliteit de basis voor een gezonde en
+      toekomstbestendige Vereniging van Eigenaren. Wij zorgen voor een nauwkeurige uitvoering
+      van vergaderbesluiten door de volledige boekhouding uit handen te nemen, variërend van
+      het opstellen van jaarrekeningen tot het deskundig beheren van reservefondsen.
+    </p>
+
+    <img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/section-1769347238692.png"
+         alt="Financieel overzicht VvE beheer"
+         class="article-image" />
+
+    <p>
+      De inrichting van onze administratie voldoet aan de strikte richtlijnen van de Raad voor
+      de Jaarverslaggeving. Via een beveiligd online portaal hebben eigenaren bovendien 24/7
+      inzicht in alle relevante documenten, facturen en actuele bankafschriften.
+    </p>
+
+    <ul class="benefits-list">
+      <li><strong>Transparante boekhouding</strong> conform RJ-richtlijnen</li>
+      <li><strong>24/7 online inzicht</strong> in documenten en bankafschriften</li>
+      <li><strong>Gescheiden bankrekeningen</strong> op naam van de rechtspersoon</li>
+      <li><strong>Actief debiteurenbeheer</strong> voor bescherming liquiditeit</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SECTION: Technical -->
+<section id="technisch" class="section section--gray">
+  <div class="container">
+    <h3>Technisch Beheer en MJOP voor Almere VvE's</h3>
+
+    <p>
+      Totaal VvE Beheer Almere waarborgt de bouwkundige staat van wooncomplexen door middel
+      van structureel technisch toezicht. De basis hiervoor wordt gevormd door een sluitend
+      <strong>Meerjarenonderhoudsplan (MJOP)</strong>, dat de planning dicteert voor zowel
+      preventief als correctief onderhoud.
+    </p>
+
+    <img src="https://shtqshmmsrmtquuhyupl.supabase.co/storage/v1/object/public/generated-images/vve-beheer-almere/diagram-1769506097331.png"
+         alt="MJOP onderhoudsplanning diagram"
+         class="article-image" />
+
+    <p>
+      Dit strategische document brengt kapitaalintensieve posten, zoals dakrenovaties,
+      liftvervangingen en gevelonderhoud, helder in kaart over een periode van vijftien jaar.
+      Specifieke expertise omtrent Flevolandse bouwmethodieken en de kenmerkende polderbodem
+      minimaliseert hierbij onvoorziene risico's tijdens bouwkundige projecten.
+    </p>
+  </div>
+</section>
+
+<!-- SECTION: Tarieven -->
+<section id="tarieven" class="section">
+  <div class="container">
+    <h2>Tarieven en Kosten VvE Beheer Almere Vergelijken</h2>
+
+    <p>
+      Bij het selecteren van Totaal VvE Beheer in Almere draait alles om de strategische balans
+      tussen de maandelijkse VvE-bijdrage en de kwaliteit van het integrale dienstenpakket.
+    </p>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Vergelijkingspunt</th>
+          <th>Budget Kantoor</th>
+          <th>Professionele Totaalbeheerder</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Basisvergoeding</strong></td>
+          <td>Gereduceerd instaptarief</td>
+          <td>Marktconforme prijs inclusief alle kerntaken</td>
+        </tr>
+        <tr>
+          <td><strong>Meerwerk</strong></td>
+          <td>Hoge toeslagen voor standaard handelingen</td>
+          <td>Strikt afgebakend en beperkt tot uitzonderingen</td>
+        </tr>
+        <tr>
+          <td><strong>MJOP Expertise</strong></td>
+          <td>Vaak extern of generiek</td>
+          <td>Interne bouwkunde specifiek voor Almere</td>
+        </tr>
+        <tr>
+          <td><strong>Storingsdienst</strong></td>
+          <td>Beperkte bereikbaarheid</td>
+          <td>24/7 noodlijn voor lokale calamiteiten</td>
+        </tr>
+        <tr>
+          <td><strong>Financieel Inzicht</strong></td>
+          <td>Periodieke verantwoording achteraf</td>
+          <td>Real-time dashboarding en liquiditeitsprognoses</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION: Voordelen -->
+<section id="voordelen" class="section section--navy">
+  <div class="container">
+    <h2>Specifieke Voordelen voor VvE's in Almere</h2>
+
+    <p>
+      <strong>Totaal VvE Beheer Almere</strong> combineert een transparante financiële structuur
+      met diepgaande kennis van de lokale vastgoedmarkt. Uitdagingen zoals stadsverwarming en
+      de specifieke bodemgesteldheid in de polder vragen om een technisch regisseur die de
+      situatie in Flevoland tot in detail begrijpt.
+    </p>
+
+    <ul class="benefits-list">
+      <li><strong>Expertise Stadsverwarming</strong> — Specialistisch inzicht in het lokale warmtenet</li>
+      <li><strong>Geverifieerde Aannemers</strong> — Vakmensen met ervaring in Almeerse systeembouw</li>
+      <li><strong>Aansluiting Gemeentebeleid</strong> — MJOP's afgestemd op lokale verordeningen</li>
+      <li><strong>Snelle Calamiteitenservice</strong> — Korte lijnen met regionale leveranciers</li>
+    </ul>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-banner">
+  <div class="container">
+    <h2>Klaar voor professioneel VvE beheer?</h2>
+    <p>
+      Ontdek hoe Totaal VvE Beheer uw vereniging volledig kan ontzorgen.
+      Vraag vrijblijvend een offerte aan of neem contact op voor een persoonlijk gesprek.
+    </p>
+    <div class="cta-buttons">
+      <a href="#contact" class="btn btn-primary">Offerte aanvragen →</a>
+      <a href="#contact" class="btn btn-secondary">Contact opnemen</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section id="faq" class="section section--gray">
+  <div class="container">
+    <h2>Veelgestelde Vragen</h2>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-question">
+          Wat kost VvE beheer per appartement?
+          <span>+</span>
+        </div>
+        <div class="faq-answer">
+          De kosten variëren afhankelijk van de omvang van het complex en de gewenste dienstverlening.
+          Professionele totaalbeheerders rekenen doorgaans een vaste vergoeding per appartementsrecht
+          voor de reguliere werkzaamheden.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">
+          Wat is een MJOP?
+          <span>+</span>
+        </div>
+        <div class="faq-answer">
+          Een Meerjarenonderhoudsplan (MJOP) is een strategisch document dat alle geplande
+          onderhoudswerkzaamheden over een periode van 10-15 jaar in kaart brengt, inclusief
+          de bijbehorende kosten en reserveringen.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">
+          Hoe snel kunnen jullie bij calamiteiten reageren?
+          <span>+</span>
+        </div>
+        <div class="faq-answer">
+          Onze calamiteitendienst is 24/7 bereikbaar. Door korte lijnen met lokale leveranciers
+          in Almere en omgeving kunnen we bij noodgevallen snel ter plaatse zijn.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section id="contact" class="section">
+  <div class="container" style="text-align: center;">
+    <h2>Neem contact op</h2>
+    <p style="max-width: 600px; margin: 0 auto 2rem;">
+      Wilt u meer weten over Totaal VvE Beheer voor uw complex in Almere?
+      Neem vrijblijvend contact met ons op voor een persoonlijk adviesgesprek.
+    </p>
+    <a href="tel:0880102030" class="btn btn-primary">Bel 088 - 010 20 30</a>
+  </div>
+</section>
+
+</body>
+</html>
