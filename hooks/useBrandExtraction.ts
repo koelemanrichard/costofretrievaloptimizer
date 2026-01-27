@@ -14,7 +14,7 @@ import type { UrlSuggestion } from '../services/brand-extraction/UrlDiscoverySer
 import { ExtractionAnalyzer } from '../services/brand-extraction/ExtractionAnalyzer';
 import { ComponentLibrary } from '../services/brand-extraction/ComponentLibrary';
 import type { ExtractedComponent } from '../types/brandExtraction';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../services/supabaseClient';
 
 // ============================================================================
 // TYPES
@@ -104,7 +104,7 @@ export function useBrandExtraction(
       }
 
       // Call edge function for URL discovery (avoids CORS)
-      const { data, error: fnError } = await supabase.functions.invoke('brand-url-discovery', {
+      const { data, error: fnError } = await getSupabaseClient().functions.invoke('brand-url-discovery', {
         body: { domain, apifyToken }
       });
 
@@ -203,7 +203,7 @@ export function useBrandExtraction(
       });
 
       // Call edge function for batch extraction (uses Apify)
-      const { data, error: fnError } = await supabase.functions.invoke('brand-extract-pages', {
+      const { data, error: fnError } = await getSupabaseClient().functions.invoke('brand-extract-pages', {
         body: {
           urls: selectedUrls,
           apifyToken,
@@ -275,7 +275,7 @@ export function useBrandExtraction(
             // Save tokens from AI analysis
             if (analysisResult.tokens) {
               const tokensId = crypto.randomUUID();
-              await supabase.from('brand_tokens').upsert({
+              await getSupabaseClient().from('brand_tokens').upsert({
                 id: tokensId,
                 project_id: projectId,
                 colors: analysisResult.tokens.colors,
@@ -297,7 +297,7 @@ export function useBrandExtraction(
         // Also save the basic tokens from edge function extraction
         if (extraction.colors) {
           const tokensId = crypto.randomUUID();
-          await supabase.from('brand_tokens').upsert({
+          await getSupabaseClient().from('brand_tokens').upsert({
             id: tokensId,
             project_id: projectId,
             colors: extraction.colors,
