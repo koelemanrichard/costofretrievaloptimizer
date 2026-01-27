@@ -531,10 +531,21 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
       }
 
       // If draft was regenerated, update with new draft
-      // BUT only if the new draft is NOT shorter (prevent accidental content loss)
+      // Allow replacement if: new draft is longer, OR current draft is corrupted (contains base64 images)
       if (isDraftRegenerated) {
+        // Detect corrupted drafts: contain large base64 image data (> 10KB of base64)
+        const currentDraft = draftContent || '';
+        const isCurrentCorrupted = currentDraft.includes('data:image/') &&
+          (currentDraft.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10000,}/g)?.length || 0) > 0;
+
         if (existingDraft.length >= loadedDraftLengthRef.current) {
           console.log('[DraftingModal] Draft regenerated! Updating from', loadedDraftLengthRef.current, 'to', existingDraft.length, 'chars');
+          setDraftContent(existingDraft);
+          loadedDraftLengthRef.current = existingDraft.length;
+          loadedAtRef.current = new Date().toISOString();
+          setHasUnsavedChanges(false);
+        } else if (isCurrentCorrupted) {
+          console.log('[DraftingModal] Current draft is CORRUPTED (contains base64 images). Replacing with fresh content:', existingDraft.length, 'chars');
           setDraftContent(existingDraft);
           loadedDraftLengthRef.current = existingDraft.length;
           loadedAtRef.current = new Date().toISOString();
@@ -698,10 +709,18 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
     if (stateDraft && stateDraft !== draftContent && !hasUnsavedChanges) {
       // CRITICAL: Prevent race condition where stale state overwrites synced content
       // If we recently loaded/synced content that's longer, don't revert to shorter content
-      if (loadedDraftLengthRef.current > 0 && stateDraft.length < loadedDraftLengthRef.current) {
+      // EXCEPTION: Allow replacement if current content is corrupted (contains base64 images)
+      const isCurrentCorrupted = draftContent &&
+        draftContent.includes('data:image/') &&
+        (draftContent.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10000,}/g)?.length || 0) > 0;
+
+      if (loadedDraftLengthRef.current > 0 && stateDraft.length < loadedDraftLengthRef.current && !isCurrentCorrupted) {
         console.log('[DraftingModal] Skipping state sync - would revert to shorter content:',
           stateDraft.length, 'chars vs loaded', loadedDraftLengthRef.current, 'chars');
         return;
+      }
+      if (isCurrentCorrupted) {
+        console.log('[DraftingModal] Current content is CORRUPTED - allowing state sync replacement');
       }
       console.log('[DraftingModal] State updated with new draft:', stateDraft.length, 'chars');
       setDraftContent(stateDraft);
@@ -892,11 +911,17 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         const dbLength = assembledDraft.length;
         const lengthDiff = Math.abs(currentLength - dbLength);
 
+        // CRITICAL: Detect corrupted local content (contains large base64 images > 10KB)
+        const isLocalCorrupted = draftContent &&
+          draftContent.includes('data:image/') &&
+          (draftContent.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10000,}/g)?.length || 0) > 0;
+
         // For determining if we should suggest sync:
         // - If database is LONGER: only suggest if significantly longer (>500 chars)
         //   This avoids false positives when user inserts images (which can make content shorter)
         // - If database is shorter: NEVER suggest (user likely polished/improved content)
         // - If LOCAL is shorter: NEVER suggest - user has polished/consolidated the draft
+        // - EXCEPTION: ALWAYS suggest sync if local is CORRUPTED (contains base64 images)
         // - Exception: incomplete jobs should show status but ONLY if db content is not shorter
         const dbIsSignificantlyLonger = dbLength > currentLength + 500;
         const dbIsShorter = dbLength < currentLength - 100; // DB is notably shorter than local
@@ -906,12 +931,18 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
         const isSubstantiallyDifferent = dbIsSignificantlyLonger || (isJobNewer && lengthDiff > 500);
         const isDifferent = isSubstantiallyDifferent || assembledDraft !== draftContent;
 
+        // Log corruption detection
+        if (isLocalCorrupted) {
+          console.log('[DraftingModal] LOCAL CONTENT IS CORRUPTED (contains base64 images) - forcing sync suggestion');
+        }
+
         // Only set databaseDraft if there's actually better/newer content to sync
         // AND the database content is meaningfully longer (not just format differences from image insertion)
         // CRITICAL: Never suggest syncing to SHORTER content - this would revert polished/improved drafts
         // CRITICAL: Never suggest syncing when LOCAL is shorter - user has polished/consolidated
         // When local is shorter than DB, the user likely ran polish which consolidates raw sections
-        if ((isDifferent && dbIsSignificantlyLonger && !localIsSignificantlyShorter) || (isIncomplete && !dbIsShorter && !localIsSignificantlyShorter)) {
+        // EXCEPTION: ALWAYS suggest sync when local content is CORRUPTED
+        if (isLocalCorrupted || (isDifferent && dbIsSignificantlyLonger && !localIsSignificantlyShorter) || (isIncomplete && !dbIsShorter && !localIsSignificantlyShorter)) {
           setDatabaseDraft(assembledDraft);
           console.log('[DraftingModal] Found newer/different database content:', {
             currentLength,
@@ -2602,8 +2633,17 @@ ${schemaScript}`;
           .join('\n\n');
       }
 
-      // Use the LONGEST content available
-      const contentOptions = [
+      // CRITICAL: Detect corrupted editor content (contains large base64 images > 10KB)
+      const isEditorCorrupted = draftContent &&
+        draftContent.includes('data:image/') &&
+        (draftContent.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10000,}/g)?.length || 0) > 0;
+
+      // Use the LONGEST NON-CORRUPTED content available
+      // If editor is corrupted, exclude it from selection
+      const contentOptions = isEditorCorrupted ? [
+        { source: 'job.draft_content', content: jobDraftContent, length: jobDraftContent.length },
+        { source: 'assembled_sections', content: assembledSections, length: assembledSections.length }
+      ] : [
         { source: 'editor', content: draftContent, length: draftContent.length },
         { source: 'job.draft_content', content: jobDraftContent, length: jobDraftContent.length },
         { source: 'assembled_sections', content: assembledSections, length: assembledSections.length }
@@ -2611,6 +2651,9 @@ ${schemaScript}`;
       const best = contentOptions.reduce((a, b) => a.length >= b.length ? a : b);
       const startingContent = best.content;
 
+      if (isEditorCorrupted) {
+        console.log('[DraftingModal] Editor content is CORRUPTED (contains base64 images) - excluding from re-run selection');
+      }
       console.log('[DraftingModal] Re-run content selection:', contentOptions.map(c => `${c.source}: ${c.length} chars`).join(', '));
       console.log('[DraftingModal] Using:', best.source, 'with', best.length, 'chars');
 

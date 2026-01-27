@@ -530,8 +530,13 @@ export function useContentGeneration({
 
             const dbArticleDraft = briefData?.article_draft || '';
 
-            if (dbArticleDraft.trim().length > 0) {
-              // Database already has user-saved content - DO NOT overwrite
+            // CRITICAL: Detect corrupted article_draft (contains large base64 images > 10KB)
+            const isDbDraftCorrupted = dbArticleDraft &&
+              dbArticleDraft.includes('data:image/') &&
+              (dbArticleDraft.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10000,}/g)?.length || 0) > 0;
+
+            if (dbArticleDraft.trim().length > 0 && !isDbDraftCorrupted) {
+              // Database already has user-saved content - DO NOT overwrite (unless corrupted)
               console.log('[useContentGeneration] Completed job found, but database already has article_draft:', dbArticleDraft.length, 'chars');
               console.log('[useContentGeneration] NOT syncing job content to preserve user\'s saved work (Polish/Flow/Audit)');
               // Still log comparison for debugging
@@ -540,9 +545,13 @@ export function useContentGeneration({
                 console.log('[useContentGeneration] FYI - job.draft_content:', jobDraftContent.length, 'chars, assembled sections:', assembledDraft.length, 'chars, DB article_draft:', dbArticleDraft.length, 'chars');
               }
             } else {
-              // Database has NO article_draft - this is initial sync after generation completed
+              // Database has NO article_draft OR article_draft is CORRUPTED (contains base64 images)
               // Use job.draft_content (optimized through passes 1-9)
-              console.log('[useContentGeneration] Database has no article_draft, syncing from completed job');
+              if (isDbDraftCorrupted) {
+                console.log('[useContentGeneration] DATABASE DRAFT IS CORRUPTED (contains base64 images) - REPLACING with fresh job content');
+              } else {
+                console.log('[useContentGeneration] Database has no article_draft, syncing from completed job');
+              }
 
               let assembledDraft = '';
               if (existingSections.length > 0) {
@@ -1531,6 +1540,34 @@ export function useContentGeneration({
         if (existingJob.status === 'failed' || existingJob.status === 'cancelled' || existingJob.status === 'completed') {
           onLog(existingJob.status === 'completed' ? 'Clearing previous draft for regeneration...' : 'Clearing failed job...', 'info');
           await orchestratorRef.current.deleteJob(existingJob.id);
+
+          // CRITICAL: Also clear the article_draft in content_briefs if it's corrupted (contains base64 images)
+          // This ensures regeneration starts with a clean slate
+          try {
+            const { createClient } = await import('@supabase/supabase-js');
+            const supabase = createClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+            const { data: briefData } = await supabase
+              .from('content_briefs')
+              .select('article_draft')
+              .eq('id', briefId)
+              .single();
+
+            const currentDraft = briefData?.article_draft || '';
+            const isCorrupted = currentDraft.includes('data:image/') &&
+              (currentDraft.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10000,}/g)?.length || 0) > 0;
+
+            if (isCorrupted) {
+              console.log('[useContentGeneration] Clearing CORRUPTED article_draft before regeneration (contained base64 images)');
+              await supabase
+                .from('content_briefs')
+                .update({ article_draft: null })
+                .eq('id', briefId);
+            }
+          } catch (clearErr) {
+            console.warn('[useContentGeneration] Failed to check/clear corrupted draft:', clearErr);
+            // Continue anyway - the corruption detection in sync will handle it
+          }
+
           existingJob = null;
           // Clear local state
           setJob(null);

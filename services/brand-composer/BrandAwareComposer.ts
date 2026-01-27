@@ -336,7 +336,9 @@ export class BrandAwareComposer {
       html.trim() !== '' &&
       !html.trim().startsWith('<!--') &&
       html.length > 100 && // Must be substantial HTML
-      (html.includes('<') && html.includes('>'));
+      html.length < 50000 && // Not too large (would indicate full page extraction)
+      (html.includes('<') && html.includes('>')) &&
+      !this.containsCookieContent(html); // Must not be cookie consent content
 
     if (!hasUsableLiteralHtml) {
       // Fallback if no literal HTML available
@@ -510,5 +512,47 @@ export class BrandAwareComposer {
     };
 
     return text.replace(/[&<>"']/g, char => escapeMap[char]);
+  }
+
+  /**
+   * Check if HTML content contains cookie consent / privacy policy content.
+   * These should not be used as component templates.
+   */
+  private containsCookieContent(html: string): boolean {
+    const lowerHtml = html.toLowerCase();
+
+    // Keywords that indicate cookie consent / privacy policy content
+    const cookieKeywords = [
+      'cookie policy',
+      'cookie consent',
+      'gdpr',
+      'privacy policy',
+      'storage duration',
+      'http cookie',
+      'maximum storage',
+      'learn more about this provider',
+      'onetrust',
+      'cookieyes',
+      'cookie banner',
+      'consent manager',
+      'tracking pixel',
+      'local storage',
+      'session storage',
+    ];
+
+    let keywordCount = 0;
+    for (const keyword of cookieKeywords) {
+      if (lowerHtml.includes(keyword)) {
+        keywordCount++;
+      }
+    }
+
+    // If 3+ cookie keywords found, this is likely cookie consent content
+    if (keywordCount >= 3) {
+      console.log('[BrandAwareComposer] Detected cookie consent content, skipping literal HTML');
+      return true;
+    }
+
+    return false;
   }
 }

@@ -397,11 +397,14 @@ For each component, provide:
    * with regex fallback for server-side/edge environments.
    */
   private extractHtmlBySelector(rawHtml: string, selectorHint: string): string {
+    // First, clean the HTML to remove unwanted content
+    const cleanedHtml = this.removeUnwantedContent(rawHtml);
+
     // Try DOMParser first (works in browser)
     if (typeof DOMParser !== 'undefined') {
       try {
         const parser = new DOMParser();
-        const doc = parser.parseFromString(rawHtml, 'text/html');
+        const doc = parser.parseFromString(cleanedHtml, 'text/html');
 
         // Clean up selector for querySelector
         let cleanSelector = selectorHint;
@@ -440,9 +443,11 @@ For each component, provide:
         }
 
         if (element) {
-          // Get the outer HTML
-          const html = element.outerHTML;
-          if (html && html.length > 50) {
+          // Get the outer HTML and clean it
+          let html = element.outerHTML;
+          html = this.cleanExtractedHtml(html);
+
+          if (html && html.length > 50 && html.length < 10000) {
             console.log('[ExtractionAnalyzer] DOM extraction successful for:', selectorHint.substring(0, 50));
             return html;
           }
@@ -551,6 +556,85 @@ For each component, provide:
     }
 
     return extractedRules.join('\n\n');
+  }
+
+  /**
+   * Remove unwanted content from HTML before extraction.
+   * Filters out cookie consent, tracking scripts, ads, etc.
+   */
+  private removeUnwantedContent(html: string): string {
+    // Remove script tags
+    let cleaned = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
+    // Remove style tags (we extract styles separately)
+    cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+    // Remove noscript tags
+    cleaned = cleaned.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+
+    // Remove common cookie consent elements
+    const cookieSelectors = [
+      /id="[^"]*cookie[^"]*"/gi,
+      /id="[^"]*consent[^"]*"/gi,
+      /id="[^"]*gdpr[^"]*"/gi,
+      /id="[^"]*privacy[^"]*"/gi,
+      /class="[^"]*cookie[^"]*"/gi,
+      /class="[^"]*consent[^"]*"/gi,
+      /class="[^"]*gdpr[^"]*"/gi,
+      /class="[^"]*onetrust[^"]*"/gi,
+      /class="[^"]*cookieyes[^"]*"/gi,
+    ];
+
+    // Remove elements containing cookie/consent attributes
+    for (const selector of cookieSelectors) {
+      // This is a simplified removal - in practice we'd use DOM parsing
+      cleaned = cleaned.replace(
+        new RegExp(`<[^>]*${selector.source}[^>]*>[\\s\\S]*?<\\/[^>]+>`, 'gi'),
+        ''
+      );
+    }
+
+    // Remove common tracking/ad containers
+    cleaned = cleaned.replace(/<div[^>]*id="[^"]*(?:ad|banner|tracker|analytics)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+
+    return cleaned;
+  }
+
+  /**
+   * Clean extracted HTML to remove unwanted content that slipped through.
+   */
+  private cleanExtractedHtml(html: string): string {
+    // Remove excessive whitespace
+    let cleaned = html.replace(/\s+/g, ' ').trim();
+
+    // Remove data-* attributes that may contain tracking info
+    cleaned = cleaned.replace(/\sdata-[a-z-]+="[^"]*"/gi, '');
+
+    // Remove onclick and other event handlers
+    cleaned = cleaned.replace(/\son[a-z]+="[^"]*"/gi, '');
+
+    // Remove tracking pixels (1x1 images)
+    cleaned = cleaned.replace(/<img[^>]*(?:width|height)=["']1["'][^>]*>/gi, '');
+
+    // Remove empty elements
+    cleaned = cleaned.replace(/<([a-z][a-z0-9]*)[^>]*>\s*<\/\1>/gi, '');
+
+    // If the extracted content contains cookie/tracking keywords heavily, return empty
+    const cookieKeywords = ['cookie', 'tracking', 'gdpr', 'consent', 'privacy policy', 'storage duration'];
+    let keywordCount = 0;
+    for (const keyword of cookieKeywords) {
+      const regex = new RegExp(keyword, 'gi');
+      const matches = cleaned.match(regex);
+      keywordCount += matches ? matches.length : 0;
+    }
+
+    // If more than 10 cookie-related keywords, this is probably a cookie consent dialog
+    if (keywordCount > 10) {
+      console.warn('[ExtractionAnalyzer] Extracted content appears to be cookie consent dialog, skipping');
+      return '';
+    }
+
+    return cleaned;
   }
 
   /**
