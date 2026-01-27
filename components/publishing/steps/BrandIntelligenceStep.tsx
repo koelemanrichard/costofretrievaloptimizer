@@ -162,7 +162,8 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
   const brandExtraction = useBrandExtraction(
     projectId || '',
     'gemini',
-    geminiApiKey || ''
+    geminiApiKey || '',
+    apifyToken // Required for URL discovery
   );
 
   const handleDetect = useCallback(() => {
