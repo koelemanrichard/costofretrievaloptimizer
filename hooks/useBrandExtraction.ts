@@ -47,6 +47,7 @@ export interface UseBrandExtractionResult {
   extractedTokens: Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> | null;
   screenshotBase64: string | null;
   error: string | null;
+  hasStoredExtractions: boolean;
 
   // Actions
   discoverUrls: (domain: string) => Promise<void>;
@@ -54,6 +55,8 @@ export interface UseBrandExtractionResult {
   selectAllUrls: () => void;
   clearSelection: () => void;
   startExtraction: () => Promise<void>;
+  reanalyze: () => Promise<void>;
+  checkStoredExtractions: () => Promise<boolean>;
   reset: () => void;
 }
 
@@ -87,6 +90,7 @@ export function useBrandExtraction(
   const [extractedTokens, setExtractedTokens] = useState<Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> | null>(null);
   const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasStoredExtractions, setHasStoredExtractions] = useState<boolean>(false);
 
   /**
    * Discover URLs from a domain using server-side edge function
@@ -505,6 +509,163 @@ export function useBrandExtraction(
   }, [selectedUrls, projectId, aiProvider, apiKey, apifyToken, progress.completedUrls]);
 
   /**
+   * Check if there are stored extractions in the database that can be re-analyzed
+   */
+  const checkStoredExtractions = useCallback(async (): Promise<boolean> => {
+    try {
+      const { data, error: queryError } = await useSupabase()
+        .from('brand_extractions')
+        .select('id, source_url, screenshot_base64, raw_html')
+        .eq('project_id', projectId)
+        .limit(1);
+
+      if (queryError) {
+        console.warn('[useBrandExtraction] Failed to check stored extractions:', queryError);
+        return false;
+      }
+
+      const hasData = data && data.length > 0 && data[0].screenshot_base64;
+      setHasStoredExtractions(hasData);
+      return hasData;
+    } catch (err) {
+      console.warn('[useBrandExtraction] Error checking stored extractions:', err);
+      return false;
+    }
+  }, [projectId]);
+
+  /**
+   * Re-analyze existing extractions from database (without re-crawling)
+   * This is faster and cheaper than full re-extraction
+   */
+  const reanalyze = useCallback(async () => {
+    setPhase('analyzing');
+    setError(null);
+    setExtractedComponents([]);
+
+    try {
+      // Fetch existing extractions from database
+      const { data: extractions, error: queryError } = await useSupabase()
+        .from('brand_extractions')
+        .select('id, source_url, screenshot_base64, raw_html, computed_styles')
+        .eq('project_id', projectId);
+
+      if (queryError) {
+        throw new Error(queryError.message || 'Failed to load stored extractions');
+      }
+
+      if (!extractions || extractions.length === 0) {
+        throw new Error('No stored extractions found. Please run full extraction first.');
+      }
+
+      console.log('[useBrandExtraction] Re-analyzing', extractions.length, 'stored extractions');
+
+      setProgress({
+        phase: 'analyzing',
+        completedUrls: 0,
+        totalUrls: extractions.length,
+        message: `Re-analyzing ${extractions.length} stored pages...`
+      });
+
+      const analyzer = new ExtractionAnalyzer({ provider: aiProvider, apiKey });
+      const library = new ComponentLibrary(projectId);
+
+      // Clear existing components for this project
+      await library.clearAll();
+
+      let mergedTokens: Omit<ExtractedTokens, 'id' | 'projectId' | 'extractedAt'> | null = null;
+      let firstScreenshot: string | null = null;
+
+      for (let i = 0; i < extractions.length; i++) {
+        const extraction = extractions[i];
+        const url = extraction.source_url;
+
+        setProgress({
+          phase: 'analyzing',
+          currentUrl: url,
+          completedUrls: i,
+          totalUrls: extractions.length,
+          message: `Re-analyzing ${i + 1}/${extractions.length}: ${url}`
+        });
+
+        // Skip if no screenshot
+        if (!extraction.screenshot_base64) {
+          console.warn(`[useBrandExtraction] No screenshot for ${url}, skipping`);
+          continue;
+        }
+
+        // Save first screenshot for preview
+        if (!firstScreenshot) {
+          firstScreenshot = extraction.screenshot_base64;
+          setScreenshotBase64(extraction.screenshot_base64);
+        }
+
+        try {
+          // Run AI analysis on stored screenshot + raw HTML
+          const analysisResult = await analyzer.analyze({
+            screenshotBase64: extraction.screenshot_base64,
+            rawHtml: extraction.raw_html || ''
+          });
+
+          console.log('[useBrandExtraction] Re-analysis complete, components:', analysisResult.components.length);
+
+          // Track tokens
+          if (analysisResult.tokens && !mergedTokens) {
+            mergedTokens = analysisResult.tokens;
+            setExtractedTokens(analysisResult.tokens);
+          }
+
+          // Save components
+          for (const component of analysisResult.components) {
+            const fullComponent: ExtractedComponent = {
+              id: crypto.randomUUID(),
+              extractionId: extraction.id,
+              projectId,
+              visualDescription: component.visualDescription,
+              componentType: component.componentType,
+              literalHtml: component.literalHtml,
+              literalCss: component.literalCss,
+              theirClassNames: component.theirClassNames,
+              contentSlots: component.contentSlots,
+              boundingBox: component.boundingBox,
+              createdAt: new Date().toISOString()
+            };
+
+            try {
+              await library.saveComponent(fullComponent);
+              setExtractedComponents(prev => [...prev, fullComponent]);
+            } catch (saveErr) {
+              console.warn('[useBrandExtraction] Failed to save component:', saveErr);
+            }
+          }
+        } catch (analyzeErr) {
+          console.warn(`[useBrandExtraction] Re-analysis failed for ${url}:`, analyzeErr);
+        }
+      }
+
+      // Complete
+      setPhase('complete');
+      setProgress({
+        phase: 'complete',
+        completedUrls: extractions.length,
+        totalUrls: extractions.length,
+        message: `Re-analysis complete! Processed ${extractions.length} pages.`
+      });
+
+      console.log('[useBrandExtraction] Re-analysis complete');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Re-analysis failed';
+      setError(message);
+      setPhase('error');
+      setProgress({
+        phase: 'error',
+        completedUrls: 0,
+        totalUrls: 0,
+        message: `Error: ${message}`
+      });
+    }
+  }, [projectId, aiProvider, apiKey]);
+
+  /**
    * Reset to idle state
    */
   const reset = useCallback(() => {
@@ -516,6 +677,7 @@ export function useBrandExtraction(
     setExtractedTokens(null);
     setScreenshotBase64(null);
     setError(null);
+    setHasStoredExtractions(false);
   }, []);
 
   return {
@@ -528,6 +690,7 @@ export function useBrandExtraction(
     extractedTokens,
     screenshotBase64,
     error,
+    hasStoredExtractions,
 
     // Actions
     discoverUrls,
@@ -535,6 +698,8 @@ export function useBrandExtraction(
     selectAllUrls,
     clearSelection,
     startExtraction,
+    reanalyze,
+    checkStoredExtractions,
     reset
   };
 }

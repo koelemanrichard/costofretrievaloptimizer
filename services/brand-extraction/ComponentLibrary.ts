@@ -123,4 +123,20 @@ export class ComponentLibrary {
       createdAt: row.created_at
     }));
   }
+
+  /**
+   * Clear all components for this project.
+   * Used before re-analysis to remove stale components.
+   */
+  async clearAll(): Promise<void> {
+    const { error } = await supabase
+      .from('brand_components')
+      .delete()
+      .eq('project_id', this.projectId);
+
+    if (error) {
+      console.warn(`Failed to clear components: ${error.message}`);
+      // Don't throw - it's ok if there were no components to delete
+    }
+  }
 }

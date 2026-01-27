@@ -573,6 +573,26 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     }
   };
 
+  // Check for stored extractions when component mounts (for re-analyze option)
+  useEffect(() => {
+    if (projectId) {
+      brandExtraction.checkStoredExtractions();
+    }
+  }, [projectId, brandExtraction.checkStoredExtractions]);
+
+  // State for re-analysis in progress
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+
+  // Handle re-analyze request
+  const handleReanalyze = useCallback(async () => {
+    setIsReanalyzing(true);
+    try {
+      await brandExtraction.reanalyze();
+    } finally {
+      setIsReanalyzing(false);
+    }
+  }, [brandExtraction.reanalyze]);
+
   // Use the current state from props (if already detected) or detection result
   const currentDna = designDna || detection.result?.designDna;
   const currentScreenshot = screenshotBase64 || detection.result?.screenshotBase64;
@@ -808,12 +828,27 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
             <div className="flex-1 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-white">Brand Summary</h4>
-                <Button variant="secondary" size="sm" onClick={() => {
-                  detection.reset();
-                  onReset?.(); // Clear parent's cached state
-                }}>
-                  Re-detect
-                </Button>
+                <div className="flex gap-2">
+                  {/* Re-analyze button - uses stored data, faster */}
+                  {brandExtraction.hasStoredExtractions && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleReanalyze}
+                      disabled={isReanalyzing || brandExtraction.phase === 'analyzing'}
+                      title="Re-run AI analysis on stored pages (faster, no re-crawling)"
+                    >
+                      {isReanalyzing || brandExtraction.phase === 'analyzing' ? 'Analyzing...' : 'Re-analyze'}
+                    </Button>
+                  )}
+                  {/* Re-detect button - full re-crawl */}
+                  <Button variant="secondary" size="sm" onClick={() => {
+                    detection.reset();
+                    onReset?.(); // Clear parent's cached state
+                  }}>
+                    Re-detect
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
