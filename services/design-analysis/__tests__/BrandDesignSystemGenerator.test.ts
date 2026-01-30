@@ -437,7 +437,7 @@ That's the result.`;
 
       // Should use fallbacks for missing properties
       expect(tokens.json['--ctc-primary']).toBe('#3b82f6');
-      expect(tokens.json['--ctc-primary-light']).toBe('#60a5fa'); // fallback
+      expect(tokens.json['--ctc-primary-light']).toBe('#e2ecfe'); // derived: lighten primary by 85%
       expect(tokens.json['--ctc-secondary']).toBe('#1f2937'); // fallback
       expect(tokens.json['--ctc-neutral-darkest']).toBe('#111827'); // fallback
       expect(tokens.json['--ctc-success']).toBe('#10b981'); // fallback

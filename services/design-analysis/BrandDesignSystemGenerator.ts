@@ -52,11 +52,14 @@ export class BrandDesignSystemGenerator {
 
   /**
    * Generate a complete brand design system from Design DNA
+   * @param screenshotBase64 - Optional brand website screenshot for AI vision input
    */
   async generate(
     designDna: DesignDNA,
     brandName: string,
-    sourceUrl: string
+    sourceUrl: string,
+    screenshotBase64?: string,
+    googleFontsUrl?: string | null
   ): Promise<BrandDesignSystem> {
     const tokens = this.generateTokensFromDNA(designDna);
     const designDnaHash = this.computeDesignDnaHash(designDna);
@@ -75,27 +78,30 @@ export class BrandDesignSystemGenerator {
     try {
       // Step 1: Generate component styles one by one for better quality
       console.log('[BrandDesignSystemGenerator] Step 1: Generating component styles...');
-      componentStyles = await this.generateComponentStylesStepByStep(designDna);
+      if (screenshotBase64) {
+        console.log('[BrandDesignSystemGenerator] Using brand screenshot for AI vision input (' + Math.round(screenshotBase64.length / 1024) + 'KB)');
+      }
+      componentStyles = await this.generateComponentStylesStepByStep(designDna, screenshotBase64);
       console.log('[BrandDesignSystemGenerator] Component styles generated successfully');
 
       // Step 2: Generate decorative elements
       console.log('[BrandDesignSystemGenerator] Step 2: Generating decorative elements...');
-      decorative = await this.generateDecorativeElements(designDna);
+      decorative = await this.generateDecorativeElements(designDna, screenshotBase64);
       console.log('[BrandDesignSystemGenerator] Decorative elements generated');
 
       // Step 3: Generate interactions
       console.log('[BrandDesignSystemGenerator] Step 3: Generating interactions...');
-      interactions = await this.generateInteractions(designDna);
+      interactions = await this.generateInteractions(designDna, screenshotBase64);
       console.log('[BrandDesignSystemGenerator] Interactions generated');
 
       // Step 4: Generate typography treatments
       console.log('[BrandDesignSystemGenerator] Step 4: Generating typography treatments...');
-      typographyTreatments = await this.generateTypographyTreatments(designDna);
+      typographyTreatments = await this.generateTypographyTreatments(designDna, screenshotBase64);
       console.log('[BrandDesignSystemGenerator] Typography treatments generated');
 
       // Step 5: Generate image treatments
       console.log('[BrandDesignSystemGenerator] Step 5: Generating image treatments...');
-      imageTreatments = await this.generateImageTreatments(designDna);
+      imageTreatments = await this.generateImageTreatments(designDna, screenshotBase64);
       console.log('[BrandDesignSystemGenerator] Image treatments generated');
 
       console.log('[BrandDesignSystemGenerator] All AI generation steps completed successfully');
@@ -133,13 +139,23 @@ export class BrandDesignSystemGenerator {
     if (postProcessResult.normalizedCount > 0) {
       console.log(`[BrandDesignSystemGenerator] Normalized ${postProcessResult.normalizedCount} CSS variable names`);
     }
+    if (postProcessResult.deduplicatedCount > 0) {
+      console.log(`[BrandDesignSystemGenerator] Deduplicated ${postProcessResult.deduplicatedCount} CSS selector blocks`);
+    }
     if (postProcessResult.warnings.length > 0) {
       console.warn('[BrandDesignSystemGenerator] CSS warnings:', postProcessResult.warnings);
     }
 
-    const finalCssLength = postProcessResult.css.length;
+    // Prepend Google Fonts @import if available
+    let finalCss = postProcessResult.css;
+    if (googleFontsUrl) {
+      console.log('[BrandDesignSystemGenerator] Adding Google Fonts import:', googleFontsUrl.substring(0, 100));
+      finalCss = `@import url('${googleFontsUrl}');\n\n${finalCss}`;
+    }
+
+    const finalCssLength = finalCss.length;
     console.log('[BrandDesignSystemGenerator] Final compiled CSS length:', finalCssLength, 'characters');
-    console.log('[BrandDesignSystemGenerator] First 500 chars of compiled CSS:', postProcessResult.css.substring(0, 500));
+    console.log('[BrandDesignSystemGenerator] First 500 chars of compiled CSS:', finalCss.substring(0, 500));
     console.log('[BrandDesignSystemGenerator] BrandDesignSystem generation COMPLETE for:', brandName);
 
     return {
@@ -154,7 +170,7 @@ export class BrandDesignSystemGenerator {
       interactions,
       typographyTreatments,
       imageTreatments,
-      compiledCss: postProcessResult.css,
+      compiledCss: finalCss,
       variantMappings: this.getDefaultVariantMappings(designDna)
     };
   }
@@ -168,6 +184,55 @@ export class BrandDesignSystemGenerator {
     return color.hex || fallback;
   }
 
+  private lightenHex(hex: string, factor: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return '#' + [r, g, b].map(c =>
+      Math.round(c + (255 - c) * factor).toString(16).padStart(2, '0')
+    ).join('');
+  }
+
+  private darkenHex(hex: string, factor: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return '#' + [r, g, b].map(c =>
+      Math.round(c * (1 - factor)).toString(16).padStart(2, '0')
+    ).join('');
+  }
+
+  private computeComplementary(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    // Convert to HSL, rotate hue by 180°, convert back
+    const rn = r / 255, gn = g / 255, bn = b / 255;
+    const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (rn === max) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+      else if (gn === max) h = ((bn - rn) / d + 2) / 6;
+      else h = ((rn - gn) / d + 4) / 6;
+    }
+    h = (h + 0.5) % 1; // Rotate 180°
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    return '#' + [hue2rgb(p, q, h + 1/3), hue2rgb(p, q, h), hue2rgb(p, q, h - 1/3)]
+      .map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
+  }
+
   /**
    * Generate CSS tokens from Design DNA
    * This is the deterministic fallback that always works
@@ -178,10 +243,36 @@ export class BrandDesignSystemGenerator {
     // Safely extract colors with fallbacks
     const colors = designDna.colors || {} as DesignDNA['colors'];
     const primaryHex = this.getHex(colors.primary, '#3b82f6');
-    const primaryLightHex = this.getHex(colors.primaryLight, '#60a5fa');
-    const primaryDarkHex = this.getHex(colors.primaryDark, '#2563eb');
-    const secondaryHex = this.getHex(colors.secondary, '#1f2937');
-    const accentHex = this.getHex(colors.accent, '#f59e0b');
+
+    // Validate colors - reject black/white/near-white as accent, primaryLight, etc.
+    const isUselessColor = (hex: string | undefined): boolean => {
+      if (!hex) return true;
+      const normalized = hex.toLowerCase().replace('#', '');
+      return ['000000', 'ffffff', 'fff', '000', 'f3f5f5', 'f9fafb', 'e5e7eb'].includes(normalized);
+    };
+
+    let accentHex = this.getHex(colors.accent, '#f59e0b');
+    let primaryLightHex = this.getHex(colors.primaryLight, '');
+    let primaryDarkHex = this.getHex(colors.primaryDark, '');
+    let secondaryHex = this.getHex(colors.secondary, '#1f2937');
+
+    // Fix useless colors by deriving from primary
+    if (isUselessColor(accentHex)) {
+      accentHex = this.computeComplementary(primaryHex);
+      console.log('[BrandDesignSystemGenerator] Accent was useless color, computed complementary:', accentHex);
+    }
+    if (isUselessColor(primaryLightHex)) {
+      primaryLightHex = this.lightenHex(primaryHex, 0.85);
+      console.log('[BrandDesignSystemGenerator] PrimaryLight computed from primary:', primaryLightHex);
+    }
+    if (isUselessColor(primaryDarkHex)) {
+      primaryDarkHex = this.darkenHex(primaryHex, 0.2);
+      console.log('[BrandDesignSystemGenerator] PrimaryDark computed from primary:', primaryDarkHex);
+    }
+    if (isUselessColor(secondaryHex)) {
+      secondaryHex = this.darkenHex(primaryHex, 0.4);
+      console.log('[BrandDesignSystemGenerator] Secondary was useless, derived from primary:', secondaryHex);
+    }
 
     // Color tokens
     json['--ctc-primary'] = primaryHex;
@@ -214,6 +305,17 @@ export class BrandDesignSystemGenerator {
     json['--ctc-text-dark'] = json['--ctc-neutral-dark'];
     json['--ctc-text-medium'] = json['--ctc-neutral-medium'];
     json['--ctc-text-light'] = json['--ctc-neutral-light'];
+
+    // Additional alias tokens referenced by supplementary CSS and AI-generated styles
+    json['--ctc-gradient-start'] = primaryHex;
+    json['--ctc-gradient-end'] = primaryDarkHex;
+    json['--ctc-card-bg'] = '#ffffff';
+    json['--ctc-card-border'] = json['--ctc-neutral-light'];
+    json['--ctc-hover-bg'] = primaryLightHex;
+    json['--ctc-hover-border'] = primaryHex;
+    json['--ctc-text-muted'] = json['--ctc-neutral-medium'];
+    json['--ctc-text-heading'] = json['--ctc-neutral-darkest'];
+    json['--ctc-border-color'] = json['--ctc-neutral-light'];
 
     // Typography (with fallbacks for all nested properties)
     const typography = designDna.typography || {} as DesignDNA['typography'];
@@ -338,7 +440,7 @@ export class BrandDesignSystemGenerator {
    * Generate component styles one by one with focused prompts
    * This is more reliable than generating everything at once
    */
-  private async generateComponentStylesStepByStep(designDna: DesignDNA): Promise<BrandDesignSystem['componentStyles']> {
+  private async generateComponentStylesStepByStep(designDna: DesignDNA, screenshotBase64?: string): Promise<BrandDesignSystem['componentStyles']> {
     const personality = designDna.personality?.overall || 'corporate';
     const shapeStyle = designDna.shapes?.borderRadius?.style || 'rounded';
     const shadowStyle = designDna.effects?.shadows?.style || 'subtle';
@@ -348,18 +450,18 @@ export class BrandDesignSystemGenerator {
 
     // Generate each component with focused prompts
     const [button, card, hero, timeline, testimonial, faq, cta, keyTakeaways, prose, list, table, blockquote] = await Promise.all([
-      this.generateComponentCSS('button', designDna),
-      this.generateComponentCSS('card', designDna),
-      this.generateComponentCSS('hero', designDna),
-      this.generateComponentCSS('timeline', designDna),
-      this.generateComponentCSS('testimonial', designDna),
-      this.generateComponentCSS('faq', designDna),
-      this.generateComponentCSS('cta', designDna),
-      this.generateComponentCSS('keyTakeaways', designDna),
-      this.generateComponentCSS('prose', designDna),
-      this.generateComponentCSS('list', designDna),
-      this.generateComponentCSS('table', designDna),
-      this.generateComponentCSS('blockquote', designDna),
+      this.generateComponentCSS('button', designDna, screenshotBase64),
+      this.generateComponentCSS('card', designDna, screenshotBase64),
+      this.generateComponentCSS('hero', designDna, screenshotBase64),
+      this.generateComponentCSS('timeline', designDna, screenshotBase64),
+      this.generateComponentCSS('testimonial', designDna, screenshotBase64),
+      this.generateComponentCSS('faq', designDna, screenshotBase64),
+      this.generateComponentCSS('cta', designDna, screenshotBase64),
+      this.generateComponentCSS('keyTakeaways', designDna, screenshotBase64),
+      this.generateComponentCSS('prose', designDna, screenshotBase64),
+      this.generateComponentCSS('list', designDna, screenshotBase64),
+      this.generateComponentCSS('table', designDna, screenshotBase64),
+      this.generateComponentCSS('blockquote', designDna, screenshotBase64),
     ]);
 
     return { button, card, hero, timeline, testimonial, faq, cta, keyTakeaways, prose, list, table, blockquote };
@@ -370,7 +472,8 @@ export class BrandDesignSystemGenerator {
    */
   private async generateComponentCSS(
     componentType: string,
-    designDna: DesignDNA
+    designDna: DesignDNA,
+    screenshotBase64?: string
   ): Promise<ComponentStyleDefinition> {
     const prompt = this.buildComponentPrompt(componentType, designDna);
 
@@ -380,9 +483,9 @@ export class BrandDesignSystemGenerator {
 
     try {
       if (this.config.provider === 'gemini') {
-        response = await this.callGeminiForComponent(prompt);
+        response = await this.callGeminiForComponent(prompt, 3, screenshotBase64);
       } else {
-        response = await this.callClaudeForComponent(prompt);
+        response = await this.callClaudeForComponent(prompt, screenshotBase64);
       }
     } catch (error) {
       console.error(`[BrandDesignSystemGenerator] Failed to generate ${componentType}:`, error);
@@ -548,36 +651,53 @@ Motion: --ctc-transition-speed, --ctc-easing
 5. Match the brand's personality - ${personality.overall || 'corporate'} means ${this.getPersonalityDescription(personality.overall || 'corporate')}
 6. DO NOT include :root declarations - variables are already defined
 
-## CRITICAL: Class Naming Convention (DO NOT USE BEM __ NOTATION)
-- Base class: .ctc-${componentType}
-- Child elements: .ctc-${componentType}-{element} (SINGLE HYPHEN)
+## CRITICAL: Class Naming Convention (DUAL-SELECTOR for maximum compatibility)
+Use DUAL SELECTORS so the CSS targets both prefixed and non-prefixed class names.
+- Base class: .ctc-${componentType}, .${componentType === 'keyTakeaways' ? 'key-takeaways' : componentType}
+- Child elements: use SINGLE HYPHEN (NOT BEM double underscore __)
 - Variants: .ctc-${componentType}--{variant} (double hyphen OK for variants)
-- States: .ctc-${componentType}:hover, :active, :focus-visible
+- States: :hover, :active, :focus-visible
 
-REQUIRED child class names for each component:
-- hero: .ctc-hero-title, .ctc-hero-subtitle, .ctc-hero-content, .ctc-hero-badge, .ctc-hero-actions, .ctc-hero-decor, .ctc-hero-decor-orb
-- card: .ctc-card-title, .ctc-card-desc, .ctc-card-content
-- faq: .ctc-faq-header, .ctc-faq-list, .ctc-faq-item, .ctc-faq-question, .ctc-faq-answer, .ctc-faq-answer-content
-- prose: .ctc-prose-content, .ctc-section-header, .ctc-section-heading, .ctc-section-heading-accent
-- toc: .ctc-toc-header, .ctc-toc-title, .ctc-toc-list, .ctc-toc-item, .ctc-toc-link, .ctc-toc-arrow
-- cta: .ctc-cta-banner-content, .ctc-cta-banner-title, .ctc-cta-banner-text, .ctc-cta-banner-actions, .ctc-cta-banner-decor
-- bullet-list: .ctc-bullet-list-items, .ctc-bullet-list-item, .ctc-bullet-list-marker
-- key-takeaways: .ctc-key-takeaways-grid, .ctc-key-takeaways-item, .ctc-key-takeaways-icon, .ctc-key-takeaways-text
-- highlight-box: .ctc-highlight-box-inner, .ctc-highlight-box-icon, .ctc-highlight-box-content, .ctc-highlight-box-heading, .ctc-highlight-box-text
-- timeline: .ctc-timeline-track, .ctc-timeline-line, .ctc-timeline-step, .ctc-timeline-marker, .ctc-timeline-step-content
-- table: .ctc-table, .ctc-table-head, .ctc-table-body, .ctc-table-row, .ctc-table-header, .ctc-table-cell
-- btn: .ctc-btn, .ctc-btn-primary, .ctc-btn-secondary, .ctc-btn-arrow
+REQUIRED: For every .ctc-* selector, ALSO include the non-prefixed equivalent.
+Example: ".ctc-card, .card { background: ... }" and ".ctc-card-content, .card-body { padding: ... }"
+
+CLASS MAPPING (ctc-prefixed → non-prefixed):
+- hero: .ctc-hero / .section-hero, .ctc-hero-content / .hero-content, .ctc-hero-subtitle / .hero-lead, .ctc-hero-title / .hero-text
+- card: .ctc-card / .card, .ctc-card-content / .card-body, .ctc-card-desc / .card-body
+- faq: .ctc-faq / .faq-accordion, .ctc-faq-item / .faq-item, .ctc-faq-question / .faq-question, .ctc-faq-answer / .faq-answer
+- prose: .ctc-prose-content / .prose, .ctc-section-heading / .section-heading, .ctc-section-heading-accent / .heading-accent
+- toc: .ctc-toc / .article-toc
+- cta: .ctc-cta / .cta-banner
+- list: .ctc-bullet-list-items / .checklist, .ctc-bullet-list-item / .checklist-item
+- key-takeaways: .ctc-key-takeaways / .key-takeaways, .ctc-key-takeaways-grid / .key-takeaways-grid, .ctc-key-takeaways-item / .key-takeaways-item
+- timeline: .ctc-timeline / .timeline, .ctc-timeline-step / .timeline-item, .ctc-timeline-marker / .timeline-marker, .ctc-timeline-step-content / .timeline-content
+- table: .ctc-table / .comparison-table, .ctc-table-header / th, .ctc-table-cell / td
+- button: .ctc-btn / .btn, .ctc-btn-primary / .btn-primary
+- feature-grid: .feature-grid, .feature-card, .feature-icon, .feature-title, .feature-desc
+- step-list: .steps-list, .step-item, .step-number, .step-content
+- stat-highlight: .stat-card, .stat-value, .stat-label, .stat-grid
+- definition-box: .definition-box, .definition-term, .definition-content
+- section structure: .section, .section-container, .section-content, .section-inner
+- emphasis levels: .emphasis-hero, .emphasis-featured, .emphasis-standard, .emphasis-supporting
+
+ALSO include styles for these structural classes used in the HTML:
+- .article-header (the hero/title area)
+- .article-toc (table of contents navigation)
+- .section (content sections wrapper)
+- .section-container (max-width container)
+- .section-content (inner content area)
+- .section-heading (all section headings)
 
 NEVER use BEM double underscore (__) notation like .ctc-hero__title - ALWAYS use single hyphen like .ctc-hero-title
 
 ## Output Format (JSON only)
 {
-  "baseCSS": ".ctc-${componentType} { ... complete CSS ... }",
+  "baseCSS": ".ctc-${componentType}, .${componentType === 'keyTakeaways' ? 'key-takeaways' : componentType} { ... complete CSS with DUAL selectors ... }",
   "variants": {
     "variantName": ".ctc-${componentType}--variantName { ... }"
   },
   "states": {
-    "hover": ".ctc-${componentType}:hover { ... }",
+    "hover": ".ctc-${componentType}:hover, .${componentType === 'keyTakeaways' ? 'key-takeaways' : componentType}:hover { ... }",
     "active": ".ctc-${componentType}:active { ... }",
     "focus": ".ctc-${componentType}:focus-visible { ... }"
   }
@@ -774,11 +894,25 @@ CRITICAL: Return ONLY valid JSON. Make the CSS sophisticated and brand-specific,
   /**
    * Call Gemini for a single component with retry logic for rate limits
    */
-  private async callGeminiForComponent(prompt: string, maxRetries = 3): Promise<{ baseCSS: string; variants: Record<string, string>; states: Record<string, string> }> {
+  private async callGeminiForComponent(prompt: string, maxRetries = 3, screenshotBase64?: string): Promise<{ baseCSS: string; variants: Record<string, string>; states: Record<string, string> }> {
     const model = this.config.model || this.defaultModels.gemini;
     const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.config.apiKey}`;
 
     let lastError: Error | null = null;
+
+    // Build parts: text prompt + optional screenshot
+    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+    if (screenshotBase64) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/png',
+          data: screenshotBase64,
+        }
+      });
+      parts.push({ text: 'Above is a screenshot of the target brand website. Use the visual design you see (colors, typography, spacing, shapes, shadows, component styles) as the PRIMARY reference for generating CSS that matches this brand.\n\n' + prompt });
+    } else {
+      parts.push({ text: prompt });
+    }
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -786,7 +920,7 @@ CRITICAL: Return ONLY valid JSON. Make the CSS sophisticated and brand-specific,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts }],
             generationConfig: { temperature: 0.4, maxOutputTokens: 4096 }
           })
         });
@@ -824,8 +958,27 @@ CRITICAL: Return ONLY valid JSON. Make the CSS sophisticated and brand-specific,
   /**
    * Call Claude for a single component
    */
-  private async callClaudeForComponent(prompt: string): Promise<{ baseCSS: string; variants: Record<string, string>; states: Record<string, string> }> {
+  private async callClaudeForComponent(prompt: string, screenshotBase64?: string): Promise<{ baseCSS: string; variants: Record<string, string>; states: Record<string, string> }> {
     const model = this.config.model || this.defaultModels.anthropic;
+
+    // Build content: optional screenshot + text prompt
+    const content: Array<{ type: string; source?: { type: string; media_type: string; data: string }; text?: string }> = [];
+    if (screenshotBase64) {
+      content.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/png',
+          data: screenshotBase64,
+        }
+      });
+      content.push({
+        type: 'text',
+        text: 'Above is a screenshot of the target brand website. Use the visual design you see (colors, typography, spacing, shapes, shadows, component styles) as the PRIMARY reference for generating CSS that matches this brand.\n\n' + prompt,
+      });
+    } else {
+      content.push({ type: 'text', text: prompt });
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -837,7 +990,7 @@ CRITICAL: Return ONLY valid JSON. Make the CSS sophisticated and brand-specific,
       body: JSON.stringify({
         model,
         max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content }]
       })
     });
 
@@ -856,7 +1009,7 @@ CRITICAL: Return ONLY valid JSON. Make the CSS sophisticated and brand-specific,
    * Generate decorative elements (dividers, backgrounds, shapes)
    * ENHANCED: Now passes actual brand values for sophisticated output
    */
-  private async generateDecorativeElements(designDna: DesignDNA): Promise<BrandDesignSystem['decorative']> {
+  private async generateDecorativeElements(designDna: DesignDNA, screenshotBase64?: string): Promise<BrandDesignSystem['decorative']> {
     const personality = designDna.personality?.overall || 'corporate';
     const colors = designDna.colors || {} as DesignDNA['colors'];
     const effects = designDna.effects || {} as DesignDNA['effects'];
@@ -927,8 +1080,8 @@ CRITICAL:
 
     try {
       const response = this.config.provider === 'gemini'
-        ? await this.callGeminiForComponent(prompt)
-        : await this.callClaudeForComponent(prompt);
+        ? await this.callGeminiForComponent(prompt, 3, screenshotBase64)
+        : await this.callClaudeForComponent(prompt, screenshotBase64);
 
       return {
         dividers: {
@@ -951,7 +1104,7 @@ CRITICAL:
   /**
    * Generate interaction styles (hover, focus, animations)
    */
-  private async generateInteractions(designDna: DesignDNA): Promise<BrandDesignSystem['interactions']> {
+  private async generateInteractions(designDna: DesignDNA, screenshotBase64?: string): Promise<BrandDesignSystem['interactions']> {
     const personality = designDna.personality?.overall || 'corporate';
     const motionStyle = designDna.motion?.overall || 'subtle';
     const hoverButtons = designDna.motion?.hoverEffects?.buttons || 'darken';
@@ -993,8 +1146,8 @@ CRITICAL: Return ONLY valid JSON with actual CSS code.`;
 
     try {
       const response = this.config.provider === 'gemini'
-        ? await this.callGeminiForComponent(prompt)
-        : await this.callClaudeForComponent(prompt);
+        ? await this.callGeminiForComponent(prompt, 3, screenshotBase64)
+        : await this.callClaudeForComponent(prompt, screenshotBase64);
 
       const r = response as unknown as BrandDesignSystem['interactions'];
       return {
@@ -1015,7 +1168,7 @@ CRITICAL: Return ONLY valid JSON with actual CSS code.`;
   /**
    * Generate typography treatments
    */
-  private async generateTypographyTreatments(designDna: DesignDNA): Promise<BrandDesignSystem['typographyTreatments']> {
+  private async generateTypographyTreatments(designDna: DesignDNA, screenshotBase64?: string): Promise<BrandDesignSystem['typographyTreatments']> {
     const personality = designDna.personality?.overall || 'corporate';
     const headingStyle = designDna.typography?.headingUnderlineStyle || 'none';
     const usesDropCaps = designDna.typography?.usesDropCaps || false;
@@ -1048,8 +1201,8 @@ CRITICAL: Return ONLY valid JSON.`;
 
     try {
       const response = this.config.provider === 'gemini'
-        ? await this.callGeminiForComponent(prompt)
-        : await this.callClaudeForComponent(prompt);
+        ? await this.callGeminiForComponent(prompt, 3, screenshotBase64)
+        : await this.callClaudeForComponent(prompt, screenshotBase64);
 
       const r = response as unknown as BrandDesignSystem['typographyTreatments'];
       return {
@@ -1069,7 +1222,7 @@ CRITICAL: Return ONLY valid JSON.`;
   /**
    * Generate image treatment styles
    */
-  private async generateImageTreatments(designDna: DesignDNA): Promise<BrandDesignSystem['imageTreatments']> {
+  private async generateImageTreatments(designDna: DesignDNA, screenshotBase64?: string): Promise<BrandDesignSystem['imageTreatments']> {
     const personality = designDna.personality?.overall || 'corporate';
     const frameStyle = designDna.images?.frameStyle || 'rounded';
     const hoverEffect = designDna.images?.hoverEffect || 'none';
@@ -1098,8 +1251,8 @@ CRITICAL: Return ONLY valid JSON.`;
 
     try {
       const response = this.config.provider === 'gemini'
-        ? await this.callGeminiForComponent(prompt)
-        : await this.callClaudeForComponent(prompt);
+        ? await this.callGeminiForComponent(prompt, 3, screenshotBase64)
+        : await this.callClaudeForComponent(prompt, screenshotBase64);
 
       const r = response as unknown as BrandDesignSystem['imageTreatments'];
       return {

@@ -195,6 +195,24 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
 
   // Notify parent when Full Extraction completes - convert tokens to DesignDNA
   useEffect(() => {
+    const lightenColor = (hex: string, factor: number): string => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return '#' + [r, g, b].map(c =>
+        Math.round(c + (255 - c) * factor).toString(16).padStart(2, '0')
+      ).join('');
+    };
+
+    const darkenColor = (hex: string, factor: number): string => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return '#' + [r, g, b].map(c =>
+        Math.round(c * (1 - factor)).toString(16).padStart(2, '0')
+      ).join('');
+    };
+
     const processFullExtraction = async () => {
       // Only process once when phase becomes 'complete'
       if (
@@ -207,31 +225,46 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
 
         const tokens = brandExtraction.extractedTokens;
 
+        // Usage-aware color lookups (instead of fragile index-based assignment)
+        const findColorByUsage = (usage: string, exclude?: string[]) =>
+          tokens.colors?.values?.find((c: { hex?: string; usage?: string }) => {
+            const u = c.usage?.toLowerCase() || '';
+            if (!u.includes(usage)) return false;
+            if (exclude?.some(ex => u.includes(ex))) return false;
+            return true;
+          });
+
+        const primaryHex = findColorByUsage('primary', ['light', 'dark'])?.hex || tokens.colors?.values?.[0]?.hex || '#3b82f6';
+        const secondaryHex = findColorByUsage('secondary')?.hex || tokens.colors?.values?.[1]?.hex || '#1f2937';
+        const accentHex = findColorByUsage('accent')?.hex || tokens.colors?.values?.[2]?.hex || '#f59e0b';
+
+        console.log('[BrandIntelligenceStep] Color lookup results - primary:', primaryHex, 'secondary:', secondaryHex, 'accent:', accentHex);
+
         // Convert extracted tokens to DesignDNA format
         const designDna: DesignDNA = {
           colors: {
             primary: {
-              hex: tokens.colors?.values?.[0]?.hex || '#3b82f6',
-              usage: tokens.colors?.values?.[0]?.usage || 'primary',
+              hex: primaryHex,
+              usage: 'primary',
               confidence: 0.9
             },
             primaryLight: {
-              hex: tokens.colors?.values?.[1]?.hex || '#60a5fa',
+              hex: lightenColor(primaryHex, 0.3),
               usage: 'primary light variant',
               confidence: 0.8
             },
             primaryDark: {
-              hex: tokens.colors?.values?.[2]?.hex || '#2563eb',
+              hex: darkenColor(primaryHex, 0.2),
               usage: 'primary dark variant',
               confidence: 0.8
             },
             secondary: {
-              hex: tokens.colors?.values?.[3]?.hex || '#1f2937',
+              hex: secondaryHex,
               usage: 'secondary',
               confidence: 0.8
             },
             accent: {
-              hex: tokens.colors?.values?.[4]?.hex || '#f59e0b',
+              hex: accentHex,
               usage: 'accent',
               confidence: 0.7
             },
@@ -376,17 +409,57 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
           analysisNotes: ['Extracted via Full Brand Extraction from multiple pages']
         };
 
+        // Merge DOM-extracted high-confidence colors into DesignDNA
+        // (mirrors the merge logic in useBrandDetection.ts)
+        if (brandExtraction.extractedTokens?.colors?.values) {
+          const colorValues = brandExtraction.extractedTokens.colors.values;
+          for (const cv of colorValues) {
+            if (!cv?.hex || !cv?.usage) continue;
+            const usage = cv.usage.toLowerCase();
+            if (usage.includes('primary') && !usage.includes('light') && !usage.includes('dark')) {
+              designDna.colors.primary.hex = cv.hex;
+              designDna.colors.primary.confidence = 0.95;
+              // Recompute light/dark
+              designDna.colors.primaryLight.hex = lightenColor(cv.hex, 0.3);
+              designDna.colors.primaryDark.hex = darkenColor(cv.hex, 0.2);
+              console.log('[BrandIntelligenceStep] Matched primary color by usage:', cv.hex);
+            } else if (usage.includes('secondary')) {
+              designDna.colors.secondary.hex = cv.hex;
+              designDna.colors.secondary.confidence = 0.9;
+              console.log('[BrandIntelligenceStep] Matched secondary color by usage:', cv.hex);
+            } else if (usage.includes('accent')) {
+              designDna.colors.accent.hex = cv.hex;
+              designDna.colors.accent.confidence = 0.85;
+              console.log('[BrandIntelligenceStep] Matched accent color by usage:', cv.hex);
+            }
+          }
+        }
+
+        // Merge DOM-extracted fonts
+        if (brandExtraction.extractedTokens?.typography?.headings?.fontFamily &&
+            brandExtraction.extractedTokens.typography.headings.fontFamily !== 'system-ui') {
+          designDna.typography.headingFont.family = brandExtraction.extractedTokens.typography.headings.fontFamily;
+          console.log('[BrandIntelligenceStep] Using extracted heading font:', designDna.typography.headingFont.family);
+        }
+        if (brandExtraction.extractedTokens?.typography?.body?.fontFamily &&
+            brandExtraction.extractedTokens.typography.body.fontFamily !== 'system-ui') {
+          designDna.typography.bodyFont.family = brandExtraction.extractedTokens.typography.body.fontFamily;
+          console.log('[BrandIntelligenceStep] Using extracted body font:', designDna.typography.bodyFont.family);
+        }
+
         // Generate BrandDesignSystem from DesignDNA
         try {
           const generator = new BrandDesignSystemGenerator({
-            provider: 'gemini',
-            apiKey: geminiApiKey || '',
+            provider: geminiApiKey ? 'gemini' : 'anthropic',
+            apiKey: geminiApiKey || anthropicApiKey || '',
           });
 
           const designSystem = await generator.generate(
             designDna,
             'Extracted Brand',
-            brandExtraction.selectedUrls[0] || ''
+            brandExtraction.selectedUrls[0] || '',
+            brandExtraction.screenshotBase64 || undefined,
+            undefined // googleFontsUrl not available in full extraction path
           );
 
           console.log('[BrandIntelligenceStep] Generated design system, CSS length:', designSystem.compiledCss?.length);
@@ -468,7 +541,7 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
 
     processFullExtraction();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onDetectionComplete intentionally excluded to prevent infinite loops
-  }, [brandExtraction.phase, brandExtraction.extractedTokens, brandExtraction.screenshotBase64, brandExtraction.selectedUrls, geminiApiKey]);
+  }, [brandExtraction.phase, brandExtraction.extractedTokens, brandExtraction.screenshotBase64, brandExtraction.selectedUrls, geminiApiKey, anthropicApiKey]);
 
   // Personality slider handler
   const handlePersonalityChange = useCallback(
@@ -521,7 +594,8 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
 
   // Handle regenerate styles - regenerates CSS from existing DesignDNA without re-crawling
   const handleRegenerateStyles = useCallback(async () => {
-    if (!designDna || !geminiApiKey) {
+    const apiKey = geminiApiKey || anthropicApiKey;
+    if (!designDna || !apiKey) {
       console.warn('[BrandIntelligenceStep] Cannot regenerate styles: missing designDna or API key');
       return;
     }
@@ -531,14 +605,15 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
       console.log('[BrandIntelligenceStep] Regenerating CSS from existing DesignDNA...');
 
       const generator = new BrandDesignSystemGenerator({
-        provider: 'gemini',
-        apiKey: geminiApiKey,
+        provider: geminiApiKey ? 'gemini' : 'anthropic',
+        apiKey,
       });
 
       const newDesignSystem = await generator.generate(
         designDna,
         brandDesignSystem?.brandName || 'Brand',
-        brandDesignSystem?.sourceUrl || savedSourceUrl || ''
+        brandDesignSystem?.sourceUrl || savedSourceUrl || '',
+        screenshotBase64 || undefined
       );
 
       console.log('[BrandIntelligenceStep] CSS regeneration complete, compiledCss length:', newDesignSystem.compiledCss?.length);
@@ -554,7 +629,7 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
     } finally {
       setIsRegeneratingStyles(false);
     }
-  }, [designDna, geminiApiKey, brandDesignSystem, savedSourceUrl, screenshotBase64, onDetectionComplete]);
+  }, [designDna, geminiApiKey, anthropicApiKey, brandDesignSystem, savedSourceUrl, screenshotBase64, onDetectionComplete]);
 
   // Format the saved date for display
   const formatSavedDate = (dateStr: string | null | undefined): string => {
