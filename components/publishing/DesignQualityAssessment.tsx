@@ -12,7 +12,7 @@
  * Provides actionable suggestions with "Fix with AI" options.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Button } from '../ui/Button';
 
 // ============================================================================
@@ -88,13 +88,15 @@ interface DesignQualityAssessmentProps {
   onAutoFix?: (issue: DesignIssue) => Promise<void>;
   onRegenerateWithInstructions?: (instructions: string) => Promise<void>;
   isFixing?: boolean;
+  /** Called when the design quality score is computed, so the parent can display it */
+  onScoreCalculated?: (result: DesignQualityResult) => void;
 }
 
 // ============================================================================
 // Analysis Functions
 // ============================================================================
 
-function analyzeDesignQuality(
+export function analyzeDesignQuality(
   html: string,
   css: string,
   businessContext?: DesignQualityAssessmentProps['businessContext'],
@@ -248,7 +250,7 @@ function analyzeDesignQuality(
         'Ensure each visual component has parseable list structure'
       ]
     });
-    componentVarietyScore = 15; // Very low - this is a critical failure
+    componentVarietyScore = 5; // Critical failure - visual components declared but none rendered
   } else if (actualProseRatio > 0.8) {
     issues.push({
       id: 'too-much-prose',
@@ -270,7 +272,7 @@ function analyzeDesignQuality(
         'Add key-takeaways box at the end of major sections'
       ]
     });
-    componentVarietyScore = 25;
+    componentVarietyScore = 10; // >80% prose is very poor
   } else if (actualProseRatio > 0.6) {
     issues.push({
       id: 'moderate-prose',
@@ -285,7 +287,7 @@ function analyzeDesignQuality(
       autoFixPrompt: 'Add more visual variety to this content. Insert stat highlights for key metrics, use blockquotes for important statements, and convert grouped items to feature grids. Focus on sections that currently feel text-heavy. Ensure all content has proper list structure for parsing.',
       layoutFixPrompt: 'Increase component variety in layout patterns: add stat-highlight and blockquote components to preferred components list.'
     });
-    componentVarietyScore = 50;
+    componentVarietyScore = 30; // 60-80% prose is below target
   } else {
     // Good: actual visual components are rendering
     const actualVisualCount = Object.entries(actualVisualComponents).filter(([_, v]) => v > 0).length;
@@ -293,11 +295,17 @@ function analyzeDesignQuality(
     componentVarietyScore = 80;
   }
 
-  // Bonus for specific components
-  if (hasStyledLists) componentVarietyScore += 5;
-  if (hasStats) componentVarietyScore += 5;
-  if (hasQuotes) componentVarietyScore += 3;
-  if (hasFaq) componentVarietyScore += 5;
+  // Bonus for specific components - BUT only if they actually rendered with visual structures
+  // (not just declared in data-component attributes)
+  if (hasStyledLists && actualVisualComponents.featureGrid > 0) componentVarietyScore += 5;
+  if (hasStats && actualVisualComponents.statHighlight > 0) componentVarietyScore += 5;
+  if (hasQuotes && actualVisualComponents.testimonial > 0) componentVarietyScore += 3;
+  if (hasFaq && actualVisualComponents.faq > 0) componentVarietyScore += 5;
+
+  // If visual components declared but none rendered, cap at 10 regardless of bonuses
+  if (declaredVisualsButRenderedAsProse) {
+    componentVarietyScore = Math.min(componentVarietyScore, 10);
+  }
 
   componentVarietyScore = Math.min(100, componentVarietyScore);
 
@@ -571,6 +579,82 @@ function analyzeDesignQuality(
     brandConsistencyScore += 10;
   }
 
+  // Validate that CSS actually contains visual styles for rendered HTML elements
+  // We check not just for selector presence, but for VISUAL properties (background, border, box-shadow)
+  // vs purely structural properties (display, flex, gap, padding)
+  const visualCssProperties = ['background', 'border', 'box-shadow', 'color:', 'gradient'];
+  const componentCssChecks = [
+    { htmlClass: 'feature-card', cssSelector: '.feature-card' },
+    { htmlClass: 'timeline-item', cssSelector: '.timeline-item' },
+    { htmlClass: 'step-item', cssSelector: '.step-item' },
+    { htmlClass: 'faq-item', cssSelector: '.faq-item' },
+    { htmlClass: 'stat-item', cssSelector: '.stat-item' },
+    { htmlClass: 'checklist-item', cssSelector: '.checklist-item' },
+  ];
+
+  let styledComponentCount = 0;
+  let unstyledComponentCount = 0;
+  let structuralOnlyComponentCount = 0;
+  for (const check of componentCssChecks) {
+    if (html.includes(check.htmlClass)) {
+      if (css.includes(check.cssSelector)) {
+        // Check if the CSS rule for this selector contains VISUAL properties
+        // Extract the CSS rule block for this selector
+        const selectorEscaped = check.cssSelector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const ruleRegex = new RegExp(selectorEscaped + '\\s*\\{([^}]+)\\}', 'g');
+        const ruleMatches = [...css.matchAll(ruleRegex)];
+        const allRuleContent = ruleMatches.map(m => m[1]).join(' ');
+
+        const hasVisualProperty = visualCssProperties.some(prop => allRuleContent.includes(prop));
+        if (hasVisualProperty) {
+          styledComponentCount++;
+        } else {
+          structuralOnlyComponentCount++;
+        }
+      } else {
+        unstyledComponentCount++;
+      }
+    }
+  }
+
+  if (unstyledComponentCount > 0 && styledComponentCount === 0) {
+    issues.push({
+      id: 'unstyled-components',
+      category: 'branding',
+      severity: 'critical',
+      title: 'Visual components have no CSS styling',
+      description: `${unstyledComponentCount} component type(s) exist in HTML but have no matching CSS rules. Components will render as plain unstyled text.`,
+      currentState: `${unstyledComponentCount} component types without CSS styles`,
+      recommendation: 'Ensure the CSS pipeline includes component visual styles (backgrounds, borders, colors) alongside structural CSS.',
+      canAutoFix: false,
+      fixLevel: 'brand',
+    });
+    brandConsistencyScore = Math.max(brandConsistencyScore - 25, 10);
+  } else if (structuralOnlyComponentCount > 0 && styledComponentCount === 0) {
+    issues.push({
+      id: 'css-structural-only',
+      category: 'branding',
+      severity: 'critical',
+      title: 'Component CSS contains only structural properties',
+      description: `${structuralOnlyComponentCount} component type(s) have CSS rules but they only contain structural properties (display, flex, gap) without visual styling (background, border, box-shadow). Components will look unstyled.`,
+      currentState: `${structuralOnlyComponentCount} component types with structural-only CSS (no backgrounds, borders, or shadows)`,
+      recommendation: 'Add visual CSS properties (background, border, box-shadow, color) to component style rules. Structural CSS alone does not create visual design.',
+      canAutoFix: false,
+      fixLevel: 'brand',
+    });
+    brandConsistencyScore = Math.max(brandConsistencyScore - 20, 15);
+  } else if (styledComponentCount > 0) {
+    brandConsistencyScore += 5;
+  }
+
+  // Check that brand colors appear in CSS values (not just declarations)
+  const hexColorPattern = /#[0-9a-fA-F]{3,8}/g;
+  const cssColors = css.match(hexColorPattern) || [];
+  const uniqueCssColors = [...new Set(cssColors.map(c => c.toLowerCase()))];
+  if (uniqueCssColors.length < 3) {
+    brandConsistencyScore = Math.max(brandConsistencyScore - 10, 10);
+  }
+
   brandConsistencyScore = Math.min(100, brandConsistencyScore);
 
   // ============================================================================
@@ -586,14 +670,14 @@ function analyzeDesignQuality(
     brandConsistency: brandConsistencyScore,
   };
 
-  // Weighted average
+  // Weighted average - prioritize component variety and visual hierarchy
   const weights = {
-    componentVariety: 0.2,
-    visualHierarchy: 0.2,
-    businessFit: 0.2,
-    layoutDesign: 0.15,
+    componentVariety: 0.25,
+    visualHierarchy: 0.20,
+    businessFit: 0.10,
+    layoutDesign: 0.20,
     engagement: 0.15,
-    brandConsistency: 0.1,
+    brandConsistency: 0.10,
   };
 
   const overallScore = Math.round(
@@ -658,6 +742,7 @@ export const DesignQualityAssessment: React.FC<DesignQualityAssessmentProps> = (
   onAutoFix,
   onRegenerateWithInstructions,
   isFixing = false,
+  onScoreCalculated,
 }) => {
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null);
   const [fixingIssue, setFixingIssue] = useState<string | null>(null);
@@ -668,6 +753,11 @@ export const DesignQualityAssessment: React.FC<DesignQualityAssessmentProps> = (
     () => analyzeDesignQuality(html, css, businessContext, contentContext),
     [html, css, businessContext, contentContext]
   );
+
+  // Notify parent of score when assessment changes
+  useEffect(() => {
+    onScoreCalculated?.(assessment);
+  }, [assessment, onScoreCalculated]);
 
   // Handle auto-fix
   const handleAutoFix = useCallback(async (issue: DesignIssue) => {

@@ -751,6 +751,296 @@ test.describe('ComponentSelector content pattern detection', () => {
 });
 
 // ============================================================================
+// DESIGN QUALITY SCORING VALIDATION
+// ============================================================================
+
+test.describe('Design Quality Score Recalibration', () => {
+  test('quality score penalizes sections where visual component renders as prose', async () => {
+    const { analyzeDesignQuality } = await import(
+      '../components/publishing/DesignQualityAssessment'
+    );
+
+    // HTML with declared visual components but NO actual visual structures
+    // This simulates the bug: data-component="feature-grid" but content is plain paragraphs
+    const html = `
+      <article>
+        <section data-component="feature-grid" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Key Features</h2>
+            <div class="prose"><p>Feature one is great.</p><p>Feature two is better.</p></div>
+          </div>
+        </section>
+        <section data-component="timeline" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Process</h2>
+            <div class="prose"><p>Step one happens first.</p><p>Step two follows.</p></div>
+          </div>
+        </section>
+        <section data-component="step-list" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Steps</h2>
+            <div class="prose"><p>Do this first. Then do that.</p></div>
+          </div>
+        </section>
+        <section data-component="stat-highlight" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Results</h2>
+            <div class="prose"><p>95% satisfaction rate. 50% cost reduction.</p></div>
+          </div>
+        </section>
+        <section data-component="prose" class="emphasis-standard">
+          <div class="section-container">
+            <h2>About Us</h2>
+            <div class="prose"><p>We are a company.</p></div>
+          </div>
+        </section>
+      </article>
+    `;
+
+    // CSS with only structural properties - no visual styling
+    const css = `
+      .section-container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+      .prose { line-height: 1.6; }
+      .prose p { margin-bottom: 1rem; }
+    `;
+
+    const result = analyzeDesignQuality(html, css);
+
+    // Component variety should be very low: visual components declared but not rendered
+    expect(result.categoryScores.componentVariety).toBeLessThanOrEqual(10);
+
+    // Should report the visual-components-not-rendered issue
+    const notRenderedIssue = result.issues.find(i => i.id === 'visual-components-not-rendered');
+    expect(notRenderedIssue).toBeDefined();
+    expect(notRenderedIssue!.severity).toBe('critical');
+
+    // Overall score should be under 50 for this poor output
+    expect(result.overallScore).toBeLessThan(50);
+
+    // Recommendation should be needs-improvement or rework
+    expect(['needs-improvement', 'rework-recommended']).toContain(result.recommendation);
+  });
+
+  test('quality score rewards sections with actual visual component structures', async () => {
+    const { analyzeDesignQuality } = await import(
+      '../components/publishing/DesignQualityAssessment'
+    );
+
+    // HTML with proper visual structures actually rendered
+    const html = `
+      <article>
+        <section data-component="hero" class="emphasis-hero section-hero">
+          <div class="section-container width-full">
+            <div class="hero-content">
+              <h1>Great Article Title</h1>
+              <p class="article-subtitle">Subtitle here</p>
+            </div>
+          </div>
+        </section>
+        <section data-component="feature-grid" class="emphasis-featured has-background has-accent-border">
+          <div class="section-container width-wide columns-3">
+            <h2>Key Features</h2>
+            <div class="feature-grid">
+              <div class="feature-card"><h3>Feature 1</h3><p>Description</p></div>
+              <div class="feature-card"><h3>Feature 2</h3><p>Description</p></div>
+              <div class="feature-card"><h3>Feature 3</h3><p>Description</p></div>
+            </div>
+          </div>
+        </section>
+        <section data-component="step-list" class="emphasis-standard">
+          <div class="section-container width-medium">
+            <h2>Process</h2>
+            <div class="step-item"><span class="step-number">1</span><p>First step</p></div>
+            <div class="step-item"><span class="step-number">2</span><p>Second step</p></div>
+          </div>
+        </section>
+        <section data-component="faq-accordion" class="emphasis-standard">
+          <div class="section-container width-medium">
+            <h2>FAQ</h2>
+            <div class="faq-item"><strong>Q: Question?</strong><p>Answer.</p></div>
+            <div class="faq-item"><strong>Q: Another?</strong><p>Answer.</p></div>
+          </div>
+        </section>
+        <section data-component="stat-highlight" class="emphasis-featured">
+          <div class="section-container width-wide">
+            <h2>Results</h2>
+            <div class="stat-item"><span>95%</span><span>Satisfaction</span></div>
+          </div>
+        </section>
+        <section data-component="key-takeaways" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Takeaways</h2>
+            <div class="takeaway-item"><p>Key point here.</p></div>
+          </div>
+        </section>
+        <section data-component="prose" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Conclusion</h2>
+            <div class="ctc-button--primary">Contact Us</div>
+          </div>
+        </section>
+      </article>
+    `;
+
+    // CSS with proper visual styling
+    const css = `
+      :root { --ctc-primary: #0056b3; --ctc-accent: #ff6b35; }
+      .feature-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
+      .feature-card:hover { transform: translateY(-2px); }
+      .step-item { background: #ffffff; border-left: 3px solid #0056b3; padding: 1rem; }
+      .step-number { background: #0056b3; color: #ffffff; border-radius: 50%; }
+      .faq-item { background: #f8f9fa; border: 1px solid #dee2e6; padding: 1rem; }
+      .faq-item:hover { background: #e9ecef; }
+      .stat-item { background: linear-gradient(135deg, #0056b3, #003d80); color: #fff; border-radius: 12px; }
+      .checklist-check { background: #0056b3; border-radius: 50%; }
+      .emphasis-hero { background: linear-gradient(135deg, #0056b3, #003d80); }
+      .emphasis-featured .section-container { background: #f8f9fa; border-left: 4px solid #ff6b35; }
+      .ctc-button--primary { background: #0056b3; color: #ffffff; }
+      .article-header { background: linear-gradient(135deg, #0056b3, #003d80); }
+      .section-container { max-width: 800px; margin: 0 auto; }
+      section:nth-child(even) { background: #fafafa; }
+    `;
+
+    const result = analyzeDesignQuality(html, css);
+
+    // Component variety should be high: multiple actual visual components
+    expect(result.categoryScores.componentVariety).toBeGreaterThanOrEqual(80);
+
+    // Should NOT report visual-components-not-rendered
+    const notRenderedIssue = result.issues.find(i => i.id === 'visual-components-not-rendered');
+    expect(notRenderedIssue).toBeUndefined();
+
+    // Overall score should be high
+    expect(result.overallScore).toBeGreaterThanOrEqual(65);
+
+    // Recommendation should be good or excellent
+    expect(['good', 'excellent']).toContain(result.recommendation);
+  });
+
+  test('CSS with only structural properties scores low on brand consistency', async () => {
+    const { analyzeDesignQuality } = await import(
+      '../components/publishing/DesignQualityAssessment'
+    );
+
+    // HTML with visual components
+    const html = `
+      <article>
+        <section data-component="feature-grid" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Features</h2>
+            <div class="feature-card"><p>Feature 1</p></div>
+            <div class="feature-card"><p>Feature 2</p></div>
+          </div>
+        </section>
+        <section data-component="step-list" class="emphasis-standard">
+          <div class="section-container">
+            <h2>Steps</h2>
+            <div class="step-item"><p>Step 1</p></div>
+          </div>
+        </section>
+      </article>
+    `;
+
+    // CSS with ONLY structural properties for components - no backgrounds, borders, shadows
+    const css = `
+      .feature-card { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+      .step-item { display: flex; align-items: center; gap: 1rem; padding: 0.5rem; }
+    `;
+
+    const result = analyzeDesignQuality(html, css);
+
+    // Should detect structural-only CSS issue
+    const structuralOnlyIssue = result.issues.find(i => i.id === 'css-structural-only');
+    expect(structuralOnlyIssue).toBeDefined();
+    expect(structuralOnlyIssue!.severity).toBe('critical');
+
+    // Brand consistency should be penalized
+    expect(result.categoryScores.brandConsistency).toBeLessThanOrEqual(55);
+  });
+
+  test('overall score is below 50 for completely unstyled declared components', async () => {
+    const { analyzeDesignQuality } = await import(
+      '../components/publishing/DesignQualityAssessment'
+    );
+
+    // Simulate the original bug: 85% score for unstyled output
+    // 8 sections, all declared as visual components, but all render as prose
+    const html = `
+      <article>
+        <section data-component="feature-grid" class="emphasis-standard">
+          <div class="section-container"><h2>Features</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="timeline" class="emphasis-standard">
+          <div class="section-container"><h2>Timeline</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="step-list" class="emphasis-standard">
+          <div class="section-container"><h2>Steps</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="stat-highlight" class="emphasis-standard">
+          <div class="section-container"><h2>Stats</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="checklist" class="emphasis-standard">
+          <div class="section-container"><h2>Checklist</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="faq-accordion" class="emphasis-standard">
+          <div class="section-container"><h2>FAQ</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="testimonial-card" class="emphasis-standard">
+          <div class="section-container"><h2>Reviews</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+        <section data-component="key-takeaways" class="emphasis-standard">
+          <div class="section-container"><h2>Summary</h2><div class="prose"><p>Plain text.</p></div></div>
+        </section>
+      </article>
+    `;
+
+    const css = `
+      .section-container { max-width: 800px; margin: 0 auto; }
+      .prose { line-height: 1.6; }
+    `;
+
+    const result = analyzeDesignQuality(html, css);
+
+    // The old bug: score was 85%. Now it should be under 50.
+    expect(result.overallScore).toBeLessThan(50);
+
+    // Should have critical issues
+    const criticalIssues = result.issues.filter(i => i.severity === 'critical');
+    expect(criticalIssues.length).toBeGreaterThanOrEqual(1);
+
+    // Should recommend rework or at minimum needs-improvement
+    expect(['needs-improvement', 'rework-recommended']).toContain(result.recommendation);
+  });
+
+  test('weights are correctly calibrated', async () => {
+    const { analyzeDesignQuality } = await import(
+      '../components/publishing/DesignQualityAssessment'
+    );
+
+    // Minimal HTML/CSS to just verify weights exist and total to 1.0
+    const html = '<article><section><div class="section-container"><p>Test</p></div></section></article>';
+    const css = '.section-container { max-width: 800px; }';
+
+    const result = analyzeDesignQuality(html, css);
+
+    // Verify all six categories are present
+    expect(result.categoryScores).toHaveProperty('componentVariety');
+    expect(result.categoryScores).toHaveProperty('visualHierarchy');
+    expect(result.categoryScores).toHaveProperty('businessFit');
+    expect(result.categoryScores).toHaveProperty('layoutDesign');
+    expect(result.categoryScores).toHaveProperty('engagement');
+    expect(result.categoryScores).toHaveProperty('brandConsistency');
+
+    // Verify overall score is a weighted average (between min and max category scores)
+    const scores = Object.values(result.categoryScores);
+    const minScore = Math.min(...scores);
+    const maxScore = Math.max(...scores);
+    expect(result.overallScore).toBeGreaterThanOrEqual(minScore);
+    expect(result.overallScore).toBeLessThanOrEqual(maxScore);
+  });
+});
+
+// ============================================================================
 // SCREENSHOT CAPTURE (requires running app)
 // ============================================================================
 
