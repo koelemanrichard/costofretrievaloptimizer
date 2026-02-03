@@ -715,6 +715,119 @@ test.describe('ComponentSelector content pattern detection', () => {
     expect(result.primaryComponent).toBe('prose');
   });
 
+  test('ComponentSelector prefers feature-grid for short benefit lists', async () => {
+    const { ComponentSelector } = await import(
+      '../services/layout-engine/ComponentSelector'
+    );
+
+    // Content with a short list of benefits/features (< 100 chars each)
+    const featureListContent =
+      '<ul>' +
+      '<li>Snellere laadtijden voor uw website</li>' +
+      '<li>Verbeterde beveiliging tegen aanvallen</li>' +
+      '<li>Automatische back-ups elke dag</li>' +
+      '<li>24/7 klantenondersteuning beschikbaar</li>' +
+      '</ul>';
+
+    const analysis = createAnalysis({ contentType: 'list', hasList: true });
+    const result = ComponentSelector.selectComponent(analysis, undefined, {
+      content: featureListContent,
+    });
+
+    expect(result.primaryComponent).toBe('feature-grid');
+    expect(result.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
+  test('ComponentSelector assigns step-list for sequential content', async () => {
+    const { ComponentSelector } = await import(
+      '../services/layout-engine/ComponentSelector'
+    );
+
+    // Content with sequential keywords (Dutch)
+    const sequentialContent =
+      '<p>Eerst moet u het formulier invullen met uw gegevens.</p>' +
+      '<p>Vervolgens controleert het systeem uw aanvraag.</p>' +
+      '<p>Daarna ontvangt u een bevestigingsmail.</p>' +
+      '<p>Tot slot wordt uw account geactiveerd.</p>';
+
+    const analysis = createAnalysis({ contentType: 'explanation' });
+    const result = ComponentSelector.selectComponent(analysis, undefined, {
+      content: sequentialContent,
+    });
+
+    expect(['step-list', 'timeline']).toContain(result.primaryComponent);
+    expect(result.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
+  test('ComponentSelector assigns step-list for numbered list content', async () => {
+    const { ComponentSelector } = await import(
+      '../services/layout-engine/ComponentSelector'
+    );
+
+    // Content with numbered items
+    const numberedContent =
+      '<ol>' +
+      '<li>Download the installer from the website.</li>' +
+      '<li>Run the setup wizard and follow the prompts.</li>' +
+      '<li>Configure your preferences in the settings panel.</li>' +
+      '<li>Restart the application to apply changes.</li>' +
+      '</ol>';
+
+    const analysis = createAnalysis({ contentType: 'explanation', hasList: true });
+    const result = ComponentSelector.selectComponent(analysis, undefined, {
+      content: numberedContent,
+    });
+
+    expect(['step-list', 'timeline']).toContain(result.primaryComponent);
+    expect(result.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
+  test('ComponentSelector assigns faq-accordion for Q&A format content', async () => {
+    const { ComponentSelector } = await import(
+      '../services/layout-engine/ComponentSelector'
+    );
+
+    // Content with bold questions and answers
+    const qaContent =
+      '<p><strong>Wat is SEO?</strong></p>' +
+      '<p>SEO staat voor Search Engine Optimization en helpt uw website beter vindbaar te maken.</p>' +
+      '<p><strong>Hoeveel kost SEO?</strong></p>' +
+      '<p>De kosten variëren afhankelijk van de omvang van uw project.</p>' +
+      '<p><strong>Hoe lang duurt SEO?</strong></p>' +
+      '<p>Resultaten zijn meestal zichtbaar na 3 tot 6 maanden.</p>';
+
+    const analysis = createAnalysis({ contentType: 'explanation' });
+    const result = ComponentSelector.selectComponent(analysis, undefined, {
+      content: qaContent,
+    });
+
+    expect(result.primaryComponent).toBe('faq-accordion');
+    expect(result.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
+  test('ComponentSelector assigns faq-accordion for question-mark content', async () => {
+    const { ComponentSelector } = await import(
+      '../services/layout-engine/ComponentSelector'
+    );
+
+    // Content with questions followed by answers (no bold, but with question marks)
+    const questionContent =
+      '<p>What are the system requirements?</p>' +
+      '<p>You need at least 8GB RAM and 50GB of disk space.</p>' +
+      '<p>How do I reset my password?</p>' +
+      '<p>Click on the "Forgot Password" link on the login page.</p>' +
+      '<p>Can I cancel my subscription?</p>' +
+      '<p>Yes, you can cancel at any time from your account settings.</p>';
+
+    const analysis = createAnalysis({ contentType: 'explanation' });
+    const result = ComponentSelector.selectComponent(analysis, undefined, {
+      content: questionContent,
+    });
+
+    expect(result.primaryComponent).toBe('faq-accordion');
+    expect(result.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+
   test('ComponentSelector without content option behaves as before', async () => {
     const { ComponentSelector } = await import(
       '../services/layout-engine/ComponentSelector'

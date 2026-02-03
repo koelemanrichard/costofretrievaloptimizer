@@ -8,7 +8,8 @@
  * Selection priority:
  * 1. FS-protected sections -> Always use compliant components
  * 2. High-value sections (UNIQUE/RARE) -> May get enhanced components
- * 3. Content patterns -> alert-box, info-box, lead-paragraph detection
+ * 3. Content patterns -> lead-paragraph, alert-box, info-box, faq-accordion,
+ *    feature-grid, step-list detection
  * 4. Standard selection -> Content type x brand personality matrix
  */
 
@@ -41,6 +42,9 @@ const HIGH_VALUE_BASE_CONFIDENCE = 0.85;
 const CONTENT_PATTERN_ALERT_CONFIDENCE = 0.7;
 const CONTENT_PATTERN_INFO_CONFIDENCE = 0.6;
 const CONTENT_PATTERN_LEAD_CONFIDENCE = 0.8;
+const CONTENT_PATTERN_FEATURE_GRID_CONFIDENCE = 0.75;
+const CONTENT_PATTERN_SEQUENTIAL_CONFIDENCE = 0.7;
+const CONTENT_PATTERN_QA_CONFIDENCE = 0.7;
 const STANDARD_CONFIDENCE = 0.75;
 const FALLBACK_CONFIDENCE = 0.6;
 
@@ -279,6 +283,179 @@ function detectLeadParagraphPattern(
   return analysis.contentType === 'introduction' && isFirstSection;
 }
 
+// =============================================================================
+// FEATURE LIST PATTERN DETECTION
+// =============================================================================
+
+/**
+ * Keywords that indicate a feature or benefit item.
+ */
+const FEATURE_BENEFIT_KEYWORDS = [
+  /\bbenefit\b/i,
+  /\bvoordeel\b/i,
+  /\bvoordelen\b/i,
+  /\bfeature\b/i,
+  /\bfunctie\b/i,
+  /\bfunctionaliteit\b/i,
+  /\badvantage\b/i,
+  /\bimprove\b/i,
+  /\bverbeter\b/i,
+  /\benhance\b/i,
+  /\boptimize\b/i,
+  /\boptimaliseer\b/i,
+  /\bsneller\b/i,
+  /\bfaster\b/i,
+  /\bbetter\b/i,
+  /\bbeter\b/i,
+  /\bautomat\w*/i,
+  /\beffici[eë]nt\b/i,
+  /\bsupport\b/i,
+  /\bondersteuning\b/i,
+  /\bbeveiliging\b/i,
+  /\bsecurity\b/i,
+  /\bprotect\b/i,
+  /\bbescherming\b/i,
+  /\bincluded\b/i,
+  /\binbegrepen\b/i,
+  /\bunlimited\b/i,
+  /\bonbeperkt\b/i,
+];
+
+/**
+ * Detect if content is a short list of features/benefits.
+ * Returns true if:
+ * - Content contains 3-5 list items (ul/ol > li)
+ * - Items are short (< 100 chars each)
+ * - Items contain feature/benefit keywords
+ */
+function detectFeatureListPattern(content: string): boolean {
+  // Extract list items
+  const listItemPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+  const items: string[] = [];
+  let match;
+  while ((match = listItemPattern.exec(content)) !== null) {
+    items.push(stripHtmlTags(match[1]));
+  }
+
+  // Need 3-5 items for a feature grid
+  if (items.length < 3 || items.length > 5) {
+    return false;
+  }
+
+  // All items must be short (< 100 chars)
+  const allShort = items.every((item) => item.length < 100);
+  if (!allShort) {
+    return false;
+  }
+
+  // Check if items contain feature/benefit language
+  const plainText = items.join(' ');
+  let keywordMatches = 0;
+  for (const kw of FEATURE_BENEFIT_KEYWORDS) {
+    if (kw.test(plainText)) {
+      keywordMatches++;
+    }
+  }
+
+  // At least 1 keyword match across all items
+  return keywordMatches >= 1;
+}
+
+// =============================================================================
+// SEQUENTIAL CONTENT PATTERN DETECTION
+// =============================================================================
+
+/**
+ * Sequential keywords (Dutch and English) that indicate step-by-step content.
+ */
+const SEQUENTIAL_KEYWORDS = [
+  /\beerst(?:e)?\b/i,
+  /\bvervolgens\b/i,
+  /\bdaarna\b/i,
+  /\btot\s+slot\b/i,
+  /\bten\s+slotte\b/i,
+  /\bfirst\b/i,
+  /\bthen\b/i,
+  /\bnext\b/i,
+  /\bfinally\b/i,
+  /\bafterwards?\b/i,
+  /\bsubsequently\b/i,
+  /\blastly\b/i,
+  /\bstep\s+\d/i,
+  /\bstap\s+\d/i,
+];
+
+/**
+ * Detect if content follows a sequential pattern (step-by-step).
+ * Returns true if:
+ * - Content contains 2+ sequential keywords, OR
+ * - Content contains an ordered list (<ol>)
+ */
+function detectSequentialPattern(content: string): boolean {
+  // Check for ordered list
+  if (/<ol[\s>]/i.test(content)) {
+    // Verify it has at least 2 items
+    const olItems = content.match(/<li[^>]*>/gi);
+    if (olItems && olItems.length >= 2) {
+      return true;
+    }
+  }
+
+  // Check for sequential keywords in plain text
+  const plainText = stripHtmlTags(content);
+  let keywordMatches = 0;
+  for (const kw of SEQUENTIAL_KEYWORDS) {
+    if (kw.test(plainText)) {
+      keywordMatches++;
+    }
+    if (keywordMatches >= 2) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// =============================================================================
+// Q&A PATTERN DETECTION
+// =============================================================================
+
+/**
+ * Detect if content follows a Q&A (question-answer) format.
+ * Returns true if:
+ * - Content has 2+ bold questions (bold text ending with ?), OR
+ * - Content has 2+ paragraphs that end with a question mark followed by a non-question paragraph
+ */
+function detectQAPattern(content: string): boolean {
+  // Check for bold questions: <strong>...?</strong>
+  const boldQuestionPattern = /<strong>[^<]*\?[^<]*<\/strong>/gi;
+  const boldQuestions = content.match(boldQuestionPattern);
+  if (boldQuestions && boldQuestions.length >= 2) {
+    return true;
+  }
+
+  // Check for question-answer pairs in paragraphs
+  // Extract paragraph texts
+  const paragraphPattern = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  const paragraphs: string[] = [];
+  let pMatch;
+  while ((pMatch = paragraphPattern.exec(content)) !== null) {
+    paragraphs.push(stripHtmlTags(pMatch[1]).trim());
+  }
+
+  // Count paragraphs that end with ? (questions)
+  let questionCount = 0;
+  for (const para of paragraphs) {
+    if (para.endsWith('?')) {
+      questionCount++;
+    }
+  }
+
+  // Need at least 2 question paragraphs, and they shouldn't be all questions
+  // (there should be some answer paragraphs too)
+  return questionCount >= 2 && questionCount < paragraphs.length;
+}
+
 /**
  * Try content-based pattern detection.
  * Returns a ComponentSelection if a pattern matches, or null for standard selection.
@@ -324,6 +501,39 @@ function tryContentPatternDetection(
       componentVariant: 'tip',
       confidence: CONTENT_PATTERN_INFO_CONFIDENCE,
       reasoning: `Info box selected: content contains tip/note indicators. Highlights helpful supplementary information.`,
+    };
+  }
+
+  // Q&A / FAQ pattern detection (check before sequential to prioritize Q&A format)
+  if (detectQAPattern(content)) {
+    return {
+      primaryComponent: 'faq-accordion',
+      alternativeComponents: ['accordion', 'card'],
+      componentVariant: 'default',
+      confidence: CONTENT_PATTERN_QA_CONFIDENCE,
+      reasoning: `FAQ accordion selected: content follows question-answer format. Structured Q&A improves scanability and may target PAA snippets.`,
+    };
+  }
+
+  // Feature list pattern detection (short benefit/feature lists -> feature-grid)
+  if (detectFeatureListPattern(content)) {
+    return {
+      primaryComponent: 'feature-grid',
+      alternativeComponents: ['checklist', 'card'],
+      componentVariant: 'default',
+      confidence: CONTENT_PATTERN_FEATURE_GRID_CONFIDENCE,
+      reasoning: `Feature grid selected: content contains a short list of features/benefits. Visual grid is more impactful than a plain checklist.`,
+    };
+  }
+
+  // Sequential content pattern detection (step-by-step -> step-list/timeline)
+  if (detectSequentialPattern(content)) {
+    return {
+      primaryComponent: 'step-list',
+      alternativeComponents: ['timeline', 'checklist'],
+      componentVariant: 'default',
+      confidence: CONTENT_PATTERN_SEQUENTIAL_CONFIDENCE,
+      reasoning: `Step list selected: content follows a sequential pattern with ordered steps or sequence keywords. Visual step indicators improve comprehension.`,
     };
   }
 
@@ -382,7 +592,8 @@ export class ComponentSelector implements IComponentSelector {
       return ComponentSelector.selectHighValueComponent(analysis, personality);
     }
 
-    // Priority 3: Content-based pattern detection (alert-box, info-box, lead-paragraph)
+    // Priority 3: Content-based pattern detection
+    // (lead-paragraph, alert-box, info-box, faq-accordion, feature-grid, step-list)
     const contentPatternResult = tryContentPatternDetection(analysis, options);
     if (contentPatternResult) {
       return contentPatternResult;
