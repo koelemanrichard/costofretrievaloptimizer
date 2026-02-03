@@ -127,6 +127,54 @@ test.describe('CSS Pipeline Validation', () => {
     expect(css).toMatch(/\.step-medium\s+\.step-number\s*\{[^}]*font-size:\s*1\.25rem/);
   });
 
+  test('component styles adapt to brand personality', async () => {
+    const { generateComponentStyles } = await import(
+      '../services/publishing/renderer/ComponentStyles'
+    );
+
+    const corporateCss = generateComponentStyles({
+      primaryColor: '#1a365d',
+      accentColor: '#dd6b20',
+      personality: 'corporate',
+    });
+
+    const creativeCss = generateComponentStyles({
+      primaryColor: '#7c3aed',
+      accentColor: '#ec4899',
+      personality: 'creative',
+    });
+
+    const minimalCss = generateComponentStyles({
+      primaryColor: '#333333',
+      accentColor: '#666666',
+      personality: 'minimal',
+    });
+
+    // Corporate: sharp corners (small radii like 2px, 4px, 6px)
+    expect(corporateCss).toMatch(/border-radius:\s*[0-4]px/);
+    // Corporate should NOT have large radii like 20px
+    expect(corporateCss).not.toMatch(/border-radius:\s*20px/);
+
+    // Creative: rounded corners (large radii like 12px, 20px)
+    expect(creativeCss).toMatch(/border-radius:\s*(12|16|20|24)px/);
+    // Creative should NOT have tiny 2px radii
+    expect(creativeCss).not.toMatch(/border-radius:\s*2px/);
+
+    // Minimal: near-zero radii (0px, 2px)
+    expect(minimalCss).toMatch(/border-radius:\s*0px/);
+
+    // Personality should affect box-shadow values
+    // Minimal has 'none' shadows
+    expect(minimalCss).toMatch(/box-shadow:\s*none/);
+    // Creative has bolder shadows
+    expect(creativeCss).toMatch(/box-shadow:\s*0 4px 16px/);
+
+    // Personality should affect transition durations
+    expect(corporateCss).toMatch(/transition.*0\.2s/);
+    expect(creativeCss).toMatch(/transition.*0\.4s/);
+    expect(minimalCss).toMatch(/transition.*0\.15s/);
+  });
+
   test('alert-box and info-box component styles are generated', async () => {
     const { generateComponentStyles } = await import(
       '../services/publishing/renderer/ComponentStyles'

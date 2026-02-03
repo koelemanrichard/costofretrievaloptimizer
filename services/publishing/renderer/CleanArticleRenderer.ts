@@ -1111,6 +1111,7 @@ ${listItems}
         radiusSmall: this.getRadius('small'),
         radiusMedium: this.getRadius('medium'),
         radiusLarge: this.getRadius('large'),
+        personality: this.designDna?.personality?.overall,
       };
       const componentCss = generateComponentStyles(brandColors);
       // NEW order: componentCss (generic visual base) → compiledCss (brand-specific overrides) → structuralCSS (layout)
@@ -1168,6 +1169,7 @@ ${listItems}
         radiusSmall: radiusSm,
         radiusMedium: radiusMd,
         radiusLarge: radiusLg,
+        personality: this.designDna?.personality?.overall,
       }),
     ];
 

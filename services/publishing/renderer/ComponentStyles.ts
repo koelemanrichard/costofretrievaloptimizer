@@ -26,6 +26,7 @@ export interface ComponentStylesOptions {
   radiusSmall: string;
   radiusMedium: string;
   radiusLarge: string;
+  personality?: 'corporate' | 'creative' | 'luxurious' | 'friendly' | 'bold' | 'minimal';
 }
 
 const DEFAULT_OPTIONS: ComponentStylesOptions = {
@@ -103,6 +104,57 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   const raw = { ...DEFAULT_OPTIONS, ...options };
   const o = sanitizeColors(raw);
 
+  // ---------------------------------------------------------------------------
+  // Personality-driven visual parameters
+  // ---------------------------------------------------------------------------
+  const personality = o.personality || 'corporate';
+
+  const visualParams = {
+    corporate: {
+      radius: { sm: '2px', md: '4px', lg: '6px' },
+      shadow: { card: '0 1px 4px rgba(0,0,0,0.06)', hover: '0 4px 12px rgba(0,0,0,0.08)' },
+      heroStyle: 'gradient-dark',
+      animationDuration: '0.2s',
+    },
+    creative: {
+      radius: { sm: '8px', md: '12px', lg: '20px' },
+      shadow: { card: '0 4px 16px rgba(0,0,0,0.08)', hover: '0 8px 30px rgba(0,0,0,0.12)' },
+      heroStyle: 'gradient-vibrant',
+      animationDuration: '0.4s',
+    },
+    luxurious: {
+      radius: { sm: '0px', md: '2px', lg: '4px' },
+      shadow: { card: '0 2px 20px rgba(0,0,0,0.04)', hover: '0 10px 40px rgba(0,0,0,0.08)' },
+      heroStyle: 'gradient-elegant',
+      animationDuration: '0.5s',
+    },
+    friendly: {
+      radius: { sm: '8px', md: '12px', lg: '16px' },
+      shadow: { card: '0 2px 8px rgba(0,0,0,0.06)', hover: '0 6px 20px rgba(0,0,0,0.1)' },
+      heroStyle: 'solid-warm',
+      animationDuration: '0.3s',
+    },
+    bold: {
+      radius: { sm: '4px', md: '8px', lg: '12px' },
+      shadow: { card: '0 4px 16px rgba(0,0,0,0.1)', hover: '0 12px 40px rgba(0,0,0,0.15)' },
+      heroStyle: 'gradient-high-contrast',
+      animationDuration: '0.2s',
+    },
+    minimal: {
+      radius: { sm: '0px', md: '0px', lg: '2px' },
+      shadow: { card: 'none', hover: '0 1px 4px rgba(0,0,0,0.04)' },
+      heroStyle: 'flat',
+      animationDuration: '0.15s',
+    },
+  }[personality];
+
+  // Override radius values when personality is provided
+  if (o.personality) {
+    o.radiusSmall = visualParams.radius.sm;
+    o.radiusMedium = visualParams.radius.md;
+    o.radiusLarge = visualParams.radius.lg;
+  }
+
   // Derive light blue page background from primaryColor
   const lightBlueBg = `${o.primaryColor}12`; // 7% opacity of brand blue
   const navyDark = darkenHex(o.primaryColor, 0.65); // Dark navy from brand blue
@@ -147,7 +199,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   background: ${o.backgroundColor};
   border-radius: ${o.radiusLarge};
   padding: 2.5rem 2.5rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: ${visualParams.shadow.card};
 }
 
 /* Layout Width Classes */
@@ -280,7 +332,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   font-size: 0.95rem;
   text-decoration: none;
   margin-top: 1.5rem;
-  transition: all 0.2s ease;
+  transition: all ${visualParams.animationDuration} ease;
   border: none;
   cursor: pointer;
 }
@@ -323,7 +375,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   font-size: 0.9rem;
   line-height: 1.4;
   display: block;
-  transition: color 0.2s ease;
+  transition: color ${visualParams.animationDuration} ease;
 }
 
 .article-toc a:hover {
@@ -517,7 +569,7 @@ section.section-introduction,
   background: ${o.backgroundColor};
   border-radius: ${o.radiusLarge};
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform ${visualParams.animationDuration} ease, box-shadow ${visualParams.animationDuration} ease;
   border: 1px solid ${o.borderColor};
 }
 
@@ -559,12 +611,13 @@ section.section-introduction,
   align-items: center;
   text-align: center;
   border: 1px solid ${o.borderColor};
-  transition: all 0.3s ease;
+  box-shadow: ${visualParams.shadow.card};
+  transition: all ${visualParams.animationDuration} ease;
 }
 
 .feature-card:hover {
   border-color: ${o.primaryColor};
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: ${visualParams.shadow.hover};
 }
 
 .feature-icon {
@@ -686,7 +739,8 @@ section.section-introduction,
   background: ${o.backgroundColor};
   border-radius: ${o.radiusLarge};
   border: 1px solid ${o.borderColor};
-  transition: all 0.3s ease;
+  box-shadow: ${visualParams.shadow.card};
+  transition: all ${visualParams.animationDuration} ease;
 }
 
 .step-item:hover {
@@ -754,12 +808,13 @@ section.section-introduction,
   border: 1px solid ${o.borderColor};
   border-radius: ${o.radiusMedium};
   overflow: hidden;
-  transition: all 0.3s ease;
+  box-shadow: ${visualParams.shadow.card};
+  transition: all ${visualParams.animationDuration} ease;
 }
 
 .faq-item:hover {
   border-color: ${o.primaryColor};
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: ${visualParams.shadow.hover};
 }
 
 .faq-question {
@@ -837,7 +892,7 @@ section.section-introduction,
   overflow-x: auto;
   margin: 1.5rem 0;
   border-radius: ${o.radiusMedium};
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: ${visualParams.shadow.card};
 }
 
 .comparison-table {
@@ -1028,7 +1083,7 @@ section.section-introduction,
   border-radius: ${o.radiusSmall};
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all ${visualParams.animationDuration} ease;
   white-space: nowrap;
 }
 
@@ -1111,7 +1166,7 @@ section.section-introduction,
   background: ${o.surfaceColor};
   border-radius: ${o.radiusLarge};
   border: 1px solid ${o.borderColor};
-  transition: all 0.2s ease;
+  transition: all ${visualParams.animationDuration} ease;
 }
 
 .checklist-item:hover {
@@ -1170,7 +1225,7 @@ section.section-introduction,
 .blockquote-featured {
   background: linear-gradient(135deg, ${o.surfaceColor}, ${o.backgroundColor});
   padding: 2rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: ${visualParams.shadow.card};
 }
 
 /* ------------------------------------------------------------------------- */
