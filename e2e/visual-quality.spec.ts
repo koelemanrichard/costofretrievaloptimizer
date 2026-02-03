@@ -493,6 +493,86 @@ test.describe('HTML Visual Structure Validation', () => {
     // Subtitle should be rendered in the HTML when intro content qualifies
     expect(result.html).toContain('article-subtitle');
   });
+
+  test('rendered article CSS provides visual styling for all used components', async () => {
+    const result = await renderTestArticle({ withBlueprint: true, withCompiledCss: true });
+
+    // Helper: check that a selector has real visual styling, not just structural
+    function hasVisualStyling(css: string, selector: string): boolean {
+      const nonMediaCss = css.replace(/@media[^{]*\{[^}]*(\{[^}]*\})*[^}]*\}/g, '');
+      const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped + '\\s*\\{([^}]+)\\}', 'g');
+      const matches = [...nonMediaCss.matchAll(regex)];
+      if (matches.length === 0) return false;
+
+      return matches.some(m => {
+        const props = m[1];
+        return (
+          props.includes('background') ||
+          props.includes('border') ||
+          props.includes('box-shadow') ||
+          props.includes('color:')
+        );
+      });
+    }
+
+    // Every visual component must have visual CSS
+    expect(hasVisualStyling(result.css, '.feature-card')).toBe(true);
+    expect(hasVisualStyling(result.css, '.step-item')).toBe(true);
+    expect(hasVisualStyling(result.css, '.faq-item')).toBe(true);
+    expect(hasVisualStyling(result.css, '.timeline-number')).toBe(true);
+    expect(hasVisualStyling(result.css, '.checklist-check')).toBe(true);
+    expect(hasVisualStyling(result.css, '.card')).toBe(true);
+    expect(hasVisualStyling(result.css, '.article-header')).toBe(true);
+    expect(hasVisualStyling(result.css, '.alert-box')).toBe(true);
+    expect(hasVisualStyling(result.css, '.info-box')).toBe(true);
+    expect(hasVisualStyling(result.css, '.lead-paragraph')).toBe(true);
+
+    // Brand colors must appear in rendered CSS
+    expect(result.css).toContain('#0056b3');
+
+    // CSS must have hover effects (agency quality indicator)
+    expect(result.css).toMatch(/\.feature-card:hover/);
+    expect(result.css).toMatch(/\.step-item:hover/);
+    expect(result.css).toMatch(/\.faq-item:hover/);
+  });
+
+  test('all blueprint components render as visual elements, not prose fallback', async () => {
+    const result = await renderTestArticle({ withBlueprint: true });
+
+    // Parse sections from HTML
+    const sectionRegex = /<section[^>]*data-component="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g;
+    const sections: Array<{ component: string; html: string }> = [];
+    let match;
+    while ((match = sectionRegex.exec(result.html)) !== null) {
+      sections.push({ component: match[1], html: match[2] });
+    }
+
+    // Map of component type -> expected HTML class in rendered output
+    const componentIndicators: Record<string, string[]> = {
+      'feature-grid': ['feature-card', 'feature-grid'],
+      'step-list': ['step-item', 'step-number'],
+      'timeline': ['timeline-item', 'timeline-number'],
+      'faq-accordion': ['faq-item', 'faq-question'],
+      'checklist': ['checklist-item', 'checklist-check'],
+      'stat-highlight': ['stat-item', 'stat-value'],
+      'alert-box': ['alert-box'],
+      'info-box': ['info-box'],
+    };
+
+    for (const section of sections) {
+      const indicators = componentIndicators[section.component];
+      if (indicators) {
+        const hasVisualStructure = indicators.some(cls => section.html.includes(cls));
+        const hasProseFallback = section.html.includes('class="prose"') && !hasVisualStructure;
+
+        if (hasProseFallback) {
+          console.warn(`Section with component="${section.component}" rendered as prose fallback`);
+        }
+        expect(hasVisualStructure || !hasProseFallback).toBeTruthy();
+      }
+    }
+  });
 });
 
 // ============================================================================
