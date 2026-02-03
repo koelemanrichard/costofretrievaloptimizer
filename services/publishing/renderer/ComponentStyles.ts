@@ -159,13 +159,24 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   const lightBlueBg = `${o.primaryColor}12`; // 7% opacity of brand blue
   const navyDark = darkenHex(o.primaryColor, 0.65); // Dark navy from brand blue
 
+  // Brand divider: repeating dash pattern for corporate/bold; solid line for others
+  const useDashPattern = personality === 'corporate' || personality === 'bold';
+  const brandDividerBg = useDashPattern
+    ? `repeating-linear-gradient(90deg, ${o.primaryColor} 0px, ${o.primaryColor} 18px, transparent 18px, transparent 24px, ${o.accentColor} 24px, ${o.accentColor} 30px, transparent 30px, transparent 36px)`
+    : `linear-gradient(90deg, ${o.primaryColor} 0%, ${o.primaryColor} 60%, ${o.accentColor} 100%)`;
+
+  // Last-step accent: only apply distinct accent styling when accent differs visually from primary
+  const accentLum = hexLuminance(o.accentColor);
+  const primaryLum = hexLuminance(o.primaryColor);
+  const accentDiffersFromPrimary = Math.abs(accentLum - primaryLum) > 0.05 || o.accentColor.toLowerCase() !== o.primaryColor.toLowerCase();
+
   return `
 /* ==========================================================================
    COMPONENT STYLES - Brand-Matched Visual Components
    ========================================================================== */
 
 /* ------------------------------------------------------------------------- */
-/* PAGE-LEVEL: Light blue background (NFIR signature)                        */
+/* PAGE-LEVEL: Light tinted background from brand primary                    */
 /* ------------------------------------------------------------------------- */
 
 .article-body,
@@ -258,7 +269,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
 /* EMPHASIS LEVELS - Visual Impact Scaling                                   */
 /* ------------------------------------------------------------------------- */
 
-/* ===== ARTICLE HEADER - Dark Navy Hero (NFIR style) ===== */
+/* ===== ARTICLE HEADER - Dark Hero with brand colors ===== */
 .article-header {
   background: ${navyDark};
   padding: 3rem 2.5rem 2.5rem;
@@ -271,13 +282,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   display: block;
   margin-top: 1.5rem;
   height: 4px;
-  background: repeating-linear-gradient(
-    90deg,
-    ${o.primaryColor} 0px, ${o.primaryColor} 18px,
-    transparent 18px, transparent 24px,
-    ${o.accentColor} 24px, ${o.accentColor} 30px,
-    transparent 30px, transparent 36px
-  );
+  background: ${brandDividerBg};
 }
 
 .article-header h1 {
@@ -320,7 +325,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   gap: 0.4rem;
 }
 
-/* Orange CTA button in header */
+/* Accent CTA button in header */
 .article-header .cta-button,
 .cta-button-orange {
   display: inline-block;
@@ -390,7 +395,7 @@ section.section-introduction,
   display: none;
 }
 
-/* Hero Emphasis - Navy accent section (NFIR style) */
+/* Hero Emphasis - Accent section using brand colors */
 /* Note: background is overridden by .emphasis-hero in the Visual Rhythm section below with a gradient */
 .emphasis-hero {
   padding: 3rem 0;
@@ -405,13 +410,7 @@ section.section-introduction,
   display: block;
   height: 4px;
   margin-bottom: 2rem;
-  background: repeating-linear-gradient(
-    90deg,
-    ${o.primaryColor} 0px, ${o.primaryColor} 18px,
-    transparent 18px, transparent 24px,
-    ${o.accentColor} 24px, ${o.accentColor} 30px,
-    transparent 30px, transparent 36px
-  );
+  background: ${brandDividerBg};
 }
 
 .emphasis-hero .section-heading {
@@ -460,7 +459,7 @@ section.section-introduction,
 .emphasis-hero .prose { color: rgba(255, 255, 255, 0.92); }
 .emphasis-hero .prose p { color: rgba(255, 255, 255, 0.92); }
 
-/* Featured Emphasis - Clean white, subtle separator (matches NFIR) */
+/* Featured Emphasis - Clean white, subtle separator */
 .emphasis-featured {
   background: ${o.backgroundColor};
   padding: 2.5rem 0;
@@ -519,13 +518,7 @@ section.section-introduction,
   display: block;
   height: 4px;
   margin-bottom: 1.5rem;
-  background: repeating-linear-gradient(
-    90deg,
-    ${o.primaryColor} 0px, ${o.primaryColor} 18px,
-    transparent 18px, transparent 24px,
-    ${o.accentColor} 24px, ${o.accentColor} 30px,
-    transparent 30px, transparent 36px
-  );
+  background: ${brandDividerBg};
 }
 
 /* Clear separator line between standard sections */
@@ -747,7 +740,8 @@ section.section-introduction,
   border-color: ${o.primaryColor};
 }
 
-/* Last step item gets orange accent (NFIR CTA pattern) */
+/* Last step item gets accent highlight when accent differs from primary */
+${accentDiffersFromPrimary ? `
 .step-list .step-item:last-child {
   background: ${o.accentColor};
   border-color: ${o.accentColor};
@@ -762,6 +756,11 @@ section.section-introduction,
 .step-list .step-item:last-child .step-content {
   color: white;
 }
+` : `
+.step-list .step-item:last-child {
+  border-color: ${o.primaryColor};
+}
+`}
 
 .step-indicator {
   flex-shrink: 0;
