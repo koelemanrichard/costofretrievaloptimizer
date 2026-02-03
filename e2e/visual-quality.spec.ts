@@ -1239,21 +1239,141 @@ test.describe('Design Quality Score Recalibration', () => {
 
 test.describe('Visual Screenshot Capture', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only');
+  test.setTimeout(600000); // 10 min - includes AI generation time
 
-  test('capture full-page preview screenshot for manual review', async ({ page }) => {
-    // This test requires a running app with test data
-    // Skip if no server is available
+  test('capture Style & Publish preview for visual review', async ({ page }) => {
+    const BASE_URL = 'http://localhost:3000';
+    const TEST_EMAIL = 'richard@kjenmarks.nl';
+    const TEST_PASSWORD = 'pannekoek';
+
+    // Check if dev server is running
     try {
-      await page.goto('http://localhost:3000', { timeout: 5000 });
+      await page.goto(BASE_URL, { timeout: 5000 });
     } catch {
       test.skip(true, 'No dev server running');
       return;
     }
 
     const dir = ensureDir(SCREENSHOTS_DIR);
-    await page.screenshot({
-      path: path.join(dir, 'visual-quality-baseline.png'),
-      fullPage: true,
-    });
+
+    // === LOGIN ===
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+    await page.fill('input[type="email"]', TEST_EMAIL);
+    await page.fill('input[type="password"]', TEST_PASSWORD);
+    await page.click('button[type="submit"]');
+    await page.waitForSelector('button:has-text("Open")', { timeout: 30000 });
+    console.log('=== LOGIN ===');
+    await page.screenshot({ path: path.join(dir, '01-logged-in.png'), fullPage: true });
+
+    // === OPEN PROJECT (nfir) ===
+    const nfirRow = page.locator('tr', { hasText: /nfir/i }).first();
+    if (await nfirRow.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await nfirRow.locator('button:has-text("Open")').click();
+    } else {
+      // Try resultaatmakers
+      const rmRow = page.locator('tr', { hasText: /resultaatmakers/i }).first();
+      await rmRow.locator('button:has-text("Open")').click();
+    }
+    await page.waitForTimeout(2000);
+
+    // === LOAD MAP ===
+    await page.locator('button:has-text("Load Map")').first().click();
+    await page.waitForTimeout(3000);
+    console.log('=== MAP LOADED ===');
+
+    // === FIND ARTICLE (wi-fi kwetsbaarheden or seo voor groothandel) ===
+    let articleRow = page.locator('tr', { hasText: /wi-fi.*kwetsbaar/i }).first();
+    if (!await articleRow.isVisible({ timeout: 5000 }).catch(() => false)) {
+      articleRow = page.locator('tr', { hasText: /seo.*groothandel/i }).first();
+    }
+    if (!await articleRow.isVisible({ timeout: 5000 }).catch(() => false)) {
+      // Fallback: click the first article row with content
+      articleRow = page.locator('tr').filter({ hasText: /generated|draft|published/i }).first();
+    }
+    await articleRow.click();
+    await page.waitForTimeout(1500);
+
+    // === NAVIGATE TO DRAFT ===
+    const briefBtn = page.locator('button:has-text("View Brief")').first();
+    if (await briefBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await briefBtn.click();
+      await page.waitForTimeout(2000);
+    }
+    const draftBtn = page.locator('button:has-text("View Draft"), button:has-text("View Generated Draft")').first();
+    if (await draftBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await draftBtn.click();
+      await page.waitForTimeout(3000);
+    }
+
+    // === OPEN STYLE & PUBLISH ===
+    const publishBtn = page.locator('button:has-text("Publish")').last();
+    if (await publishBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await publishBtn.click();
+      await page.waitForTimeout(1000);
+    }
+    const stylePublish = page.locator('text=Style & Publish').first();
+    if (await stylePublish.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await stylePublish.click();
+      await page.waitForTimeout(3000);
+    }
+    console.log('=== STYLE & PUBLISH OPENED ===');
+    await page.screenshot({ path: path.join(dir, '02-brand-step.png'), fullPage: true });
+
+    // === STEP 1: BRAND → Click Next ===
+    const nextBtn = page.locator('button:has-text("Next")').last();
+    if (await nextBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
+      await nextBtn.click({ force: true });
+      await page.waitForTimeout(3000);
+    }
+    console.log('=== LAYOUT STEP ===');
+    await page.screenshot({ path: path.join(dir, '03-layout-step.png'), fullPage: true });
+
+    // === STEP 2: LAYOUT → Click Next ===
+    const nextBtn2 = page.locator('button:has-text("Next")').last();
+    if (await nextBtn2.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await nextBtn2.click({ force: true });
+      await page.waitForTimeout(3000);
+    }
+    console.log('=== PREVIEW STEP ===');
+    await page.screenshot({ path: path.join(dir, '04-preview-step.png'), fullPage: true });
+
+    // === GENERATE PREVIEW ===
+    const generateBtn = page.locator('button:has-text("Generate")').first();
+    if (await generateBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
+      console.log('=== GENERATING PREVIEW (may take minutes) ===');
+      await generateBtn.click({ force: true });
+      // Wait for generation to complete (quality score or iframe appears)
+      await page.waitForTimeout(15000);
+      await page.waitForSelector('text=Design Quality, iframe, [class*="preview"]', { timeout: 180000 }).catch(() => {});
+      await page.waitForTimeout(5000);
+      console.log('=== GENERATION COMPLETE ===');
+    } else {
+      console.log('=== Generate button not found - may already be generated ===');
+      await page.waitForTimeout(3000);
+    }
+
+    // === CAPTURE FINAL PREVIEW ===
+    await page.screenshot({ path: path.join(dir, '05-preview-output.png'), fullPage: true });
+
+    // Try to capture the iframe content separately
+    const iframe = page.frameLocator('iframe').first();
+    try {
+      const iframeBody = iframe.locator('body');
+      if (await iframeBody.isVisible({ timeout: 5000 }).catch(() => false)) {
+        // Get the iframe element and screenshot it
+        const iframeEl = page.locator('iframe').first();
+        await iframeEl.screenshot({ path: path.join(dir, '06-rendered-article.png') });
+        console.log('=== CAPTURED RENDERED ARTICLE IFRAME ===');
+      }
+    } catch {
+      console.log('=== Could not capture iframe content ===');
+    }
+
+    // Capture Design Quality section if visible
+    const qualitySection = page.locator('text=Design Quality').first();
+    if (await qualitySection.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await page.screenshot({ path: path.join(dir, '07-quality-scores.png'), fullPage: true });
+      console.log('=== CAPTURED QUALITY SCORES ===');
+    }
   });
 });
