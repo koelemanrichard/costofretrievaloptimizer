@@ -278,7 +278,8 @@ export async function fetchCompetitorData(
       businessInfo.dataforseoLogin,
       businessInfo.dataforseoPassword,
       businessInfo.targetMarket || 'United States',
-      businessInfo.language || 'en'
+      businessInfo.language || 'en',
+      { supabaseUrl: businessInfo.supabaseUrl, supabaseAnonKey: businessInfo.supabaseAnonKey }
     );
 
     return serpResults.slice(0, maxCompetitors).map((result, index) => ({

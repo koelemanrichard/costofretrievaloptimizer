@@ -204,7 +204,8 @@ export const useTopicEnrichment = (
                             businessInfo.dataforseoLogin,
                             businessInfo.dataforseoPassword,
                             getLocationCode(businessInfo.targetMarket),
-                            businessInfo.language
+                            businessInfo.language,
+                            { supabaseUrl: businessInfo.supabaseUrl, supabaseAnonKey: businessInfo.supabaseAnonKey }
                         );
 
                         // Update topics with search volume

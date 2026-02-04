@@ -26,7 +26,8 @@ export class QueryPriorityService {
           businessInfo.dataforseoLogin,
           businessInfo.dataforseoPassword,
           this.getLocationCode(businessInfo.targetMarket),
-          businessInfo.language
+          businessInfo.language,
+          { supabaseUrl: businessInfo.supabaseUrl, supabaseAnonKey: businessInfo.supabaseAnonKey }
         );
       } catch (error) {
         console.warn('Could not fetch search volume, using GSC data only:', error);

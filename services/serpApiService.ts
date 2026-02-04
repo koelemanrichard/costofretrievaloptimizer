@@ -6,15 +6,80 @@ import { SerpResult, BusinessInfo } from '../types';
 import { cacheService } from './cacheService';
 import React from 'react';
 
+export interface ProxyConfig {
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+}
+
 const CORS_PROXY_URL = `https://corsproxy.io/?`;
 
-const fetchWithProxy = async (url: string, options?: RequestInit): Promise<Response> => {
-    const proxyUrl = `${CORS_PROXY_URL}${encodeURIComponent(url)}`;
-    // FIX: Increased timeout to 30 seconds to handle slow API responses.
+/**
+ * Fetch via Supabase fetch-proxy edge function (preferred) or corsproxy.io fallback.
+ * The edge function avoids third-party CORS proxy issues.
+ */
+const fetchWithProxy = async (url: string, options?: RequestInit, proxyConfig?: ProxyConfig): Promise<Response> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
+
     try {
+        // Preferred: use Supabase fetch-proxy edge function
+        if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+            const proxyUrl = `${proxyConfig.supabaseUrl}/functions/v1/fetch-proxy`;
+            const method = options?.method || 'GET';
+            const customHeaders: Record<string, string> = {};
+            if (options?.headers) {
+                const h = options.headers;
+                if (h instanceof Headers) {
+                    h.forEach((v, k) => { customHeaders[k] = v; });
+                } else if (Array.isArray(h)) {
+                    h.forEach(([k, v]) => { customHeaders[k] = v; });
+                } else {
+                    Object.assign(customHeaders, h);
+                }
+            }
+
+            const proxyBody: Record<string, unknown> = { url, method, headers: customHeaders };
+            if (options?.body) {
+                proxyBody.body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+            }
+
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${proxyConfig.supabaseAnonKey}`,
+                    'apikey': proxyConfig.supabaseAnonKey,
+                },
+                body: JSON.stringify(proxyBody),
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Edge proxy HTTP error: ${response.status} ${response.statusText}`);
+            }
+
+            // The edge function wraps the response in JSON: { ok, status, statusText, body, contentType }
+            const wrapper = await response.json();
+
+            // Handle proxy-level errors (e.g., network failures)
+            if (wrapper.error && !wrapper.body) {
+                throw new Error(`Proxy error: ${wrapper.error}`);
+            }
+
+            // Reconstruct a Response object from the wrapper
+            const responseBody = wrapper.body ?? '';
+
+            return new Response(typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody), {
+                status: wrapper.status || 0,
+                statusText: wrapper.statusText || '',
+                headers: { 'Content-Type': wrapper.contentType || 'application/json' },
+            });
+        }
+
+        // Fallback: corsproxy.io
+        const proxyUrl = `${CORS_PROXY_URL}${encodeURIComponent(url)}`;
         const response = await fetch(proxyUrl, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
         return response;
@@ -134,7 +199,7 @@ export const analyzeCompetitorSitemap = async (domain: string): Promise<string[]
 };
 
 
-export const fetchSerpResults = async (query: string, login: string, password: string, locationName: string, languageCode: string): Promise<SerpResult[]> => {
+export const fetchSerpResults = async (query: string, login: string, password: string, locationName: string, languageCode: string, proxyConfig?: ProxyConfig): Promise<SerpResult[]> => {
     const cacheKey = `serp:dataforseo:${JSON.stringify({ query, locationName, languageCode })}`;
 
     // Check cache first
@@ -168,7 +233,7 @@ export const fetchSerpResults = async (query: string, login: string, password: s
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(postData)
-        });
+        }, proxyConfig);
 
         console.log(`[DataForSEO] Response received in ${Date.now() - startTime}ms, status: ${response.status}`);
 
@@ -295,7 +360,8 @@ export const fetchFullSerpData = async (
   login: string,
   password: string,
   locationName: string,
-  languageCode: string
+  languageCode: string,
+  proxyConfig?: ProxyConfig
 ): Promise<FullSerpResult> => {
   const fetchFn = async (): Promise<FullSerpResult> => {
     const postData = [{
@@ -315,7 +381,7 @@ export const fetchFullSerpData = async (
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(postData)
-    });
+    }, proxyConfig);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -623,13 +689,14 @@ export const discoverInitialCompetitors = async (
         return [];
     }
 
-    // Fetch raw SERP results
+    // Fetch raw SERP results via Supabase edge proxy (avoids CORS issues)
     const rawResults = await fetchSerpResults(
         localizedQuery,
         info.dataforseoLogin,
         info.dataforseoPassword,
         info.targetMarket,
-        info.language
+        info.language,
+        { supabaseUrl: info.supabaseUrl, supabaseAnonKey: info.supabaseAnonKey }
     );
 
     // Filter and score results
@@ -692,7 +759,8 @@ export const fetchKeywordSearchVolume = async (
   login: string,
   password: string,
   locationCode: string = '2840', // US default
-  languageCode: string = 'en'
+  languageCode: string = 'en',
+  proxyConfig?: ProxyConfig
 ): Promise<Map<string, number>> => {
   const fetchFn = async () => {
     const postData = [{
@@ -712,7 +780,7 @@ export const fetchKeywordSearchVolume = async (
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(postData)
-      });
+      }, proxyConfig);
 
       if (!response.ok) {
         throw new Error(`DataForSEO Keywords API HTTP Error: ${response.status}`);
