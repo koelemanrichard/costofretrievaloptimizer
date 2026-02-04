@@ -51,6 +51,7 @@ const DEFAULT_OPTIONS: ComponentStylesOptions = {
  * Uses the WCAG 2.0 formula
  */
 function hexLuminance(hex: string): number {
+  if (!hex) return 0.5;
   const clean = hex.replace('#', '');
   if (clean.length < 6) return 0.5;
   const r = parseInt(clean.substring(0, 2), 16) / 255;
@@ -64,6 +65,7 @@ function hexLuminance(hex: string): number {
  * Darken a hex color by a given amount (0-1)
  */
 function darkenHex(hex: string, amount: number): string {
+  if (!hex) return '#000000';
   const clean = hex.replace('#', '');
   const r = Math.max(0, Math.round(parseInt(clean.substring(0, 2), 16) * (1 - amount)));
   const g = Math.max(0, Math.round(parseInt(clean.substring(2, 4), 16) * (1 - amount)));
@@ -113,37 +115,49 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     corporate: {
       radius: { sm: '2px', md: '4px', lg: '6px' },
       shadow: { card: '0 1px 4px rgba(0,0,0,0.06)', hover: '0 4px 12px rgba(0,0,0,0.08)' },
-      heroStyle: 'gradient-dark',
+      heroStyle: 'clean-light' as const,
+      pageBg: '#ffffff',
+      sectionCard: false, // Corporate sites use flat layout, not card-per-section
       animationDuration: '0.2s',
     },
     creative: {
       radius: { sm: '8px', md: '12px', lg: '20px' },
       shadow: { card: '0 4px 16px rgba(0,0,0,0.08)', hover: '0 8px 30px rgba(0,0,0,0.12)' },
-      heroStyle: 'gradient-vibrant',
+      heroStyle: 'gradient-vibrant' as const,
+      pageBg: `${o.primaryColor}08`,
+      sectionCard: true,
       animationDuration: '0.4s',
     },
     luxurious: {
       radius: { sm: '0px', md: '2px', lg: '4px' },
       shadow: { card: '0 2px 20px rgba(0,0,0,0.04)', hover: '0 10px 40px rgba(0,0,0,0.08)' },
-      heroStyle: 'gradient-elegant',
+      heroStyle: 'gradient-elegant' as const,
+      pageBg: '#faf9f7',
+      sectionCard: true,
       animationDuration: '0.5s',
     },
     friendly: {
       radius: { sm: '8px', md: '12px', lg: '16px' },
       shadow: { card: '0 2px 8px rgba(0,0,0,0.06)', hover: '0 6px 20px rgba(0,0,0,0.1)' },
-      heroStyle: 'solid-warm',
+      heroStyle: 'solid-warm' as const,
+      pageBg: '#ffffff',
+      sectionCard: true,
       animationDuration: '0.3s',
     },
     bold: {
       radius: { sm: '4px', md: '8px', lg: '12px' },
       shadow: { card: '0 4px 16px rgba(0,0,0,0.1)', hover: '0 12px 40px rgba(0,0,0,0.15)' },
-      heroStyle: 'gradient-high-contrast',
+      heroStyle: 'gradient-dark' as const,
+      pageBg: '#ffffff',
+      sectionCard: true,
       animationDuration: '0.2s',
     },
     minimal: {
       radius: { sm: '0px', md: '0px', lg: '2px' },
       shadow: { card: 'none', hover: '0 1px 4px rgba(0,0,0,0.04)' },
-      heroStyle: 'flat',
+      heroStyle: 'flat' as const,
+      pageBg: '#ffffff',
+      sectionCard: false,
       animationDuration: '0.15s',
     },
   }[personality];
@@ -155,9 +169,10 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     o.radiusLarge = visualParams.radius.lg;
   }
 
-  // Derive light blue page background from primaryColor
-  const lightBlueBg = `${o.primaryColor}12`; // 7% opacity of brand blue
-  const navyDark = darkenHex(o.primaryColor, 0.65); // Dark navy from brand blue
+  // Page background: personality-driven (corporate/minimal = white, others = tinted)
+  const pageBg = visualParams.pageBg;
+  // Dark navy variant used only for bold/creative hero styles
+  const navyDark = darkenHex(o.primaryColor, 0.65);
 
   // Brand divider: repeating dash pattern for corporate/bold; solid line for others
   const useDashPattern = personality === 'corporate' || personality === 'bold';
@@ -179,9 +194,10 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
 /* PAGE-LEVEL: Light tinted background from brand primary                    */
 /* ------------------------------------------------------------------------- */
 
+body,
 .article-body,
 .styled-article {
-  background: linear-gradient(180deg, ${lightBlueBg} 0%, ${o.primaryColor}0a 100%);
+  background: ${pageBg};
   min-height: 100vh;
 }
 
@@ -205,13 +221,18 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   margin-top: 1.5rem;
 }
 
-/* White content card on blue background */
+${visualParams.sectionCard ? `
+/* Elevated content cards on tinted background */
 .section:not(.emphasis-hero) .section-container {
   background: ${o.backgroundColor};
-  border-radius: ${o.radiusLarge};
+  border-radius: ${visualParams.radius.lg};
   padding: 2.5rem 2.5rem;
   box-shadow: ${visualParams.shadow.card};
-}
+}` : `
+/* Clean flat layout - sections flow on white background */
+.section:not(.emphasis-hero) .section-container {
+  padding: 1rem 1.5rem;
+}`}
 
 /* Layout Width Classes */
 .layout-narrow .section-container { max-width: 680px; }
@@ -269,9 +290,106 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
 /* EMPHASIS LEVELS - Visual Impact Scaling                                   */
 /* ------------------------------------------------------------------------- */
 
-/* ===== ARTICLE HEADER - Dark Hero with brand colors ===== */
+${visualParams.heroStyle === 'clean-light' ? `
+/* ===== ARTICLE HEADER - Clean Professional (Corporate/Minimal) ===== */
 .article-header {
-  background: ${navyDark};
+  background: ${o.backgroundColor};
+  padding: 3.5rem 2.5rem 2rem;
+  text-align: left;
+  position: relative;
+  border-bottom: 3px solid ${o.primaryColor};
+}
+
+.article-header h1 {
+  font-family: ${o.headingFont};
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: ${o.primaryDark};
+  line-height: 1.15;
+  margin: 0;
+  max-width: 900px;
+  letter-spacing: -0.02em;
+}
+
+.article-header p,
+.article-header .subtitle {
+  color: ${o.textMuted};
+  font-size: 1.1rem;
+  margin-top: 0.75rem;
+}
+
+.article-header .article-subtitle {
+  color: ${o.textColor};
+  font-size: 1.15rem;
+  line-height: 1.6;
+  margin-top: 1rem;
+  max-width: 700px;
+}
+
+.article-meta {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+  color: ${o.textMuted};
+  font-size: 0.875rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+` : visualParams.heroStyle === 'flat' ? `
+/* ===== ARTICLE HEADER - Flat Minimal ===== */
+.article-header {
+  background: ${o.backgroundColor};
+  padding: 3rem 2.5rem 2rem;
+  text-align: left;
+  position: relative;
+}
+
+.article-header h1 {
+  font-family: ${o.headingFont};
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: ${o.textColor};
+  line-height: 1.2;
+  margin: 0;
+  max-width: 900px;
+}
+
+.article-header p,
+.article-header .subtitle {
+  color: ${o.textMuted};
+  font-size: 1.1rem;
+  margin-top: 0.75rem;
+}
+
+.article-header .article-subtitle {
+  color: ${o.textColor};
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-top: 0.75rem;
+  max-width: 700px;
+}
+
+.article-meta {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  color: ${o.textMuted};
+  font-size: 0.875rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+` : `
+/* ===== ARTICLE HEADER - Dark/Gradient Hero ===== */
+.article-header {
+  background: ${visualParams.heroStyle === 'gradient-elegant' ? `linear-gradient(135deg, ${navyDark} 0%, ${o.primaryDark} 100%)` : visualParams.heroStyle === 'gradient-vibrant' ? `linear-gradient(135deg, ${o.primaryColor} 0%, ${o.primaryDark} 100%)` : visualParams.heroStyle === 'solid-warm' ? o.primaryColor : navyDark};
   padding: 3rem 2.5rem 2.5rem;
   text-align: left;
   position: relative;
@@ -324,15 +442,16 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   align-items: center;
   gap: 0.4rem;
 }
+`}
 
 /* Accent CTA button in header */
 .article-header .cta-button,
 .cta-button-orange {
   display: inline-block;
-  background: ${o.accentColor};
+  background: ${o.primaryColor};
   color: white;
   padding: 0.875rem 2rem;
-  border-radius: 6px;
+  border-radius: ${visualParams.radius.md};
   font-weight: 700;
   font-size: 0.95rem;
   text-decoration: none;
@@ -344,7 +463,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
 
 .article-header .cta-button:hover,
 .cta-button-orange:hover {
-  background: ${darkenHex(o.accentColor, 0.1)};
+  background: ${o.primaryDark};
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -396,35 +515,33 @@ section.section-introduction,
 }
 
 /* Hero Emphasis - Accent section using brand colors */
-/* Note: background is overridden by .emphasis-hero in the Visual Rhythm section below with a gradient */
 .emphasis-hero {
   padding: 3rem 0;
   position: relative;
   overflow: hidden;
-  color: white;
+  color: ${visualParams.heroStyle === 'clean-light' || visualParams.heroStyle === 'flat' ? o.textColor : 'white'};
   margin: 1rem 0;
 }
 
+${visualParams.sectionCard ? `
 .emphasis-hero::before {
   content: '';
   display: block;
   height: 4px;
   margin-bottom: 2rem;
   background: ${brandDividerBg};
-}
+}` : `
+.emphasis-hero::before {
+  content: '';
+  display: block;
+  height: 2px;
+  margin-bottom: 2rem;
+  background: ${o.primaryColor}30;
+}`}
 
 .emphasis-hero .section-heading {
   font-size: 1.875rem;
   margin-bottom: 1.5rem;
-  color: white;
-}
-
-.emphasis-hero .section-content {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.emphasis-hero .section-content p {
-  color: rgba(255, 255, 255, 0.92);
 }
 
 .emphasis-hero .hero-lead {
@@ -435,8 +552,14 @@ section.section-introduction,
 .emphasis-hero .hero-text {
   font-size: 1.125rem;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.92);
 }
+
+${visualParams.heroStyle !== 'clean-light' && visualParams.heroStyle !== 'flat' ? `
+/* Dark hero: white text on gradient background */
+.emphasis-hero .section-heading { color: white; }
+.emphasis-hero .section-content { color: rgba(255, 255, 255, 0.92); }
+.emphasis-hero .section-content p { color: rgba(255, 255, 255, 0.92); }
+.emphasis-hero .hero-text { color: rgba(255, 255, 255, 0.92); }
 
 .emphasis-hero .step-item,
 .emphasis-hero .card,
@@ -458,6 +581,7 @@ section.section-introduction,
 
 .emphasis-hero .prose { color: rgba(255, 255, 255, 0.92); }
 .emphasis-hero .prose p { color: rgba(255, 255, 255, 0.92); }
+` : ''}
 
 /* Featured Emphasis - Clean white, subtle separator */
 .emphasis-featured {
@@ -507,7 +631,8 @@ section.section-introduction,
   color: ${o.textMuted};
 }
 
-/* Signature Brand Divider - applied between major sections */
+${visualParams.sectionCard ? `
+/* Signature Brand Divider - applied between major sections (card layouts) */
 .section + .section.emphasis-featured {
   border-top: none;
   position: relative;
@@ -520,10 +645,17 @@ section.section-introduction,
   margin-bottom: 1.5rem;
   background: ${brandDividerBg};
 }
+` : `
+/* Clean separator between sections (flat layout) */
+.section + .section.emphasis-featured {
+  border-top: none;
+  position: relative;
+}
+`}
 
 /* Clear separator line between standard sections */
 .section.emphasis-standard + .section.emphasis-standard {
-  border-top: 2px solid ${o.borderColor};
+  border-top: 1px solid ${o.borderColor};
   padding-top: 3rem;
 }
 
@@ -772,7 +904,7 @@ ${accentDiffersFromPrimary ? `
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
-  background: ${navyDark};
+  background: ${o.primaryColor};
   color: white;
   border-radius: 50%;
   font-weight: 700;
@@ -1403,7 +1535,8 @@ ${accentDiffersFromPrimary ? `
 /* SECTION VISUAL RHYTHM - Alternating backgrounds & accent borders          */
 /* ------------------------------------------------------------------------- */
 
-/* Alternating subtle background tints for visual rhythm */
+${visualParams.sectionCard ? `
+/* Alternating subtle background tints for visual rhythm (card-based layouts) */
 .section:nth-child(even):not(.emphasis-hero) .section-container {
   background: ${o.surfaceColor};
 }
@@ -1412,17 +1545,58 @@ ${accentDiffersFromPrimary ? `
 .emphasis-featured .section-container {
   border-left: 4px solid ${o.primaryColor};
 }
+` : `
+/* Flat layout: no alternating backgrounds, clean border separation */
+`}
 
-/* Hero sections get gradient background using brand colors */
+${visualParams.heroStyle === 'clean-light' || visualParams.heroStyle === 'flat' ? `
+/* Hero sections get subtle brand tint for clean personalities */
+.emphasis-hero {
+  background: ${o.primaryColor}0a;
+  color: ${o.textColor};
+}
+
+.emphasis-hero .section-heading {
+  color: ${o.primaryDark};
+}
+
+.emphasis-hero .section-content,
+.emphasis-hero .section-content p,
+.emphasis-hero .prose,
+.emphasis-hero .prose p,
+.emphasis-hero .hero-text {
+  color: ${o.textColor};
+}
+
+.emphasis-hero .step-item,
+.emphasis-hero .card,
+.emphasis-hero .feature-card,
+.emphasis-hero .checklist-item {
+  background: ${o.backgroundColor};
+  border-color: ${o.borderColor};
+  color: ${o.textColor};
+}
+
+.emphasis-hero .step-content,
+.emphasis-hero .card-body,
+.emphasis-hero .feature-content,
+.emphasis-hero .checklist-text,
+.emphasis-hero .timeline-body,
+.emphasis-hero .feature-desc {
+  color: ${o.textColor};
+}
+` : `
+/* Hero sections get gradient background using brand colors (bold/creative) */
 .emphasis-hero {
   background: linear-gradient(135deg, ${navyDark} 0%, ${darkenHex(o.primaryColor, 0.45)} 100%);
 }
+`}
 
 /* Visual break line between emphasis level transitions */
 .emphasis-standard + .emphasis-featured,
 .emphasis-supporting + .emphasis-featured,
 .emphasis-featured + .emphasis-standard {
-  border-top: 3px solid ${o.primaryColor}20;
+  border-top: 1px solid ${o.borderColor};
   margin-top: 0.5rem;
 }
 

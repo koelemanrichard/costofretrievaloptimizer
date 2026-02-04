@@ -1115,7 +1115,13 @@ ${listItems}
       };
       const componentCss = generateComponentStyles(brandColors);
       // NEW order: componentCss (generic visual base) → compiledCss (brand-specific overrides) → structuralCSS (layout)
-      return `${componentCss}\n\n/* === Brand-Specific Overrides (compiledCss) === */\n${this.compiledCss}\n\n${this.generateStructuralCSS()}`;
+      // Final override: compiledCss often sets body { background-color: var(--ctc-backgrounds) }
+      // which uses surfaceColor (#f9fafb) instead of the personality-driven page background.
+      // We override this after all other CSS to ensure the correct page background.
+      const personality = this.designDna?.personality?.overall || 'corporate';
+      const pageBgOverride = personality === 'luxurious' ? '#faf9f7' : personality === 'creative' ? `${brandColors.primaryColor}08` : '#ffffff';
+      const pageOverrideCss = `\n/* === Page Background Override (personality: ${personality}) === */\nbody { background-color: ${pageBgOverride}; }\n`;
+      return `${componentCss}\n\n/* === Brand-Specific Overrides (compiledCss) === */\n${this.compiledCss}\n\n${this.generateStructuralCSS()}${pageOverrideCss}`;
     }
 
     console.log('[CleanArticleRenderer] Generating fallback CSS from DesignDNA');

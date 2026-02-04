@@ -266,11 +266,15 @@ export class ComponentRenderer {
     const listBlock = blocks.find(b => b.type === 'list');
 
     // If no list, try to create feature cards from paragraphs
+    // BUT only if paragraphs are SHORT enough to work as cards
     if (!listBlock?.items) {
       const paragraphs = blocks.filter(b => b.type === 'paragraph' && b.content && b.content.length > 30);
+      // Only create feature cards if ALL paragraphs are reasonably short (< 200 chars)
+      // Long paragraphs get truncated uglily in card format - use prose instead
+      const allShortEnough = paragraphs.length >= 2 && paragraphs.every(p => (p.content || '').length < 200);
 
-      if (paragraphs.length >= 2) {
-        console.log(`[ComponentRenderer] renderFeatureGrid: Creating grid from ${paragraphs.length} paragraphs`);
+      if (allShortEnough) {
+        console.log(`[ComponentRenderer] renderFeatureGrid: Creating grid from ${paragraphs.length} short paragraphs`);
         const columnCount = layout.columns === '3-column' ? 3 : layout.columns === '2-column' ? 2 : 2;
         const icons = ['✓', '★', '◆', '▸', '●', '◎', '⬢', '◈'];
 
@@ -298,8 +302,8 @@ export class ComponentRenderer {
 </div>`;
       }
 
-      console.warn('[ComponentRenderer] renderFeatureGrid: Not enough content for grid - falling back to prose');
-      return this.renderProse(content, emphasis, layout);
+      console.warn('[ComponentRenderer] renderFeatureGrid: Content too long for cards or not enough items - falling back to card');
+      return this.renderCard(content, emphasis);
     }
     console.log(`[ComponentRenderer] renderFeatureGrid: Found ${listBlock.items.length} items for feature grid`);
 
@@ -634,8 +638,8 @@ ${proseHtml}
     const listBlock = blocks.find(b => b.type === 'list');
 
     if (!listBlock?.items) {
-      console.warn('[ComponentRenderer] renderChecklist: No list items found - falling back to prose');
-      return this.renderProse(content, emphasis, { columns: '1-column' } as any);
+      console.warn('[ComponentRenderer] renderChecklist: No list items found - falling back to card');
+      return this.renderCard(content, emphasis);
     }
     console.log(`[ComponentRenderer] renderChecklist: Found ${listBlock.items.length} items for checklist`);
 
