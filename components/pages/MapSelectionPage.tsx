@@ -2,9 +2,11 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../../state/appState';
 import { MapSelectionScreen } from '../screens';
+import NewMapModal from '../modals/NewMapModal';
 import { TopicalMap, AppStep } from '../../types';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { verifiedDelete, verifiedBulkDelete } from '../../services/verifiedDatabaseService';
+import { normalizeRpcData, parseTopicalMap } from '../../utils/parsers';
 
 /**
  * MapSelectionPage - Route wrapper for map selection within a project.
@@ -23,9 +25,28 @@ const MapSelectionPage: React.FC = () => {
         navigate(`/p/${projectId}/m/${mapId}`);
     };
 
-    const handleCreateNewMap = () => {
-        // Open the new map modal (stays as a modal)
+    const handleOpenNewMapModal = () => {
         dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'newMap', visible: true } });
+    };
+
+    const handleCreateNewMap = async (mapName: string) => {
+        if (!projectId) return;
+        try {
+            const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+            const { data, error } = await supabase.rpc('create_new_map', { p_project_id: projectId, p_map_name: mapName });
+            if (error) throw error;
+
+            const rawMap = normalizeRpcData(data);
+            const newMap = parseTopicalMap(rawMap);
+
+            dispatch({ type: 'ADD_TOPICAL_MAP', payload: newMap });
+            dispatch({ type: 'SET_ACTIVE_MAP', payload: newMap.id });
+            navigate(`/p/${projectId}/m/${newMap.id}/setup/business`);
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to create map.';
+            dispatch({ type: 'SET_ERROR', payload: message });
+            throw e;
+        }
     };
 
     const handleStartAnalysis = () => {
@@ -75,15 +96,22 @@ const MapSelectionPage: React.FC = () => {
     };
 
     return (
-        <MapSelectionScreen
-            projectName={activeProject?.project_name || 'Project'}
-            topicalMaps={projectMaps}
-            onSelectMap={handleSelectMap}
-            onCreateNewMap={handleCreateNewMap}
-            onStartAnalysis={handleStartAnalysis}
-            onBackToProjects={handleBackToProjects}
-            onInitiateDeleteMap={handleInitiateDeleteMap}
-        />
+        <>
+            <MapSelectionScreen
+                projectName={activeProject?.project_name || 'Project'}
+                topicalMaps={projectMaps}
+                onSelectMap={handleSelectMap}
+                onCreateNewMap={handleOpenNewMapModal}
+                onStartAnalysis={handleStartAnalysis}
+                onBackToProjects={handleBackToProjects}
+                onInitiateDeleteMap={handleInitiateDeleteMap}
+            />
+            <NewMapModal
+                isOpen={!!state.modals.newMap}
+                onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'newMap', visible: false } })}
+                onCreateMap={handleCreateNewMap}
+            />
+        </>
     );
 };
 
