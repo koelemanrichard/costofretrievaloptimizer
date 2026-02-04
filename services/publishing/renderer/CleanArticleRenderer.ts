@@ -1120,8 +1120,28 @@ ${listItems}
       // We override this after all other CSS to ensure the correct page background.
       const personality = this.designDna?.personality?.overall || 'corporate';
       const pageBgOverride = personality === 'luxurious' ? '#faf9f7' : personality === 'creative' ? `${brandColors.primaryColor}08` : '#ffffff';
-      const pageOverrideCss = `\n/* === Page Background Override (personality: ${personality}) === */\nbody { background-color: ${pageBgOverride}; }\n`;
-      return `${componentCss}\n\n/* === Brand-Specific Overrides (compiledCss) === */\n${this.compiledCss}\n\n${this.generateStructuralCSS()}${pageOverrideCss}`;
+      // Defensive overrides: compiledCss sometimes sets problematic values that
+      // break readability. These safeguards run LAST in the cascade.
+      const safetyOverrides = `
+/* === Safety Overrides (personality: ${personality}) === */
+body { background-color: ${pageBgOverride}; }
+
+/* Headings must never be font-weight: normal - minimum 600 for readability */
+.section-heading { font-weight: 700; color: ${brandColors.primaryDark}; }
+.prose h2, .prose h3, .prose h4 { font-weight: 600; }
+.faq-question { font-weight: 600; }
+
+/* Emphasis sections: reset font-style and font-weight on content (not headings) */
+.emphasis-featured { font-style: normal; font-weight: normal; }
+.emphasis-standard { font-style: normal; font-weight: normal; }
+.emphasis-featured .section-heading,
+.emphasis-standard .section-heading,
+.emphasis-hero .section-heading { font-weight: 700; }
+
+/* Prose paragraphs should never inherit bold from parent emphasis containers */
+.section-content p, .prose p, .card-body p { font-weight: normal; }
+`;
+      return `${componentCss}\n\n/* === Brand-Specific Overrides (compiledCss) === */\n${this.compiledCss}\n\n${this.generateStructuralCSS()}${safetyOverrides}`;
     }
 
     console.log('[CleanArticleRenderer] Generating fallback CSS from DesignDNA');

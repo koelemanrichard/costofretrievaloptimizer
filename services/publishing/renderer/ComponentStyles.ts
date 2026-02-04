@@ -115,7 +115,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     corporate: {
       radius: { sm: '2px', md: '4px', lg: '6px' },
       shadow: { card: '0 1px 4px rgba(0,0,0,0.06)', hover: '0 4px 12px rgba(0,0,0,0.08)' },
-      heroStyle: 'clean-light' as const,
+      heroStyle: 'gradient-dark' as const,
       pageBg: '#ffffff',
       sectionCard: false, // Corporate sites use flat layout, not card-per-section
       animationDuration: '0.2s',
@@ -175,7 +175,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   const navyDark = darkenHex(o.primaryColor, 0.65);
 
   // Brand divider: repeating dash pattern for corporate/bold; solid line for others
-  const useDashPattern = personality === 'corporate' || personality === 'bold';
+  const useDashPattern = personality === 'bold';
   const brandDividerBg = useDashPattern
     ? `repeating-linear-gradient(90deg, ${o.primaryColor} 0px, ${o.primaryColor} 18px, transparent 18px, transparent 24px, ${o.accentColor} 24px, ${o.accentColor} 30px, transparent 30px, transparent 36px)`
     : `linear-gradient(90deg, ${o.primaryColor} 0%, ${o.primaryColor} 60%, ${o.accentColor} 100%)`;
@@ -264,7 +264,7 @@ ${visualParams.sectionCard ? `
 .section-heading {
   font-family: ${o.headingFont};
   font-weight: 700;
-  color: ${o.textColor};
+  color: ${o.primaryDark};
   line-height: 1.25;
   margin: 0 0 1.25rem 0;
   position: relative;
@@ -596,7 +596,7 @@ ${visualParams.heroStyle !== 'clean-light' && visualParams.heroStyle !== 'flat' 
 
 .emphasis-featured .section-heading {
   font-size: 1.875rem;
-  color: ${o.textColor};
+  color: ${o.primaryDark};
 }
 
 /* Standard Emphasis - Clean white with generous spacing */
@@ -606,7 +606,7 @@ ${visualParams.heroStyle !== 'clean-light' && visualParams.heroStyle !== 'flat' 
 }
 
 .emphasis-standard .section-heading {
-  color: ${o.textColor};
+  color: ${o.primaryDark};
 }
 
 /* Supporting Emphasis */
@@ -617,7 +617,7 @@ ${visualParams.heroStyle !== 'clean-light' && visualParams.heroStyle !== 'flat' 
 
 .emphasis-supporting .section-heading {
   font-size: 1.25rem;
-  color: ${o.textColor};
+  color: ${o.primaryDark};
 }
 
 /* Minimal Emphasis */
