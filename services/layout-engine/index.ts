@@ -14,7 +14,8 @@ export { LayoutPlanner } from './LayoutPlanner';
 export { ComponentSelector } from './ComponentSelector';
 export { VisualEmphasizer } from './VisualEmphasizer';
 export { ImageHandler } from './ImageHandler';
-export { LayoutEngine, LayoutBlueprintOutput } from './LayoutEngine';
+export { LayoutEngine } from './LayoutEngine';
+export type { LayoutBlueprintOutput } from './LayoutEngine';
 
 // AI-powered layout planning (for agency-quality results)
 export { generateAILayoutBlueprint } from './AILayoutPlanner';

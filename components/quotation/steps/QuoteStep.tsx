@@ -69,7 +69,7 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
       if (quote) {
         setSavedQuote(quote);
         // Download as HTML file (can be opened in browser and printed as PDF)
-        downloadQuoteHtml(quote, { currency, includeAnalysis: true, includeKpiProjections: true, includeRoi: true, includeTerms: true });
+        downloadQuoteHtml(quote, { format: 'html', currency, includeAnalysis: true, includeKpiProjections: true, includeRoi: true, includeTerms: true });
         setExportSuccess('Quote saved as HTML file');
       }
     } finally {
@@ -84,7 +84,7 @@ export const QuoteStep: React.FC<QuoteStepProps> = ({
       const quote = onGenerateQuote();
       if (quote) {
         // Open in new window for printing to PDF
-        openQuoteForPrint(quote, { currency, includeAnalysis: true, includeKpiProjections: true, includeRoi: true, includeTerms: true });
+        openQuoteForPrint(quote, { format: 'pdf', currency, includeAnalysis: true, includeKpiProjections: true, includeRoi: true, includeTerms: true });
         setExportSuccess('Quote opened for print/PDF');
       }
     } finally {

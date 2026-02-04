@@ -473,19 +473,21 @@ ${brandCss}`;
 
   // CRITICAL FIX: Always add ComponentStyles CSS for visual components (.card, .feature-grid, etc.)
   // The ComponentRenderer uses these classes, not the ctc- prefixed ones
-  const componentStyleOptions = options.brandDesignSystem?.designDna?.colors
+  // Extract colors from BrandDesignSystem tokens.json (CSS variable values)
+  const bdsTokens = options.brandDesignSystem?.tokens?.json;
+  const componentStyleOptions = bdsTokens
     ? {
-        primaryColor: options.brandDesignSystem.designDna.colors.primary,
-        primaryDark: options.brandDesignSystem.designDna.colors.primaryDark,
-        secondaryColor: options.brandDesignSystem.designDna.colors.secondary,
-        accentColor: options.brandDesignSystem.designDna.colors.accent,
-        textColor: options.brandDesignSystem.designDna.colors.text,
-        textMuted: options.brandDesignSystem.designDna.colors.textMuted,
-        backgroundColor: options.brandDesignSystem.designDna.colors.background,
-        surfaceColor: options.brandDesignSystem.designDna.colors.surface,
-        borderColor: options.brandDesignSystem.designDna.colors.border,
-        headingFont: options.brandDesignSystem.designDna.typography?.headingFont?.family || 'system-ui, sans-serif',
-        bodyFont: options.brandDesignSystem.designDna.typography?.bodyFont?.family || 'system-ui, sans-serif',
+        primaryColor: bdsTokens['--ctc-color-primary'] || bdsTokens['--ctc-primary'],
+        primaryDark: bdsTokens['--ctc-color-primary-dark'] || bdsTokens['--ctc-primary-dark'],
+        secondaryColor: bdsTokens['--ctc-color-secondary'] || bdsTokens['--ctc-secondary'],
+        accentColor: bdsTokens['--ctc-color-accent'] || bdsTokens['--ctc-accent'],
+        textColor: bdsTokens['--ctc-color-text'] || bdsTokens['--ctc-text-primary'],
+        textMuted: bdsTokens['--ctc-color-text-muted'] || bdsTokens['--ctc-text-secondary'],
+        backgroundColor: bdsTokens['--ctc-color-background'] || bdsTokens['--ctc-bg-primary'] || '#ffffff',
+        surfaceColor: bdsTokens['--ctc-color-surface'] || bdsTokens['--ctc-bg-secondary'] || '#f8f9fa',
+        borderColor: bdsTokens['--ctc-color-border'] || bdsTokens['--ctc-border-color'],
+        headingFont: bdsTokens['--ctc-font-heading'] || 'system-ui, sans-serif',
+        bodyFont: bdsTokens['--ctc-font-body'] || 'system-ui, sans-serif',
       }
     : options.designTokens?.colors
       ? {

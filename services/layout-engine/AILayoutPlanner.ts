@@ -392,9 +392,12 @@ function buildSectionsFromAIDecisions(
     const layout: LayoutParameters = aiDecision
       ? {
           width: aiDecision.layoutWidth,
-          columns: aiDecision.layoutColumns,
+          columns: aiDecision.layoutColumns === 'asymmetric' ? 'asymmetric-left' : aiDecision.layoutColumns,
+          imagePosition: 'none',
           verticalSpacingBefore: 'normal',
           verticalSpacingAfter: 'normal',
+          breakBefore: 'none',
+          breakAfter: 'none',
           alignText: 'left',
         }
       : LayoutPlanner.planLayout(analysis, dna);
@@ -403,14 +406,16 @@ function buildSectionsFromAIDecisions(
       ? {
           level: aiDecision.emphasisLevel,
           headingSize: aiDecision.emphasisLevel === 'hero' ? 'xl' : aiDecision.emphasisLevel === 'featured' ? 'lg' : 'md',
-          sectionPadding: aiDecision.emphasisLevel === 'hero' ? 'generous' : 'normal',
+          headingDecoration: ['hero', 'featured'].includes(aiDecision.emphasisLevel),
+          paddingMultiplier: aiDecision.emphasisLevel === 'hero' ? 2 : aiDecision.emphasisLevel === 'featured' ? 1.5 : 1,
+          marginMultiplier: aiDecision.emphasisLevel === 'hero' ? 2 : aiDecision.emphasisLevel === 'featured' ? 1.5 : 1,
           hasBackgroundTreatment: ['hero', 'featured'].includes(aiDecision.emphasisLevel),
-          backgroundType: aiDecision.emphasisLevel === 'hero' ? 'gradient' : 'subtle',
+          backgroundType: aiDecision.emphasisLevel === 'hero' ? 'gradient' : undefined,
           hasAccentBorder: aiDecision.emphasisLevel === 'featured',
           accentPosition: 'left',
           elevation: aiDecision.emphasisLevel === 'hero' ? 2 : aiDecision.emphasisLevel === 'featured' ? 1 : 0,
           hasEntryAnimation: ['hero', 'featured'].includes(aiDecision.emphasisLevel),
-          animationType: 'fade-in',
+          animationType: 'fade',
         }
       : VisualEmphasizer.calculateEmphasis(analysis, dna);
 

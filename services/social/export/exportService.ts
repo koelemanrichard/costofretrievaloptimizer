@@ -412,8 +412,6 @@ export function createExportService(
 // Convenience functions for direct export (used by useSocialExport hook)
 // ============================================================================
 
-import type { SocialPost } from '../../../types/social';
-
 /**
  * Export single post to clipboard
  */
@@ -422,12 +420,11 @@ export async function exportToClipboard(
   options: { includeHashtags?: boolean; includeLink?: boolean; includeMentions?: boolean } = {}
 ): Promise<boolean> {
   try {
-    const result = await clipboardExporter.copyToClipboard(post, {
-      includeHashtags: options.includeHashtags ?? true,
-      includeUtmLink: options.includeLink ?? true,
-      includeMentions: options.includeMentions ?? true,
+    const content = clipboardExporter.formatForClipboard(post, {
+      include_hashtags: options.includeHashtags ?? true,
+      include_link: options.includeLink ?? true,
     });
-    return result.success;
+    return await clipboardExporter.copyToClipboard(content);
   } catch {
     return false;
   }
@@ -440,17 +437,11 @@ export async function exportToJSON(
   campaign: SocialCampaign,
   posts: SocialPost[]
 ): Promise<string> {
-  const result = await jsonExporter.export({
-    campaign,
-    posts,
-    options: {
-      pretty: true,
-      includeMetadata: true,
-      includeCompliance: true,
-      includeImageSpecs: true,
-    },
+  return jsonExporter.exportCampaign(campaign, posts, {
+    pretty_print: true,
+    include_metadata: true,
+    include_compliance: true,
   });
-  return result.content;
 }
 
 /**
@@ -461,18 +452,22 @@ export async function exportToText(
   campaign?: SocialCampaign,
   options: { includeInstructions?: boolean; includeImageSpecs?: boolean; format?: 'plain' | 'markdown' } = {}
 ): Promise<string> {
-  const result = await textExporter.export({
-    posts,
-    campaign,
-    options: {
+  if (campaign) {
+    return textExporter.exportCampaign(campaign, posts, {
       format: options.format || 'markdown',
-      includeInstructions: options.includeInstructions ?? true,
-      includeImageSpecs: options.includeImageSpecs ?? true,
-      includeUtmLinks: true,
-      includeCompliance: true,
-    },
-  });
-  return result.content;
+      include_instructions: options.includeInstructions ?? true,
+      include_image_specs: options.includeImageSpecs ?? true,
+      include_compliance: true,
+    });
+  }
+  // If no campaign, export individual posts joined together
+  return posts.map(post =>
+    textExporter.exportPost(post, {
+      format: options.format || 'markdown',
+      include_instructions: options.includeInstructions ?? true,
+      include_image_specs: options.includeImageSpecs ?? true,
+    })
+  ).join('\n\n---\n\n');
 }
 
 /**
@@ -481,7 +476,7 @@ export async function exportToText(
 export async function exportToPackage(
   campaign: SocialCampaign,
   posts: SocialPost[],
-  options: {
+  _options: {
     includeInstructions?: boolean;
     includeImageSpecs?: boolean;
     includeUtmLinks?: boolean;
@@ -489,18 +484,7 @@ export async function exportToPackage(
     groupByPlatform?: boolean;
   } = {}
 ): Promise<Blob> {
-  const result = await packageExporter.createPackage({
-    campaign,
-    posts,
-    options: {
-      includeInstructions: options.includeInstructions ?? true,
-      includeImageSpecs: options.includeImageSpecs ?? true,
-      includeUtmLinks: options.includeUtmLinks ?? true,
-      includeJson: true,
-      includeMarkdown: true,
-      groupByPlatform: options.groupByPlatform ?? true,
-      platformsToInclude: options.platformsToInclude,
-    },
-  });
-  return result.blob;
+  const zipStructure = packageExporter.getZipStructure(campaign, posts);
+  const content = JSON.stringify(zipStructure, null, 2);
+  return new Blob([content], { type: 'application/json' });
 }

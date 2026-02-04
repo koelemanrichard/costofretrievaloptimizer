@@ -1217,7 +1217,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                             googleApiKey={effectiveBusinessInfo?.googleKnowledgeGraphApiKey}
                             knowledgeGraph={knowledgeGraph}
                             sourceContext={topicalMap.pillars?.sourceContext || ''}
-                            centralSearchIntent={topicalMap.pillars?.centralSearchIntent || []}
+                            centralSearchIntent={Array.isArray(topicalMap.pillars?.centralSearchIntent) ? topicalMap.pillars.centralSearchIntent : []}
                             onClose={() => setShowEntityHealth(false)}
                         />
                     </div>

@@ -373,10 +373,10 @@ export const LayoutIntelligenceStep: React.FC<LayoutIntelligenceStepProps> = ({
                             <span className="text-zinc-500">Component: </span>
                             {section.component?.primaryComponent || 'prose'}
                           </div>
-                          {section.component?.alternativeComponent && (
+                          {section.component?.alternativeComponents && (
                             <div>
                               <span className="text-zinc-500">Alt: </span>
-                              {section.component.alternativeComponent}
+                              {section.component.alternativeComponents}
                             </div>
                           )}
                           <div>
@@ -405,10 +405,10 @@ export const LayoutIntelligenceStep: React.FC<LayoutIntelligenceStepProps> = ({
                               {section.contentZone}
                             </div>
                           )}
-                          {section.component?.alternativeComponent && (
+                          {section.component?.alternativeComponents && (
                             <div>
                               <span className="text-zinc-500">Alt: </span>
-                              {section.component.alternativeComponent}
+                              {section.component.alternativeComponents}
                             </div>
                           )}
                         </div>

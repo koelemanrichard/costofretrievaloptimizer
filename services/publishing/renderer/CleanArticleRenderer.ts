@@ -238,7 +238,7 @@ export class CleanArticleRenderer {
             },
             layout: {
               width: 'medium' as const,
-              columns: 1 as const,
+              columns: '1-column' as const,
               imagePosition: 'none' as const,
               verticalSpacingBefore: 'normal' as const,
               verticalSpacingAfter: 'normal' as const,
@@ -1111,7 +1111,7 @@ ${listItems}
         radiusSmall: this.getRadius('small'),
         radiusMedium: this.getRadius('medium'),
         radiusLarge: this.getRadius('large'),
-        personality: this.designDna?.personality?.overall,
+        personality: this.mapPersonalityForComponentStyles(this.designDna?.personality?.overall),
       };
       const componentCss = generateComponentStyles(brandColors);
       // NEW order: componentCss (generic visual base) → compiledCss (brand-specific overrides) → structuralCSS (layout)
@@ -1213,7 +1213,7 @@ body { background-color: ${pageBgOverride}; }
         radiusSmall: radiusSm,
         radiusMedium: radiusMd,
         radiusLarge: radiusLg,
-        personality: this.designDna?.personality?.overall,
+        personality: this.mapPersonalityForComponentStyles(this.designDna?.personality?.overall),
       }),
     ];
 
@@ -2713,6 +2713,27 @@ ${html}
   // HELPER METHODS - Extract actual values from DesignDNA
   // ============================================================================
 
+  /**
+   * Map DesignDNA personality to ComponentStylesOptions personality.
+   * DesignDNA allows 'playful' and 'elegant' which ComponentStyles doesn't support.
+   */
+  private mapPersonalityForComponentStyles(
+    personality?: string
+  ): 'corporate' | 'creative' | 'luxurious' | 'friendly' | 'bold' | 'minimal' | undefined {
+    if (!personality) return undefined;
+    const mapping: Record<string, 'corporate' | 'creative' | 'luxurious' | 'friendly' | 'bold' | 'minimal'> = {
+      corporate: 'corporate',
+      creative: 'creative',
+      luxurious: 'luxurious',
+      friendly: 'friendly',
+      bold: 'bold',
+      minimal: 'minimal',
+      elegant: 'luxurious',   // elegant maps to luxurious (closest visual style)
+      playful: 'creative',    // playful maps to creative (closest visual style)
+    };
+    return mapping[personality] || 'corporate';
+  }
+
   private getColor(type: 'primary' | 'primaryLight' | 'primaryDark' | 'secondary' | 'accent'): string {
     const colors = this.designDna.colors || {};
     const defaults: Record<string, string> = {
@@ -2760,7 +2781,7 @@ ${html}
   }
 
   private getFont(type: 'heading' | 'body'): string {
-    const typography = this.designDna.typography || {};
+    const typography = this.designDna.typography || {} as Partial<DesignDNA['typography']>;
     const font = type === 'heading' ? typography.headingFont : typography.bodyFont;
 
     if (!font) {
@@ -2781,7 +2802,7 @@ ${html}
   }
 
   private getRadius(size: 'small' | 'medium' | 'large'): string {
-    const shapes = this.designDna.shapes || {};
+    const shapes = this.designDna.shapes || {} as Partial<DesignDNA['shapes']>;
     const borderRadius = shapes.borderRadius;
 
     const defaults: Record<string, string> = {
@@ -2818,7 +2839,7 @@ ${html}
   }
 
   private getGoogleFontsUrl(): string | null {
-    const typography = this.designDna.typography || {};
+    const typography = this.designDna.typography || {} as Partial<DesignDNA['typography']>;
     const fonts: string[] = [];
 
     const headingFont = typography.headingFont?.family;

@@ -16,7 +16,7 @@ import { SemanticLayoutEngine } from '../../semantic-layout';
 import type { ContentBrief, EnrichedTopic, TopicalMap, ImagePlaceholder } from '../../../types';
 import type { DesignDNA } from '../../../types/designDna';
 import type { LayoutBlueprint } from '../architect/blueprintTypes';
-import type { StyledContentOutput, CssVariables, RenderInfo } from '../../../types/publishing';
+import type { StyledContentOutput, CssVariables, RenderInfo, ContentTypeTemplate } from '../../../types/publishing';
 import {
   injectImagesIntoContent,
   placeholdersToInjectableImages,
@@ -415,18 +415,7 @@ export async function renderContent(
         brandDesignSystem: options.brandDesignSystem ? {
           brandName: options.brandDesignSystem.brandName || 'Brand',
           compiledCss: options.brandDesignSystem.compiledCss,
-          designDna: options.designDna ? {
-            colors: {
-              primary: options.designDna.colors?.primary?.hex || options.designTokens?.colors?.primary,
-              secondary: options.designDna.colors?.secondary?.hex || options.designTokens?.colors?.secondary,
-              accent: options.designDna.colors?.accent?.hex || options.designTokens?.colors?.accent,
-            },
-            typography: {
-              headingFont: options.designDna.typography?.headingFont?.family || options.designTokens?.fonts?.heading,
-              bodyFont: options.designDna.typography?.bodyFont?.family || options.designTokens?.fonts?.body,
-            },
-          } : undefined,
-        } : undefined,
+        } as any : undefined,
         designDna: options.designDna,
         language: options.language,
       });
@@ -449,13 +438,13 @@ export async function renderContent(
           const hv = validateHeadingStructure(result.html);
           return {
             isValid: hv.isValid,
-            warnings: hv.issues,
-            headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy, issues: hv.issues },
+            warnings: hv.issues.map(msg => ({ type: 'heading' as const, severity: 'warning' as const, message: msg })),
+            headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy.map(h => `h${h.level}: ${h.text}`), issues: hv.issues },
             schemaPreserved: true,
             metaPreserved: true,
           };
         })(),
-        template: 'semantic-layout',
+        template: 'blog-article' as ContentTypeTemplate,
         renderInfo: {
           renderer: 'semantic-layout-engine',
           message: 'Using AI-driven Semantic Layout Engine for design-agency quality output with intelligent component selection',
@@ -559,18 +548,41 @@ export async function renderContent(
 
       // Fallback: If we have designDna or designTokens, use CleanArticleRenderer
       if (options.designDna || options.designTokens) {
-        const fallbackDna = options.designDna || {
+        // Build a complete DesignDNA from designTokens when no real designDna is available
+        const fallbackDna: DesignDNA = options.designDna || {
           colors: {
-            primary: options.designTokens?.colors?.primary || '#1a1a2e',
-            secondary: options.designTokens?.colors?.secondary || '#4a4a68',
-            background: options.designTokens?.colors?.background || '#ffffff',
-            text: options.designTokens?.colors?.text || '#333333',
+            primary: { hex: options.designTokens?.colors?.primary || '#1a1a2e', usage: 'primary', confidence: 0.5 },
+            primaryLight: { hex: options.designTokens?.colors?.primary || '#3F3F46', usage: 'primary-light', confidence: 0.3 },
+            primaryDark: { hex: options.designTokens?.colors?.primary || '#09090B', usage: 'primary-dark', confidence: 0.3 },
+            secondary: { hex: options.designTokens?.colors?.secondary || '#4a4a68', usage: 'secondary', confidence: 0.5 },
+            accent: { hex: options.designTokens?.colors?.accent || '#71717A', usage: 'accent', confidence: 0.3 },
+            neutrals: { lightest: options.designTokens?.colors?.background || '#FFFFFF', light: options.designTokens?.colors?.surface || '#F8FAFC', medium: options.designTokens?.colors?.textMuted || '#64748B', dark: options.designTokens?.colors?.text || '#333333', darkest: '#000000' },
+            semantic: { success: '#22c55e', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6' },
+            harmony: 'monochromatic', dominantMood: 'corporate', contrastLevel: 'medium',
           },
           typography: {
-            headingFont: options.designTokens?.fonts?.heading || 'system-ui, sans-serif',
-            bodyFont: options.designTokens?.fonts?.body || 'system-ui, sans-serif',
+            headingFont: { family: options.designTokens?.fonts?.heading || 'system-ui', fallback: 'sans-serif', weight: 700, style: 'sans-serif', character: 'modern' },
+            bodyFont: { family: options.designTokens?.fonts?.body || 'system-ui', fallback: 'sans-serif', weight: 400, style: 'sans-serif', lineHeight: 1.6 },
+            scaleRatio: 1.25, baseSize: '16px', headingCase: 'none', headingLetterSpacing: '-0.02em',
+            usesDropCaps: false, headingUnderlineStyle: 'none', linkStyle: 'underline',
           },
-        } as import('../../../types/designDna').DesignDNA;
+          spacing: { baseUnit: 8, density: 'comfortable', sectionGap: 'moderate', contentWidth: 'medium', whitespacePhilosophy: 'balanced' },
+          shapes: { borderRadius: { style: 'subtle', small: '4px', medium: '8px', large: '16px', full: '9999px' }, buttonStyle: 'soft', cardStyle: 'subtle-shadow', inputStyle: 'bordered' },
+          effects: {
+            shadows: { style: 'subtle', cardShadow: '0 1px 3px rgba(0,0,0,0.12)', buttonShadow: '0 1px 2px rgba(0,0,0,0.08)', elevatedShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+            gradients: { usage: 'subtle', primaryGradient: 'linear-gradient(135deg, #1a1a2e 0%, #4a4a68 100%)', heroGradient: 'linear-gradient(180deg, #1a1a2e 0%, #333333 100%)', ctaGradient: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)' },
+            backgrounds: { usesPatterns: false, usesTextures: false, usesOverlays: false },
+            borders: { style: 'subtle', defaultColor: '#e5e7eb', accentBorderUsage: false },
+          },
+          decorative: { dividerStyle: 'line', usesFloatingShapes: false, usesCornerAccents: false, usesWaveShapes: false, usesGeometricPatterns: false, iconStyle: 'outline', decorativeAccentColor: '#3b82f6' },
+          layout: { gridStyle: 'strict-12', alignment: 'left', heroStyle: 'contained', cardLayout: 'grid', ctaPlacement: 'section-end', navigationStyle: 'standard' },
+          motion: { overall: 'subtle', transitionSpeed: 'normal', easingStyle: 'ease', hoverEffects: { buttons: 'darken', cards: 'lift', links: 'underline' }, scrollAnimations: false, parallaxEffects: false },
+          images: { treatment: 'natural', frameStyle: 'rounded', hoverEffect: 'none', aspectRatioPreference: '16:9' },
+          componentPreferences: { preferredListStyle: 'bullets', preferredCardStyle: 'bordered', testimonialStyle: 'card', faqStyle: 'accordion', ctaStyle: 'button' },
+          personality: { overall: 'corporate', formality: 3, energy: 3, warmth: 3, trustSignals: 'moderate' },
+          confidence: { overall: 0.4, colorsConfidence: 0.5, typographyConfidence: 0.4, layoutConfidence: 0.3 },
+          analysisNotes: ['Fallback DesignDNA - generated from designTokens during contamination/quality fallback'],
+        };
 
         const articleInput = {
           title: processedContent.title,
@@ -597,10 +609,12 @@ export async function renderContent(
               `## ${s.heading || ''}\n${s.content}`
             ).join('\n\n');
 
+            // AILayoutPlanner only supports 'gemini' | 'anthropic'; fallback to 'gemini' for 'openai'
+            const layoutAiProvider = (options.aiProvider === 'anthropic' ? 'anthropic' : 'gemini') as import('../../layout-engine/AILayoutPlanner').AIProvider;
             const aiBlueprint = await LayoutEngine.generateBlueprintWithAI(
               fullContent,
               processedContent.title,
-              { provider: options.aiProvider || 'gemini', apiKey: options.aiApiKey },
+              { provider: layoutAiProvider, apiKey: options.aiApiKey },
               fallbackDna,
               { language: options.language }
             );
@@ -650,13 +664,16 @@ export async function renderContent(
             const hv = validateHeadingStructure(cleanResult.fullDocument || cleanResult.html);
             return {
               isValid: hv.isValid,
-              warnings: [`Fallback renderer used due to ${reason}`, ...hv.issues],
-              headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy, issues: hv.issues },
+              warnings: [
+                { type: 'content' as const, severity: 'warning' as const, message: `Fallback renderer used due to ${reason}` },
+                ...hv.issues.map(msg => ({ type: 'heading' as const, severity: 'warning' as const, message: msg })),
+              ],
+              headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy.map(h => `h${h.level}: ${h.text}`), issues: hv.issues },
               schemaPreserved: true,
               metaPreserved: true,
             };
           })(),
-          template: 'clean-article-fallback',
+          template: 'blog-article' as ContentTypeTemplate,
           renderInfo: {
             renderer: 'fallback',
             message: userMessage,
@@ -690,13 +707,13 @@ export async function renderContent(
         const hv = validateHeadingStructure(result.html);
         return {
           isValid: hv.isValid,
-          warnings: hv.issues,
-          headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy, issues: hv.issues },
+          warnings: hv.issues.map(msg => ({ type: 'heading' as const, severity: 'warning' as const, message: msg })),
+          headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy.map(h => `h${h.level}: ${h.text}`), issues: hv.issues },
           schemaPreserved: true,
           metaPreserved: true,
         };
       })(),
-      template: 'brand-aware',
+      template: 'blog-article' as ContentTypeTemplate,
       renderInfo: {
         renderer: 'brand-aware',
         message: isPoorQuality
@@ -709,7 +726,7 @@ export async function renderContent(
         details: {
           brandExtractionUsed: true,
           componentsDetected: result.componentsUsed?.length || 0,
-          poorQualityWarning: isPoorQuality,
+          fallbackTriggered: isPoorQuality,
         },
       },
       renderMetadata: {
@@ -893,13 +910,13 @@ export async function renderContent(
         const hv = validateHeadingStructure(cleanResult.fullDocument || cleanResult.html);
         return {
           isValid: hv.isValid,
-          warnings: hv.issues,
-          headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy, issues: hv.issues },
+          warnings: hv.issues.map(msg => ({ type: 'heading' as const, severity: 'warning' as const, message: msg })),
+          headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy.map(h => `h${h.level}: ${h.text}`), issues: hv.issues },
           schemaPreserved: true,
           metaPreserved: true,
         };
       })(),
-      template: 'clean-article',
+      template: 'blog-article' as ContentTypeTemplate,
       renderInfo: {
         renderer: 'clean-article',
         message: compiledCss
@@ -974,8 +991,8 @@ export async function renderContent(
     heroImage: options.heroImage,
     ctaConfig: options.ctaConfig,
     author: options.author,
-    // Pass brandDesignSystem for AI-generated CSS
-    brandDesignSystem: options.brandDesignSystem,
+    // Pass brandDesignSystem for AI-generated CSS (cast to full type; renderer only uses compiledCss/brandName/sourceUrl)
+    brandDesignSystem: options.brandDesignSystem as import('../../../types/designDna').BrandDesignSystem | undefined,
     // THE KEY FIX: Pass actual article content with injected images
     // This ensures the REAL article is rendered, not brief summaries
     articleContent: processedContent,
@@ -1010,8 +1027,8 @@ export async function renderContent(
       const hv = validateHeadingStructure(blueprintResult.html);
       return {
         isValid: hv.isValid,
-        warnings: hv.issues,
-        headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy, issues: hv.issues },
+        warnings: hv.issues.map(msg => ({ type: 'heading' as const, severity: 'warning' as const, message: msg })),
+        headingStructure: { hasH1: hv.hasH1, hierarchy: hv.hierarchy.map(h => `h${h.level}: ${h.text}`), issues: hv.issues },
         schemaPreserved: true,
         metaPreserved: true,
       };

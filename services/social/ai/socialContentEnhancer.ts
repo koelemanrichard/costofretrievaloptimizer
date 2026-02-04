@@ -16,6 +16,9 @@ import * as geminiService from '../../geminiService';
 import * as openAiService from '../../openAiService';
 import * as anthropicService from '../../anthropicService';
 
+// No-op dispatch for AI calls that don't need state updates
+const noopDispatch: React.Dispatch<any> = () => {};
+
 /**
  * AI enhancement request options
  */
@@ -181,9 +184,9 @@ Return JSON only:
 
   try {
     const response = await dispatchToProvider(businessInfo, {
-      gemini: () => geminiService.generateText(prompt, businessInfo),
-      openai: () => openAiService.generateText(prompt, businessInfo),
-      anthropic: () => anthropicService.generateText(prompt, businessInfo)
+      gemini: () => geminiService.generateText(prompt, businessInfo, noopDispatch),
+      openai: () => openAiService.generateText(prompt, businessInfo, noopDispatch),
+      anthropic: () => anthropicService.generateText(prompt, businessInfo, noopDispatch)
     });
 
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -269,9 +272,9 @@ Return JSON only:
 
   try {
     const response = await dispatchToProvider(businessInfo, {
-      gemini: () => geminiService.generateText(prompt, businessInfo),
-      openai: () => openAiService.generateText(prompt, businessInfo),
-      anthropic: () => anthropicService.generateText(prompt, businessInfo)
+      gemini: () => geminiService.generateText(prompt, businessInfo, noopDispatch),
+      openai: () => openAiService.generateText(prompt, businessInfo, noopDispatch),
+      anthropic: () => anthropicService.generateText(prompt, businessInfo, noopDispatch)
     });
 
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -328,9 +331,9 @@ Return JSON only:
 
   try {
     const response = await dispatchToProvider(businessInfo, {
-      gemini: () => geminiService.generateText(prompt, businessInfo),
-      openai: () => openAiService.generateText(prompt, businessInfo),
-      anthropic: () => anthropicService.generateText(prompt, businessInfo)
+      gemini: () => geminiService.generateText(prompt, businessInfo, noopDispatch),
+      openai: () => openAiService.generateText(prompt, businessInfo, noopDispatch),
+      anthropic: () => anthropicService.generateText(prompt, businessInfo, noopDispatch)
     });
 
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -380,9 +383,9 @@ Return JSON only:
 
   try {
     const response = await dispatchToProvider(businessInfo, {
-      gemini: () => geminiService.generateText(prompt, businessInfo),
-      openai: () => openAiService.generateText(prompt, businessInfo),
-      anthropic: () => anthropicService.generateText(prompt, businessInfo)
+      gemini: () => geminiService.generateText(prompt, businessInfo, noopDispatch),
+      openai: () => openAiService.generateText(prompt, businessInfo, noopDispatch),
+      anthropic: () => anthropicService.generateText(prompt, businessInfo, noopDispatch)
     });
 
     const jsonMatch = response.match(/\{[\s\S]*\}/);

@@ -9,7 +9,7 @@
 
 import type { SemanticTriple, ContentBrief, BriefSection } from '../../types';
 import type { DesignDNA } from '../../types/designDna';
-import type { BrandDesignSystem } from '../../types/brandExtraction';
+import type { BrandDesignSystem } from '../../types/designDna';
 import type { BlueprintSection as LayoutBlueprintSection } from '../layout-engine/types';
 
 // ============================================================================

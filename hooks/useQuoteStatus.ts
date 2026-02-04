@@ -11,8 +11,9 @@ import {
   QuoteActivity,
   QuoteActivityType,
 } from '../types/quotation';
-import { getSupabaseClient } from '../services/supabaseClient';
+import { useSupabase } from '../services/supabaseClient';
 import { useAppState } from '../state/appState';
+import type { Json } from '../database.types';
 
 export interface UseQuoteStatusReturn {
   // Status management
@@ -44,7 +45,7 @@ const STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
 export function useQuoteStatus(): UseQuoteStatusReturn {
   const [isUpdating, setIsUpdating] = useState(false);
   const { state } = useAppState();
-  const supabase = getSupabaseClient();
+  const supabase = useSupabase();
 
   /**
    * Check if a status transition is valid
@@ -79,7 +80,7 @@ export function useQuoteStatus(): UseQuoteStatusReturn {
           .insert({
             quote_id: quoteId,
             activity_type: activityType,
-            details,
+            details: (details as Json) ?? null,
             created_by: state.user?.id || null,
           });
 

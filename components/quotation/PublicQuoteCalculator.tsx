@@ -22,7 +22,7 @@ import {
 import { getActivePackages, getRecommendedPackage, getPackageById } from '../../config/quotation/packages';
 import { quickAnalyzeUrl } from '../../services/quotation';
 import { useQuotationSettings, QuotationSettingsProvider } from '../../hooks/useQuotationSettings';
-import { getSupabaseClient } from '../../services/supabaseClient';
+import { useSupabase } from '../../services/supabaseClient';
 
 type CalculatorStep = 'url' | 'questionnaire' | 'result';
 
@@ -126,7 +126,7 @@ const PublicQuoteCalculatorContent: React.FC = () => {
     setIsSubmittingLead(true);
 
     try {
-      const supabase = getSupabaseClient();
+      const supabase = useSupabase();
 
       // Prepare context data with quote calculator info
       const contextData = {

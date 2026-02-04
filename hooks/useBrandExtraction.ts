@@ -579,7 +579,7 @@ export function useBrandExtraction(
         return false;
       }
 
-      const hasData = data && data.length > 0 && data[0].screenshot_base64;
+      const hasData = !!(data && data.length > 0 && data[0].screenshot_base64);
       setHasStoredExtractions(hasData);
       return hasData;
     } catch (err) {

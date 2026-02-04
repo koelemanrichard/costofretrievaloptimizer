@@ -610,8 +610,8 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
 
           // Expose compiled CSS for E2E testing/debugging
           if (typeof window !== 'undefined') {
-            (window as Record<string, unknown>).__BRAND_COMPILED_CSS__ = designSystem.compiledCss;
-            (window as Record<string, unknown>).__BRAND_DESIGN_SYSTEM__ = designSystem;
+            (window as unknown as Record<string, unknown>).__BRAND_COMPILED_CSS__ = designSystem.compiledCss;
+            (window as unknown as Record<string, unknown>).__BRAND_DESIGN_SYSTEM__ = designSystem;
           }
 
           // Update parent with the full design system (with generated CSS)
@@ -797,8 +797,8 @@ export const BrandIntelligenceStep: React.FC<BrandIntelligenceStepProps> = ({
 
   // Expose design system for E2E testing/debugging (works for both saved and fresh data)
   if (typeof window !== 'undefined' && brandDesignSystem?.compiledCss) {
-    (window as Record<string, unknown>).__BRAND_COMPILED_CSS__ = brandDesignSystem.compiledCss;
-    (window as Record<string, unknown>).__BRAND_DESIGN_SYSTEM__ = brandDesignSystem;
+    (window as unknown as Record<string, unknown>).__BRAND_COMPILED_CSS__ = brandDesignSystem.compiledCss;
+    (window as unknown as Record<string, unknown>).__BRAND_DESIGN_SYSTEM__ = brandDesignSystem;
   }
 
   return (

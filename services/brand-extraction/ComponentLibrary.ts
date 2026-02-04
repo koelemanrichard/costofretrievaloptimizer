@@ -110,18 +110,18 @@ export class ComponentLibrary {
       return [];
     }
 
-    return data.map(row => ({
-      id: row.id,
-      extractionId: row.extraction_id,
-      projectId: row.project_id,
-      visualDescription: row.visual_description,
-      componentType: row.component_type,
-      literalHtml: row.literal_html,
-      literalCss: row.literal_css,
-      theirClassNames: row.their_class_names,
-      contentSlots: row.content_slots,
-      boundingBox: row.bounding_box,
-      createdAt: row.created_at
+    return data.map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      extractionId: row.extraction_id as string,
+      projectId: row.project_id as string,
+      visualDescription: row.visual_description as string,
+      componentType: row.component_type as string | undefined,
+      literalHtml: row.literal_html as string,
+      literalCss: row.literal_css as string,
+      theirClassNames: row.their_class_names as string[],
+      contentSlots: row.content_slots as ExtractedComponent['contentSlots'],
+      boundingBox: row.bounding_box as ExtractedComponent['boundingBox'],
+      createdAt: row.created_at as string
     }));
   }
 

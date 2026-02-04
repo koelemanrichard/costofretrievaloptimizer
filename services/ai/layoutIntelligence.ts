@@ -91,10 +91,10 @@ export async function generateLayoutText(
     // Dispatch to the appropriate provider
     const result = await dispatchToProvider(businessInfo, {
       gemini: () => geminiService.generateText(prompt, businessInfo, dispatch, model),
-      anthropic: () => anthropicService.generateText(prompt, businessInfo, dispatch, model),
-      openai: () => openAiService.generateText(prompt, businessInfo, dispatch, model),
+      anthropic: () => anthropicService.generateText(prompt, businessInfo, dispatch),
+      openai: () => openAiService.generateText(prompt, businessInfo, dispatch),
       perplexity: () => perplexityService.generateText(prompt, businessInfo, dispatch),
-      openrouter: () => openRouterService.generateText(prompt, businessInfo, dispatch, model),
+      openrouter: () => openRouterService.generateText(prompt, businessInfo, dispatch),
     });
 
     const durationMs = Date.now() - startTime;

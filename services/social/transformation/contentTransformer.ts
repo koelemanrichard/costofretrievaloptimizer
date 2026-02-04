@@ -453,6 +453,7 @@ export class ContentTransformer {
     const linkWithUTM = postInput.link_url || '';
     const tempPost: SocialPost = {
       ...postInput,
+      is_hub: postInput.is_hub ?? false,
       id: '',
       user_id: this.userId,
       campaign_id: campaignId,
@@ -526,7 +527,7 @@ export class ContentTransformer {
       return null;
     }
 
-    const topic = job.topics as { id: string; title: string; map_id: string; content_briefs: Array<{ meta_description: string; contextual_vectors: unknown }> };
+    const topic = job.topics as unknown as { id: string; title: string; map_id: string; content_briefs: Array<{ meta_description: string; contextual_vectors: unknown }> };
     const brief = topic.content_briefs?.[0];
 
     // Fetch language from map's business_info

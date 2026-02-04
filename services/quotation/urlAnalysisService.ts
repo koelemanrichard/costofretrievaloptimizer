@@ -234,6 +234,10 @@ async function analyzeSerpVisibility(
     seedKeyword: '',
     language: 'en',
     targetMarket: 'United States',
+    aiProvider: 'gemini',
+    aiModel: '',
+    supabaseUrl: '',
+    supabaseAnonKey: '',
   };
 
   try {

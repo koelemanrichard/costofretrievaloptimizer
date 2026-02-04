@@ -303,7 +303,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
       css: row.css,
       htmlTemplate: row.html_template,
       previewHtml: row.preview_html || '',
-      sourceComponent: row.source_component as BrandComponent['sourceComponent'],
+      sourceComponent: row.source_component as unknown as BrandComponent['sourceComponent'],
       matchScore: row.match_score,
       variants: (row.variants || []) as BrandComponent['variants'],
       createdAt: row.created_at,

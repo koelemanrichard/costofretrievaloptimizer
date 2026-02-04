@@ -25,7 +25,6 @@ import { generateAILayoutBlueprint, type AIProvider } from './AILayoutPlanner';
 import {
   BlueprintSection,
   ComponentSelection,
-  ILayoutEngine,
   ImagePlacement,
   LayoutParameters,
   LayoutSuggestion,
@@ -412,7 +411,7 @@ function generateKeyDecisions(
 // LAYOUT ENGINE CLASS
 // =============================================================================
 
-export class LayoutEngine implements ILayoutEngine {
+export class LayoutEngine {
   /**
    * Generate a complete LayoutBlueprint from content and configuration
    */

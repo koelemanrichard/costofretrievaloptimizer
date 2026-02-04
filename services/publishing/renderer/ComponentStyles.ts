@@ -111,11 +111,21 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
   // ---------------------------------------------------------------------------
   const personality = o.personality || 'corporate';
 
-  const visualParams = {
+  type HeroStyle = 'gradient-dark' | 'gradient-vibrant' | 'gradient-elegant' | 'solid-warm' | 'flat' | 'clean-light';
+  type VisualParams = {
+    radius: { sm: string; md: string; lg: string };
+    shadow: { card: string; hover: string };
+    heroStyle: HeroStyle;
+    pageBg: string;
+    sectionCard: boolean;
+    animationDuration: string;
+  };
+
+  const visualParams: VisualParams = ({
     corporate: {
       radius: { sm: '2px', md: '4px', lg: '6px' },
       shadow: { card: '0 1px 4px rgba(0,0,0,0.06)', hover: '0 4px 12px rgba(0,0,0,0.08)' },
-      heroStyle: 'gradient-dark' as const,
+      heroStyle: 'gradient-dark' as HeroStyle,
       pageBg: '#ffffff',
       sectionCard: false, // Corporate sites use flat layout, not card-per-section
       animationDuration: '0.2s',
@@ -123,7 +133,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     creative: {
       radius: { sm: '8px', md: '12px', lg: '20px' },
       shadow: { card: '0 4px 16px rgba(0,0,0,0.08)', hover: '0 8px 30px rgba(0,0,0,0.12)' },
-      heroStyle: 'gradient-vibrant' as const,
+      heroStyle: 'gradient-vibrant' as HeroStyle,
       pageBg: `${o.primaryColor}08`,
       sectionCard: true,
       animationDuration: '0.4s',
@@ -131,7 +141,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     luxurious: {
       radius: { sm: '0px', md: '2px', lg: '4px' },
       shadow: { card: '0 2px 20px rgba(0,0,0,0.04)', hover: '0 10px 40px rgba(0,0,0,0.08)' },
-      heroStyle: 'gradient-elegant' as const,
+      heroStyle: 'gradient-elegant' as HeroStyle,
       pageBg: '#faf9f7',
       sectionCard: true,
       animationDuration: '0.5s',
@@ -139,7 +149,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     friendly: {
       radius: { sm: '8px', md: '12px', lg: '16px' },
       shadow: { card: '0 2px 8px rgba(0,0,0,0.06)', hover: '0 6px 20px rgba(0,0,0,0.1)' },
-      heroStyle: 'solid-warm' as const,
+      heroStyle: 'solid-warm' as HeroStyle,
       pageBg: '#ffffff',
       sectionCard: true,
       animationDuration: '0.3s',
@@ -147,7 +157,7 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     bold: {
       radius: { sm: '4px', md: '8px', lg: '12px' },
       shadow: { card: '0 4px 16px rgba(0,0,0,0.1)', hover: '0 12px 40px rgba(0,0,0,0.15)' },
-      heroStyle: 'gradient-dark' as const,
+      heroStyle: 'gradient-dark' as HeroStyle,
       pageBg: '#ffffff',
       sectionCard: true,
       animationDuration: '0.2s',
@@ -155,12 +165,12 @@ export function generateComponentStyles(options: Partial<ComponentStylesOptions>
     minimal: {
       radius: { sm: '0px', md: '0px', lg: '2px' },
       shadow: { card: 'none', hover: '0 1px 4px rgba(0,0,0,0.04)' },
-      heroStyle: 'flat' as const,
+      heroStyle: 'flat' as HeroStyle,
       pageBg: '#ffffff',
       sectionCard: false,
       animationDuration: '0.15s',
     },
-  }[personality];
+  } as Record<string, VisualParams>)[personality];
 
   // Override radius values when personality is provided
   if (o.personality) {

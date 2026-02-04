@@ -56,7 +56,7 @@ import type {
 import { LayoutIntelligenceService } from './LayoutIntelligenceService';
 import { SemanticRenderer } from './SemanticRenderer';
 import { setLayoutUsageContext } from '../ai/layoutIntelligence';
-import type { BrandDesignSystem } from '../../types/brandExtraction';
+import type { BrandDesignSystem } from '../../types/designDna';
 import type { BusinessInfo, ContentBrief, TopicalMap } from '../../types';
 import type { DesignDNA } from '../../types/designDna';
 
@@ -230,9 +230,9 @@ export class SemanticLayoutEngine {
     const business = map?.business_info;
 
     return {
-      centralEntity: business?.centralEntity || 'Brand',
-      sourceContext: business?.sourceContext || 'General business',
-      targetAudience: business?.targetAudience || 'General audience',
+      centralEntity: business?.seedKeyword || business?.projectName || 'Brand',
+      sourceContext: business?.model || 'General business',
+      targetAudience: business?.audience || 'General audience',
       industry: business?.industry || 'General',
       monetizationModel: this.inferMonetizationModel(business),
       brandPersonality: {
@@ -266,7 +266,7 @@ export class SemanticLayoutEngine {
       title: article.title,
       sections,
       totalWordCount,
-      primaryKeyword: brief?.primaryKeyword || article.title,
+      primaryKeyword: brief?.targetKeyword || article.title,
       searchIntent: this.inferSearchIntent(brief),
       contentType: this.inferContentType(brief, options.topicalMap),
       language: options.language || 'nl',
@@ -281,7 +281,7 @@ export class SemanticLayoutEngine {
       fsTargets: this.extractFSTargets(brief),
       internalLinks: [],
       competitorGaps: [],
-      relatedKeywords: brief?.relatedKeywords || [],
+      relatedKeywords: brief?.discourse_anchors || [],
     };
   }
 
@@ -293,11 +293,11 @@ export class SemanticLayoutEngine {
       designSystem: brandSystem,
       designDna,
       colorPalette: {
-        primary: designDna?.colors?.primary?.hex || brandSystem?.designDna?.colors?.primary || '#3b82f6',
-        secondary: designDna?.colors?.secondary?.hex || brandSystem?.designDna?.colors?.secondary || '#64748b',
-        accent: designDna?.colors?.accent?.hex || brandSystem?.designDna?.colors?.accent || '#f59e0b',
-        background: designDna?.colors?.background?.hex || '#ffffff',
-        text: designDna?.colors?.text?.hex || '#1f2937',
+        primary: designDna?.colors?.primary?.hex || brandSystem?.tokens?.json?.['--color-primary'] || '#3b82f6',
+        secondary: designDna?.colors?.secondary?.hex || brandSystem?.tokens?.json?.['--color-secondary'] || '#64748b',
+        accent: designDna?.colors?.accent?.hex || brandSystem?.tokens?.json?.['--color-accent'] || '#f59e0b',
+        background: designDna?.colors?.neutrals?.lightest || '#ffffff',
+        text: designDna?.colors?.neutrals?.darkest || '#1f2937',
       },
       typography: {
         headingFont: designDna?.typography?.headingFont?.family || 'Georgia',
@@ -315,7 +315,7 @@ export class SemanticLayoutEngine {
   private inferMonetizationModel(business: any): BusinessContext['monetizationModel'] {
     if (!business) return 'other';
 
-    const sc = (business.sourceContext || '').toLowerCase();
+    const sc = (business.model || '').toLowerCase();
     if (sc.includes('ecommerce') || sc.includes('shop')) return 'ecommerce';
     if (sc.includes('saas') || sc.includes('software')) return 'saas';
     if (sc.includes('agency') || sc.includes('service')) return 'agency';
@@ -341,10 +341,14 @@ export class SemanticLayoutEngine {
   ): ContentContext['contentType'] {
     if (!brief) return 'blog';
 
-    // Check if this is a pillar topic
-    if (brief.isPillar || brief.topicType === 'pillar') return 'pillar';
-    if (brief.topicType === 'cluster') return 'cluster';
-    if (brief.topicType === 'supporting') return 'supporting';
+    // Infer content type from topic_class and search intent
+    const briefAny = brief as unknown as Record<string, unknown>;
+    if (briefAny.isPillar || briefAny.topicType === 'pillar') return 'pillar';
+    if (briefAny.topicType === 'cluster') return 'cluster';
+    if (briefAny.topicType === 'supporting') return 'supporting';
+
+    // Fallback: use topic_class if available
+    if (brief.topic_class === 'monetization') return 'landing';
 
     return 'blog';
   }
@@ -356,11 +360,13 @@ export class SemanticLayoutEngine {
     const targets: SEOContext['fsTargets'] = [];
 
     for (const section of brief.structured_outline) {
-      if (section.fs_target) {
+      // A section targets a featured snippet when its format_code is 'FS'
+      if (section.format_code === 'FS') {
+        const fsFormat = brief.featured_snippet_target?.target_type?.toLowerCase() as 'paragraph' | 'list' | 'table' | undefined;
         targets.push({
           question: section.heading,
-          fsType: section.fs_format || 'paragraph',
-          sectionId: section.id || `section-${targets.length}`,
+          fsType: fsFormat || 'paragraph',
+          sectionId: section.key || `section-${targets.length}`,
           priority: 'secondary',
         });
       }

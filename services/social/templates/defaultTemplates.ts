@@ -484,7 +484,7 @@ Learn everything you need to know about {{entity}}. {{key_takeaways}}
 {{keywords}}`,
     hashtag_strategy: {
       count: 0,
-      placement: 'none',
+      placement: 'end',
       branded: [],
       niche: []
     },
@@ -513,7 +513,7 @@ Learn everything you need to know about {{entity}}. {{key_takeaways}}
 {{keywords}}`,
     hashtag_strategy: {
       count: 0,
-      placement: 'none',
+      placement: 'end',
       branded: [],
       niche: []
     },
@@ -544,7 +544,7 @@ This is a {{category}} fact for anyone interested in {{entity}}.
 {{keywords}}`,
     hashtag_strategy: {
       count: 0,
-      placement: 'none',
+      placement: 'end',
       branded: [],
       niche: []
     },
@@ -605,14 +605,16 @@ export function getDefaultTemplates(): SocialPostTemplate[] {
   return DEFAULT_TEMPLATES.map(def => ({
     id: `default-${def.platform}-${def.template_type}`,
     user_id: 'system',
-    name: def.name,
     platform: def.platform,
+    template_name: def.template_name,
     template_type: def.template_type,
-    content_template: def.template,
-    character_limit: def.characterLimit,
+    content_pattern: def.content_pattern,
+    hashtag_strategy: def.hashtag_strategy,
+    cta_templates: def.cta_templates,
+    character_limits: def.character_limits,
+    image_specs: def.image_specs,
     is_default: true,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   }));
 }
 

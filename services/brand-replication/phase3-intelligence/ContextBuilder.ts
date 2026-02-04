@@ -91,9 +91,9 @@ export class ContextBuilder {
 
     const bi = topicalMap.business_info;
     return {
-      centralEntity: bi.business_name || bi.website_url || '',
-      sourceContext: bi.business_description || '',
-      centralSearchIntent: bi.primary_goal || '',
+      centralEntity: bi.projectName || bi.domain || '',
+      sourceContext: bi.valueProp || '',
+      centralSearchIntent: bi.conversionGoal || '',
     };
   }
 
@@ -112,10 +112,10 @@ export class ContextBuilder {
 
     return {
       id: topicalMap?.id || '',
-      coreTopic: topic?.name || topicalMap?.name || '',
+      coreTopic: topic?.title || topicalMap?.name || '',
       relatedTopics,
       contentGaps,
-      targetAudience: topicalMap?.business_info?.target_audience || '',
+      targetAudience: topicalMap?.business_info?.audience || '',
     };
   }
 
@@ -135,13 +135,13 @@ export class ContextBuilder {
         if (t.id === currentTopic.id) continue;
 
         // Add siblings (same parent)
-        if (currentTopic.parent_id && t.parent_id === currentTopic.parent_id) {
-          related.push(t.name);
+        if (currentTopic.parent_topic_id && t.parent_topic_id === currentTopic.parent_topic_id) {
+          related.push(t.title);
         }
 
         // Add children if current topic is a parent
-        if (t.parent_id === currentTopic.id) {
-          related.push(t.name);
+        if (t.parent_topic_id === currentTopic.id) {
+          related.push(t.title);
         }
 
         // Limit to prevent context overflow
@@ -149,7 +149,7 @@ export class ContextBuilder {
       }
     } else {
       // No current topic, just take first few topics
-      related.push(...topicalMap.topics.slice(0, 10).map(t => t.name));
+      related.push(...topicalMap.topics.slice(0, 10).map(t => t.title));
     }
 
     return related;
@@ -163,14 +163,14 @@ export class ContextBuilder {
 
     // Extract from contextual coverage result if available
     const coverage = topicalMap?.analysis_state?.contextualCoverageResult;
-    if (coverage?.missingPredicates) {
-      gaps.push(...coverage.missingPredicates.slice(0, 5));
+    if (coverage?.gaps) {
+      gaps.push(...coverage.gaps.slice(0, 5).map(g => g.context));
     }
 
     // Extract from validation result if available
     const validation = topicalMap?.analysis_state?.validationResult;
-    if (validation?.missingTopics) {
-      gaps.push(...validation.missingTopics.slice(0, 5));
+    if (validation?.issues) {
+      gaps.push(...validation.issues.slice(0, 5).map(i => i.message));
     }
 
     return [...new Set(gaps)]; // Deduplicate

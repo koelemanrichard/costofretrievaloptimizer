@@ -407,13 +407,14 @@ export const saveFoundationPages = async (
   const supabase = useSupabase();
 
   // Prepare pages for the RPC function - cast to Json for Supabase compatibility
+  // Also sanitize schema_type to match the database CHECK constraint
   const pagesToInsert = pages.map(page => ({
     page_type: page.page_type,
     title: page.title,
     slug: page.slug,
     meta_description: page.meta_description,
     h1_template: page.h1_template,
-    schema_type: page.schema_type,
+    schema_type: normalizeSchemaType(page.schema_type, page.page_type),
     sections: page.sections as unknown as Record<string, unknown>[],
     nap_data: page.nap_data as unknown as Record<string, unknown>,
     metadata: page.metadata as unknown as Record<string, unknown>
@@ -1150,6 +1151,33 @@ async function callOpenAIForNavigation(
 // Valid page types that match the database CHECK constraint
 const VALID_PAGE_TYPES: FoundationPageType[] = ['homepage', 'about', 'contact', 'privacy', 'terms', 'author'];
 
+// Valid schema_type values that match the database CHECK constraint on foundation_pages
+const VALID_SCHEMA_TYPES = ['Organization', 'AboutPage', 'ContactPage', 'WebPage'] as const;
+type ValidSchemaType = typeof VALID_SCHEMA_TYPES[number];
+
+// Map page_type to default schema_type
+const PAGE_TYPE_TO_SCHEMA: Record<FoundationPageType, ValidSchemaType> = {
+  homepage: 'Organization',
+  about: 'AboutPage',
+  contact: 'ContactPage',
+  privacy: 'WebPage',
+  terms: 'WebPage',
+  author: 'AboutPage',
+};
+
+/**
+ * Normalize schema_type from AI response to a valid CHECK constraint value.
+ * AI may return 'WebSite', 'FAQPage', 'Service', 'LocalBusiness', 'Person', etc.
+ * We map these to the allowed values or fall back to a default based on page_type.
+ */
+const normalizeSchemaType = (rawSchemaType: string | undefined | null, pageType: FoundationPageType): ValidSchemaType => {
+  if (rawSchemaType && VALID_SCHEMA_TYPES.includes(rawSchemaType as ValidSchemaType)) {
+    return rawSchemaType as ValidSchemaType;
+  }
+  // AI returned an invalid schema type - use the default for this page type
+  return PAGE_TYPE_TO_SCHEMA[pageType] || 'WebPage';
+};
+
 /**
  * Normalize and validate page_type from AI response
  * Handles variations like "Homepage", "privacy_policy", "Privacy Policy", etc.
@@ -1213,7 +1241,7 @@ export const prepareFoundationPagesForSave = (
         slug: page.slug,
         meta_description: page.meta_description,
         h1_template: page.h1_template,
-        schema_type: page.schema_type,
+        schema_type: normalizeSchemaType(page.schema_type, validPageType),
         sections: page.sections,
         nap_data: napData,
         metadata: {}
