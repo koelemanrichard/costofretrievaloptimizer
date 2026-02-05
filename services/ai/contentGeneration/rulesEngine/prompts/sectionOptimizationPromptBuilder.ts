@@ -959,17 +959,17 @@ ${section.current_content}
 **WEAVE the definition into business context, don't isolate it:**
 - Start by connecting the topic to ${businessInfo.projectName || 'the business'}'s expertise
 - The definition should emerge naturally, not as a standalone sentence
-- WRONG: "${holistic.centralEntity} is een [definitie]. ${businessInfo.projectName || 'Wij'} biedt..." (disconnected)
-- CORRECT: "${businessInfo.projectName || 'Wij'} specialiseert zich in ${holistic.centralEntity.toLowerCase()}, de [woven definition]..."
-- ALSO CORRECT: "Voor [target audience], betekent ${holistic.centralEntity.toLowerCase()} [definition] - en ${businessInfo.projectName || 'wij'} helpt daarbij."
+- WRONG: Generic definition first, then company mention separately (disconnected)
+- CORRECT: Company expertise + topic + woven definition in ONE sentence
+- ALSO CORRECT: Target audience + topic meaning + company connection
 - The central entity "${holistic.centralEntity}" MUST still appear in the first 400 characters (Centerpiece Annotation)
 
 ### RULE 2: HUMAN READABILITY
 **Write for humans first, search engines second:**
 - Use natural sentence flow, not keyword-stuffed facts
 - Vary sentence structure (not all "X is Y" patterns)
-- Include the reader: "u", "uw", "voor u"
-- Conversational connectors allowed: "daarom", "dat betekent", "in de praktijk"
+- Include the reader (direct address: "you", "your" or equivalent in ${regionalLang})
+- Conversational connectors allowed
 - ONE clear value proposition for the reader in first paragraph
 
 ### RULE 3: COVER KEY SECTIONS (Not exhaustive list)
@@ -978,20 +978,19 @@ Article H2 topics to reference (pick 2-3 MOST IMPORTANT):
 ${h2Topics.join('\n')}
 
 - Reference only the most important topics, NOT all of them
-- NOT: "In dit artikel behandelen we [topic1], [topic2], [topic3], [topic4], [topic5]..."
-- CORRECT: "Ontdek hoe [key topic] werkt en waarom [benefit]."
+- NOT: "This article covers [topic1], [topic2], [topic3], [topic4], [topic5]..."
+- CORRECT: "Discover how [key topic] works and why [benefit]."
 - Let the article structure speak for itself
 
 ### RULE 4: TOPIC-SPECIFIC HEADING
 **BANNED GENERIC TERMS (never use these in heading):**
-- Dutch: "Introductie", "Inleiding", "Overzicht", "Een Overzicht", "Samenvatting"
-- English: "Introduction", "Overview", "An Overview", "Summary"
-- Generic patterns: "[Topic]: Een Overzicht", "[Topic]: Een Introductie"
+- Generic words: Introduction, Overview, Summary, Inleiding, Introductie, Overzicht, Samenvatting
+- Generic patterns: "[Topic]: Overview", "[Topic]: Introduction"
 
-**GOOD HEADING PATTERNS:**
-- "Wat is ${holistic.centralEntity}?" (question format)
-- "${holistic.centralEntity}: De Complete Gids" (comprehensive)
-- "Alles over ${holistic.centralEntity}" (informative)
+**GOOD HEADING PATTERNS (adapt to ${regionalLang}):**
+- Question format: "What is [Topic]?" / "Wat is [Topic]?"
+- Comprehensive: "[Topic]: The Complete Guide" / "[Topic]: De Complete Gids"
+- Informative: "Everything about [Topic]" / "Alles over [Topic]"
 
 ### RULE 5: KEEP SEMANTIC VALUE
 **Still optimize, but naturally:**
