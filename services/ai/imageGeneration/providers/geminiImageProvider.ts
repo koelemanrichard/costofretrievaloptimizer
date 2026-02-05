@@ -3,6 +3,12 @@ import { GoogleGenAI, PersonGeneration } from '@google/genai';
 import { ImagePlaceholder, BusinessInfo } from '../../../../types';
 import { ImageProvider, ImageGenerationOptions, GenerationResult, ProviderConfig } from './types';
 import { IMAGE_SPECS_BY_TYPE } from '../../../../config/imageTemplates';
+import {
+  IMAGE_TYPE_PROMPTS,
+  buildNoTextInstruction,
+  normalizeImageType
+} from '../../../../config/imageTypeRouting';
+import { ImageStyle } from '../../../../types/contextualEditor';
 
 // Imagen models - try newer first, fall back to older
 const IMAGEN_MODELS = [
@@ -185,29 +191,21 @@ async function generateWithModel(
 }
 
 /**
- * Get style description for prompt
+ * Filter description to remove terms that could trigger unwanted text generation
  */
-function getStyleDescription(style?: string): string {
-  switch (style) {
-    case 'photorealistic':
-      return 'Photorealistic, professional photography style, natural lighting';
-    case 'illustration':
-      return 'Digital illustration style, clean vector-like artwork';
-    case 'cartoon':
-      return 'Cartoon style, colorful and playful, friendly illustration';
-    case 'minimal':
-      return 'Minimalist design, simple shapes, clean and modern';
-    case 'artistic':
-      return 'Artistic style, creative and expressive, unique visual approach';
-    case 'technical':
-      return 'Technical illustration style, precise and detailed, educational';
-    default:
-      return 'Professional, clean, suitable for web publication';
+function filterDescriptionForAvoidTerms(description: string, avoidTerms: readonly string[]): string {
+  let filtered = description;
+  for (const term of avoidTerms) {
+    // Create a regex that matches the term as a whole word (case-insensitive)
+    const regex = new RegExp(`\\b${term}\\b`, 'gi');
+    filtered = filtered.replace(regex, '').replace(/\s+/g, ' ').trim();
   }
+  return filtered;
 }
 
 /**
  * Build a detailed prompt for image generation based on placeholder and context
+ * Uses the photographic-first routing configuration for optimal results
  */
 function buildImagePrompt(
   placeholder: ImagePlaceholder,
@@ -216,13 +214,28 @@ function buildImagePrompt(
 ): string {
   const parts: string[] = [];
 
-  // Start with style direction if specified
-  if (options.style) {
-    parts.push(getStyleDescription(options.style));
+  // Normalize the image type and get the mapping
+  const normalizedType = normalizeImageType(placeholder.type as ImageStyle);
+  const mapping = IMAGE_TYPE_PROMPTS[normalizedType] ?? IMAGE_TYPE_PROMPTS.scene;
+
+  // Start with tier-appropriate base instruction
+  if (mapping.tier === 'photographic') {
+    parts.push('Create a professional photograph');
+  } else if (mapping.tier === 'minimal-diagram') {
+    parts.push('Create a minimal diagram with simple geometric shapes');
   }
 
-  // Start with the placeholder description (primary visual direction)
-  parts.push(placeholder.description);
+  // Add the prompt modifiers from the routing configuration
+  parts.push(mapping.promptModifiers.join(', '));
+
+  // Filter description through avoid terms and add it
+  const filteredDescription = filterDescriptionForAvoidTerms(
+    placeholder.description,
+    mapping.avoidTerms
+  );
+  if (filteredDescription) {
+    parts.push(filteredDescription);
+  }
 
   // Add text overlay context if provided (but not as literal text in image)
   if (options.textOverlay) {
@@ -244,45 +257,15 @@ function buildImagePrompt(
     parts.push(`Industry context: ${businessInfo.industry}`);
   }
 
-  // Add style guidance based on image type
-  const typeGuidance = getTypeStyleGuidance(placeholder.type);
-  if (typeGuidance) {
-    parts.push(typeGuidance);
-  }
-
   // Add brand color hints if available
   if (businessInfo.brandKit?.colors?.primary) {
     parts.push(`Incorporate the brand color ${businessInfo.brandKit.colors.primary} subtly where appropriate.`);
   }
 
-  // Quality and style modifiers (only if no specific style set)
-  if (!options.style) {
-    parts.push('High quality, professional, clean composition, suitable for web publication.');
-  }
+  // Add the critical no-text instruction
+  parts.push(buildNoTextInstruction(normalizedType));
 
   return parts.join('. ');
-}
-
-/**
- * Get style guidance based on image type
- */
-function getTypeStyleGuidance(type: string): string | null {
-  switch (type) {
-    case 'HERO':
-      return 'Create a bold, attention-grabbing hero image with space for text overlay. Wide format, dramatic lighting.';
-    case 'SECTION':
-      return 'Create a supporting image that illustrates the concept clearly. Clean and focused.';
-    case 'INFOGRAPHIC':
-      return 'Create a visual that could serve as a base for an infographic. Clean layout, organized visual hierarchy.';
-    case 'CHART':
-      return 'Create an abstract visualization or data-themed image. Clean, modern, analytical feel.';
-    case 'DIAGRAM':
-      return 'Create a clear, explanatory visual. Simple shapes, clear relationships, educational style.';
-    case 'AUTHOR':
-      return 'Create a professional headshot-style background or avatar base. Clean, trustworthy, approachable.';
-    default:
-      return null;
-  }
 }
 
 /**
