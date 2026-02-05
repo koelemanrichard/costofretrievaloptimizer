@@ -3338,8 +3338,9 @@ export const PASS_NAMES: Record<number, string> = {
 export const TOTAL_PASSES = 10;
 
 // Passes that should exclude intro/conclusion sections
-// Passes 2-6 process body content only; Pass 7 rewrites intro/conclusion with full polished body context
-export const PASSES_EXCLUDE_INTRO_CONCLUSION = [2, 3, 4, 5, 6];
+// Passes 2-5 process body content only; Pass 7 rewrites intro/conclusion with full polished body context
+// NOTE: Pass 6 (Visual Semantics) is NOT excluded - it needs to add hero image to intro section
+export const PASSES_EXCLUDE_INTRO_CONCLUSION = [2, 3, 4, 5];
 
 // =============================================================================
 // SEMANTIC ANALYSIS TYPES (Macro/Micro Framework)
