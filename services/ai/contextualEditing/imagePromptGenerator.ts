@@ -13,10 +13,17 @@ import {
   ImageStyle,
   AspectRatio,
   PlacementSuggestion,
+  ImageTier,
 } from '../../../types/contextualEditor';
 
 import { resolvePersonalityToTokens } from '../../publishing/tokenResolver';
 import { DesignPersonalityId } from '../../../config/designTokens/personalities';
+import {
+  routeContentToImageType,
+  getPromptModifiers,
+  buildNoTextInstruction,
+  IMAGE_TYPE_PROMPTS,
+} from '../../../config/imageTypeRouting';
 
 /**
  * Build a style descriptor for the AI prompt based on design personality
@@ -56,32 +63,19 @@ function getColorKeyword(hex?: string): string {
 
 /**
  * Suggest image style based on content analysis
+ * Uses photographic-first routing - only suggests diagrams for explicitly technical content
  */
 export function suggestImageStyle(contextText: string, personalityId?: string): ImageStyle {
-  const lower = contextText.toLowerCase();
+  const { imageType } = routeContentToImageType(contextText);
+  return imageType;
+}
 
-  // How-to, process, step-by-step content -> diagram
-  if (/how to|step|process|install|guide|tutorial/i.test(lower)) {
-    return 'diagram';
-  }
-
-  // Statistics, data, comparisons -> infographic
-  if (/statistics|data|percent|%|comparison|chart|graph/i.test(lower)) {
-    return 'infographic';
-  }
-
-  // Location, office, team content -> photograph
-  if (/office|location|building|team|staff|city|region/i.test(lower)) {
-    return 'photograph';
-  }
-
-  // Conceptual content -> illustration
-  if (/concept|idea|strategy|approach|method|benefit/i.test(lower)) {
-    return 'illustration';
-  }
-
-  // Default to photograph for general content
-  return 'photograph';
+/**
+ * Get the image tier for a given style
+ */
+export function getImageTier(style: ImageStyle): ImageTier {
+  const mapping = IMAGE_TYPE_PROMPTS[style];
+  return mapping?.tier || 'photographic';
 }
 
 /**
@@ -162,6 +156,7 @@ export function determinePlacement(
  * - Adds visual value without being generic
  * - Avoids copyrighted content
  * - Is appropriate for professional/business content
+ * - Uses photographic-first routing with proper tier differentiation
  */
 async function buildImagePrompt(params: {
   contextText: string;
@@ -177,7 +172,25 @@ async function buildImagePrompt(params: {
   const vibeDescriptor = getVisualVibeDescriptor(personalityId);
   const colorHint = getColorKeyword((businessInfo as any)?.branding?.colors?.primary);
 
+  // Get routing info for the content
+  const routingInfo = routeContentToImageType(contextText);
+  const tier = getImageTier(style);
+  const promptModifiers = getPromptModifiers(style);
+  const noTextInstruction = buildNoTextInstruction(style);
+
+  // Build style-specific instructions based on tier
+  const tierInstruction = tier === 'photographic'
+    ? `Create a PHOTOGRAPH - real-world photography with no text, labels, or watermarks.`
+    : `Create a MINIMAL DIAGRAM - simple geometric shapes and lines only, no text labels or annotations.`;
+
+  const styleModifiersText = promptModifiers.join(', ');
+
   const systemPrompt = `You are an expert at creating image generation prompts for SEO content.
+
+IMAGE TYPE: ${style.toUpperCase()} (${tier} tier)
+${tierInstruction}
+
+${noTextInstruction}
 
 Your task is to create a detailed, specific prompt for generating a ${style} that:
 1. Directly relates to the content context
@@ -187,6 +200,8 @@ Your task is to create a detailed, specific prompt for generating a ${style} tha
 5. Avoids copyrighted characters, logos, or trademarked content
 6. Is appropriate for professional/business content
 
+REQUIRED STYLE MODIFIERS: ${styleModifiersText}
+
 Context from the article:
 "${contextText}"
 
@@ -195,9 +210,10 @@ Article: ${articleTitle}
 ${(businessInfo as any)?.projectName ? `Business: ${(businessInfo as any).projectName}` : ''}
 ${(businessInfo as any)?.targetMarket ? `Location: ${(businessInfo as any).targetMarket}` : ''}
 
-Generate a single, detailed prompt (50-100 words) for creating this ${style}. 
-Include keywords for composition, lighting, and "vibe": ${vibeDescriptor || 'standard professional'}.
+Generate a single, detailed prompt (50-100 words) for creating this ${style}.
+Include the required style modifiers and keywords for composition, lighting, and "vibe": ${vibeDescriptor || 'standard professional'}.
 Emphasize these tones: ${colorHint || 'balanced lighting'}.
+${tier === 'photographic' ? 'Emphasize: PHOTOGRAPH, real photography, no text visible.' : 'Emphasize: MINIMAL DIAGRAM, geometric shapes only, no labels.'}
 Do not include any explanations, just the prompt.`;
 
   // Use the user's preferred AI provider with fallback support
