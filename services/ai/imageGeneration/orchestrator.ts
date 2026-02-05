@@ -26,6 +26,43 @@ export function initImageGeneration(supabase: SupabaseClient | null) {
 }
 
 /**
+ * Ensure the Supabase client is ready for authenticated requests.
+ * This fixes the first-run race condition where the user clicks "Generate"
+ * before the Supabase SDK has finished establishing the auth state.
+ *
+ * Call this before the first image generation to warm up the auth connection.
+ * Returns true if the client is ready, false if not authenticated.
+ */
+export async function ensureClientReady(): Promise<boolean> {
+  if (!supabaseClientRef) {
+    console.warn('[ImageOrchestrator] ensureClientReady: No Supabase client available');
+    return false;
+  }
+
+  try {
+    // Make a lightweight call to verify auth is ready
+    // This forces the SDK to complete any pending auth initialization
+    const { data, error } = await supabaseClientRef.auth.getSession();
+
+    if (error) {
+      console.warn('[ImageOrchestrator] ensureClientReady: Auth check failed:', error.message);
+      return false;
+    }
+
+    if (!data.session) {
+      console.warn('[ImageOrchestrator] ensureClientReady: No active session');
+      return false;
+    }
+
+    console.log('[ImageOrchestrator] ensureClientReady: Client ready, session active');
+    return true;
+  } catch (err) {
+    console.warn('[ImageOrchestrator] ensureClientReady: Error checking auth:', err);
+    return false;
+  }
+}
+
+/**
  * Upload a blob to Supabase Storage and return a public URL
  * This provides persistent image storage without requiring Cloudinary
  */

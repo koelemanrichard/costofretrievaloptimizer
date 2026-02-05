@@ -378,10 +378,12 @@ function generateHeroImageSpec(
   const primaryEntity = entities[0] || brief.title;
   const searchIntent = brief.searchIntent || 'informational';
 
-  // Determine best image type for hero
-  const heroImageType = imageNGrams[0] || 'illustration';
+  // PHOTOGRAPHIC-FIRST: Hero image should always be a scene photograph
+  // Never use illustration/infographic/diagram for hero - AI cannot render text well
+  const heroImageType = 'scene photograph';
 
-  const description = `${heroImageType} representing ${primaryEntity} - main visual for "${brief.title}"`;
+  // Create a photographic description that AI can render well (no text elements)
+  const description = `Professional ${heroImageType} representing ${primaryEntity} in a business context - visually compelling without any text overlays`;
   const altText = generateAltText(description, entities, searchIntent);
   const fileName = generateFileName(primaryEntity, 'hero', 'featured', 'avif');
 
@@ -399,7 +401,7 @@ function generateHeroImageSpec(
       title: `${primaryEntity} visual`,
       width: HERO_IMAGE_SPECS.max_width,
       height: Math.round(HERO_IMAGE_SPECS.max_width * 0.5625), // 16:9
-      caption: `${primaryEntity} - Featured illustration`,
+      caption: `${primaryEntity} - Professional photograph`,
     }),
     figcaption_text: `${primaryEntity}: Visual representation for ${brief.title}`,
     n_gram_match: [heroImageType],
@@ -416,7 +418,8 @@ function generateSectionImageSpec(
   const sectionTopic = section.heading;
   const suggestedType = determineSectionImageType(section, imageNGrams);
 
-  const description = `${suggestedType} for ${sectionTopic} section`;
+  // PHOTOGRAPHIC-FIRST: Create descriptions that AI can render well (no text elements)
+  const description = `${suggestedType} visualizing ${sectionTopic} - photorealistic without text overlays or labels`;
   const altText = generateAltText(description, [primaryEntity, sectionTopic], 'informational');
   const fileName = generateFileName(primaryEntity, slugifySection(sectionTopic), 'section', 'avif');
 
@@ -442,24 +445,59 @@ function generateSectionImageSpec(
   };
 }
 
+/**
+ * PHOTOGRAPHIC-FIRST: Determine section image type
+ *
+ * AI image generators (DALL-E, Gemini) are poor at rendering text.
+ * This function now returns PHOTOGRAPHIC types instead of text-heavy infographics/charts.
+ *
+ * Migration from old types:
+ * - "step-by-step illustration" → "action photograph showing process"
+ * - "comparison chart" → "comparison photograph (side by side)"
+ * - "infographic" → "concept photograph"
+ * - "diagram" → "minimal flowchart" (shapes only, no labels)
+ */
 function determineSectionImageType(section: BriefSection, imageNGrams: string[]): string {
   const heading = section.heading.toLowerCase();
 
-  // Map section topics to image types
-  if (heading.includes('how') || heading.includes('step') || heading.includes('process')) {
-    return 'step-by-step illustration';
+  // PHOTOGRAPHIC-FIRST mappings (no text-heavy types)
+  if (heading.includes('how') || heading.includes('step') || heading.includes('process') || heading.includes('hoe')) {
+    return 'action photograph showing process steps';
   }
-  if (heading.includes('compare') || heading.includes('vs') || heading.includes('difference')) {
-    return 'comparison chart';
+  if (heading.includes('compare') || heading.includes('vs') || heading.includes('difference') || heading.includes('vergelijk')) {
+    return 'comparison photograph (side by side objects)';
   }
-  if (heading.includes('benefit') || heading.includes('advantage') || heading.includes('feature')) {
-    return 'infographic';
+  if (heading.includes('benefit') || heading.includes('advantage') || heading.includes('feature') || heading.includes('voordeel')) {
+    return 'concept photograph representing benefits';
   }
-  if (heading.includes('example') || heading.includes('case')) {
-    return 'screenshot';
+  if (heading.includes('example') || heading.includes('case') || heading.includes('voorbeeld')) {
+    return 'scene photograph showing real-world application';
+  }
+  if (heading.includes('product') || heading.includes('tool') || heading.includes('equipment')) {
+    return 'object photograph showing product details';
+  }
+  if (heading.includes('team') || heading.includes('expert') || heading.includes('professional')) {
+    return 'portrait photograph of professional';
   }
 
-  return imageNGrams[Math.floor(Math.random() * imageNGrams.length)] || 'diagram';
+  // Default to photographic type from imageNGrams (which are now photographic)
+  // Filter out any legacy text-heavy types that might still be in the array
+  const photographicTypes = imageNGrams.filter(type =>
+    type.includes('photograph') ||
+    type.includes('photo') ||
+    type.includes('scene') ||
+    type.includes('object') ||
+    type.includes('action') ||
+    type.includes('concept') ||
+    type.includes('portrait')
+  );
+
+  if (photographicTypes.length > 0) {
+    return photographicTypes[Math.floor(Math.random() * photographicTypes.length)];
+  }
+
+  // Fallback to generic scene photograph (never return diagram/infographic/chart)
+  return 'scene photograph representing the concept';
 }
 
 function slugifySection(heading: string): string {

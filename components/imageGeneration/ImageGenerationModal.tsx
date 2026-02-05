@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ImagePlaceholder, BrandKit, BusinessInfo, ImageGenerationProgress, HeroImageMetadata } from '../../types';
 import { DEFAULT_HERO_TEMPLATES, DEFAULT_MARKUPGO_TEMPLATE_ID } from '../../config/imageTemplates';
-import { generateImage, ImageGenerationOptions, initImageGeneration } from '../../services/ai/imageGeneration/orchestrator';
+import { generateImage, ImageGenerationOptions, initImageGeneration, ensureClientReady } from '../../services/ai/imageGeneration/orchestrator';
 import { Button } from '../ui/Button';
 import { Label } from '../ui/Label';
 import { Input } from '../ui/Input';
@@ -44,8 +44,37 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
     return getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
   }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey]);
 
+  // Track when Supabase client is ready for authenticated requests
+  // This fixes the first-run race condition where Generate fails on first click
+  const [isClientReady, setIsClientReady] = useState(false);
+
   useEffect(() => {
-    initImageGeneration(supabase);
+    if (supabase) {
+      initImageGeneration(supabase);
+
+      // Warm up the auth connection - this ensures the SDK has completed
+      // any pending auth initialization before user clicks Generate
+      let cancelled = false;
+      ensureClientReady().then(ready => {
+        if (!cancelled) {
+          setIsClientReady(ready);
+          if (!ready) {
+            // Even if not authenticated, allow generation (will use non-proxy providers)
+            // Give a small delay to ensure SDK has fully initialized
+            setTimeout(() => {
+              if (!cancelled) setIsClientReady(true);
+            }, 500);
+          }
+        }
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    } else {
+      // No Supabase client - generation can still work with direct API keys
+      setIsClientReady(true);
+    }
   }, [supabase]);
 
   // Form state
@@ -448,8 +477,11 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
               <Button variant="secondary" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleGenerate} disabled={availableProviders.length === 0}>
-                Generate Image
+              <Button
+                onClick={handleGenerate}
+                disabled={availableProviders.length === 0 || !isClientReady}
+              >
+                {!isClientReady ? 'Initializing...' : 'Generate Image'}
               </Button>
             </>
           )}
