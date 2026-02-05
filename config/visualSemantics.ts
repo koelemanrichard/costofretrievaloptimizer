@@ -404,6 +404,39 @@ export const ALT_TEXT_EXAMPLES = [
   },
 ];
 
+/**
+ * Figcaption best practices
+ * Since text is moved from images to captions
+ */
+export const FIGCAPTION_GUIDELINES = {
+  maxLength: 150,
+  structure: 'Describe what the image shows, then explain its relevance to the content',
+  examples: [
+    {
+      imageDescription: 'Scene photograph of modern office workspace',
+      goodCaption: 'Een moderne werkplek waar remote teams effectief samenwerken.',
+      badCaption: 'Afbeelding van kantoor',
+    },
+    {
+      imageDescription: 'Flowchart showing 4 connected boxes',
+      goodCaption: 'Het vier-stappen proces voor succesvolle implementatie: analyse, ontwerp, uitvoering, evaluatie.',
+      badCaption: 'Diagram',
+    },
+  ],
+};
+
+/**
+ * Mapping from old text-heavy types to new photographic types
+ */
+export const LEGACY_TYPE_MIGRATION: Record<string, string> = {
+  'infographic': 'concept',
+  'chart': 'concept',
+  'diagram': 'flowchart',
+  'illustration': 'concept',
+  'data visualization': 'concept',
+  'labeled diagram': 'flowchart',
+};
+
 // =============================================================================
 // IMAGE N-GRAM EXPECTATIONS BY SEARCH INTENT
 // What types of images rank for different query types
@@ -411,35 +444,31 @@ export const ALT_TEXT_EXAMPLES = [
 
 export const IMAGE_NGRAM_BY_INTENT: Record<string, string[]> = {
   informational: [
-    'diagrams',
-    'infographics',
-    'flowcharts',
-    'step-by-step illustrations',
-    'comparison charts',
-    'screenshots',
+    'scene photographs showing context',
+    'action photographs demonstrating process',
+    'concept photographs representing ideas',
+    'minimal flowcharts for step sequences',
+    'object photographs of relevant items',
   ],
   transactional: [
-    'product photos',
-    'multiple angles',
-    'lifestyle shots',
-    'size comparisons',
-    'unboxing images',
-    'detail shots',
+    'product photographs from multiple angles',
+    'lifestyle scene photographs',
+    'object close-up photographs',
+    'action photographs showing product in use',
+    'comparison photographs (side by side)',
   ],
   commercial: [
-    'comparison tables',
-    'feature matrices',
-    'before/after photos',
-    'testimonial images',
-    'pricing tables',
-    'demo screenshots',
+    'comparison photographs',
+    'scene photographs showing benefits',
+    'object photographs of features',
+    'action photographs of usage',
+    'concept photographs for value propositions',
   ],
   navigational: [
-    'brand logos',
-    'UI screenshots',
-    'app interfaces',
-    'location maps',
-    'team photos',
+    'scene photographs of locations',
+    'object photographs of interfaces',
+    'portrait photographs of team members',
+    'action photographs of processes',
   ],
 };
 
