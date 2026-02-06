@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Flow Diagrams - Holistic SEO Content Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#6366F1',
+                        accent: '#10B981',
+                        surface: '#1E293B',
+                        'surface-light': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .collapsible { cursor: pointer; user-select: none; }
+        .content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .content.expanded { max-height: none; }
+        .chevron { transition: transform 0.3s ease; }
+        .collapsible.active .chevron { transform: rotate(90deg); }
+        .step-number {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, #3B82F6, #6366F1);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: white;
+            flex-shrink: 0;
+        }
+        .badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 9999px; white-space: nowrap; }
+        .badge-component { background: #3B82F620; color: #60A5FA; }
+        .badge-service { background: #10B98120; color: #34D399; }
+        .badge-database { background: #F59E0B20; color: #FBBF24; }
+        .badge-ai { background: #8B5CF620; color: #A78BFA; }
+        .badge-user { background: #EC489920; color: #F472B6; }
+        .tech-detail { font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 0.75rem; }
+        .pass-card { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); border-left: 3px solid #3B82F6; }
+        .tab-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; transition: all 0.2s; }
+        .tab-btn.active { background: #3B82F6; color: white; }
+        .tab-btn:not(.active) { background: #1E293B; color: #94A3B8; }
+        .tab-btn:not(.active):hover { background: #334155; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .io-box { border-radius: 0.5rem; padding: 1rem; }
+        .io-input { background: #3B82F610; border-left: 3px solid #3B82F6; }
+        .io-process { background: #8B5CF610; border-left: 3px solid #8B5CF6; }
+        .io-output { background: #10B98110; border-left: 3px solid #10B981; }
+        .data-flow { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .data-flow .arrow { color: #6B7280; font-size: 1.25rem; }
+        pre { white-space: pre-wrap; word-break: break-word; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <header class="bg-surface border-b border-gray-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">System Flow Diagrams</h1>
+            <p class="text-gray-400 mt-1">Holistic SEO Topical Map Generator - Complete Process Documentation</p>
+        </div>
+    </header>
+
+    <nav class="bg-surface-light border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex gap-4 overflow-x-auto">
+            <a href="#topical-map" class="px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition whitespace-nowrap">1. Topical Map Creation</a>
+            <a href="#content-brief" class="px-4 py-2 rounded-lg bg-secondary/10 text-secondary hover:bg-secondary/20 transition whitespace-nowrap">2. Content Brief Creation</a>
+            <a href="#article-draft" class="px-4 py-2 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition whitespace-nowrap">3. Article Draft Generation</a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-surface rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    </div>
+                    <div><h3 class="font-semibold">Topical Map</h3><p class="text-sm text-gray-400">7 Steps</p></div>
+                </div>
+                <p class="text-sm text-gray-300 mb-3">Strategic foundation for your content. Defines your business context, SEO pillars, semantic triples, and generates interconnected topics.</p>
+                <div class="text-xs text-gray-500"><strong>Duration:</strong> 10-20 minutes | <strong>AI Calls:</strong> 4-6</div>
+            </div>
+            <div class="bg-surface rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <div><h3 class="font-semibold">Content Brief</h3><p class="text-sm text-gray-400">7 Steps</p></div>
+                </div>
+                <p class="text-sm text-gray-300 mb-3">Detailed blueprint for each article. Analyzes competitors, defines structure, images, internal links, and featured snippet targets.</p>
+                <div class="text-xs text-gray-500"><strong>Duration:</strong> 2-5 minutes | <strong>AI Calls:</strong> 2-4</div>
+            </div>
+            <div class="bg-surface rounded-xl p-6 border border-gray-700">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </div>
+                    <div><h3 class="font-semibold">Article Draft</h3><p class="text-sm text-gray-400">10 Passes</p></div>
+                </div>
+                <p class="text-sm text-gray-300 mb-3">Multi-pass AI generation system. Creates, optimizes, and audits content for semantic compliance, then generates structured data.</p>
+                <div class="text-xs text-gray-500"><strong>Duration:</strong> 5-15 minutes | <strong>AI Calls:</strong> 20-50+</div>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 1: TOPICAL MAP CREATION ==================== -->
+        <section id="topical-map" class="mb-16">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-2xl font-bold">1</div>
+                <div>
+                    <h2 class="text-3xl font-bold">Topical Map Creation</h2>
+                    <p class="text-gray-400">Build your content strategy foundation</p>
+                </div>
+            </div>
+
+            <!-- Executive Summary -->
+            <div class="bg-surface rounded-xl p-6 border border-gray-700 mb-8">
+                <h3 class="font-semibold text-lg mb-4">Executive Summary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="io-box io-input">
+                        <p class="font-medium text-blue-400 text-sm mb-2">What You Provide</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• Primary keyword (seed)</li>
+                            <li>• Business information</li>
+                            <li>• Target audience & language</li>
+                            <li>• Author profile & style</li>
+                            <li>• AI provider credentials</li>
+                        </ul>
+                    </div>
+                    <div class="io-box io-process">
+                        <p class="font-medium text-purple-400 text-sm mb-2">What We Process</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• AI-driven pillar discovery</li>
+                            <li>• Semantic triple generation</li>
+                            <li>• Competitor identification</li>
+                            <li>• Hub-spoke topic clustering</li>
+                            <li>• Publication scheduling</li>
+                        </ul>
+                    </div>
+                    <div class="io-box io-output">
+                        <p class="font-medium text-green-400 text-sm mb-2">What You Get</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• Complete topic hierarchy (20-100+ topics)</li>
+                            <li>• SEO pillars for all content</li>
+                            <li>• Knowledge graph (EAVs)</li>
+                            <li>• Competitor benchmark list</li>
+                            <li>• Publication calendar</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <!-- STEP 1.1: Project & Map Initialization -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">1</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Project & Map Initialization</h3>
+                                <span class="badge badge-component">UI Component</span>
+                                <span class="badge badge-database">Database</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Create a new project container and initialize an empty topical map</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'step1-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'step1-technical')">Technical View</button>
+                        </div>
+
+                        <div id="step1-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Your Input</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Action:</strong> Click "Create New Map" button</li>
+                                            <li>• <strong>Optional:</strong> Select existing project or create new one</li>
+                                            <li>• <strong>Optional:</strong> Name your topical map</li>
+                                        </ul>
+                                    </div>
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">What We Handle</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• Create your workspace (project container)</li>
+                                            <li>• Initialize empty map structure</li>
+                                            <li>• Set up wizard navigation</li>
+                                            <li>• Prepare database records</li>
+                                        </ul>
+                                    </div>
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">What You See</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Screen:</strong> Business Info wizard opens</li>
+                                            <li>• <strong>Progress:</strong> Step 1 of 6 indicator</li>
+                                            <li>• <strong>Data:</strong> Empty form ready for your input</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="step1-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Services & Components</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3 space-y-1">
+                                            <p><span class="text-blue-400">UI Components:</span> App.tsx, SetupWizardLayout.tsx, MapSelectionScreen.tsx</p>
+                                            <p><span class="text-green-400">State Management:</span> state/appState.ts (React Context + useReducer)</p>
+                                            <p><span class="text-yellow-400">Database Client:</span> Supabase JS Client v2</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Input → Processing → Output</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <p class="text-gray-400 mb-2">// User clicks "Create New Map"</p>
+                                            <p><span class="text-blue-400">INPUT:</span> { userId, projectId?, mapName? }</p>
+                                            <p class="mt-2"><span class="text-purple-400">PROCESS:</span></p>
+                                            <pre class="text-gray-300 ml-4">1. supabase.from('topical_maps').insert({
+   user_id, project_id, name,
+   business_info: {}, pillars: {}, eavs: [],
+   status: 'draft', created_at: now()
+})
+2. dispatch({ type: 'SET_ACTIVE_MAP', payload: mapId })
+3. router.navigate('/setup/business-info')</pre>
+                                            <p class="mt-2"><span class="text-green-400">OUTPUT:</span> New map record with UUID, wizard state initialized</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Database Schema</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">TABLE: topical_maps
+├── id: UUID (primary key)
+├── user_id: UUID (foreign key → auth.users)
+├── project_id: UUID (foreign key → projects)
+├── name: TEXT
+├── business_info: JSONB (empty initially)
+├── pillars: JSONB (empty initially)
+├── eavs: JSONB[] (empty array)
+├── competitors: TEXT[] (empty array)
+├── status: ENUM('draft', 'active', 'archived')
+└── created_at, updated_at: TIMESTAMPTZ</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1.2: Business Info Collection -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">2</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Business Info Collection</h3>
+                                <span class="badge badge-user">User Input</span>
+                                <span class="badge badge-database">Database</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Gather your business context, target audience, language, and author profile</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'step2-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'step2-technical')">Technical View</button>
+                        </div>
+
+                        <div id="step2-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Information You Provide</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <p class="text-xs text-gray-400 uppercase mb-2">Strategic Context</p>
+                                                <ul class="text-sm text-gray-300 space-y-1">
+                                                    <li>• <strong>Seed Keyword:</strong> Your main topic (e.g., "industrial robotics")</li>
+                                                    <li>• <strong>Industry:</strong> Your business vertical (e.g., "Manufacturing")</li>
+                                                    <li>• <strong>Value Proposition:</strong> What makes you unique</li>
+                                                    <li>• <strong>Target Audience:</strong> Who you're writing for</li>
+                                                    <li>• <strong>Language:</strong> Content language (en, nl, de, etc.)</li>
+                                                    <li>• <strong>Target Market:</strong> Geographic region</li>
+                                                    <li>• <strong>Website Type:</strong> E-commerce, SaaS, Blog, News, etc.</li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs text-gray-400 uppercase mb-2">Author Profile</p>
+                                                <ul class="text-sm text-gray-300 space-y-1">
+                                                    <li>• <strong>Credentials:</strong> Your expertise/qualifications</li>
+                                                    <li>• <strong>Bio:</strong> Short author biography</li>
+                                                    <li>• <strong>Writing Style:</strong> INSTRUCTIONAL, ACADEMIC, DIRECT, or PERSUASIVE</li>
+                                                    <li>• <strong>Words to Avoid:</strong> Custom style rules</li>
+                                                </ul>
+                                                <p class="text-xs text-gray-400 uppercase mb-2 mt-3">AI Configuration</p>
+                                                <ul class="text-sm text-gray-300 space-y-1">
+                                                    <li>• <strong>AI Provider:</strong> Gemini, OpenAI, Anthropic, etc.</li>
+                                                    <li>• <strong>Model:</strong> Specific model version</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">What We Handle</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Validation:</strong> Ensure required fields are complete</li>
+                                            <li>• <strong>Normalization:</strong> Standardize language codes, industry categories</li>
+                                            <li>• <strong>Storage:</strong> Securely save to database</li>
+                                            <li>• <strong>Preparation:</strong> Format data for AI consumption in next steps</li>
+                                        </ul>
+                                    </div>
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">What You Get</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Confirmation:</strong> Business info saved successfully</li>
+                                            <li>• <strong>Navigation:</strong> Proceed to SEO Pillars wizard</li>
+                                            <li>• <strong>Foundation:</strong> All future AI calls will use this context</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                        <p class="text-sm text-blue-300"><strong>Why This Matters:</strong> This information shapes ALL content generated. The seed keyword determines your topical authority focus. The language/region ensures culturally appropriate content. The author profile ensures consistent voice across all articles.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="step2-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Services & Components</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3 space-y-1">
+                                            <p><span class="text-blue-400">UI Components:</span> BusinessInfoPage.tsx, BusinessInfoForm.tsx</p>
+                                            <p><span class="text-green-400">Form Library:</span> React Hook Form with Zod validation</p>
+                                            <p><span class="text-yellow-400">State Action:</span> dispatch({ type: 'UPDATE_MAP_DATA', payload: { business_info } })</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Data Structure: BusinessInfo</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">interface BusinessInfo {
+  // Strategic Context
+  seedKeyword: string;           // Primary topic focus
+  industry: string;              // Business vertical
+  valueProp: string;             // Unique value proposition
+  audience: string;              // Target audience description
+  language: 'en' | 'nl' | 'de' | 'fr' | 'es' | ...;
+  targetMarket: string;          // Geographic region
+  websiteType: 'ecommerce' | 'saas' | 'blog' | 'news' | 'local' | ...;
+
+  // Author Profile
+  authorProfile: {
+    credentials: string;         // Expert qualifications
+    bio: string;                 // Short biography
+    stylometry: 'INSTRUCTIONAL' | 'ACADEMIC' | 'DIRECT' | 'PERSUASIVE';
+    customStylometryRules: string[];  // Words/phrases to avoid
+  };
+
+  // AI Configuration
+  aiProvider: 'gemini' | 'openai' | 'anthropic' | 'perplexity' | 'openrouter';
+  aiModel: string;               // e.g., 'gemini-1.5-pro', 'gpt-4-turbo'
+}</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Database Operation</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Verified update with read-back confirmation
+await verifiedUpdate('topical_maps', mapId, {
+  business_info: businessInfoData,
+  updated_at: new Date().toISOString()
+});
+
+// verifiedUpdate performs:
+// 1. UPDATE topical_maps SET business_info = $1 WHERE id = $2
+// 2. SELECT business_info FROM topical_maps WHERE id = $2
+// 3. Deep equality check between sent and received
+// 4. Throws if mismatch (data integrity guarantee)</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1.3: SEO Pillars Discovery -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">3</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">SEO Pillars Discovery</h3>
+                                <span class="badge badge-ai">AI-Assisted</span>
+                                <span class="badge badge-user">User Selection</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Define your Central Entity, Source Context, and Central Search Intent (4-part wizard)</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'step3-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'step3-technical')">Technical View</button>
+                        </div>
+
+                        <div id="step3-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+
+                                <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-lg p-4 mb-4">
+                                    <p class="text-sm text-gray-200"><strong>The Holistic SEO Framework:</strong> These three pillars form the foundation of all your content. They ensure every article you create serves a unified purpose and builds topical authority consistently.</p>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <!-- Sub-step 3a -->
+                                    <div class="border border-gray-700 rounded-lg p-4">
+                                        <p class="font-medium text-blue-400 mb-2">Step 3a: Central Entity Selection</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div class="io-box io-input">
+                                                <p class="text-xs text-blue-400 mb-1">Your Input</p>
+                                                <p class="text-sm text-gray-300">Review AI-suggested entities based on your seed keyword and select the one that best represents your expertise.</p>
+                                            </div>
+                                            <div class="io-box io-process">
+                                                <p class="text-xs text-purple-400 mb-1">AI Processing</p>
+                                                <p class="text-sm text-gray-300">AI analyzes your business info to suggest 3-5 candidate entities with confidence scores and reasoning.</p>
+                                            </div>
+                                            <div class="io-box io-output">
+                                                <p class="text-xs text-green-400 mb-1">Your Output</p>
+                                                <p class="text-sm text-gray-300">Selected Central Entity (e.g., "Industrial Robotics") that will appear in ALL content.</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-gray-900/50 rounded p-2 mt-3 text-xs text-gray-400">
+                                            <strong>Example:</strong> For seed keyword "warehouse automation", AI might suggest: "Warehouse Automation Systems" (85% confidence), "Logistics Robotics" (72%), "Automated Fulfillment" (68%)
+                                        </div>
+                                    </div>
+
+                                    <!-- Sub-step 3b -->
+                                    <div class="border border-gray-700 rounded-lg p-4">
+                                        <p class="font-medium text-purple-400 mb-2">Step 3b: Source Context Selection</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div class="io-box io-input">
+                                                <p class="text-xs text-blue-400 mb-1">Your Input</p>
+                                                <p class="text-sm text-gray-300">Select who you are and how you monetize from AI suggestions.</p>
+                                            </div>
+                                            <div class="io-box io-process">
+                                                <p class="text-xs text-purple-400 mb-1">AI Processing</p>
+                                                <p class="text-sm text-gray-300">AI considers your entity + website type to suggest appropriate business contexts.</p>
+                                            </div>
+                                            <div class="io-box io-output">
+                                                <p class="text-xs text-green-400 mb-1">Your Output</p>
+                                                <p class="text-sm text-gray-300">Source Context (e.g., "Enterprise Solutions Provider") that shapes attribute priorities.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sub-step 3c -->
+                                    <div class="border border-gray-700 rounded-lg p-4">
+                                        <p class="font-medium text-green-400 mb-2">Step 3c: Central Search Intent Selection</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div class="io-box io-input">
+                                                <p class="text-xs text-blue-400 mb-1">Your Input</p>
+                                                <p class="text-sm text-gray-300">Select the unified action/goal your content helps users achieve.</p>
+                                            </div>
+                                            <div class="io-box io-process">
+                                                <p class="text-xs text-purple-400 mb-1">AI Processing</p>
+                                                <p class="text-sm text-gray-300">AI generates intent options based on entity + context combination.</p>
+                                            </div>
+                                            <div class="io-box io-output">
+                                                <p class="text-xs text-green-400 mb-1">Your Output</p>
+                                                <p class="text-sm text-gray-300">Central Search Intent (e.g., "Optimize warehouse operations") used in all content predicates.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Final output summary -->
+                                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                                        <p class="font-medium text-green-400 mb-2">Final Output: Your SEO Pillars</p>
+                                        <div class="grid grid-cols-3 gap-3 text-sm">
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-blue-400 text-xs">Central Entity</p>
+                                                <p class="text-gray-200">"Warehouse Automation Systems"</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 text-xs">Source Context</p>
+                                                <p class="text-gray-200">"Enterprise Solutions Provider"</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-green-400 text-xs">Central Search Intent</p>
+                                                <p class="text-gray-200">"Optimize warehouse operations"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="step3-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Services & Components</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3 space-y-1">
+                                            <p><span class="text-blue-400">UI Component:</span> PillarDefinitionWizard.tsx (4-step sub-wizard)</p>
+                                            <p><span class="text-green-400">AI Service:</span> services/ai/mapGeneration.ts</p>
+                                            <p><span class="text-purple-400">AI Functions:</span></p>
+                                            <ul class="ml-4">
+                                                <li>• suggestCentralEntityCandidates(businessInfo) → CandidateEntity[]</li>
+                                                <li>• suggestSourceContextOptions(businessInfo, entity) → SourceContextOption[]</li>
+                                                <li>• suggestCentralSearchIntent(businessInfo, entity, context) → IntentOption[]</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">AI Provider Dispatch</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Provider-agnostic dispatch pattern
+const candidates = await dispatchToProvider(businessInfo, {
+  gemini: () => geminiService.suggestCentralEntityCandidates(businessInfo),
+  openai: () => openAiService.suggestCentralEntityCandidates(businessInfo),
+  anthropic: () => anthropicService.suggestCentralEntityCandidates(businessInfo),
+  perplexity: () => perplexityService.suggestCentralEntityCandidates(businessInfo),
+  openrouter: () => openRouterService.suggestCentralEntityCandidates(businessInfo)
+});
+
+// Response structure
+interface CandidateEntity {
+  entity: string;           // e.g., "Warehouse Automation Systems"
+  reasoning: string;        // Why this entity fits
+  confidence: number;       // 0-100 score
+  relatedConcepts: string[]; // Supporting concepts
+}</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Data Structure: SEOPillars</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">interface SEOPillars {
+  centralEntity: string;        // Main entity site is about
+  sourceContext: string;        // Who you are / monetization
+  centralSearchIntent: string;  // Unified user goal
+
+  // Metadata from selection
+  entityConfidence: number;
+  entityReasoning: string;
+  contextReasoning: string;
+  intentReasoning: string;
+}
+
+// Stored in: topical_maps.pillars (JSONB)</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Prompt Template (Central Entity)</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3 text-xs">
+                                            <pre class="text-gray-300">SUGGEST_CENTRAL_ENTITY_PROMPT = `
+You are an SEO strategist using the Holistic SEO framework.
+
+Given this business context:
+- Seed Keyword: {seedKeyword}
+- Industry: {industry}
+- Value Proposition: {valueProp}
+- Website Type: {websiteType}
+
+Suggest 3-5 Central Entity candidates.
+A Central Entity is the single main concept the entire website
+should be known for. It will appear in:
+- Site-wide boilerplate
+- Navigation menus
+- Every piece of content
+
+Return JSON: { candidates: [{ entity, reasoning, confidence }] }
+`</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1.4: Semantic Triples (EAVs) Discovery -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">4</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Semantic Triples (EAVs) Discovery</h3>
+                                <span class="badge badge-ai">AI-Generated</span>
+                                <span class="badge badge-service">Knowledge Graph</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Generate Entity-Attribute-Value triples that form your knowledge graph</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'step4-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'step4-technical')">Technical View</button>
+                        </div>
+
+                        <div id="step4-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+
+                                <div class="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                                    <p class="text-sm text-gray-200"><strong>What are EAVs?</strong> Entity-Attribute-Value triples are facts about your topic. Example: "Robot (Entity) → hasCapability (Attribute) → Autonomous Navigation (Value)". These facts form a knowledge graph that ensures your content is factually consistent and semantically rich.</p>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Your Input</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Review:</strong> AI-generated semantic triples</li>
+                                            <li>• <strong>Expand:</strong> Click "Expand +15/50/100" for more EAVs</li>
+                                            <li>• <strong>Mark:</strong> Toggle star on important EAVs for Knowledge Panel eligibility</li>
+                                            <li>• <strong>Optional:</strong> Add custom EAVs manually</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">What We Handle</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>AI Generation:</strong> Create initial 15-30 semantic triples</li>
+                                            <li>• <strong>Classification:</strong> Categorize each as UNIQUE, ROOT, RARE, or COMMON</li>
+                                            <li>• <strong>Enrichment:</strong> Add synonyms, hypernyms for semantic expansion</li>
+                                            <li>• <strong>Scoring:</strong> Calculate completeness score and distribution</li>
+                                        </ul>
+                                        <div class="grid grid-cols-4 gap-2 mt-3">
+                                            <div class="bg-blue-500/10 rounded p-2 text-center">
+                                                <p class="text-xs text-blue-400 font-medium">UNIQUE</p>
+                                                <p class="text-xs text-gray-500">Definitive features only your entity has</p>
+                                            </div>
+                                            <div class="bg-green-500/10 rounded p-2 text-center">
+                                                <p class="text-xs text-green-400 font-medium">ROOT</p>
+                                                <p class="text-xs text-gray-500">Essential definitions everyone needs</p>
+                                            </div>
+                                            <div class="bg-yellow-500/10 rounded p-2 text-center">
+                                                <p class="text-xs text-yellow-400 font-medium">RARE</p>
+                                                <p class="text-xs text-gray-500">Specific details proving expertise</p>
+                                            </div>
+                                            <div class="bg-gray-500/10 rounded p-2 text-center">
+                                                <p class="text-xs text-gray-400 font-medium">COMMON</p>
+                                                <p class="text-xs text-gray-500">General attributes many share</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">What You Get</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Knowledge Graph:</strong> 15-100+ semantic triples about your topic</li>
+                                            <li>• <strong>Completeness Score:</strong> Percentage showing EAV coverage</li>
+                                            <li>• <strong>Distribution Chart:</strong> Visual breakdown by category</li>
+                                            <li>• <strong>KP Candidates:</strong> Marked facts for Google Knowledge Panel</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="bg-gray-900/50 rounded-lg p-3">
+                                        <p class="text-sm text-gray-200 mb-2"><strong>Example EAVs for "Warehouse Automation":</strong></p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                                            <div class="bg-blue-500/10 rounded p-2">
+                                                <span class="text-blue-400">UNIQUE:</span> Warehouse Robot → inventedBy → Amazon Robotics (2012)
+                                            </div>
+                                            <div class="bg-green-500/10 rounded p-2">
+                                                <span class="text-green-400">ROOT:</span> Warehouse Automation → isA → Logistics Technology
+                                            </div>
+                                            <div class="bg-yellow-500/10 rounded p-2">
+                                                <span class="text-yellow-400">RARE:</span> AMR → maxPayload → 1500kg
+                                            </div>
+                                            <div class="bg-gray-500/10 rounded p-2">
+                                                <span class="text-gray-400">COMMON:</span> Automation → reduces → Manual Labor
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="step4-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Services & Components</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3 space-y-1">
+                                            <p><span class="text-blue-400">UI Component:</span> EavDiscoveryWizard.tsx, EavCompletenessCard.tsx</p>
+                                            <p><span class="text-green-400">AI Services:</span></p>
+                                            <ul class="ml-4">
+                                                <li>• services/ai/eavService.ts - Industry predicates, auto-classification</li>
+                                                <li>• services/ai/mapGeneration.ts - discoverCoreSemanticTriples()</li>
+                                                <li>• services/ai/eavClassifier.ts - 70+ predicate patterns</li>
+                                            </ul>
+                                            <p><span class="text-yellow-400">Knowledge Graph:</span> lib/knowledgeGraph.ts</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Data Structure: SemanticTriple</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">interface SemanticTriple {
+  id: string;                    // UUID
+
+  subject: {
+    label: string;               // "Warehouse Robot"
+    type: string;                // "Thing", "Organization", "Product"
+    wikidata_id?: string;        // "Q11012" (optional Wikidata link)
+  };
+
+  predicate: {
+    relation: string;            // "hasCapability", "isA", "usedFor"
+    category: 'UNIQUE' | 'ROOT' | 'RARE' | 'COMMON';
+    classification: 'TYPE' | 'COMPONENT' | 'BENEFIT' | 'RISK' |
+                   'PROCESS' | 'SPECIFICATION' | 'RELATIONSHIP';
+  };
+
+  object: {
+    value: string;               // "Autonomous Navigation"
+    type: 'string' | 'number' | 'boolean' | 'date' | 'entity';
+    unit?: string;               // "kg", "meters", etc.
+  };
+
+  lexical: {
+    synonyms: string[];          // Alternative terms
+    hypernyms: string[];         // Parent concepts
+    hyponyms: string[];          // Child concepts
+  };
+
+  kpMetadata: {
+    isKPEligible: boolean;       // Knowledge Panel candidate
+    confidence: number;          // 0-100
+    source?: string;             // Where fact came from
+  };
+}</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">AI Generation Flow</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Initial generation
+const eavs = await discoverCoreSemanticTriples({
+  businessInfo,
+  pillars,
+  count: 30  // Initial batch
+});
+
+// Expansion (user clicks "Expand +50")
+const moreEavs = await expandSemanticTriples({
+  existingEavs: eavs,
+  businessInfo,
+  pillars,
+  count: 50,
+  focus: 'RARE'  // Fill gaps in underrepresented categories
+});
+
+// Auto-classification
+const classified = await eavClassifier.classifyBatch(eavs, {
+  industry: businessInfo.industry,
+  patterns: PREDICATE_PATTERNS  // 70+ patterns
+});</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Database Storage</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Stored as JSONB array in topical_maps
+UPDATE topical_maps
+SET eavs = $1::jsonb  -- Array of SemanticTriple objects
+WHERE id = $2;
+
+// Indexed for fast querying
+CREATE INDEX idx_eavs_category ON topical_maps
+USING gin ((eavs -> 'predicate' -> 'category'));</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Continue with Steps 5, 6, 7... -->
+                <!-- STEP 1.5: Competitor Refinement -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">5</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Competitor Refinement</h3>
+                                <span class="badge badge-service">SERP API</span>
+                                <span class="badge badge-ai">AI Fallback</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Discover and select competitors for benchmarking</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'step5-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'step5-technical')">Technical View</button>
+                        </div>
+
+                        <div id="step5-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Your Input</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Review:</strong> Discovered competitor list</li>
+                                            <li>• <strong>Select/Deselect:</strong> Choose which competitors to benchmark</li>
+                                            <li>• <strong>Add Manual:</strong> Enter competitor URLs you know</li>
+                                        </ul>
+                                    </div>
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">What We Handle</p>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-green-400 mb-1">With DataForSEO API</p>
+                                                <ul class="text-xs text-gray-400 space-y-0.5">
+                                                    <li>• Real SERP queries for your entity</li>
+                                                    <li>• Top 20 ranking sites extracted</li>
+                                                    <li>• Publishing sites filtered (Medium, LinkedIn)</li>
+                                                    <li>• Ranked by topical relevance</li>
+                                                </ul>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-purple-400 mb-1">Without API (Perplexity Fallback)</p>
+                                                <ul class="text-xs text-gray-400 space-y-0.5">
+                                                    <li>• AI-generated competitor suggestions</li>
+                                                    <li>• Based on industry + entity analysis</li>
+                                                    <li>• Labeled as "AI-suggested"</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">What You Get</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Competitor List:</strong> 5-15 URLs for analysis</li>
+                                            <li>• <strong>Benchmarks:</strong> These sites inform word counts, headings, images</li>
+                                            <li>• <strong>Gap Analysis:</strong> Content they cover that you should too</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="step5-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Services & Components</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <p><span class="text-blue-400">UI:</span> CompetitorRefinementWizard.tsx</p>
+                                            <p><span class="text-green-400">SERP Service:</span> services/serpApiService.ts (DataForSEO via Supabase edge proxy)</p>
+                                            <p><span class="text-purple-400">Fallback:</span> services/perplexityService.ts</p>
+                                            <p><span class="text-yellow-400">Database:</span> topical_maps.competitors (TEXT[])</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">SERP Query Flow</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Build localized query
+const query = buildLocalizedQuery({
+  entity: pillars.centralEntity,
+  language: businessInfo.language,
+  market: businessInfo.targetMarket
+});
+
+// Fetch via Supabase edge function (avoids CORS, hides API key)
+const response = await supabase.functions.invoke('serp-proxy', {
+  body: { query, location: market, language }
+});
+
+// Filter and rank results
+const competitors = response.organic_results
+  .filter(r => !EXCLUDED_DOMAINS.includes(getDomain(r.url)))
+  .slice(0, 20)
+  .map(r => ({ url: r.url, title: r.title, position: r.position }));</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1.6: Blueprint Configuration -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">6</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Blueprint Configuration</h3>
+                                <span class="badge badge-user">Optional</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Configure foundation pages and business NAP data</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="io-box io-input">
+                                    <p class="font-medium text-sm text-blue-400 mb-2">Your Input (Optional)</p>
+                                    <ul class="text-sm text-gray-300 space-y-1">
+                                        <li>• Foundation pages to generate</li>
+                                        <li>• NAP: Name, Address, Phone</li>
+                                        <li>• Service areas, business hours</li>
+                                    </ul>
+                                </div>
+                                <div class="io-box io-process">
+                                    <p class="font-medium text-sm text-purple-400 mb-2">Default If Skipped</p>
+                                    <ul class="text-sm text-gray-300 space-y-1">
+                                        <li>• Homepage</li>
+                                        <li>• About</li>
+                                        <li>• Contact</li>
+                                        <li>• Privacy Policy</li>
+                                        <li>• Terms of Service</li>
+                                    </ul>
+                                </div>
+                                <div class="io-box io-output">
+                                    <p class="font-medium text-sm text-green-400 mb-2">What You Get</p>
+                                    <ul class="text-sm text-gray-300 space-y-1">
+                                        <li>• Foundation page templates</li>
+                                        <li>• NAP consistency across site</li>
+                                        <li>• Local SEO signals</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1.7: Topical Map Generation -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number">7</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Topical Map Generation</h3>
+                                <span class="badge badge-ai">AI-Generated</span>
+                                <span class="badge badge-database">Bulk Insert</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">AI generates your complete topic structure with hub-spoke architecture</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'step7-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'step7-technical')">Technical View</button>
+                        </div>
+
+                        <div id="step7-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Your Input</p>
+                                        <p class="text-sm text-gray-300">Click "Generate Map" - everything else is automatic based on previous steps.</p>
+                                    </div>
+
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">What We Handle (This is the big one!)</p>
+                                        <div class="space-y-3">
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400 uppercase">Step 7a: Persist Wizard Data</p>
+                                                <p class="text-sm text-gray-300">Save all your inputs to database with verification</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400 uppercase">Step 7b: AI Topic Generation</p>
+                                                <p class="text-sm text-gray-300">AI creates Core Topics (pillars) and Outer Topics (supporting content) based on your EAVs and pillars</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400 uppercase">Step 7c: Hub-Spoke Assignment</p>
+                                                <p class="text-sm text-gray-300">Organize topics into clusters. Website type determines ratios:</p>
+                                                <div class="grid grid-cols-4 gap-2 mt-2 text-xs">
+                                                    <span class="bg-gray-800 rounded px-2 py-1">E-commerce: 3-10/hub</span>
+                                                    <span class="bg-gray-800 rounded px-2 py-1">SaaS: 5-12/hub</span>
+                                                    <span class="bg-gray-800 rounded px-2 py-1">Blog: 7-15/hub</span>
+                                                    <span class="bg-gray-800 rounded px-2 py-1">News: 5-10/hub</span>
+                                                </div>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400 uppercase">Step 7d: Metadata Enrichment</p>
+                                                <p class="text-sm text-gray-300">Each topic gets: slug, cluster_role, canonical_query, query_network, publication_date, freshness type</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400 uppercase">Step 7e: Database Insertion</p>
+                                                <p class="text-sm text-gray-300">Bulk insert all topics with read-back verification</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">What You Get</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>20-100+ Topics:</strong> Complete content roadmap</li>
+                                            <li>• <strong>Pillar Pages:</strong> Core topics that anchor clusters (3-7 typically)</li>
+                                            <li>• <strong>Cluster Content:</strong> Supporting articles linked to pillars</li>
+                                            <li>• <strong>Publication Calendar:</strong> 3-day spacing for optimal crawling</li>
+                                            <li>• <strong>Internal Linking Map:</strong> How topics connect</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                                        <p class="text-sm text-green-300"><strong>Result:</strong> You now have a complete content strategy! Navigate to the dashboard to see your topics, generate briefs, and start creating content.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="step7-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Services & Components</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <p><span class="text-blue-400">Hook:</span> useMapGeneration.ts → generateMapWithBlueprint()</p>
+                                            <p><span class="text-green-400">AI Service:</span> services/ai/mapGeneration.ts → generateInitialTopicalMap()</p>
+                                            <p><span class="text-purple-400">Clustering:</span> assignClusterRoles(coreTopics, outerTopics, websiteType)</p>
+                                            <p><span class="text-yellow-400">Database:</span> verifiedBulkInsert() to topics table</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Topic Data Structure</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">interface EnrichedTopic {
+  id: string;                      // UUID
+  map_id: string;                  // Parent map
+  parent_topic_id?: string;        // Hub topic (for spokes)
+
+  // Content
+  title: string;                   // "How to Implement AMR Systems"
+  slug: string;                    // "how-to-implement-amr-systems"
+  description: string;             // SEO meta description
+
+  // Classification
+  type: 'core' | 'outer';
+  cluster_role: 'pillar' | 'cluster_content';
+  topic_class: 'monetization' | 'informational';
+
+  // SEO Metadata
+  canonical_query: string;         // Primary keyword
+  query_network: string[];         // Related queries
+  query_type: 'Definitional' | 'Comparative' | 'Process' | ...;
+
+  // Scheduling
+  planned_publication_date: string; // 3-day spacing
+  freshness: 'EVERGREEN' | 'STANDARD' | 'FREQUENT';
+
+  // Structure
+  attribute_focus: string;         // Which EAV this topic covers
+  blueprint: TopicBlueprint;       // Structural guidance
+}</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Bulk Insert with Verification</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Verified bulk insert ensures data integrity
+const insertedIds = await verifiedBulkInsert('topics', topics, {
+  returnFields: ['id', 'title', 'slug'],
+  chunkSize: 50,  // Insert in batches
+  onProgress: (inserted, total) => updateProgress(inserted / total)
+});
+
+// verifiedBulkInsert performs:
+// 1. INSERT INTO topics ... RETURNING id
+// 2. SELECT * FROM topics WHERE id IN (...)
+// 3. Compare sent vs received for each record
+// 4. Retry failed inserts up to 3 times</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion Card -->
+                <div class="bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl p-6 border border-primary/30">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <h3 class="font-semibold text-green-400 text-lg">Topical Map Complete!</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-medium text-sm text-gray-200 mb-2">Data Created</p>
+                            <ul class="text-sm text-gray-400 space-y-1">
+                                <li>✓ Business context & SEO pillars</li>
+                                <li>✓ Knowledge graph (15-100+ EAVs)</li>
+                                <li>✓ Competitor benchmark list</li>
+                                <li>✓ 20-100+ organized topics</li>
+                                <li>✓ Publication calendar</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="font-medium text-sm text-gray-200 mb-2">What You Can Do Now</p>
+                            <ul class="text-sm text-gray-400 space-y-1">
+                                <li>→ View topics in dashboard</li>
+                                <li>→ Generate content briefs</li>
+                                <li>→ Run semantic distance analysis</li>
+                                <li>→ Find cannibalization risks</li>
+                                <li>→ Identify linking opportunities</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 2: CONTENT BRIEF CREATION ==================== -->
+        <section id="content-brief" class="mb-16">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary to-purple-600 flex items-center justify-center text-2xl font-bold">2</div>
+                <div>
+                    <h2 class="text-3xl font-bold">Content Brief Creation</h2>
+                    <p class="text-gray-400">Build detailed blueprints for each article</p>
+                </div>
+            </div>
+
+            <!-- Executive Summary -->
+            <div class="bg-surface rounded-xl p-6 border border-gray-700 mb-8">
+                <h3 class="font-semibold text-lg mb-4">Executive Summary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="io-box io-input">
+                        <p class="font-medium text-blue-400 text-sm mb-2">What You Provide</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• Select a topic from your map</li>
+                            <li>• Confirm/override response code</li>
+                            <li>• Optional: AI provider override</li>
+                        </ul>
+                    </div>
+                    <div class="io-box io-process">
+                        <p class="font-medium text-purple-400 text-sm mb-2">What We Process</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• SERP analysis (optional)</li>
+                            <li>• Competitor content extraction</li>
+                            <li>• AI brief generation</li>
+                            <li>• Visual semantics planning</li>
+                            <li>• Internal link mapping</li>
+                        </ul>
+                    </div>
+                    <div class="io-box io-output">
+                        <p class="font-medium text-green-400 text-sm mb-2">What You Get</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• Complete article structure (headings)</li>
+                            <li>• Target word count & benchmarks</li>
+                            <li>• Image plan with alt text</li>
+                            <li>• Featured snippet targets</li>
+                            <li>• Internal linking strategy</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <!-- STEP 2.1: Response Code Selection -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">1</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Response Code Selection</h3>
+                                <span class="badge badge-ai">AI Suggests</span>
+                                <span class="badge badge-user">User Confirms</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">AI analyzes the topic and suggests the optimal content format</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'brief1-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'brief1-technical')">Technical View</button>
+                        </div>
+
+                        <div id="brief1-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Your Input</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>Action:</strong> Click "Generate Brief" on a topic card</li>
+                                            <li>• <strong>Review:</strong> AI-suggested response code</li>
+                                            <li>• <strong>Optional:</strong> Override with different format</li>
+                                        </ul>
+                                    </div>
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">Response Codes Explained</p>
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">DEFINITION</p>
+                                                <p class="text-gray-500">"What is X?" articles</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">PROCESS</p>
+                                                <p class="text-gray-500">"How to" guides</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">COMPARISON</p>
+                                                <p class="text-gray-500">"X vs Y" articles</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">LIST</p>
+                                                <p class="text-gray-500">"Top 10" listicles</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">INFORMATIONAL</p>
+                                                <p class="text-gray-500">General knowledge</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">PRODUCT_SERVICE</p>
+                                                <p class="text-gray-500">Commercial pages</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">CAUSE_EFFECT</p>
+                                                <p class="text-gray-500">"Why X happens"</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-purple-400 font-medium">BENEFIT_ADVANTAGE</p>
+                                                <p class="text-gray-500">"Benefits of X"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">What You Get</p>
+                                        <p class="text-sm text-gray-300">Selected response code that determines the article structure template used in generation.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="brief1-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="tech-detail bg-gray-900 rounded p-3">
+                                    <p><span class="text-blue-400">Component:</span> ResponseCodeSelectionModal.tsx</p>
+                                    <p><span class="text-green-400">AI Function:</span> suggestResponseCode(topic) → { code, confidence, reasoning }</p>
+                                    <p class="mt-2"><span class="text-yellow-400">Logic:</span> Analyzes topic.title, topic.query_type, topic.search_intent to match optimal format</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2.2-2.4: Context, SERP, AI Generation -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">2-4</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Context, Competitor Analysis & AI Generation</h3>
+                                <span class="badge badge-service">SERP</span>
+                                <span class="badge badge-ai">Multi-Provider</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Gather data, analyze competitors, generate brief with AI</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'brief2-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'brief2-technical')">Technical View</button>
+                        </div>
+
+                        <div id="brief2-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">Automatic Processing (You Wait ~30-60 seconds)</p>
+                                        <div class="space-y-3">
+                                            <div class="border-l-2 border-blue-500 pl-3">
+                                                <p class="text-sm text-blue-400 font-medium">Step 2: Context Gathering</p>
+                                                <p class="text-xs text-gray-400">System assembles: topic data, SEO pillars, EAVs, all topics for linking, competitor list</p>
+                                            </div>
+                                            <div class="border-l-2 border-yellow-500 pl-3">
+                                                <p class="text-sm text-yellow-400 font-medium">Step 3: Competitor Analysis (Optional)</p>
+                                                <p class="text-xs text-gray-400">If enabled: Fetch SERP results, extract competitor content, aggregate market patterns</p>
+                                                <div class="bg-gray-900/50 rounded p-2 mt-2 text-xs">
+                                                    <p class="text-gray-300 mb-1">Creates <strong>CompetitorSpecs</strong>:</p>
+                                                    <ul class="text-gray-500 space-y-0.5 ml-2">
+                                                        <li>• Target word count: 2500 (from competitor average)</li>
+                                                        <li>• Target images: 6</li>
+                                                        <li>• Avg H2 count: 8, Avg H3 count: 15</li>
+                                                        <li>• Required topics: ["definition", "benefits", "comparison"]</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="border-l-2 border-purple-500 pl-3">
+                                                <p class="text-sm text-purple-400 font-medium">Step 4: AI Brief Generation</p>
+                                                <p class="text-xs text-gray-400">AI receives all context and generates complete brief structure</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="brief2-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Data Sources Assembled</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">const briefContext = {
+  // From Topic
+  topic: { title, type, search_intent, metadata, blueprint },
+
+  // From Map
+  pillars: { centralEntity, sourceContext, centralSearchIntent },
+  eavs: SemanticTriple[],  // Filtered to topic-relevant
+  competitors: string[],
+  businessInfo: { language, audience, industry, authorProfile },
+
+  // From Context
+  allTopics: Topic[],      // For internal linking
+  knowledgeGraph: KnowledgeGraph
+};</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">Competitor Analysis Pipeline</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Step 3a: Check cache (30-day TTL)
+const cached = await getFromCache(topic.canonical_query);
+if (cached) return cached;
+
+// Step 3b: SERP fetching
+const serp = await serpService.getSerpResults(topic.canonical_query);
+// Returns: organic_results, people_also_ask, featured_snippets
+
+// Step 3c: Competitor extraction (3-10 pages)
+const extracted = await ComprehensiveCompetitorExtractor.extract(
+  serp.organic_results.slice(0, analysisDepth),
+  { provider: 'jina' | 'firecrawl' }
+);
+
+// Step 3d: Pattern aggregation
+const specs = MarketPatternAggregator.aggregate(extracted);
+// Returns: CompetitorSpecs with benchmarks</pre>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-gray-200 mb-2">AI Brief Generation</p>
+                                        <div class="tech-detail bg-gray-900 rounded p-3">
+                                            <pre class="text-gray-300">// Provider-agnostic dispatch
+const brief = await dispatchToProvider(businessInfo, {
+  gemini: () => geminiService.generateContentBrief(context),
+  openai: () => openAiService.generateContentBrief(context),
+  // ... other providers
+});
+
+// Response validation
+const validated = AIResponseSanitizer.sanitize(brief, ContentBriefSchema);
+if (!validated.structured_outline?.length) {
+  // Retry with fallback model
+}</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2.5: Post-Generation Enrichment -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">5</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Post-Generation Enrichment</h3>
+                                <span class="badge badge-service">Visual Semantics</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Validate, add length suggestions, enrich with image plan</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-medium text-primary mb-3">Enrichment Steps</h4>
+                            <div class="space-y-3">
+                                <div class="border border-gray-700 rounded p-3">
+                                    <p class="font-medium text-sm text-gray-200">5a. Validation</p>
+                                    <p class="text-xs text-gray-400">Language/region validation, monetization brief minimum checks</p>
+                                </div>
+                                <div class="border border-gray-700 rounded p-3">
+                                    <p class="font-medium text-sm text-gray-200">5b. Length Suggestion</p>
+                                    <div class="grid grid-cols-4 gap-2 mt-2 text-xs">
+                                        <div class="bg-gray-900/50 rounded p-2 text-center">
+                                            <p class="text-purple-400">Core/Monetization</p>
+                                            <p class="text-gray-400">comprehensive</p>
+                                            <p class="text-gray-500">3000-5000 words</p>
+                                        </div>
+                                        <div class="bg-gray-900/50 rounded p-2 text-center">
+                                            <p class="text-blue-400">Standard</p>
+                                            <p class="text-gray-400">standard</p>
+                                            <p class="text-gray-500">1500-2500 words</p>
+                                        </div>
+                                        <div class="bg-gray-900/50 rounded p-2 text-center">
+                                            <p class="text-green-400">Outer/Authority</p>
+                                            <p class="text-gray-400">short</p>
+                                            <p class="text-gray-500">800-1200 words</p>
+                                        </div>
+                                        <div class="bg-gray-900/50 rounded p-2 text-center">
+                                            <p class="text-gray-400">Child/Bridge</p>
+                                            <p class="text-gray-400">minimal</p>
+                                            <p class="text-gray-500">400-600 words</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="border border-gray-700 rounded p-3">
+                                    <p class="font-medium text-sm text-gray-200">5c. Visual Semantics Enrichment</p>
+                                    <p class="text-xs text-gray-400 mb-2">Creates image plan based on "Pixels, Letters, and Bytes" framework</p>
+                                    <div class="tech-detail bg-gray-900 rounded p-2 text-xs">
+                                        <pre class="text-gray-300">enhanced_visual_semantics = {
+  hero_image: {
+    image_description: "Primary visual showing...",
+    alt_text_recommendation: "Vocabulary-extending alt text",
+    n_gram_match: ["hero", "featured"]
+  },
+  section_images: {
+    "section-0": { image_description, alt_text, n_gram_match },
+    "section-1": { ... }
+  },
+  image_count: 5
+}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2.6-7: Brief Structure & Persistence -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">6-7</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Final Brief Structure & Save</h3>
+                                <span class="badge badge-database">Persistence</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Review complete brief and save to database</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-medium text-primary mb-3">Complete ContentBrief Structure</h4>
+                            <div class="tech-detail bg-gray-900 rounded p-3 text-xs overflow-x-auto">
+                                <pre class="text-gray-300">ContentBrief = {
+  // Identifiers
+  id: "uuid", topic_id: "uuid",
+
+  // Basic Info
+  title: "How to Build a Robot",
+  slug: "how-to-build-a-robot",
+  metaDescription: "Learn to build...",
+
+  // Content Structure
+  keyTakeaways: ["Point 1", "Point 2"],
+  structured_outline: [
+    {
+      key: "section-0",
+      heading: "What is Robot Building?",
+      level: 2,
+      subordinate_text_hint: "Define the concept...",
+      methodology_note: "Use definition format",
+      suggested_internal_links: ["robot-components"]
+    },
+    // ... more sections
+  ],
+
+  // SERP Data
+  serpAnalysis: {
+    peopleAlsoAsk: ["What is...", "How do..."],
+    competitorHeadings: [...],
+    avgWordCount: 2500,
+    contentGaps: ["missing topic 1"]
+  },
+
+  // Visual Strategy (THE IMAGE PLAN)
+  enhanced_visual_semantics: {
+    hero_image: { image_description, alt_text_recommendation },
+    section_images: { "section-0": {...}, "section-2": {...} },
+    image_count: 5
+  },
+
+  // Semantic Context
+  contextualVectors: SemanticTriple[],      // Relevant EAVs
+  contextualBridge: ContextualBridgeLink[], // Internal links
+
+  // Featured Snippet Target
+  featured_snippet_target: {
+    question: "What is a robot?",
+    answer_format: "paragraph" | "list" | "table",
+    target_section: "section-0"
+  },
+
+  // Competitor Benchmarks
+  competitorSpecs: { targetWordCount, targetImageCount, avgH2Count, ... },
+
+  // UI Hints
+  suggestedLengthPreset: "comprehensive",
+  suggestedLengthReason: "Core topic requires depth"
+}</pre>
+                            </div>
+
+                            <div class="mt-4 bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                                <p class="font-medium text-green-400 mb-2">Brief is Saved & Ready</p>
+                                <p class="text-sm text-gray-300">The brief becomes the <strong>single source of truth</strong> for article generation. It defines:</p>
+                                <ul class="text-xs text-gray-400 mt-2 space-y-1">
+                                    <li>✓ What sections to create (headings, order)</li>
+                                    <li>✓ Where images go (section_images keys)</li>
+                                    <li>✓ What to link to (contextualBridge)</li>
+                                    <li>✓ What featured snippet to target</li>
+                                    <li>✓ How long the article should be</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion Card -->
+                <div class="bg-gradient-to-r from-secondary/20 to-purple-500/20 rounded-xl p-6 border border-secondary/30">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <h3 class="font-semibold text-green-400 text-lg">Content Brief Complete!</h3>
+                    </div>
+                    <p class="text-sm text-gray-300">You now have a detailed blueprint for your article. The brief serves as the authoritative plan for the 10-pass generation system.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 3: ARTICLE DRAFT GENERATION ==================== -->
+        <section id="article-draft" class="mb-16">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent to-emerald-600 flex items-center justify-center text-2xl font-bold">3</div>
+                <div>
+                    <h2 class="text-3xl font-bold">Article Draft Generation</h2>
+                    <p class="text-gray-400">10-Pass AI content generation pipeline</p>
+                </div>
+            </div>
+
+            <!-- Executive Summary -->
+            <div class="bg-surface rounded-xl p-6 border border-gray-700 mb-8">
+                <h3 class="font-semibold text-lg mb-4">Executive Summary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="io-box io-input">
+                        <p class="font-medium text-blue-400 text-sm mb-2">What You Provide</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• Click "Generate Draft"</li>
+                            <li>• Select length preset (optional)</li>
+                            <li>• That's it - fully automatic!</li>
+                        </ul>
+                    </div>
+                    <div class="io-box io-process">
+                        <p class="font-medium text-purple-400 text-sm mb-2">10 AI Passes</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>1. Draft → 2. Headers → 3. Lists/Tables</li>
+                            <li>4. Discourse → 5. Micro Semantics</li>
+                            <li>6. Visuals → 7. Intro → 8. Polish</li>
+                            <li>9. Audit → 10. Schema (JSON-LD)</li>
+                        </ul>
+                    </div>
+                    <div class="io-box io-output">
+                        <p class="font-medium text-green-400 text-sm mb-2">What You Get</p>
+                        <ul class="text-xs text-gray-300 space-y-1">
+                            <li>• Publication-ready article</li>
+                            <li>• Quality audit score (0-100%)</li>
+                            <li>• Image placeholders with alt text</li>
+                            <li>• JSON-LD structured data</li>
+                            <li>• Change tracking from brief</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Pipeline Visual -->
+                <div class="bg-gray-800/50 rounded-lg p-4">
+                    <p class="text-sm text-gray-400 mb-3">Pipeline Flow:</p>
+                    <div class="flex flex-wrap gap-1 items-center justify-center text-xs">
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 1: Draft</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 2: Headers</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 3: Lists</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 4: Discourse</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 5: Micro</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 6: Visuals</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 7: Intro</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-accent/20 text-accent px-2 py-1 rounded">Pass 8: Polish</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Pass 9: Audit</span>
+                        <span class="text-gray-600">→</span>
+                        <span class="bg-green-500/20 text-green-400 px-2 py-1 rounded">Pass 10: Schema</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Job Initialization -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="w-12 h-12 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Job Initialization</h3>
+                                <span class="badge badge-database">Creates Job</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Create generation job, fetch fresh brief, parse sections</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="font-medium text-sm text-primary mb-2">Business Perspective</p>
+                                    <ul class="text-sm text-gray-300 space-y-1">
+                                        <li>• You click "Generate Draft" in DraftingModal</li>
+                                        <li>• System creates a trackable job</li>
+                                        <li>• Progress UI shows real-time updates</li>
+                                        <li>• Job can be resumed if interrupted</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-sm text-accent mb-2">Technical Details</p>
+                                    <div class="tech-detail bg-gray-900 rounded p-2 text-xs">
+                                        <p><span class="text-blue-400">Hook:</span> useContentGeneration.ts</p>
+                                        <p><span class="text-green-400">Service:</span> ContentGenerationOrchestrator</p>
+                                        <p><span class="text-yellow-400">Table:</span> content_generation_jobs</p>
+                                        <p class="mt-2">Creates job with status: "pending", current_pass: 1</p>
+                                        <p>Fetches FRESH brief from DB (not stale React state)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASS 1: Draft Generation -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #10B981, #059669);">1</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Pass 1: Draft Generation</h3>
+                                <span class="badge badge-ai">Section-by-Section</span>
+                                <span class="badge badge-service">Resumable</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Create all article sections from brief with smart length detection</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" onclick="event.stopPropagation(); switchTab(this, 'pass1-business')">Business View</button>
+                            <button class="tab-btn" onclick="event.stopPropagation(); switchTab(this, 'pass1-technical')">Technical View</button>
+                        </div>
+
+                        <div id="pass1-business" class="tab-content active">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-primary mb-3">What Happens From Your Perspective</h4>
+                                <div class="space-y-4">
+                                    <div class="io-box io-input">
+                                        <p class="font-medium text-sm text-blue-400 mb-2">Input (From Brief)</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• <strong>structured_outline:</strong> Section headings and hints</li>
+                                            <li>• <strong>serpAnalysis:</strong> Word count targets</li>
+                                            <li>• <strong>enhanced_visual_semantics:</strong> Where images go</li>
+                                            <li>• <strong>contextualBridge:</strong> Internal links</li>
+                                            <li>• <strong>EAVs:</strong> Facts to include</li>
+                                        </ul>
+                                    </div>
+                                    <div class="io-box io-process">
+                                        <p class="font-medium text-sm text-purple-400 mb-2">Processing Steps</p>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400">1. Smart Length Detection</p>
+                                                <p class="text-xs text-gray-500">Analyzes section count, image count, SERP target</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400">2. Template Selection</p>
+                                                <p class="text-xs text-gray-500">AI picks best template for response code</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400">3. Section Ordering</p>
+                                                <p class="text-xs text-gray-500">ROOT → UNIQUE → RARE → COMMON</p>
+                                            </div>
+                                            <div class="bg-gray-900/50 rounded p-2">
+                                                <p class="text-xs text-gray-400">4. Section-by-Section AI</p>
+                                                <p class="text-xs text-gray-500">Generate, validate, retry if needed</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="io-box io-output">
+                                        <p class="font-medium text-sm text-green-400 mb-2">Output</p>
+                                        <ul class="text-sm text-gray-300 space-y-1">
+                                            <li>• All sections created with content</li>
+                                            <li>• Progress: "Pass 1 complete - 8/8 sections"</li>
+                                            <li>• Each section saved to database (resumable)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="pass1-technical" class="tab-content">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <h4 class="font-medium text-accent mb-3">Technical Implementation</h4>
+                                <div class="space-y-4">
+                                    <div class="tech-detail bg-gray-900 rounded p-3">
+                                        <p><span class="text-blue-400">File:</span> pass1DraftGeneration.ts</p>
+                                        <p><span class="text-green-400">Prompt Builder:</span> sectionPromptBuilder.ts</p>
+                                        <p><span class="text-purple-400">Context Chaining:</span> ContextChainer.extractForNext(previousContent)</p>
+                                        <p><span class="text-yellow-400">Validation:</span> RulesValidator.validate() with 3x retry</p>
+                                    </div>
+                                    <div class="tech-detail bg-gray-900 rounded p-3 text-xs">
+                                        <p class="text-gray-400 mb-2">// Section generation loop</p>
+                                        <pre class="text-gray-300">for (const section of orderedSections) {
+  const prompt = sectionPromptBuilder.build({
+    section,
+    previousContext: ContextChainer.extractForNext(lastContent),
+    eavs: relevantEavs,
+    flowGuidance: getFlowPosition(index, total),
+    imageInstruction: brief.enhanced_visual_semantics.section_images[section.key]
+      ? "[IMAGE:] placeholder instruction"
+      : "DO NOT add images to this section"
+  });
+
+  let content = await generateWithProvider(prompt);
+  let valid = RulesValidator.validate(content);
+
+  // Retry loop
+  for (let i = 0; i < 3 && !valid.passed; i++) {
+    content = await generateWithProvider(prompt + valid.fixInstructions);
+    valid = RulesValidator.validate(content);
+  }
+
+  await orchestrator.upsertSection(jobId, section.key, content);
+  onProgress({ section: section.key, status: 'complete' });
+}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASSES 2-5: Optimization Passes -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #10B981, #059669);">2-5</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Passes 2-5: Content Optimization</h3>
+                                <span class="badge badge-ai">Headers</span>
+                                <span class="badge badge-ai">Lists</span>
+                                <span class="badge badge-ai">Discourse</span>
+                                <span class="badge badge-ai">Micro</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Optimize headings, add structured data, enhance flow, polish linguistics</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="space-y-4">
+                                <!-- Pass 2 -->
+                                <div class="border border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="bg-accent/20 text-accent text-xs px-2 py-1 rounded font-medium">Pass 2</span>
+                                        <span class="font-medium text-gray-200">Header Optimization</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                        <div><span class="text-blue-400">Input:</span> <span class="text-gray-400">Draft sections with headings</span></div>
+                                        <div><span class="text-purple-400">Process:</span> <span class="text-gray-400">H1→H2→H3 hierarchy, contextual overlap with central entity, semantic clarity</span></div>
+                                        <div><span class="text-green-400">Output:</span> <span class="text-gray-400">Optimized heading structure</span></div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">File: pass2Headers.ts | Individual processing, checkpoint every 3 sections</p>
+                                </div>
+
+                                <!-- Pass 3 -->
+                                <div class="border border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="bg-accent/20 text-accent text-xs px-2 py-1 rounded font-medium">Pass 3</span>
+                                        <span class="font-medium text-gray-200">Lists & Tables</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                        <div><span class="text-blue-400">Input:</span> <span class="text-gray-400">Header-optimized sections</span></div>
+                                        <div><span class="text-purple-400">Process:</span> <span class="text-gray-400">Add lists (max 40%) and tables (max 15%) for featured snippets</span></div>
+                                        <div><span class="text-green-400">Output:</span> <span class="text-gray-400">Structured data elements</span></div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">File: pass3Lists.ts | "Baker Principle" budget prevents over-saturation</p>
+                                </div>
+
+                                <!-- Pass 4 -->
+                                <div class="border border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="bg-accent/20 text-accent text-xs px-2 py-1 rounded font-medium">Pass 4</span>
+                                        <span class="font-medium text-gray-200">Discourse Integration</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                        <div><span class="text-blue-400">Input:</span> <span class="text-gray-400">Sections + adjacent context</span></div>
+                                        <div><span class="text-purple-400">Process:</span> <span class="text-gray-400">Add transitions, contextual bridges, internal link anchors</span></div>
+                                        <div><span class="text-green-400">Output:</span> <span class="text-gray-400">Flowing narrative with links</span></div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">File: pass6Discourse.ts | Uses contextualBridge from brief</p>
+                                </div>
+
+                                <!-- Pass 5 -->
+                                <div class="border border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="bg-accent/20 text-accent text-xs px-2 py-1 rounded font-medium">Pass 5</span>
+                                        <span class="font-medium text-gray-200">Micro Semantics</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                        <div><span class="text-blue-400">Input:</span> <span class="text-gray-400">Discourse-enhanced sections</span></div>
+                                        <div><span class="text-purple-400">Process:</span> <span class="text-gray-400">Modality certainty, stop words, subject positioning, info density</span></div>
+                                        <div><span class="text-green-400">Output:</span> <span class="text-gray-400">Linguistically optimized content</span></div>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2 mt-2">
+                                        <span class="text-xs bg-gray-900/50 rounded px-2 py-1 text-gray-400">Remove "might/could/maybe"</span>
+                                        <span class="text-xs bg-gray-900/50 rounded px-2 py-1 text-gray-400">Position keyword early</span>
+                                        <span class="text-xs bg-gray-900/50 rounded px-2 py-1 text-gray-400">Clear pronouns</span>
+                                        <span class="text-xs bg-gray-900/50 rounded px-2 py-1 text-gray-400">Type-Token Ratio</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">File: pass5MicroSemantics.ts</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASS 6: Visual Semantics -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #10B981, #059669);">6</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Pass 6: Visual Semantics (Images)</h3>
+                                <span class="badge badge-service">Brief-Led</span>
+                                <span class="badge badge-service">Change Tracking</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Add semantic images with vocabulary-extending alt text</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-medium text-primary mb-3">Brief-Led Image Processing</h4>
+                            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                                <p class="text-sm text-yellow-300"><strong>Key Principle:</strong> Images are ONLY added where the brief designates them. The brief is the single source of truth for image placement.</p>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="io-box io-input">
+                                    <p class="font-medium text-sm text-blue-400 mb-2">Input (From Brief)</p>
+                                    <p class="text-sm text-gray-300">enhanced_visual_semantics.section_images → Set of section keys that should have images</p>
+                                </div>
+                                <div class="io-box io-process">
+                                    <p class="font-medium text-sm text-purple-400 mb-2">Processing Logic</p>
+                                    <div class="text-sm text-gray-300 space-y-2">
+                                        <p><strong>For each section:</strong></p>
+                                        <ol class="list-decimal ml-5 text-xs text-gray-400 space-y-1">
+                                            <li>Brief designates this section for image? → INCLUDE</li>
+                                            <li>Section already has [IMAGE:] from Pass 1? → INCLUDE</li>
+                                            <li>Evaluate justified addition (needs ≥2 criteria):
+                                                <ul class="list-disc ml-4 mt-1">
+                                                    <li>Word count > 300 AND no image</li>
+                                                    <li>Contains process/step content AND no image</li>
+                                                    <li>Featured snippet target AND no image</li>
+                                                </ul>
+                                            </li>
+                                            <li>Otherwise → EXCLUDE (no image added)</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                                <div class="io-box io-output">
+                                    <p class="font-medium text-sm text-green-400 mb-2">Output</p>
+                                    <ul class="text-sm text-gray-300 space-y-1">
+                                        <li>• Image placeholders: <code class="text-xs bg-gray-900 px-1 rounded">[IMAGE: Description | alt="Vocabulary-extending text"]</code></li>
+                                        <li>• BriefChangeTracker logs any additions beyond brief plan</li>
+                                        <li>• Changes persisted to content_briefs.generation_changes</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3">File: pass4Visuals.ts | Tracker: BriefChangeTracker in briefChangeTracker.ts</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASSES 7-8: Intro & Polish -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #10B981, #059669);">7-8</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Passes 7-8: Introduction & Final Polish</h3>
+                                <span class="badge badge-ai">Synthesis</span>
+                                <span class="badge badge-service">Preservation</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Rewrite intro post-body, polish for publication</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4 space-y-4">
+                            <!-- Pass 7 -->
+                            <div class="border border-gray-700 rounded-lg p-4">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="bg-accent/20 text-accent text-xs px-2 py-1 rounded font-medium">Pass 7</span>
+                                    <span class="font-medium text-gray-200">Introduction Synthesis</span>
+                                </div>
+                                <div class="text-sm text-gray-300 space-y-2">
+                                    <p><strong>Why after body?</strong> Intro can accurately summarize polished content, see final structure, better synthesis.</p>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="bg-gray-900/50 rounded p-2">
+                                            <p class="text-xs text-red-400">Generic headings BANNED:</p>
+                                            <p class="text-xs text-gray-500">"Introduction", "Overview", "Summary"</p>
+                                        </div>
+                                        <div class="bg-gray-900/50 rounded p-2">
+                                            <p class="text-xs text-green-400">Replaced with:</p>
+                                            <p class="text-xs text-gray-500">"Wat is [entity]?", "[entity]: De Complete Gids"</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-yellow-400"><strong>NO CONCLUSION:</strong> User preference - "Only AI does conclusions"</p>
+                                </div>
+                            </div>
+
+                            <!-- Pass 8 -->
+                            <div class="border border-gray-700 rounded-lg p-4">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="bg-accent/20 text-accent text-xs px-2 py-1 rounded font-medium">Pass 8</span>
+                                    <span class="font-medium text-gray-200">Final Polish with Smart Preservation</span>
+                                </div>
+                                <div class="text-sm text-gray-300 space-y-2">
+                                    <p><strong>Problem Solved:</strong> Earlier AI passes could accidentally remove lists/tables/images during "optimization".</p>
+                                    <div class="bg-gray-900/50 rounded p-3">
+                                        <p class="text-xs text-gray-400 mb-2">Smart Preservation Engine:</p>
+                                        <ol class="text-xs text-gray-500 space-y-1 list-decimal ml-4">
+                                            <li>BEFORE: Count images, lists, tables, headings</li>
+                                            <li>Run AI polish optimization</li>
+                                            <li>AFTER: Verify counts match</li>
+                                            <li>If elements DECREASED → BLOCK change, keep original</li>
+                                        </ol>
+                                    </div>
+                                    <div class="flex gap-2 text-xs">
+                                        <span class="bg-red-500/20 text-red-400 px-2 py-1 rounded">Images decreased → BLOCK</span>
+                                        <span class="bg-red-500/20 text-red-400 px-2 py-1 rounded">Lists/tables decreased → BLOCK</span>
+                                        <span class="bg-red-500/20 text-red-400 px-2 py-1 rounded">Content reduced >50% → BLOCK</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASS 9: Audit -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #F59E0B, #D97706);">9</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Pass 9: Final Audit</h3>
+                                <span class="badge badge-service">30+ Checks</span>
+                                <span class="badge badge-service">Scoring</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Quality scoring, compliance validation, cross-page consistency</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-medium text-primary mb-3">Algorithmic Audit (30+ Checks)</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs">
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Modality certainty</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Stop word density</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Subject positioning</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Heading hierarchy</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Generic heading detection</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">List count specificity</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Pronoun density</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Link positioning</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">Image placement</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">EAV density</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">AI signature phrases</span>
+                                <span class="bg-gray-900/50 rounded px-2 py-1 text-center">YMYL compliance</span>
+                            </div>
+
+                            <div class="bg-gray-900/50 rounded-lg p-3 mb-4">
+                                <p class="font-medium text-sm text-gray-200 mb-2">Score Calculation</p>
+                                <div class="tech-detail text-xs">
+                                    <p class="text-gray-300">finalScore = (60% × algorithmicScore) + (40% × complianceScore) - crossPagePenalty</p>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 mt-3 text-xs text-center">
+                                    <span class="bg-red-500/20 text-red-400 rounded py-1">< 50% → FAILURE</span>
+                                    <span class="bg-yellow-500/20 text-yellow-400 rounded py-1">< 70% → WARNING</span>
+                                    <span class="bg-green-500/20 text-green-400 rounded py-1">≥ 70% → PASS</span>
+                                </div>
+                            </div>
+
+                            <div class="io-box io-output">
+                                <p class="font-medium text-sm text-green-400 mb-2">Output</p>
+                                <ul class="text-sm text-gray-300 space-y-1">
+                                    <li>• <strong>final_audit_score:</strong> 0-100%</li>
+                                    <li>• <strong>audit_details:</strong> All rule results + compliance breakdown</li>
+                                    <li>• <strong>draft_content:</strong> Assembled article synced to brief</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASS 10: Schema -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="step-number" style="background: linear-gradient(135deg, #22C55E, #16A34A);">10</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Pass 10: Schema Generation (JSON-LD)</h3>
+                                <span class="badge badge-service">Wikidata</span>
+                                <span class="badge badge-service">Auto-Fix</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Generate comprehensive structured data with entity resolution</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="space-y-4">
+                                <div class="io-box io-process">
+                                    <p class="font-medium text-sm text-purple-400 mb-2">Schema Generation Process</p>
+                                    <ol class="text-sm text-gray-300 space-y-2 list-decimal ml-4">
+                                        <li><strong>Validate data</strong> collected from passes 1-8</li>
+                                        <li><strong>Generate JSON-LD</strong> (Article, FAQPage, HowTo, etc.)</li>
+                                        <li><strong>Entity Resolution</strong> via Wikidata API → sameAs links</li>
+                                        <li><strong>Validate & auto-fix</strong> schema structure</li>
+                                        <li><strong>Persist</strong> to database</li>
+                                    </ol>
+                                </div>
+
+                                <div class="bg-gray-900/50 rounded p-3">
+                                    <p class="text-sm text-gray-200 mb-2">Entity Resolution Example</p>
+                                    <div class="tech-detail text-xs">
+                                        <pre class="text-gray-300">"mainEntity": {
+  "@type": "Thing",
+  "name": "Warehouse Automation",
+  "sameAs": [
+    "https://www.wikidata.org/wiki/Q1234567",
+    "https://en.wikipedia.org/wiki/Warehouse_automation"
+  ]
+}</pre>
+                                    </div>
+                                </div>
+
+                                <div class="io-box io-output">
+                                    <p class="font-medium text-sm text-green-400 mb-2">Output</p>
+                                    <ul class="text-sm text-gray-300 space-y-1">
+                                        <li>• <strong>schema_data:</strong> Complete JSON-LD structured data</li>
+                                        <li>• <strong>schema_entities:</strong> Resolved Wikidata entities</li>
+                                        <li>• <strong>schema_validation_results:</strong> Validation status</li>
+                                        <li>• <strong>schema_page_type:</strong> Detected page type</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3">File: pass9SchemaGeneration.ts | Cache: entity_resolution_cache table</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Finalization -->
+                <div class="collapsible bg-surface rounded-xl border border-gray-700 overflow-hidden" onclick="toggleSection(this)">
+                    <div class="flex items-center gap-4 p-4 hover:bg-surface-light transition">
+                        <div class="w-12 h-12 rounded-lg bg-green-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Finalization</h3>
+                                <span class="badge badge-database">Sync & Persist</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">Persist changes, update job status, sync to brief</p>
+                        </div>
+                        <svg class="chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="content px-4 pb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <div class="space-y-3">
+                                <div class="border border-gray-700 rounded p-3">
+                                    <p class="font-medium text-sm text-gray-200">1. Change Tracker Persistence</p>
+                                    <p class="text-xs text-gray-400">All logged changes saved to content_briefs.generation_changes</p>
+                                </div>
+                                <div class="border border-gray-700 rounded p-3">
+                                    <p class="font-medium text-sm text-gray-200">2. Job Status Update</p>
+                                    <p class="text-xs text-gray-400">status: "completed", completed_at: now(), all passes marked complete</p>
+                                </div>
+                                <div class="border border-gray-700 rounded p-3">
+                                    <p class="font-medium text-sm text-gray-200">3. Brief Sync</p>
+                                    <p class="text-xs text-gray-400">content_briefs.article_draft updated with final content</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion Card -->
+                <div class="bg-gradient-to-r from-accent/20 to-emerald-500/20 rounded-xl p-6 border border-accent/30">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <h3 class="font-semibold text-green-400 text-lg">Article Draft Complete!</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-medium text-sm text-gray-200 mb-2">Final Output</p>
+                            <ul class="text-xs text-gray-400 space-y-1">
+                                <li>✓ Publication-ready article (draft_content)</li>
+                                <li>✓ Quality audit score (final_audit_score)</li>
+                                <li>✓ Detailed audit results (audit_details)</li>
+                                <li>✓ JSON-LD structured data (schema_data)</li>
+                                <li>✓ Resolved entities (schema_entities)</li>
+                                <li>✓ Change log (generation_changes)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="font-medium text-sm text-gray-200 mb-2">What You Can Do Now</p>
+                            <ul class="text-xs text-gray-400 space-y-1">
+                                <li>→ View article in DraftingModal</li>
+                                <li>→ Review quality audit results</li>
+                                <li>→ View generation changes from brief</li>
+                                <li>→ View/edit JSON-LD schema</li>
+                                <li>→ Export to WordPress</li>
+                                <li>→ Style & Publish (brand rendering)</li>
+                                <li>→ Generate images from placeholders</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Database Reference -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6">Database Tables Reference</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-surface rounded-xl p-5 border border-gray-700">
+                    <h3 class="font-semibold text-primary mb-3">Topical Map Creation</h3>
+                    <ul class="text-sm text-gray-400 space-y-2">
+                        <li>• <code class="text-gray-300">user_settings</code></li>
+                        <li>• <code class="text-gray-300">projects</code></li>
+                        <li>• <code class="text-gray-300">topical_maps</code></li>
+                        <li>• <code class="text-gray-300">topics</code></li>
+                        <li>• <code class="text-gray-300">foundation_pages</code></li>
+                        <li>• <code class="text-gray-300">navigation_structures</code></li>
+                    </ul>
+                </div>
+                <div class="bg-surface rounded-xl p-5 border border-gray-700">
+                    <h3 class="font-semibold text-secondary mb-3">Content Brief</h3>
+                    <ul class="text-sm text-gray-400 space-y-2">
+                        <li>• <code class="text-gray-300">content_briefs</code></li>
+                        <li>• <code class="text-gray-300">topical_maps</code> (read)</li>
+                        <li>• <code class="text-gray-300">topics</code> (read)</li>
+                    </ul>
+                </div>
+                <div class="bg-surface rounded-xl p-5 border border-gray-700">
+                    <h3 class="font-semibold text-accent mb-3">Article Generation</h3>
+                    <ul class="text-sm text-gray-400 space-y-2">
+                        <li>• <code class="text-gray-300">content_generation_jobs</code></li>
+                        <li>• <code class="text-gray-300">content_generation_sections</code></li>
+                        <li>• <code class="text-gray-300">content_briefs</code> (write)</li>
+                        <li>• <code class="text-gray-300">entity_resolution_cache</code></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-surface border-t border-gray-700 py-6">
+        <div class="max-w-7xl mx-auto px-6 text-center text-sm text-gray-500">
+            <p>Holistic SEO Topical Map Generator - System Documentation</p>
+            <p class="mt-1">Based on Koray Tugberk Gubur's Semantic SEO methodology</p>
+        </div>
+    </footer>
+
+    <script>
+        function toggleSection(element) {
+            element.classList.toggle('active');
+            const content = element.querySelector('.content');
+            if (content) content.classList.toggle('expanded');
+        }
+
+        function switchTab(button, tabId) {
+            const container = button.closest('.content');
+            container.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            button.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

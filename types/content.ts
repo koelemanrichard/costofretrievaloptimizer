@@ -348,6 +348,10 @@ export interface ContentBrief {
   // Content length suggestion based on topic type and market data
   suggestedLengthPreset?: 'minimal' | 'short' | 'standard' | 'comprehensive';
   suggestedLengthReason?: string;
+
+  // Generation change tracking (populated during content generation)
+  generation_changes?: BriefChangeLogEntry[];
+  generation_summary?: BriefGenerationSummary;
 }
 
 /**
@@ -394,6 +398,38 @@ export interface CompetitorSpecs {
 
   // Analysis warnings
   warnings: string[];
+}
+
+// ============================================================================
+// BRIEF CHANGE TRACKING
+// ============================================================================
+
+/**
+ * Log entry for tracking changes made during content generation
+ * that deviate from the original brief specification.
+ */
+export interface BriefChangeLogEntry {
+  id: string;
+  timestamp: string;
+  pass: number;
+  change_type: 'image_added' | 'image_modified' | 'image_removed' | 'section_modified';
+  section_key: string;
+  field: string;
+  original_value?: string | number | null;
+  new_value: string | number;
+  reason: string;
+  criteria_met: string[];
+}
+
+/**
+ * Summary of generation changes for UI display
+ */
+export interface BriefGenerationSummary {
+  total_changes: number;
+  images_added: number;
+  images_modified: number;
+  sections_modified: number;
+  last_updated: string;
 }
 
 // ============================================================================

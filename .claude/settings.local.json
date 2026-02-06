@@ -343,7 +343,16 @@
       "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" commit -m \"$\\(cat <<''EOF''\nrefactor\\(styles\\): replace NFIR-specific patterns with brand-adaptive alternatives\n\nRepeating gradient bars now only appear for corporate/bold personalities.\nLast-step accent coloring adapts based on actual accent color.\nHero gradient uses derived dark color from any brand''s primary.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "WebFetch(domain:resultaatmakers.online)",
       "Bash(if not exist \"D:\\\\www\\\\cost-of-retreival-reducer\\\\e2e\\\\screenshots\" mkdir \"D:\\\\www\\\\cost-of-retreival-reducer\\\\e2e\\\\screenshots\")",
-      "WebFetch(domain:daadvracht.nl)"
+      "WebFetch(domain:daadvracht.nl)",
+      "Bash(for func in accept_invitation admin_get_all_projects admin_reassign_project calculate_ai_cost can_use_feature check_table_exists claim_migrated_data cleanup_expired_topic_serp_analysis compare_metrics_snapshots create_foundation_pages create_new_map create_new_project decline_invitation delete_secret exec_sql get_available_features get_billable_info get_constraint_info get_help_article_by_feature_key get_help_article_by_slug get_latest_audits get_next_audit_version get_org_cost_summary get_organization_stats get_policies_for_table get_project_stats get_related_help_articles get_secret get_user_quota has_api_key increment_design_preference_frequency invite_user_to_organization log_audit_event recalculate_organization_scores resend_invitation resolve_api_key rollback_to_pass rotate_secret search_help_articles store_secret sync_sitemap_pages update_crawled_pages upsert_navigation_structure)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" diff services/entityResolutionCache.ts)",
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" add services/entityResolutionCache.ts)",
+      "Bash(second time\" database error when the same entity appears multiple times\nin a single batch.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" add docs/plans/2026-02-06-brief-generation-alignment.md)",
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" commit -m \"$\\(cat <<''EOF''\ndocs\\(plan\\): Brief → Generation Alignment implementation plan\n\n10-task TDD implementation plan to make Content Brief the single\nsource of truth for content generation:\n\n1. Add BriefChangeLogEntry types\n2. Create database migration\n3. Create BriefChangeTracker service\n4. Standardize section key format \\(section-0 not section_1\\)\n5. Enforce brief image plan in Pass 1\n6. Update Pass 4 for brief-led processing\n7. Wire change tracker in orchestrator\n8. Create GenerationChangesPanel UI\n9. Integrate panel in DraftingModal\n10. Wire tracker in useContentGeneration hook\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git check-ignore:*)"
     ],
     "deny": [],
     "ask": []
