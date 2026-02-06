@@ -162,45 +162,66 @@ Secondary focus: ${secondary.label} (${secondary.value}%)
         guidance += `Format: ${formatCode}\n`;
     }
 
-    // Add visual semantics if available for this section
-    // Handle both array-based sectionImages (types/content.ts) and Record-based section_images (types.ts)
+    // Add visual semantics ONLY if brief designates an image for this section
     const enhancedVS = brief.enhanced_visual_semantics;
+    let briefDesignatesImage = false;
+    let imageSpec: any = null;
+
     if (enhancedVS) {
       const sectionKey = section.key || section.heading?.toLowerCase().replace(/\s+/g, '-');
       const headingLower = section.heading?.toLowerCase() || '';
 
-      // Try Record-based section_images first (from types.ts BriefVisualSemantics)
+      // Try Record-based section_images first
       if (enhancedVS.section_images && typeof enhancedVS.section_images === 'object') {
-        // Look for exact key match or partial match in the Record
-        const matchingEntry = Object.entries(enhancedVS.section_images).find(
-          ([key]) => key.toLowerCase() === sectionKey || headingLower.includes(key.toLowerCase())
-        );
+        const matchingEntry = Object.entries(enhancedVS.section_images).find(([key]) => {
+          const keyLower = key.toLowerCase();
+          const sectionKeyLower = sectionKey?.toLowerCase() || '';
+          // Match with normalization (handles section-0 vs section_0)
+          return keyLower === sectionKeyLower ||
+                 keyLower.replace(/-/g, '_') === sectionKeyLower.replace(/-/g, '_') ||
+                 keyLower.replace(/_/g, '-') === sectionKeyLower.replace(/_/g, '-');
+        });
 
         if (matchingEntry) {
-          const [, vs] = matchingEntry;
-          // Derive type from n_gram_match if available, otherwise use 'SECTION'
-          const imageType = vs.n_gram_match?.[0]?.toUpperCase() || 'SECTION';
-          guidance += `\n## VISUAL PLACEHOLDER\n`;
-          guidance += `Type: ${imageType}\n`;
-          guidance += `Description: ${vs.image_description}\n`;
-          guidance += `Alt text to include: ${vs.alt_text_recommendation}\n`;
-          guidance += `Insert image placeholder: [IMAGE: ${vs.image_description}]\n`;
+          briefDesignatesImage = true;
+          imageSpec = matchingEntry[1];
         }
       }
-      // Fall back to array-based sectionImages (from types/content.ts BriefVisualSemantics)
+      // Fall back to array-based sectionImages
       else if (Array.isArray((enhancedVS as any).sectionImages)) {
         const visualGuide = (enhancedVS as any).sectionImages.find(
-          (v: { sectionKey: string }) => v.sectionKey === sectionKey || headingLower.includes(v.sectionKey)
+          (v: { sectionKey: string }) => {
+            const vKeyLower = v.sectionKey?.toLowerCase() || '';
+            const sectionKeyLower = sectionKey?.toLowerCase() || '';
+            return vKeyLower === sectionKeyLower || headingLower.includes(vKeyLower);
+          }
         );
-
         if (visualGuide) {
-          guidance += `\n## VISUAL PLACEHOLDER\n`;
-          guidance += `Type: ${visualGuide.type}\n`;
-          guidance += `Description: ${visualGuide.description}\n`;
-          guidance += `Alt text to include: ${visualGuide.altText}\n`;
-          guidance += `Insert image placeholder: [IMAGE: ${visualGuide.description}]\n`;
+          briefDesignatesImage = true;
+          imageSpec = visualGuide;
         }
       }
+    }
+
+    // ONLY add image placeholder if brief designates it
+    if (briefDesignatesImage && imageSpec) {
+      const imageType = imageSpec.n_gram_match?.[0]?.toUpperCase() || imageSpec.type || 'SECTION';
+      const description = imageSpec.image_description || imageSpec.description;
+      const altText = imageSpec.alt_text_recommendation || imageSpec.altText;
+
+      guidance += `\n## VISUAL PLACEHOLDER (Brief-Designated)
+Type: ${imageType}
+Description: ${description}
+Alt text: ${altText}
+**REQUIRED:** Insert exactly one image placeholder: [IMAGE: ${description} | alt="${altText}"]
+Place after the first paragraph, never between heading and first paragraph.
+`;
+    } else {
+      // NO image for this section per brief - explicitly forbid
+      guidance += `\n## NO IMAGE FOR THIS SECTION
+The content brief does not designate an image for this section.
+Do NOT insert any [IMAGE:] placeholders in this section.
+`;
     }
 
     return guidance;
