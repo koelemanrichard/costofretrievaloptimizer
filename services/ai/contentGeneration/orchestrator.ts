@@ -728,8 +728,11 @@ export class ContentGenerationOrchestrator {
         if (hasIntroInOutline && idx === 0) return;
         if (hasConclusionInOutline && idx === brief.structured_outline!.length - 1) return;
 
+        // Use brief's key if available, otherwise generate in standard format: section-{0-indexed}
+        // This MUST match visualSemanticsService.analyzeImageRequirements() format
+        const sectionKey = section.key || `section-${idx}`;
         bodySections.push({
-          key: `section_${idx + 1}`,
+          key: sectionKey,
           heading: section.heading,
           level: section.level || 2,
           order: idx + 1,
@@ -741,8 +744,9 @@ export class ContentGenerationOrchestrator {
         // Add subsections if present
         if (section.subsections) {
           section.subsections.forEach((sub, subIdx) => {
+            // Subsection key format: {parentKey}-sub-{0-indexed}
             bodySections.push({
-              key: `section_${idx + 1}_sub_${subIdx + 1}`,
+              key: `${sectionKey}-sub-${subIdx}`,
               heading: sub.heading,
               level: 3,
               order: idx + 1 + (subIdx + 1) * 0.1,
@@ -754,12 +758,13 @@ export class ContentGenerationOrchestrator {
       });
     } else {
       // Fallback: parse from outline string
+      // Use standard format: section-{0-indexed}
       const lines = (brief.outline || '').split('\n').filter(l => l.trim());
       lines.forEach((line, idx) => {
         const match = line.match(/^(#{2,3})\s*(.+)/);
         if (match) {
           bodySections.push({
-            key: `section_${idx + 1}`,
+            key: `section-${idx}`,
             heading: match[2].trim(),
             level: match[1].length,
             order: idx + 1,
