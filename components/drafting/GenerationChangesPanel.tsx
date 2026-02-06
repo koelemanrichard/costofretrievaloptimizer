@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { BriefChangeLogEntry, BriefGenerationSummary } from '../../types';
-import { ChevronDown, ChevronRight, ImageIcon, Edit, AlertCircle } from 'lucide-react';
 
 interface GenerationChangesPanelProps {
   changes: BriefChangeLogEntry[];
@@ -18,15 +17,51 @@ const CRITERIA_LABELS: Record<string, string> = {
   'quality_improvement': 'Quality'
 };
 
+// Inline SVG icons (project uses inline SVGs, not lucide-react)
+const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
+const ChevronRightIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+const ImageIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <polyline points="21,15 16,10 5,21" />
+  </svg>
+);
+
+const EditIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
+const AlertCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
 // Icon component for change types (extracted to avoid re-creation on render)
 const ChangeIcon: React.FC<{ type: string }> = ({ type }) => {
   switch (type) {
     case 'image_added':
-      return <ImageIcon className="w-4 h-4 text-green-400" aria-hidden="true" />;
+      return <ImageIcon className="w-4 h-4 text-green-400" />;
     case 'image_modified':
-      return <Edit className="w-4 h-4 text-amber-400" aria-hidden="true" />;
+      return <EditIcon className="w-4 h-4 text-amber-400" />;
     default:
-      return <AlertCircle className="w-4 h-4 text-blue-400" aria-hidden="true" />;
+      return <AlertCircleIcon className="w-4 h-4 text-blue-400" />;
   }
 };
 
@@ -56,9 +91,9 @@ export const GenerationChangesPanel: React.FC<GenerationChangesPanelProps> = ({
       >
         <div className="flex items-center gap-2">
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" aria-hidden="true" />
+            <ChevronDownIcon className="w-4 h-4 text-gray-400" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" aria-hidden="true" />
+            <ChevronRightIcon className="w-4 h-4 text-gray-400" />
           )}
           <span className="text-sm font-medium text-gray-200">
             Generation Changes

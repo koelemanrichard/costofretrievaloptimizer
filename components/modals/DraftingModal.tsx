@@ -29,6 +29,7 @@ import JSZip from 'jszip';
 import { PublishToWordPressModal } from '../wordpress';
 import { StylePublishModal } from '../publishing';
 import { AuditIssuesPanel } from '../drafting/AuditIssuesPanel';
+import { GenerationChangesPanel } from '../drafting/GenerationChangesPanel';
 import { AuditIssue } from '../../types';
 import { runAlgorithmicAudit, convertToAuditIssues } from '../../services/ai/contentGeneration/passes/auditChecks';
 import {
@@ -3158,6 +3159,16 @@ ${schemaScript}`;
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* Generation Changes Panel */}
+                {brief?.generation_changes && brief.generation_changes.length > 0 && (
+                  <div className="px-4 flex-shrink-0">
+                    <GenerationChangesPanel
+                      changes={brief.generation_changes}
+                      summary={brief.generation_summary || null}
+                    />
+                  </div>
                 )}
 
                 {isLoadingDraft ? (
