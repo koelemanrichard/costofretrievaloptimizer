@@ -63,44 +63,8 @@ const fetchWithRetry = async (
 let currentUsageContext: AIUsageContext = {};
 let currentOperation: string = 'unknown';
 
-/**
- * Extract markdown content from potentially JSON-wrapped AI responses.
- * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
- * This function gracefully handles such cases.
- */
-const extractMarkdownFromResponse = (text: string): string => {
-    if (!text) return text;
-
-    // Strip markdown code block wrapper if present (```json ... ``` or ``` ... ```)
-    let cleaned = text.trim();
-    if (cleaned.startsWith('```')) {
-        const firstNewline = cleaned.indexOf('\n');
-        if (firstNewline !== -1) {
-            cleaned = cleaned.substring(firstNewline + 1);
-        }
-        if (cleaned.endsWith('```')) {
-            cleaned = cleaned.substring(0, cleaned.length - 3).trimEnd();
-        }
-    }
-
-    // Try to parse as JSON and extract content
-    try {
-        const parsed = JSON.parse(cleaned);
-        // Check common key names for polished content (order matters - most specific first)
-        const content = parsed.polished_content || parsed.polished_article ||
-                       parsed.polishedContent || parsed.polishedArticle ||
-                       parsed.polishedDraft || parsed.content || parsed.article ||
-                       parsed.markdown || parsed.text || parsed.draft;
-        if (typeof content === 'string') {
-            console.log('[extractMarkdownFromResponse] Successfully extracted content from JSON wrapper');
-            return content;
-        }
-    } catch (e) {
-        // Not valid JSON, return original text (which is the expected case)
-    }
-
-    return text;
-};
+// Use shared extraction utility (previously duplicated across all providers)
+import { extractMarkdownFromResponse } from './ai/shared/extractJson';
 
 /**
  * Set the context for AI usage logging (should be called before AI operations)

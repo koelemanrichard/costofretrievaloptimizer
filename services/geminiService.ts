@@ -64,39 +64,8 @@ export function setUsageContext(context: AIUsageContext, operation?: string): vo
  * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
  * This function gracefully handles such cases.
  */
-const extractMarkdownFromResponse = (text: string): string => {
-    if (!text) return text;
-
-    // Strip markdown code block wrapper if present (```json ... ``` or ``` ... ```)
-    let cleaned = text.trim();
-    if (cleaned.startsWith('```')) {
-        const firstNewline = cleaned.indexOf('\n');
-        if (firstNewline !== -1) {
-            cleaned = cleaned.substring(firstNewline + 1);
-        }
-        if (cleaned.endsWith('```')) {
-            cleaned = cleaned.substring(0, cleaned.length - 3).trimEnd();
-        }
-    }
-
-    // Try to parse as JSON and extract content
-    try {
-        const parsed = JSON.parse(cleaned);
-        // Check common key names for polished content (order matters - most specific first)
-        const content = parsed.polished_content || parsed.polished_article ||
-                       parsed.polishedContent || parsed.polishedArticle ||
-                       parsed.polishedDraft || parsed.content || parsed.article ||
-                       parsed.markdown || parsed.text || parsed.draft;
-        if (typeof content === 'string') {
-            console.log('[extractMarkdownFromResponse] Successfully extracted content from JSON wrapper');
-            return content;
-        }
-    } catch (e) {
-        // Not valid JSON, return original text (which is the expected case)
-    }
-
-    return text;
-};
+// Use shared extraction utility (previously duplicated across all providers)
+import { extractMarkdownFromResponse } from './ai/shared/extractJson';
 
 // Valid Gemini models (January 2026)
 // Reference: https://ai.google.dev/gemini-api/docs/models
@@ -118,10 +87,10 @@ const validGeminiModels = [
     // NOTE: Gemini 1.5 models removed - API returns 404 for these
 ];
 
-// Default to gemini-3-pro-preview as the latest model (November 2025)
-// Fallback to gemini-2.5-flash if empty response is received
-const GEMINI_DEFAULT_MODEL = 'gemini-3-pro-preview';
-const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash';
+// Model defaults configurable via config/defaults.ts → env vars
+import { AI_MODEL_DEFAULTS } from '../config/defaults';
+const GEMINI_DEFAULT_MODEL = AI_MODEL_DEFAULTS.geminiModel;
+const GEMINI_FALLBACK_MODEL = AI_MODEL_DEFAULTS.geminiFallbackModel;
 
 // Retry configuration
 const MAX_RETRIES = 3;

@@ -895,28 +895,6 @@ function validatePreservation(
 }
 
 /**
- * Validate that image placeholders are preserved after optimization.
- * Logs a warning if images were lost but doesn't block the process.
- * @deprecated Use validatePreservation() for comprehensive validation
- */
-function validateImagePreservation(
-  before: string,
-  after: string,
-  sectionKey: string,
-  passNumber: number
-): boolean {
-  const countBefore = countImagePlaceholders(before);
-  const countAfter = countImagePlaceholders(after);
-
-  if (countBefore > 0 && countAfter < countBefore) {
-    console.warn(`[Pass ${passNumber}] Image count DECREASED in section ${sectionKey}: ${countBefore} → ${countAfter}`);
-    return false;
-  }
-
-  return true;
-}
-
-/**
  * Clean optimized content from AI response.
  * Handles common issues like:
  * - Markdown code blocks wrapping

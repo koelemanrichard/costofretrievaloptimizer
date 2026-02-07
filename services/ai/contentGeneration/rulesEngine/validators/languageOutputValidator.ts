@@ -61,6 +61,52 @@ const LANGUAGE_PATTERNS: Record<string, RegExp> = {
 };
 
 /**
+ * Unicode script ranges for non-Latin language detection.
+ * Maps script name to language name and Unicode character class regex.
+ */
+interface ScriptRange {
+  language: string;
+  regex: RegExp;
+}
+
+const SCRIPT_RANGES: ScriptRange[] = [
+  { language: 'Chinese', regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/g },
+  { language: 'Japanese', regex: /[\u3040-\u309F\u30A0-\u30FF]/g },
+  { language: 'Korean', regex: /[\uAC00-\uD7AF\u1100-\u11FF]/g },
+  { language: 'Russian', regex: /[\u0400-\u04FF]/g },
+  { language: 'Arabic', regex: /[\u0600-\u06FF\u0750-\u077F]/g },
+  { language: 'Hebrew', regex: /[\u0590-\u05FF]/g },
+  { language: 'Thai', regex: /[\u0E00-\u0E7F]/g },
+];
+
+/**
+ * Detect the dominant Unicode script in content.
+ * Returns the script/language with the highest character count, or null for Latin.
+ */
+function detectScript(content: string): { language: string; ratio: number } | null {
+  const totalChars = content.replace(/\s+/g, '').length;
+  if (totalChars === 0) return null;
+
+  let bestMatch: { language: string; count: number } | null = null;
+
+  for (const range of SCRIPT_RANGES) {
+    const matches = content.match(range.regex);
+    const count = matches ? matches.length : 0;
+    if (count > 0 && (!bestMatch || count > bestMatch.count)) {
+      bestMatch = { language: range.language, count };
+    }
+  }
+
+  if (!bestMatch) return null;
+
+  const ratio = bestMatch.count / totalChars;
+  // Only report if the script represents a significant portion of content
+  if (ratio < 0.15) return null;
+
+  return { language: bestMatch.language, ratio };
+}
+
+/**
  * Minimum word count required for reliable language detection
  */
 const MIN_WORDS_FOR_DETECTION = 10;
@@ -104,7 +150,20 @@ export class LanguageOutputValidator {
       };
     }
 
-    // Score each language based on word frequency
+    // Step 1: Check for non-Latin scripts (CJK, Cyrillic, Arabic, Hebrew, Thai, Korean)
+    const scriptResult = detectScript(content);
+    if (scriptResult && scriptResult.ratio > 0.3) {
+      // Dominant non-Latin script detected — use script-based detection
+      const confidence = Math.min(0.8 + scriptResult.ratio * 0.2, 1.0);
+      return {
+        isValid: scriptResult.language === normalizedExpected,
+        detectedLanguage: scriptResult.language,
+        confidence,
+        expectedLanguage: normalizedExpected,
+      };
+    }
+
+    // Step 2: Latin-based detection via word frequency (existing logic)
     const scores: Record<string, number> = {};
 
     for (const [lang, markers] of Object.entries(LANGUAGE_MARKERS)) {
@@ -129,6 +188,20 @@ export class LanguageOutputValidator {
       if (score > highestScore) {
         highestScore = score;
         detectedLanguage = lang;
+      }
+    }
+
+    // Step 3: Check for mixed-script content (non-Latin script present but not dominant)
+    if (scriptResult && scriptResult.ratio > 0.15) {
+      // Mixed content: non-Latin script is present but not dominant
+      // If expected language matches the non-Latin script, trust script detection
+      if (scriptResult.language === normalizedExpected) {
+        return {
+          isValid: true,
+          detectedLanguage: scriptResult.language,
+          confidence: 0.7,
+          expectedLanguage: normalizedExpected,
+        };
       }
     }
 

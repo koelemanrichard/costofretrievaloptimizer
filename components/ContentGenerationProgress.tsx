@@ -179,19 +179,38 @@ const PulsingDot = () => (
   </span>
 );
 
+// One-line descriptions for each pass to help users understand what's happening
+const PASS_DESCRIPTIONS: Record<number, string> = {
+  1: 'Writing initial draft for each section',
+  2: 'Optimizing headings and structure',
+  3: 'Adding lists and tables for Featured Snippets',
+  4: 'Adding transitions and contextual bridges',
+  5: 'Fine-tuning language and modality',
+  6: 'Inserting image placeholders with semantic alt text',
+  7: 'Rewriting introduction to match full article',
+  8: 'Final polish and formatting',
+  9: 'Quality audit scoring content against 21+ rules',
+  10: 'Generating JSON-LD schema markup',
+};
+
 // Memoized pass list item to prevent unnecessary re-renders
 const PassListItem = memo(({ num, name, status }: { num: string; name: string; status: 'completed' | 'in_progress' | 'pending' | 'failed' }) => (
-  <div className="flex items-center gap-2 text-sm">
-    {status === 'completed' ? (
-      <CheckIcon />
-    ) : status === 'in_progress' ? (
-      <SpinnerIcon />
-    ) : (
-      <CircleIcon />
+  <div className="flex flex-col gap-0.5">
+    <div className="flex items-center gap-2 text-sm">
+      {status === 'completed' ? (
+        <CheckIcon />
+      ) : status === 'in_progress' ? (
+        <SpinnerIcon />
+      ) : (
+        <CircleIcon />
+      )}
+      <span className={status === 'completed' ? 'text-gray-400' : 'text-gray-200'}>
+        Pass {num}: {name}
+      </span>
+    </div>
+    {status === 'in_progress' && PASS_DESCRIPTIONS[parseInt(num)] && (
+      <span className="text-xs text-gray-500 ml-6">{PASS_DESCRIPTIONS[parseInt(num)]}</span>
     )}
-    <span className={status === 'completed' ? 'text-gray-400' : 'text-gray-200'}>
-      Pass {num}: {name}
-    </span>
   </div>
 ));
 
@@ -482,10 +501,33 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
       )}
 
       {/* Audit Score */}
+      {/* Audit Score + Next Steps */}
       {job.status === 'completed' && job.final_audit_score !== null && (
-        <div className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded">
-          <p className="text-green-300 font-semibold">
-            Audit Score: {job.final_audit_score}%
+        <div className="mb-4 space-y-3">
+          <div className="p-3 bg-green-900/30 border border-green-700 rounded">
+            <p className="text-green-300 font-semibold">
+              Audit Score: {job.final_audit_score}%
+            </p>
+          </div>
+          <div className="p-3 bg-gray-800/50 border border-gray-700 rounded">
+            <p className="text-sm font-medium text-gray-300 mb-2">Next Steps:</p>
+            <ul className="text-sm text-gray-400 space-y-1 list-disc list-inside">
+              <li>Review article quality in the Quality tab</li>
+              <li>Export as HTML or Markdown</li>
+              <li>Publish to WordPress (if connected)</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Failed Guidance */}
+      {job.status === 'audit_failed' && (
+        <div className="mb-4 p-3 bg-amber-900/30 border border-amber-700 rounded">
+          <p className="text-amber-300 font-semibold mb-1">
+            Audit Score: {job.final_audit_score ?? 0}% — Target: 70%
+          </p>
+          <p className="text-sm text-amber-200/70 mb-2">
+            Content quality is below the minimum threshold. Use the re-run button below to address failing rules.
           </p>
         </div>
       )}
@@ -508,7 +550,7 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
             Resume
           </button>
         )}
-        {(job.status === 'failed' || (job.status as string) === 'audit_failed') && onRetry && (
+        {(job.status === 'failed' || job.status === 'audit_failed') && onRetry && (
           <button
             onClick={onRetry}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm flex items-center gap-2"
@@ -519,7 +561,7 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
             Retry
           </button>
         )}
-        {(job.status as string) === 'audit_failed' && onRerunFromPass && (
+        {job.status === 'audit_failed' && onRerunFromPass && (
           <button
             onClick={() => {
               const suggestion = (job.audit_details as any)?.rerunSuggestion;
@@ -533,7 +575,7 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
             Re-run from suggested pass
           </button>
         )}
-        {(job.status as string) === 'checkpoint' && (
+        {job.status === ('checkpoint' as any) && (
           <div className="flex gap-2">
             {onApproveCheckpoint && (
               <button
@@ -553,7 +595,7 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
             )}
           </div>
         )}
-        {(job.status === 'in_progress' || job.status === 'paused' || job.status === 'failed' || (job.status as string) === 'audit_failed' || (job.status as string) === 'checkpoint') && (
+        {(job.status === 'in_progress' || job.status === 'paused' || job.status === 'failed' || job.status === 'audit_failed' || job.status === ('checkpoint' as any)) && (
           <button
             onClick={onCancel}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm"

@@ -133,8 +133,7 @@ async function analyzeTechnicalData(
 
   try {
     // Crawl the site
-    // Note: extractMultiplePagesTechnicalData doesn't support maxPagesToAnalyze option
-    // TODO: Consider adding pagination support if needed
+    // Note: extractMultiplePagesTechnicalData crawls all discovered pages in a single batch
     const pages = await extractMultiplePagesTechnicalData(
       [startUrl],
       config.apifyToken,

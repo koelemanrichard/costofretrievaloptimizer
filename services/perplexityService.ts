@@ -32,44 +32,9 @@ export function setUsageContext(context: AIUsageContext, operation?: string): vo
     if (operation) currentOperation = operation;
 }
 
-/**
- * Extract markdown content from potentially JSON-wrapped AI responses.
- * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
- * This function gracefully handles such cases.
- */
-const extractMarkdownFromResponse = (text: string): string => {
-    if (!text) return text;
-
-    // Strip markdown code block wrapper if present (```json ... ``` or ``` ... ```)
-    let cleaned = text.trim();
-    if (cleaned.startsWith('```')) {
-        const firstNewline = cleaned.indexOf('\n');
-        if (firstNewline !== -1) {
-            cleaned = cleaned.substring(firstNewline + 1);
-        }
-        if (cleaned.endsWith('```')) {
-            cleaned = cleaned.substring(0, cleaned.length - 3).trimEnd();
-        }
-    }
-
-    // Try to parse as JSON and extract content
-    try {
-        const parsed = JSON.parse(cleaned);
-        // Check common key names for polished content (order matters - most specific first)
-        const content = parsed.polished_content || parsed.polished_article ||
-                       parsed.polishedContent || parsed.polishedArticle ||
-                       parsed.polishedDraft || parsed.content || parsed.article ||
-                       parsed.markdown || parsed.text || parsed.draft;
-        if (typeof content === 'string') {
-            console.log('[extractMarkdownFromResponse] Successfully extracted content from JSON wrapper');
-            return content;
-        }
-    } catch (e) {
-        // Not valid JSON, return original text (which is the expected case)
-    }
-
-    return text;
-};
+// Use shared utilities (previously duplicated across all providers)
+import { extractMarkdownFromResponse } from './ai/shared/extractJson';
+import { retryWithBackoff } from './ai/shared/retryWithBackoff';
 
 const API_URL = 'https://api.perplexity.ai/chat/completions';
 
@@ -104,28 +69,30 @@ const callApi = async <T>(
     const apiCallLog = perplexityLogger.start(operation, 'POST');
 
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${businessInfo.perplexityApiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: modelToUse,
-                messages: [
-                    { role: "system", content: "You are a helpful, expert SEO strategist. You output strict JSON when requested." },
-                    { role: "user", content: prompt }
-                ],
-                max_tokens: 8192 // Prevent truncation for long content
-            })
-        });
+        const data = await retryWithBackoff(async () => {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${businessInfo.perplexityApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: modelToUse,
+                    messages: [
+                        { role: "system", content: "You are a helpful, expert SEO strategist. You output strict JSON when requested." },
+                        { role: "user", content: prompt }
+                    ],
+                    max_tokens: 8192 // Prevent truncation for long content
+                })
+            });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`API Error: ${response.status} ${response.statusText} - ${errText}`);
-        }
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`API Error: ${response.status} ${response.statusText} - ${errText}`);
+            }
 
-        const data = await response.json();
+            return response.json();
+        }, { maxRetries: 2, baseDelay: 2000 });
         const responseText = data.choices[0].message.content || '';
         const durationMs = Date.now() - startTime;
 

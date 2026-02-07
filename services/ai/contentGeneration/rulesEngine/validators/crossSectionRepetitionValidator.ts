@@ -305,11 +305,41 @@ export class CrossSectionRepetitionValidator {
           .map((i: number) => i + 1)
           .sort((a: number, b: number) => a - b);
 
+        // Verbatim phrases longer than 10 words are errors; shorter ones are warnings
+        const wordCount = firstOccurrence.phrase.split(/\s+/).length;
+        const severity = wordCount > 10 ? 'error' : 'warning';
+
         violations.push({
           rule: 'H9_CROSS_SECTION_REPETITION',
           text: firstOccurrence.phrase,
           position: firstOccurrence.position,
           suggestion: `Phrase "${firstOccurrence.phrase}" appears in sections ${sectionNumbers.join(', ')}. Consider rephrasing to avoid redundancy and improve information diversity.`,
+          severity,
+        });
+      }
+    }
+
+    // CSR-03: Detect repeated numbers/statistics across sections
+    const numberOccurrences = new Map<string, Set<number>>();
+    sections.forEach((section, sectionIndex) => {
+      const numbers = section.content.match(/\b\d{2,}\b/g);
+      if (numbers) {
+        for (const num of numbers) {
+          if (!numberOccurrences.has(num)) {
+            numberOccurrences.set(num, new Set());
+          }
+          numberOccurrences.get(num)!.add(sectionIndex);
+        }
+      }
+    });
+
+    for (const [number, sectionIndices] of numberOccurrences) {
+      if (sectionIndices.size >= 3) {
+        violations.push({
+          rule: 'CSR-03',
+          text: number,
+          position: 0,
+          suggestion: `Statistic '${number}' appears in ${sectionIndices.size} sections — consider consolidating`,
           severity: 'warning',
         });
       }

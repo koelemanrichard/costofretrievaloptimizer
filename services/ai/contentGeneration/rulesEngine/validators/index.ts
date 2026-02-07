@@ -25,6 +25,9 @@ import { EavPerSentenceValidator } from './eavPerSentenceValidator';
 import { AttributeOrderingValidator } from './attributeOrderingValidator';
 import { EavPresenceValidator } from './eavPresenceValidator';
 import { FactConsistencyValidator } from './factConsistencyValidator';
+import { HierarchyValidator } from './hierarchyValidator';
+import { BriefCompletenessValidator } from './briefCompletenessValidator';
+import { EavDistributionValidator } from './eavDistributionValidator';
 
 export class RulesValidator {
   /**
@@ -37,6 +40,7 @@ export class RulesValidator {
     'prohibited',    // Avoid AI-speak patterns
     'wordcount',     // Basic length requirements
     'structure',     // Basic S-P-O structure
+    'eavpresence',   // UNIQUE/ROOT EAVs must appear in content
   ]);
 
   /**
@@ -65,6 +69,12 @@ export class RulesValidator {
     // Run in Pass 1 as warnings - triggers retry with fix instructions
     if (isPass1 || runAll) {
       violations.push(...EavPresenceValidator.validate(content, context));
+    }
+
+    // 1c. EAV Distribution (no single section should hog all EAVs)
+    // Skip in Pass 1 - distribution only matters with full article
+    if (runAll || !isPass1) {
+      violations.push(...EavDistributionValidator.validate(content, context));
     }
 
     // 2. EAV Density (with language-aware verb patterns)
@@ -101,6 +111,11 @@ export class RulesValidator {
     // 7. S-P-O Structure
     // Always run - basic structure is fundamental
     violations.push(...StructureValidator.validate(content, context));
+
+    // 7b. Heading Hierarchy (H1-H6 nesting rules)
+    if ((runAll || !isPass1) && context.allSections && context.allSections.length > 0) {
+      violations.push(...HierarchyValidator.validateStructure(context.allSections));
+    }
 
     // 8. Contextual Bridge (for SUPPLEMENTARY zones)
     // Skip in Pass 1 - Pass 6 (Discourse Integration) handles bridges
@@ -190,6 +205,12 @@ export class RulesValidator {
       violations.push(...FactConsistencyValidator.validate(content, context));
     }
 
+    // 22. Brief Completeness (all brief sections covered, UNIQUE/ROOT EAVs present, keyword present)
+    // Only runs during Pass 8+ audit — requires full article assembled
+    if (runAll) {
+      violations.push(...BriefCompletenessValidator.validate(content, context));
+    }
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -254,3 +275,5 @@ export { EavPresenceValidator } from './eavPresenceValidator';
 export { FactConsistencyValidator } from './factConsistencyValidator';
 export { LinkInsertionValidator, validateLinkInsertion, extractContextualBridgeLinks, generateMissingLinksFallback } from './linkInsertionValidator';
 export type { LinkInsertionResult } from './linkInsertionValidator';
+export { BriefCompletenessValidator } from './briefCompletenessValidator';
+export { EavDistributionValidator } from './eavDistributionValidator';

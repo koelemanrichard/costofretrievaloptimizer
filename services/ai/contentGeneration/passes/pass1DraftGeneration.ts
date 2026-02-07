@@ -428,7 +428,21 @@ async function generateSectionWithRetry(
         log.warn(`Section "${section.heading}" validation failed (attempt ${attempt}/${maxRetries}):`, errors);
 
         if (attempt < maxRetries) {
-          fixInstructions = validationResult.fixInstructions;
+          // Enhance fix instructions with missing EAV subjects for targeted retry
+          let enhancedFix = validationResult.fixInstructions;
+          const missingEavViolations = validationResult.violations.filter(
+            v => v.rule === 'EAV_PRESENCE' && v.severity === 'error'
+          );
+          if (missingEavViolations.length > 0) {
+            const missingConcepts = missingEavViolations
+              .map(v => v.text?.match(/Missing EAV: "([^"]+)/)?.[1])
+              .filter(Boolean);
+            if (missingConcepts.length > 0) {
+              enhancedFix = (enhancedFix || '') +
+                `\nCRITICAL: You MUST naturally incorporate these concepts: ${missingConcepts.join(', ')}. Weave them into existing sentences or add new ones.`;
+            }
+          }
+          fixInstructions = enhancedFix;
           // Exponential backoff before retry
           await delay(1000 * Math.pow(2, attempt - 1));
           continue; // Retry with fix instructions
@@ -444,9 +458,9 @@ async function generateSectionWithRetry(
             log.error(`[CHECKPOINT] Section "${section.heading}" needs review. Errors: ${errorSummary}`);
             return `<!-- VALIDATION_CHECKPOINT: ${errorSummary} -->\n${content}`;
           } else {
-            // SOFT MODE: Warn and continue (legacy behavior)
-            log.error(`Section "${section.heading}" failed validation after ${maxRetries} attempts. Proceeding with last attempt.`);
-            return content;
+            // SOFT MODE: Warn and continue, but mark as validation-failed
+            log.error(`Section "${section.heading}" failed validation after ${maxRetries} attempts. Proceeding with last attempt (soft mode).`);
+            return `<!-- SOFT_VALIDATION_FAILED: ${errorSummary} -->\n${content}`;
           }
         }
       }

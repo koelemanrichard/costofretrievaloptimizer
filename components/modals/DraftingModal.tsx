@@ -132,6 +132,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const briefFromState = activeBriefTopic ? activeMap?.briefs?.[activeBriefTopic.id] : null;
   const brief = briefFromState || briefProp;
 
+  const showDebugTab = import.meta.env.DEV;
   const [activeTab, setActiveTab] = useState<'edit' | 'preview' | 'images' | 'quality' | 'debug'>('edit');
   const [draftContent, setDraftContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -2844,6 +2845,7 @@ ${schemaScript}`;
                       </span>
                     )}
                  </button>
+                 {showDebugTab && (
                  <button
                     onClick={() => setActiveTab('debug')}
                     className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${
@@ -2854,6 +2856,7 @@ ${schemaScript}`;
                  >
                     Debug
                  </button>
+                 )}
              </div>
 
              {isPolishing && (
@@ -3611,7 +3614,7 @@ ${schemaScript}`;
                             </div>
                         )}
                     </div>
-                ) : activeTab === 'debug' ? (
+                ) : activeTab === 'debug' && showDebugTab ? (
                     <div className="h-full overflow-y-auto">
                         {brief && draftContent && (
                             <ContentAnalysisPanel

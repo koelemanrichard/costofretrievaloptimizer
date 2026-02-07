@@ -46,13 +46,7 @@ const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         <p className="text-gray-400 mt-2 flex-grow">Start from scratch with our guided wizard to build a content strategy based on your business goals.</p>
                         <Button onClick={onCreateNewMap} className="mt-6 w-full">Start Wizard</Button>
                     </Card>
-                    {/* TODO: Re-enable when edge function pipeline is complete (start-website-analysis → gap-analysis-worker) */}
-                    <Card className="p-8 flex flex-col items-center justify-center text-center opacity-60">
-                        <h2 className="text-2xl font-bold text-white">Analyze Existing Website</h2>
-                        <p className="text-gray-400 mt-2 flex-grow">Crawl your live website to automatically discover its current topical map and get AI-powered improvement suggestions.</p>
-                        <Button disabled variant="secondary" className="mt-6 w-full">Coming Soon</Button>
-                        <p className="text-xs text-amber-400/70 mt-2">Backend integration in progress</p>
-                    </Card>
+                    {/* TODO: Re-add when edge function pipeline is complete (start-website-analysis → gap-analysis-worker) */}
                     <Card className="p-8 flex flex-col items-center justify-center text-center">
                         <h2 className="text-2xl font-bold text-white">Merge Topical Maps</h2>
                         <p className="text-gray-400 mt-2 flex-grow">Combine two or more maps into one, with AI-assisted topic matching and full control over the merge.</p>

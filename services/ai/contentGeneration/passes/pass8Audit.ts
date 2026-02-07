@@ -125,8 +125,8 @@ export async function executePass8(
 
       if (!crossPageResult.isConsistent) {
         crossPageContradictions = crossPageResult.contradictions;
-        // Apply penalty: -5 per factual contradiction, no cap
-        crossPagePenalty = crossPageResult.contradictions.length * 5;
+        // Apply penalty: -5 per factual contradiction, max -20
+        crossPagePenalty = Math.min(crossPageResult.contradictions.length * 5, 20);
         log.warn(` Cross-page contradictions found: ${crossPageResult.contradictions.length}`);
         for (const contradiction of crossPageResult.contradictions) {
           log.warn(`   - "${contradiction.entity}" ${contradiction.attribute}: "${contradiction.currentValue}" vs "${contradiction.conflictingValue}" in "${contradiction.conflictingArticle.title}"`);
@@ -144,8 +144,8 @@ export async function executePass8(
   const finalScore = Math.max(0, Math.round(algorithmicScore * 0.6 + complianceResult.overall * 0.4) - crossPagePenalty);
 
   // Quality enforcement thresholds
-  const CRITICAL_THRESHOLD = 50;  // Below this, content is blocked
-  const WARNING_THRESHOLD = 70;   // Below this, content needs improvement
+  const CRITICAL_THRESHOLD = 70;  // Below this, content is blocked — enterprise SEO standard
+  const WARNING_THRESHOLD = 85;   // Below this, content needs improvement
 
   // Identify critical failing rules
   const failingRules = algorithmicResults.filter(r => !r.isPassing);
@@ -156,36 +156,7 @@ export async function executePass8(
     (r.ruleName || '').includes('IMAGE_PLACEMENT')
   );
 
-  // Quality gate enforcement
-  if (finalScore < CRITICAL_THRESHOLD) {
-    log.error(` Quality audit FAILED: Score ${finalScore}% below ${CRITICAL_THRESHOLD}% threshold`);
-    log.error(` Failing rules: ${failingRules.map(r => r.ruleName || 'unknown').join(', ')}`);
-
-    // Identify which pass to re-run based on failing rules
-    const rerunSuggestion = identifyRerunTarget(failingRules);
-
-    // Update job with audit_failed status and re-run suggestion (not hard 'failed')
-    await orchestrator.updateJob(job.id, {
-      status: 'audit_failed' as any,
-      final_audit_score: finalScore,
-      audit_details: { ...auditDetails, rerunSuggestion } as any,
-      last_error: `Audit score ${finalScore}% below ${CRITICAL_THRESHOLD}% threshold. Suggested: re-run from Pass ${rerunSuggestion.targetPass} (${rerunSuggestion.reason}).`,
-      passes_status: { ...job.passes_status, pass_9_audit: 'failed' }
-    });
-
-    throw new Error(
-      `Quality audit failed: Score ${finalScore}% is below the ${CRITICAL_THRESHOLD}% minimum threshold. ` +
-      `${failingRules.length} rules failed: ${failingRules.slice(0, 5).map(r => r.ruleName || 'unknown').join(', ')}${failingRules.length > 5 ? '...' : ''}. ` +
-      `Suggested: re-run from Pass ${rerunSuggestion.targetPass}.`
-    );
-  }
-
-  if (finalScore < WARNING_THRESHOLD) {
-    log.warn(` Quality audit WARNING: Score ${finalScore}% below ${WARNING_THRESHOLD}% threshold`);
-    log.warn(` Failing rules (${failingRules.length}): ${failingRules.map(r => r.ruleName || 'unknown').join(', ')}`);
-    // Content continues but with warning logged
-  }
-
+  // Build audit details before threshold checks (needed by failure path)
   const auditDetails: AuditDetails = {
     algorithmicResults,
     passingRules,
@@ -207,6 +178,36 @@ export async function executePass8(
     // Include cross-page contradictions if any were found
     ...(crossPageContradictions.length > 0 && { crossPageContradictions })
   };
+
+  // Quality gate enforcement
+  if (finalScore < CRITICAL_THRESHOLD) {
+    log.error(` Quality audit FAILED: Score ${finalScore}% below ${CRITICAL_THRESHOLD}% threshold`);
+    log.error(` Failing rules: ${failingRules.map(r => r.ruleName || 'unknown').join(', ')}`);
+
+    // Identify which pass to re-run based on failing rules
+    const rerunSuggestion = identifyRerunTarget(failingRules);
+
+    // Update job with audit_failed status and re-run suggestion (not hard 'failed')
+    await orchestrator.updateJob(job.id, {
+      status: 'audit_failed',
+      final_audit_score: finalScore,
+      audit_details: { ...auditDetails, rerunSuggestion } as any,
+      last_error: `Audit score ${finalScore}% below ${CRITICAL_THRESHOLD}% threshold. Suggested: re-run from Pass ${rerunSuggestion.targetPass} (${rerunSuggestion.reason}).`,
+      passes_status: { ...job.passes_status, pass_9_audit: 'failed' }
+    });
+
+    throw new Error(
+      `Quality audit failed: Score ${finalScore}% is below the ${CRITICAL_THRESHOLD}% minimum threshold. ` +
+      `${failingRules.length} rules failed: ${failingRules.slice(0, 5).map(r => r.ruleName || 'unknown').join(', ')}${failingRules.length > 5 ? '...' : ''}. ` +
+      `Suggested: re-run from Pass ${rerunSuggestion.targetPass}.`
+    );
+  }
+
+  if (finalScore < WARNING_THRESHOLD) {
+    log.warn(` Quality audit WARNING: Score ${finalScore}% below ${WARNING_THRESHOLD}% threshold`);
+    log.warn(` Failing rules (${failingRules.length}): ${failingRules.map(r => r.ruleName || 'unknown').join(', ')}`);
+    // Content continues but with warning logged
+  }
 
   // Update job with the assembled draft (source of truth after section processing)
   await orchestrator.updateJob(job.id, {

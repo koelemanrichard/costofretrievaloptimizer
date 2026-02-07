@@ -76,6 +76,9 @@ export class BatchProcessor {
             openRouterApiKey: state.businessInfo.openRouterApiKey,
         };
 
+        const failures: string[] = [];
+        let successCount = 0;
+
         for (let i = 0; i < topicsWithoutBriefs.length; i++) {
             // Fetch fresh state inside loop to catch cancellations or map changes
             const currentState = this.getState();
@@ -181,14 +184,38 @@ export class BatchProcessor {
                 const finalBrief = sanitizeBriefFromDb(rawBrief);
 
                 this.dispatch({ type: 'ADD_BRIEF', payload: { mapId: activeMap.id, topicId: topic.id, brief: finalBrief } });
+                successCount++;
             } catch (error) {
                 const message = error instanceof Error ? error.message : "Unknown error";
+                const is429 = message.includes('429') || message.includes('rate limit') || message.includes('Too Many Requests');
+                failures.push(topic.title);
                 this.dispatch({ type: 'LOG_EVENT', payload: { service: 'BatchProcessor', message: `Failed to generate brief for "${topic.title}": ${message}`, status: 'failure', timestamp: Date.now(), data: error } });
+
+                // Exponential backoff on rate limit
+                if (is429) {
+                    const backoffMs = Math.min(2000 * Math.pow(2, Math.min(i, 4)), 30000);
+                    this.dispatch({ type: 'LOG_EVENT', payload: { service: 'BatchProcessor', message: `Rate limited — waiting ${backoffMs / 1000}s before next request`, status: 'warning', timestamp: Date.now() } });
+                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                }
+            }
+
+            // Rate limiting delay between API calls (skip after last item)
+            if (i < topicsWithoutBriefs.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
-        
+
         this.dispatch({ type: 'RESET_BRIEF_GENERATION' });
-        this.dispatch({ type: 'LOG_EVENT', payload: { service: 'BatchProcessor', message: 'Batch brief generation complete.', status: 'success', timestamp: Date.now() } });
+
+        // Summary notification with failures if any
+        if (failures.length > 0) {
+            const failureNames = failures.slice(0, 3).join(', ') + (failures.length > 3 ? ` +${failures.length - 3} more` : '');
+            this.dispatch({ type: 'SET_NOTIFICATION', payload: `Generated ${successCount}/${totalCount} briefs. ${failures.length} failed: ${failureNames}` });
+        } else {
+            this.dispatch({ type: 'SET_NOTIFICATION', payload: `Successfully generated ${successCount} briefs.` });
+        }
+
+        this.dispatch({ type: 'LOG_EVENT', payload: { service: 'BatchProcessor', message: `Batch brief generation complete. ${successCount}/${totalCount} succeeded, ${failures.length} failed.`, status: failures.length > 0 ? 'warning' : 'success', timestamp: Date.now() } });
         this.dispatch({ type: 'SET_LOADING', payload: { key: 'briefs', value: false } });
     }
 }

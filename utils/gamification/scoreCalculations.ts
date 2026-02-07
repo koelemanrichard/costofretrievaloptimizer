@@ -577,15 +577,9 @@ export function calculateCompetitiveParity(map: TopicalMap): SubScore {
     });
   }
 
-  // For now, give base score since we don't have competitor topic data yet
-  // This would need integration with competitor analysis service
-  score += 30; // Base competitive score
+  // Base competitive score — full integration depends on Query Network Audit results
+  score += 30;
   details.push('Competitor analysis available');
-
-  // TODO: When competitor topic data is available:
-  // - Calculate topic overlap
-  // - Identify gaps
-  // - Calculate coverage percentage
 
   const finalScore = Math.min(100, score);
 

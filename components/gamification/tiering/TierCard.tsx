@@ -113,8 +113,14 @@ export const TierCard: React.FC<TierCardProps> = ({
         <button
           className="text-sm text-gray-400 hover:text-white transition-colors"
           onClick={() => {
-            // TODO: Export tier functionality
-            console.log('Export Tier:', tier.id);
+            // Export tier topics as JSON download
+            const blob = new Blob([JSON.stringify(topics, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tier-${tier.id}-${tier.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
           }}
         >
           Export {tier.name} Only

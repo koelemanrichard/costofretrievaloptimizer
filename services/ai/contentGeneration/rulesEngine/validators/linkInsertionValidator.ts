@@ -24,7 +24,7 @@ export interface LinkInsertionResult {
   foundLinks: string[];
   /** Percentage of links successfully inserted */
   insertionRate: number;
-  /** Whether the minimum threshold was met (>50%) */
+  /** Whether the minimum threshold was met (>=75%) */
   passed: boolean;
 }
 
@@ -131,7 +131,7 @@ export function validateLinkInsertion(
     missingLinks,
     foundLinks,
     insertionRate,
-    passed: insertionRate >= 50 // At least 50% of links should be inserted
+    passed: insertionRate >= 75 // At least 75% of links should be inserted for topical authority
   };
 }
 
@@ -195,7 +195,7 @@ export class LinkInsertionValidator {
 
       violations.push({
         rule: 'IL-01',
-        severity: 'warning',
+        severity: 'error',
         text: missingAnchors,
         position: 0,
         suggestion: `Internal link insertion incomplete: ${result.foundCount}/${result.expectedCount} links found (${result.insertionRate}%). Missing links: ${missingAnchors}. Consider adding a "Related Topics" section.`,

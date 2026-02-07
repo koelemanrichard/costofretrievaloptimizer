@@ -15,6 +15,8 @@ export interface FirecrawlProxyConfig {
  * Fetch via Supabase edge proxy if config available, otherwise direct fetch.
  * Firecrawl API blocks CORS from browser origins.
  */
+const FETCH_TIMEOUT_MS = 30000;
+
 const firecrawlFetch = async (
   url: string,
   options?: RequestInit,
@@ -40,34 +42,47 @@ const firecrawlFetch = async (
       proxyBody.body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
     }
 
-    const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${proxyConfig.supabaseAnonKey}`,
-        'apikey': proxyConfig.supabaseAnonKey,
-      },
-      body: JSON.stringify(proxyBody),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${proxyConfig.supabaseAnonKey}`,
+          'apikey': proxyConfig.supabaseAnonKey,
+        },
+        body: JSON.stringify(proxyBody),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      throw new Error(`Edge proxy HTTP error: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Edge proxy HTTP error: ${response.status} ${response.statusText}`);
+      }
+
+      const wrapper = await response.json();
+      if (wrapper.error && !wrapper.body) {
+        throw new Error(`Proxy error: ${wrapper.error}`);
+      }
+
+      const responseBody = wrapper.body ?? '';
+      return new Response(typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody), {
+        status: wrapper.status || 200,
+        statusText: wrapper.statusText || '',
+        headers: { 'Content-Type': wrapper.contentType || 'application/json' },
+      });
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const wrapper = await response.json();
-    if (wrapper.error && !wrapper.body) {
-      throw new Error(`Proxy error: ${wrapper.error}`);
-    }
-
-    const responseBody = wrapper.body ?? '';
-    return new Response(typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody), {
-      status: wrapper.status || 200,
-      statusText: wrapper.statusText || '',
-      headers: { 'Content-Type': wrapper.contentType || 'application/json' },
-    });
   }
 
-  return fetch(url, options);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 /**

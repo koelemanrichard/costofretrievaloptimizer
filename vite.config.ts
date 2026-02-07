@@ -50,6 +50,10 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      // Strip console.log and debugger from production builds
+      esbuild: {
+        drop: mode === 'production' ? ['console', 'debugger'] : [],
+      },
       build: {
         sourcemap: true,
         rollupOptions: {

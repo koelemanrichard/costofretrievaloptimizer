@@ -31,17 +31,6 @@ async function callProviderWithPrompt(
   });
 }
 
-// Legacy constants - kept for backward compatibility but patterns now come from auditPatternsMultilingual.ts
-// @deprecated Use getAuditPatterns(language) instead for multilingual support
-const LLM_SIGNATURE_PHRASES = getAuditPatterns('en').llmSignaturePhrases;
-const POSITIVE_PREDICATES = getAuditPatterns('en').positivePredicates;
-const NEGATIVE_PREDICATES = getAuditPatterns('en').negativePredicates;
-const INSTRUCTIONAL_PREDICATES = getAuditPatterns('en').instructionalPredicates;
-const GENERIC_HEADINGS = getAuditPatterns('en').genericHeadings;
-const PASSIVE_PATTERNS = getAuditPatterns('en').passivePatterns;
-const FUTURE_TENSE_PATTERNS = getAuditPatterns('en').futureTensePatterns;
-const STOP_WORDS_FULL = getAuditPatterns('en').stopWordsFull;
-
 /**
  * Yield to main thread to prevent browser freeze during long-running operations.
  * Uses setTimeout(0) which works reliably in both foreground and background tabs.

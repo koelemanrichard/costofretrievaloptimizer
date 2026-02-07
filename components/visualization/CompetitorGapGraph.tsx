@@ -601,4 +601,5 @@ export const CompetitorGapGraph: React.FC<CompetitorGapGraphProps> = ({
   );
 };
 
-export default CompetitorGapGraph;
+// Memoize to prevent re-renders when parent state changes unrelated to graph data
+export default React.memo(CompetitorGapGraph);

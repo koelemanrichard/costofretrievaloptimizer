@@ -1245,4 +1245,5 @@ export const ComprehensiveAuditDashboard: React.FC<ComprehensiveAuditDashboardPr
   );
 };
 
-export default ComprehensiveAuditDashboard;
+// Memoize to prevent re-renders when parent state changes unrelated to dashboard data
+export default React.memo(ComprehensiveAuditDashboard);

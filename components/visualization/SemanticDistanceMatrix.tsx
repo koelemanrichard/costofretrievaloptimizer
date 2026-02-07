@@ -174,14 +174,23 @@ export const SemanticDistanceMatrix: React.FC<SemanticDistanceMatrixProps> = ({
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const PAGE_SIZE = 25;
+  const [page, setPage] = useState(0);
 
-  // Limit items if too many
-  const displayItems = useMemo(() => {
+  // Limit items if too many, then paginate
+  const allDisplayItems = useMemo(() => {
     if (items.length > maxItems) {
       return items.slice(0, maxItems);
     }
     return items;
   }, [items, maxItems]);
+
+  const totalPages = Math.ceil(allDisplayItems.length / PAGE_SIZE);
+  const displayItems = useMemo(() => {
+    if (allDisplayItems.length <= PAGE_SIZE) return allDisplayItems;
+    const start = page * PAGE_SIZE;
+    return allDisplayItems.slice(start, start + PAGE_SIZE);
+  }, [allDisplayItems, page]);
 
   // Calculate or use provided distance matrix
   const matrix = useMemo<MatrixCell[][]>(() => {
@@ -197,7 +206,8 @@ export const SemanticDistanceMatrix: React.FC<SemanticDistanceMatrixProps> = ({
         if (i === j) {
           distance = 0;
         } else if (distanceMatrix) {
-          distance = distanceMatrix[i][j];
+          const offset = page * PAGE_SIZE;
+          distance = distanceMatrix[offset + i]?.[offset + j] ?? 0;
         } else if (distanceResults) {
           const key = `${displayItems[i].id}:${displayItems[j].id}`;
           const altKey = `${displayItems[j].id}:${displayItems[i].id}`;
@@ -223,7 +233,7 @@ export const SemanticDistanceMatrix: React.FC<SemanticDistanceMatrixProps> = ({
     }
 
     return result;
-  }, [displayItems, distanceMatrix, distanceResults]);
+  }, [displayItems, distanceMatrix, distanceResults, page]);
 
   // Handle mouse move for tooltip
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -268,6 +278,27 @@ export const SemanticDistanceMatrix: React.FC<SemanticDistanceMatrixProps> = ({
           <p className="text-sm text-yellow-400 mt-1">
             Showing first {maxItems} of {items.length} items
           </p>
+        )}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <span className="text-xs text-gray-400">
+              Page {page + 1} of {totalPages} ({allDisplayItems.length} topics)
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         )}
       </div>
 
@@ -483,4 +514,5 @@ export const SemanticDistanceMatrix: React.FC<SemanticDistanceMatrixProps> = ({
   );
 };
 
-export default SemanticDistanceMatrix;
+// Memoize to prevent re-renders when parent state changes unrelated to matrix data
+export default React.memo(SemanticDistanceMatrix);

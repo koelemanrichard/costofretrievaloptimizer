@@ -3080,7 +3080,7 @@ export interface TelemetryLog {
 
 // === Multi-Pass Content Generation Types ===
 
-export type JobStatus = 'pending' | 'in_progress' | 'paused' | 'completed' | 'failed' | 'cancelled';
+export type JobStatus = 'pending' | 'in_progress' | 'paused' | 'completed' | 'failed' | 'cancelled' | 'audit_failed';
 export type SectionStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
 export type PassStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
 

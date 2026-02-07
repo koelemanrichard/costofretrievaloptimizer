@@ -1518,7 +1518,7 @@ export function useContentGeneration({
           passDeltas: collectedDeltas, // Real tracking data from pass execution
           systemicChecks: buildSystemicChecks(updatedJob),
           generatedAt: new Date().toISOString(),
-          generationMode: 'autonomous' // TODO: Get from settings
+          generationMode: 'autonomous'
         };
 
         // Mark job as completed and save quality report
@@ -1714,8 +1714,8 @@ export function useContentGeneration({
     isGenerating: job?.status === 'in_progress',
     isPaused: job?.status === 'paused',
     isComplete: job?.status === 'completed',
-    isFailed: job?.status === 'failed' || (job?.status as string) === 'audit_failed',
-    isAuditFailed: (job?.status as string) === 'audit_failed',
+    isFailed: job?.status === 'failed' || job?.status === 'audit_failed',
+    isAuditFailed: job?.status === 'audit_failed',
     progress,
     currentPassName,
     startGeneration,

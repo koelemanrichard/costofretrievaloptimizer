@@ -477,12 +477,20 @@ export const generateContentBrief = async (
         );
 
         if (!hasMatchingSection && questionWords.length > 0) {
+            // Auto-add a section heading matching the FS target question
+            enrichedBrief.structured_outline.push({
+                heading: fsTarget.question,
+                key_points: [`Direct answer to "${fsTarget.question}" for Featured Snippet optimization`],
+                mapped_eavs: [],
+            } as any);
+            (enrichedBrief as any).fs_heading_auto_added = true;
+
             dispatch({
                 type: 'LOG_EVENT',
                 payload: {
                     service: 'BriefGeneration',
-                    message: `Featured snippet target "${fsTarget.question}" may not be answered by any section in the outline`,
-                    status: 'warning',
+                    message: `Auto-added outline section "${fsTarget.question}" to target Featured Snippet`,
+                    status: 'info',
                     timestamp: Date.now(),
                 },
             });

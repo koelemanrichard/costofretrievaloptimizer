@@ -45,6 +45,10 @@ export interface SerpAnalysisResult {
     topCompetitors: { domain: string; position?: number }[];
     serpFeatures: string[];
     recommendations: string[];
+    /** True when data is AI-estimated rather than from real SERP API */
+    isInferred: boolean;
+    /** Confidence 0-1 for inferred data, 1.0 for real API data */
+    confidence: number;
   };
 }
 
@@ -113,7 +117,9 @@ async function analyzeFast(
         ...data.estimatedRequirements.contentElements.map(e => `Include: ${e}`),
         `Target word count: ${data.estimatedWordCount.avg}+`,
         ...data.estimatedRequirements.schemaTypes.map(s => `Add ${s} schema`)
-      ].slice(0, 8)
+      ].slice(0, 8),
+      isInferred: true,
+      confidence: data.confidence,
     }
   };
 }
@@ -156,7 +162,9 @@ async function analyzeDeep(
         position: r.position
       })),
       serpFeatures: extractFeaturesFromFull(data),
-      recommendations: generateRecommendationsFromSerp(data)
+      recommendations: generateRecommendationsFromSerp(data),
+      isInferred: false,
+      confidence: 1.0,
     }
   };
 }
@@ -348,7 +356,9 @@ function createEmptySummary(query: string): SerpAnalysisResult['summary'] {
     difficultyScore: 0,
     topCompetitors: [],
     serpFeatures: [],
-    recommendations: []
+    recommendations: [],
+    isInferred: false,
+    confidence: 0,
   };
 }
 

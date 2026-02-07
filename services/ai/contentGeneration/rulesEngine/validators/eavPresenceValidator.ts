@@ -24,12 +24,16 @@ export class EavPresenceValidator {
       const hasObject = objectValue && objectValue.length >= 3 && contentLower.includes(objectValue);
 
       if (!hasSubject && !hasObject) {
+        // UNIQUE and ROOT EAVs are critical for semantic SEO - block generation if missing
+        const category = eav.predicate?.category || (eav as any).category || 'COMMON';
+        const isHighPriority = category === 'UNIQUE' || category === 'ROOT';
+
         violations.push({
           rule: 'EAV_PRESENCE',
           text: `Missing EAV: "${eav.subject?.label} → ${eav.predicate?.relation} → ${eav.object?.value}"`,
           position: 0,
           suggestion: `Include a factual statement about "${eav.subject?.label}" and "${eav.object?.value}" in this section.`,
-          severity: 'warning',
+          severity: isHighPriority ? 'error' : 'warning',
         });
       }
     }

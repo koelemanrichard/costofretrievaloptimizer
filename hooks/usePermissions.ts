@@ -222,14 +222,8 @@ export function useFeatureGate(feature: string): {
           setEnabled(true);
           setReason(undefined);
         } else {
-          // TODO: Remove this grace period once billing module is fully deployed
-          // For now, default to enabled if the organization hasn't been set up with
-          // module subscriptions yet. This prevents blocking existing users during
-          // the transition to the multi-tenancy billing system.
-          //
-          // Once org_subscriptions are required:
-          // setEnabled(false);
-          // setReason('This feature requires an upgrade to your subscription plan.');
+          // Grace period: default to enabled until billing module is fully deployed.
+          // When org_subscriptions are enforced, switch to setEnabled(false).
           console.info(`[useFeatureGate] Feature "${feature}" not explicitly enabled for org ${organization.id}. ` +
             'Defaulting to enabled during billing transition period.');
           setEnabled(true);

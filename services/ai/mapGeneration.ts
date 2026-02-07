@@ -459,8 +459,42 @@ export const generateInitialTopicalMap = async (
                 }
             });
 
+            // Detect orphans in corrected set
+            const correctedAll = [...reEnriched.coreTopics, ...reEnriched.outerTopics];
+            const correctedOrphans = correctedAll.filter(t =>
+                !t.parent_topic_id && t.cluster_role !== 'pillar' && t.cluster_role !== 'cluster_content'
+            );
+            if (correctedOrphans.length > 0) {
+                dispatch({
+                    type: 'LOG_EVENT',
+                    payload: {
+                        service: 'MapGeneration',
+                        message: `${correctedOrphans.length} orphan topic(s) detected after correction: ${correctedOrphans.slice(0, 3).map(t => t.title).join(', ')}${correctedOrphans.length > 3 ? ` +${correctedOrphans.length - 3} more` : ''}`,
+                        status: 'warning',
+                        timestamp: Date.now(),
+                    }
+                });
+            }
+
             return { coreTopics: reEnriched.coreTopics, outerTopics: reEnriched.outerTopics };
         }
+    }
+
+    // Step 4: Detect orphan topics (no parent, no cluster)
+    const allTopics = [...enrichedResult.coreTopics, ...enrichedResult.outerTopics];
+    const orphans = allTopics.filter(t =>
+        !t.parent_topic_id && t.cluster_role !== 'pillar' && t.cluster_role !== 'cluster_content'
+    );
+    if (orphans.length > 0) {
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'MapGeneration',
+                message: `${orphans.length} orphan topic(s) detected with no parent or cluster assignment: ${orphans.slice(0, 3).map(t => t.title).join(', ')}${orphans.length > 3 ? ` +${orphans.length - 3} more` : ''}`,
+                status: 'warning',
+                timestamp: Date.now(),
+            }
+        });
     }
 
     return { coreTopics: enrichedResult.coreTopics, outerTopics: enrichedResult.outerTopics };

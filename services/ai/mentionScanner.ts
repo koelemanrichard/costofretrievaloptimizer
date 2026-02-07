@@ -16,6 +16,7 @@ import type {
 import { GoogleGenAI } from "@google/genai";
 import { validateEntityAuthority } from '../googleKnowledgeGraphService';
 import { verifyEntity as verifyWikipediaEntity } from '../wikipediaService';
+import { AI_MODEL_DEFAULTS } from '../../config/defaults';
 
 // Progress callback type
 type ProgressCallback = (progress: MentionScannerProgress) => void;
@@ -32,7 +33,7 @@ async function executePrompt(prompt: string, businessInfo: BusinessInfo): Promis
         throw new Error('Gemini API key not configured');
       }
       const ai = new GoogleGenAI({ apiKey: businessInfo.geminiApiKey });
-      const model = businessInfo.aiModel || 'gemini-2.5-flash';
+      const model = businessInfo.aiModel || AI_MODEL_DEFAULTS.geminiFallbackModel;
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
@@ -49,7 +50,7 @@ async function executePrompt(prompt: string, businessInfo: BusinessInfo): Promis
         throw new Error('Anthropic API key or Supabase URL not configured');
       }
       const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
-      const model = businessInfo.aiModel || 'claude-sonnet-4-5-20250929';
+      const model = businessInfo.aiModel || AI_MODEL_DEFAULTS.anthropicModel;
 
       const response = await fetch(proxyUrl, {
         method: 'POST',

@@ -224,9 +224,8 @@ export const PublishToWordPressModal: React.FC<PublishToWordPressModalProps> = (
       const options: PublishOptions = {
         status: form.status,
         post_type: form.postType,
-        categories: form.postType === 'post' && form.categoryId ? [form.categoryId] : undefined
-        // TODO: Implement tag name to ID lookup before passing tags
-        // tags: form.tags would need to be converted to IDs first
+        categories: form.postType === 'post' && form.categoryId ? [form.categoryId] : undefined,
+        // Tag name-to-ID lookup deferred: WordPress REST API /wp/v2/tags?search= needed
       };
 
       // Add scheduling if future post

@@ -482,7 +482,7 @@ export async function analyzeEntityHealth(
         attributeCategory: extracted.attributeCategory,
         isCoreSectionEntity: extracted.isCoreSectionEntity,
         topicCount: extracted.topicCount,
-        betweennessCentrality: 0, // TODO: Get from knowledge graph in future enhancement
+        betweennessCentrality: 0, // Defaults to 0 until knowledge graph betweenness is computed
       };
 
       const criticality = calculateCriticalityScore(input);

@@ -750,10 +750,13 @@ export async function generateFixPreview(
       return generateUniqueEavsFix(context, 10);
 
     case 'add_root_eavs':
+      return generateUniqueEavsFix(context, 15); // ROOT EAVs: more breadth needed
+
     case 'add_common_eavs':
+      return generateUniqueEavsFix(context, 20); // COMMON EAVs: highest volume
+
     case 'expand_eavs':
-      // These use similar EAV expansion logic
-      return generateUniqueEavsFix(context, 10); // TODO: Customize for category
+      return generateUniqueEavsFix(context, 10);
 
     case 'analyze_intents':
       return analyzeSearchIntentsFix(context, 20);
@@ -784,11 +787,10 @@ export async function generateFixPreview(
       };
 
     case 'add_value_props':
-      // TODO: Implement value proposition generation
       return {
         type: 'add_value_props',
         items: [],
-        description: 'Coming soon: Suggest unique value propositions',
+        description: 'Add value propositions manually in the Business Info panel under "Unique Selling Points"',
         estimatedImpact: { scoreIncrease: 0, category: 'Entity Clarity' }
       };
 

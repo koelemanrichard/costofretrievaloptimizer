@@ -7,6 +7,13 @@ import { BusinessInfo } from '../types';
 const env = (key: string, fallback: string = ''): string =>
   import.meta.env[key] || fallback;
 
+// AI model defaults — override via VITE_ env vars without code changes
+export const AI_MODEL_DEFAULTS = {
+  geminiModel: env('VITE_GEMINI_MODEL', 'gemini-3-pro-preview'),
+  geminiFallbackModel: env('VITE_GEMINI_FALLBACK_MODEL', 'gemini-2.5-flash'),
+  anthropicModel: env('VITE_ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929'),
+};
+
 export const defaultBusinessInfo: BusinessInfo = {
   domain: '',
   projectName: '',
@@ -20,6 +27,10 @@ export const defaultBusinessInfo: BusinessInfo = {
   language: 'en',
   targetMarket: 'United States',
 
+  // SECURITY NOTE: These VITE_ keys are user-provided API keys entered in Settings.
+  // They are stored encrypted in Supabase user_settings and loaded client-side.
+  // Server-side operations (edge functions) use Vault for key storage.
+  // This is by design: the application acts as a client for user-owned API keys.
   // Service Credentials (from environment variables)
   dataforseoLogin: env('VITE_DATAFORSEO_LOGIN'),
   dataforseoPassword: env('VITE_DATAFORSEO_PASSWORD'),

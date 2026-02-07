@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import type { BrandComponent, DiscoveredComponent } from '../../services/brand-replication/interfaces';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
 // ============================================================================
 // Types
@@ -277,7 +278,7 @@ const ComponentCard: React.FC<ComponentCardProps> = ({
           <div className="text-xs text-zinc-500 mb-2">Live Preview:</div>
           <div
             className="bg-white rounded overflow-hidden"
-            dangerouslySetInnerHTML={{ __html: brand.previewHtml }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(brand.previewHtml) }}
           />
         </div>
       )}

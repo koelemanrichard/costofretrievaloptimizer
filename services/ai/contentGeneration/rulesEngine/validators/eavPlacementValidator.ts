@@ -70,13 +70,16 @@ export class EavPlacementValidator {
       return { eav, position: this.findTermPosition(content, term) };
     });
 
-    // C2: At least one UNIQUE EAV must appear in first 300 words (or no UNIQUE EAVs exist)
-    const uniqueInFirst300 = uniqueEavs.length === 0 ||
-      uniquePositions.some(p => p.position !== null && p.position <= 300);
+    // C2: At least one UNIQUE EAV must appear in first 300 words
+    // Gracefully skip if no UNIQUE EAVs exist (returns true = no violation)
+    const uniqueInFirst300 = uniqueEavs.length === 0
+      ? true // No UNIQUE EAVs to check — skip gracefully
+      : uniquePositions.some(p => p.position !== null && p.position <= 300);
 
-    // C3: At least one ROOT EAV must appear in first 500 words (or no ROOT EAVs exist)
-    const rootInFirst500 = rootEavs.length === 0 ||
-      rootPositions.some(p => p.position !== null && p.position <= 500);
+    // C3: At least one ROOT EAV must appear in first 500 words
+    const rootInFirst500 = rootEavs.length === 0
+      ? true // No ROOT EAVs to check — skip gracefully
+      : rootPositions.some(p => p.position !== null && p.position <= 500);
 
     return {
       uniqueInFirst300,
@@ -88,15 +91,19 @@ export class EavPlacementValidator {
 
   /**
    * Validate EAV placement and return violations
-   * Only validates at article level or introduction sections
+   * Validates against full article content (across all sections) or introduction sections.
+   * ROOT EAVs must appear in the first 500 words of the full article.
    */
   static validate(content: string, context: SectionGenerationContext): ValidationViolation[] {
     const violations: ValidationViolation[] = [];
 
-    // Only validate at article level or introduction sections
-    // Level 1 is intro, or check if heading contains "introduction"
-    if (context.section?.level > 1 &&
-        !context.section?.heading?.toLowerCase().includes('introduction')) {
+    // Validate at article level (intro sections) or during full audit (pass 8+)
+    // For non-intro sections during per-section passes, skip — placement is article-level
+    const isIntro = context.section?.level <= 1 ||
+        context.section?.heading?.toLowerCase().includes('introduction');
+    const isFullAudit = !context.section || context.section.key === 'full_article';
+
+    if (!isIntro && !isFullAudit) {
       return violations;
     }
 
