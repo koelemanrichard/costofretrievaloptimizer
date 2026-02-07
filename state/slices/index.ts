@@ -59,3 +59,17 @@ export {
   organizationReducer,
   organizationActions,
 } from './organizationSlice';
+
+// Topic Operations (topic CRUD within a map)
+export {
+  type TopicOperationsAction,
+  topicOperationsReducer,
+  isTopicOperationsAction,
+} from './topicOperationsSlice';
+
+// Content Generation (brief CRUD and content generation within a map)
+export {
+  type ContentGenerationAction,
+  contentGenerationReducer,
+  isContentGenerationAction,
+} from './contentGenerationSlice';

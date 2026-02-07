@@ -104,8 +104,8 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     const [generationLogs, setGenerationLogs] = useState<Array<{ message: string; status: string; timestamp: number }>>([]);
     const [isStartingGeneration, setIsStartingGeneration] = useState(false);
 
-    // Settings panel state
-    const [showSettings, setShowSettings] = useState(false);
+    // Settings panel state - consolidated "Advanced Settings" section
+    const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
 
     // Load settings from localStorage or use defaults
@@ -748,7 +748,42 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     const canShowSettings = useMultiPass && !isGenerating;
 
     // Highlight settings when there's an error to encourage switching providers
-    const highlightSettings = isFailed && !showSettings;
+    const highlightSettings = isFailed && !showAdvancedSettings;
+
+    // Count how many settings differ from defaults to show in collapsed summary
+    const customSettingsCount = useMemo(() => {
+        let count = 0;
+        // Check priority preset
+        const isDefaultPreset = (
+            contentSettings.priorities.humanReadability === DEFAULT_CONTENT_GENERATION_SETTINGS.priorities.humanReadability &&
+            contentSettings.priorities.businessConversion === DEFAULT_CONTENT_GENERATION_SETTINGS.priorities.businessConversion &&
+            contentSettings.priorities.machineOptimization === DEFAULT_CONTENT_GENERATION_SETTINGS.priorities.machineOptimization &&
+            contentSettings.priorities.factualDensity === DEFAULT_CONTENT_GENERATION_SETTINGS.priorities.factualDensity
+        );
+        if (!isDefaultPreset) count++;
+        // Check tone
+        if (contentSettings.tone !== DEFAULT_CONTENT_GENERATION_SETTINGS.tone) count++;
+        // Check audience
+        if (contentSettings.audienceExpertise !== DEFAULT_CONTENT_GENERATION_SETTINGS.audienceExpertise) count++;
+        // Check content length preset
+        const defaultLengthPreset = DEFAULT_CONTENT_GENERATION_SETTINGS.contentLength?.preset ?? 'standard';
+        if ((contentSettings.contentLength?.preset ?? 'standard') !== defaultLengthPreset) count++;
+        // Check if any passes are disabled
+        const defaultPasses = DEFAULT_CONTENT_GENERATION_SETTINGS.passes;
+        const currentPasses = contentSettings.passes;
+        const hasDisabledPass = Object.keys(defaultPasses).some(key => {
+            const k = key as keyof typeof defaultPasses;
+            return currentPasses[k]?.enabled === false && defaultPasses[k]?.enabled !== false;
+        });
+        if (hasDisabledPass) count++;
+        // Check quality mode
+        if (qualityModeSettings.mode !== 'autonomous') count++;
+        // Check analysis depth
+        if (analysisDepth !== 'standard') count++;
+        // Check design analysis
+        if (contentSettings.enableDesignAnalysis) count++;
+        return count;
+    }, [contentSettings, qualityModeSettings, analysisDepth]);
 
     // Custom header with edit/settings buttons
     const customHeader = (
@@ -770,18 +805,23 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                 {/* Settings toggle in header - show when multi-pass and no draft */}
                 {canShowSettings && (
                     <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        aria-expanded={showSettings}
+                        onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                        aria-expanded={showAdvancedSettings}
                         aria-controls="content-brief-settings"
                         className={`text-xs px-3 py-1.5 rounded border transition-colors ${
-                            showSettings
+                            showAdvancedSettings
                                 ? 'bg-blue-900/50 border-blue-600 text-blue-200'
                                 : highlightSettings
                                     ? 'bg-amber-900/50 border-amber-500 text-amber-200 animate-pulse'
                                     : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
                         }`}
                     >
-                        {showSettings ? '▲ Hide Settings' : highlightSettings ? '⚠ Change AI Provider' : '▼ Show Settings'}
+                        {showAdvancedSettings
+                            ? '\u25B2 Hide Advanced Settings'
+                            : highlightSettings
+                                ? '\u26A0 Change AI Provider'
+                                : `\u25BC Advanced Settings${customSettingsCount > 0 ? ` (${customSettingsCount} custom)` : ''}`
+                        }
                     </button>
                 )}
                 <button
@@ -915,60 +955,116 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     const modalBodyContent = (
         <>
 
-            {/* Collapsible Settings Panel - visible when settings toggled on */}
-            {canShowSettings && showSettings && (
-                <div id="content-brief-settings" className="border-b border-gray-700 bg-gray-850 p-4 flex-shrink-0">
-                        {/* Settings Tabs */}
-                        <div className="flex gap-2 mb-4 border-b border-gray-700/50 pb-2">
-                            <button
-                                onClick={() => setContentSettings(prev => ({ ...prev, _activeTab: 'passes' }))}
-                                className={`text-xs px-3 py-1.5 rounded-t border-b-2 transition-colors ${
-                                    (contentSettings as any)._activeTab !== 'quality'
-                                        ? 'border-blue-500 text-blue-300'
-                                        : 'border-transparent text-gray-400 hover:text-gray-300'
-                                }`}
-                            >
-                                Pass Settings
-                            </button>
-                            <button
-                                onClick={() => setContentSettings(prev => ({ ...prev, _activeTab: 'quality' }))}
-                                className={`text-xs px-3 py-1.5 rounded-t border-b-2 transition-colors ${
-                                    (contentSettings as any)._activeTab === 'quality'
-                                        ? 'border-purple-500 text-purple-300'
-                                        : 'border-transparent text-gray-400 hover:text-gray-300'
-                                }`}
-                            >
-                                Quality Mode
-                            </button>
-                        </div>
+            {/* Consolidated Advanced Settings Panel */}
+            {canShowSettings && (
+                <div id="content-brief-settings" className="border-b border-gray-700 bg-gray-850 flex-shrink-0">
+                    {/* Collapsed summary line */}
+                    {!showAdvancedSettings && (
+                        <button
+                            onClick={() => setShowAdvancedSettings(true)}
+                            className="w-full px-4 py-2 flex items-center justify-between text-xs text-gray-400 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+                        >
+                            <span>
+                                {customSettingsCount === 0
+                                    ? 'Using defaults'
+                                    : `${customSettingsCount} custom setting${customSettingsCount !== 1 ? 's' : ''}`
+                                }
+                            </span>
+                            <span className="text-gray-500">{'\u25BC'}</span>
+                        </button>
+                    )}
 
-                        {/* Pass Settings Tab */}
-                        {(contentSettings as any)._activeTab !== 'quality' && (
-                            <div className="grid md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
+                    {/* Expanded settings */}
+                    {showAdvancedSettings && (
+                        <div className="p-4 max-h-[60vh] overflow-y-auto space-y-5">
+                            {/* Group 1: Content Priorities & Tone */}
+                            <div>
+                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Content Priorities & Tone</h4>
                                 <ContentGenerationSettingsPanel
                                     settings={contentSettings}
                                     onChange={setContentSettings}
                                     presets={PRIORITY_PRESETS}
                                 />
+                            </div>
+
+                            {/* Group 2: Refinement Passes */}
+                            <div>
+                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Refinement Passes</h4>
                                 <PassControlPanel
                                     passes={contentSettings.passes}
                                     onChange={(passes) => setContentSettings(prev => ({ ...prev, passes }))}
                                     disabled={isGenerating}
                                 />
                             </div>
-                        )}
 
-                        {/* Quality Mode Tab */}
-                        {(contentSettings as any)._activeTab === 'quality' && (
-                            <div className="max-h-[400px] overflow-y-auto">
-                                <ContentGenerationModeSelector
-                                    settings={qualityModeSettings}
-                                    onChange={setQualityModeSettings}
-                                />
+                            {/* Group 3: Competitor Analysis Depth */}
+                            {!isAnalyzing && !isGeneratingBrief && activeBriefTopic && (
+                                <div>
+                                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Competitor Analysis</h4>
+                                    <div className="bg-gray-800 rounded-lg p-3 border border-gray-700">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="text-xs text-gray-400">
+                                                    How many competitors are analyzed before generating the brief
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={analysisDepth}
+                                                    onChange={(e) => setAnalysisDepth(e.target.value as AnalysisDepth)}
+                                                    className="text-sm bg-gray-700 border border-gray-600 text-gray-200 rounded px-3 py-1.5 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value="quick">{DEPTH_CONFIG.quick.label}</option>
+                                                    <option value="standard">{DEPTH_CONFIG.standard.label}</option>
+                                                    <option value="thorough">{DEPTH_CONFIG.thorough.label}</option>
+                                                </select>
+                                                <button
+                                                    onClick={() => clearAnalysisCache(activeBriefTopic.id)}
+                                                    className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded border border-gray-700 hover:border-gray-600"
+                                                    title="Clear cached competitor analysis for this topic"
+                                                >
+                                                    Clear Cache
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {/* Show cached analysis info if available */}
+                                        {brief.competitorSpecs && (
+                                            <div className="mt-3 pt-3 border-t border-gray-700">
+                                                <div className="flex items-center gap-4 text-xs text-gray-400">
+                                                    <span>
+                                                        Last analyzed: {new Date(brief.competitorSpecs.analysisDate).toLocaleDateString()}
+                                                    </span>
+                                                    <span className={`font-medium ${
+                                                        brief.competitorSpecs.dataQuality === 'high' ? 'text-green-400' :
+                                                        brief.competitorSpecs.dataQuality === 'medium' ? 'text-yellow-400' :
+                                                        brief.competitorSpecs.dataQuality === 'low' ? 'text-red-400' : 'text-gray-500'
+                                                    }`}>
+                                                        {brief.competitorSpecs.competitorsAnalyzed} competitors {'\u2022'} {brief.competitorSpecs.dataQuality} quality
+                                                    </span>
+                                                    <span>
+                                                        Target: {brief.competitorSpecs.targetWordCount} words
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Group 4: Quality Enforcement Mode */}
+                            <div>
+                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Quality Enforcement</h4>
+                                <div className="bg-gray-800 rounded-lg p-3 border border-gray-700">
+                                    <ContentGenerationModeSelector
+                                        settings={qualityModeSettings}
+                                        onChange={setQualityModeSettings}
+                                    />
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )}
+                        </div>
+                    )}
+                </div>
+            )}
 
                 <div className="p-6 overflow-y-auto flex-grow">
                     {/* Multi-Pass Progress UI */}
@@ -1097,58 +1193,6 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 onCancel={cancelEnhancedGeneration}
                                 compact={false}
                             />
-                        )}
-
-                        {/* Analysis Depth Selector - shown when not generating */}
-                        {!isAnalyzing && !isGeneratingBrief && activeBriefTopic && (
-                            <Card className="p-4 bg-gray-900/50 border border-gray-700">
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <h3 className="font-semibold text-sm text-gray-300">Competitor Analysis Depth</h3>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Affects how many competitors are analyzed before generating the brief
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <select
-                                            value={analysisDepth}
-                                            onChange={(e) => setAnalysisDepth(e.target.value as AnalysisDepth)}
-                                            className="text-sm bg-gray-800 border border-gray-600 text-gray-200 rounded px-3 py-1.5 focus:ring-blue-500 focus:border-blue-500"
-                                        >
-                                            <option value="quick">{DEPTH_CONFIG.quick.label}</option>
-                                            <option value="standard">{DEPTH_CONFIG.standard.label}</option>
-                                            <option value="thorough">{DEPTH_CONFIG.thorough.label}</option>
-                                        </select>
-                                        <button
-                                            onClick={() => clearAnalysisCache(activeBriefTopic.id)}
-                                            className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded border border-gray-700 hover:border-gray-600"
-                                            title="Clear cached competitor analysis for this topic"
-                                        >
-                                            Clear Cache
-                                        </button>
-                                    </div>
-                                </div>
-                                {/* Show cached analysis info if available */}
-                                {brief.competitorSpecs && (
-                                    <div className="mt-3 pt-3 border-t border-gray-700">
-                                        <div className="flex items-center gap-4 text-xs text-gray-400">
-                                            <span>
-                                                Last analyzed: {new Date(brief.competitorSpecs.analysisDate).toLocaleDateString()}
-                                            </span>
-                                            <span className={`font-medium ${
-                                                brief.competitorSpecs.dataQuality === 'high' ? 'text-green-400' :
-                                                brief.competitorSpecs.dataQuality === 'medium' ? 'text-yellow-400' :
-                                                brief.competitorSpecs.dataQuality === 'low' ? 'text-red-400' : 'text-gray-500'
-                                            }`}>
-                                                {brief.competitorSpecs.competitorsAnalyzed} competitors • {brief.competitorSpecs.dataQuality} quality
-                                            </span>
-                                            <span>
-                                                Target: {brief.competitorSpecs.targetWordCount} words
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                            </Card>
                         )}
 
                         {/* Brief Health Overview */}

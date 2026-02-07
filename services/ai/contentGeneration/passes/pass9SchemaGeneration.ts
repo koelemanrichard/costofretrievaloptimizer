@@ -94,6 +94,23 @@ export async function executePass9(
     onProgress?.('Generating schema...');
     let schemaResult = await generateSchema(context);
 
+    // Log low-confidence (pattern_inference) entity resolutions
+    if (schemaResult.resolvedEntities.length > 0) {
+      const patternInferred = schemaResult.resolvedEntities.filter(
+        e => e.source === 'pattern_inference'
+      );
+      if (patternInferred.length > 0) {
+        log.log(
+          `[Pass9] ${patternInferred.length} of ${schemaResult.resolvedEntities.length} entities ` +
+          `resolved via pattern inference (lower confidence). Entities: ` +
+          patternInferred.map(e => `"${e.name}" (${e.type}, confidence: ${e.confidenceScore})`).join(', ')
+        );
+        onProgress?.(
+          `Note: ${patternInferred.length} entity/entities resolved via pattern inference (Wikidata unavailable)`
+        );
+      }
+    }
+
     // Step 4: Run full validation
     onProgress?.('Running validation pipeline...');
     const validation = await validateSchema(

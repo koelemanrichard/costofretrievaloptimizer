@@ -1,8 +1,9 @@
 
 // state/appState.ts
 //
-// REFACTORING IN PROGRESS: This reducer is being split into domain slices.
-// See state/slices/ for the extracted reducers.
+// State management split into domain slices. See state/slices/ for extracted reducers:
+// uiSlice, siteAnalysisSlice, auditSlice, publicationPlanningSlice, organizationSlice,
+// topicOperationsSlice, contentGenerationSlice
 //
 import React, { createContext, useContext, Dispatch } from 'react';
 import { User } from '@supabase/supabase-js';
@@ -35,6 +36,16 @@ import {
   initialPublicationPlanningState,
   publicationPlanningReducer,
 } from './slices/publicationPlanningSlice';
+
+import {
+  topicOperationsReducer,
+  isTopicOperationsAction,
+} from './slices/topicOperationsSlice';
+
+import {
+  contentGenerationReducer,
+  isContentGenerationAction,
+} from './slices/contentGenerationSlice';
 
 import {
     AppStep,
@@ -697,6 +708,17 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
 };
 
 const mapReducer = (map: TopicalMap, action: any): TopicalMap => {
+    // Delegate to extracted slices first
+    if (isTopicOperationsAction(action.type)) {
+        const result = topicOperationsReducer(map, action);
+        if (result !== null) return result;
+    }
+    if (isContentGenerationAction(action.type)) {
+        const result = contentGenerationReducer(map, action);
+        if (result !== null) return result;
+    }
+
+    // Remaining map-level actions not yet extracted to slices
     switch(action.type) {
         case 'UPDATE_MAP_DATA': return { ...map, ...action.payload.data };
         case 'SET_PILLARS': return { ...map, pillars: action.payload.pillars };
@@ -713,126 +735,6 @@ const mapReducer = (map: TopicalMap, action: any): TopicalMap => {
             return { ...map, eavs: [...existing, ...newEavs] };
         }
         case 'SET_COMPETITORS': return { ...map, competitors: action.payload.competitors };
-        case 'SET_TOPICS_FOR_MAP': return { ...map, topics: action.payload.topics };
-        case 'ADD_TOPIC': {
-            const newTopics = [...(map.topics || []), action.payload.topic];
-            return { ...map, topics: newTopics };
-        }
-        case 'ADD_TOPICS': {
-            // Batch add topics - prevents issues with multiple individual dispatches
-            const currentTopics = map.topics || [];
-            const newTopicIds = new Set(action.payload.topics.map((t: any) => t.id));
-            // Filter out any existing topics to prevent duplicates
-            const dedupedCurrent = currentTopics.filter(t => !newTopicIds.has(t.id));
-            const finalTopics = [...dedupedCurrent, ...action.payload.topics];
-            return { ...map, topics: finalTopics };
-        }
-        case 'UPDATE_TOPIC': return { ...map, topics: (map.topics || []).map(t => t.id === action.payload.topicId ? { ...t, ...action.payload.updates } : t) };
-        case 'DELETE_TOPIC': return { ...map, topics: (map.topics || []).filter(t => t.id !== action.payload.topicId) };
-        case 'SET_BRIEFS_FOR_MAP': return { ...map, briefs: action.payload.briefs };
-        case 'ADD_BRIEF': return { ...map, briefs: { ...(map.briefs || {}), [action.payload.topicId]: action.payload.brief } };
-        case 'UPDATE_BRIEF': {
-            const existingBrief = map.briefs?.[action.payload.topicId];
-            if (!existingBrief) return map;
-            return { ...map, briefs: { ...(map.briefs || {}), [action.payload.topicId]: { ...existingBrief, ...action.payload.updates } } };
-        }
-        case 'UPDATE_BRIEF_LINKS': {
-            const { sourceTopicId, linkToAdd } = action.payload;
-            const brief = map.briefs?.[sourceTopicId];
-            if (!brief) return map;
-
-            let newBridge: typeof brief.contextualBridge;
-            if (Array.isArray(brief.contextualBridge)) {
-                newBridge = [...brief.contextualBridge, linkToAdd];
-            } else if (brief.contextualBridge && typeof brief.contextualBridge === 'object') {
-                // Handle Section Object
-                newBridge = {
-                    ...brief.contextualBridge,
-                    links: [...(brief.contextualBridge.links || []), linkToAdd]
-                };
-            } else {
-                // Default Fallback
-                newBridge = [linkToAdd];
-            }
-
-            const updatedBrief = { ...brief, contextualBridge: newBridge };
-            return { ...map, briefs: { ...(map.briefs || {}), [sourceTopicId]: updatedBrief } };
-        }
-        // Brief Section Editing cases
-        case 'UPDATE_BRIEF_SECTION': {
-            const { topicId, sectionIndex, section } = action.payload;
-            const brief = map.briefs?.[topicId];
-            if (!brief || !brief.structured_outline) return map;
-
-            const newOutline = [...brief.structured_outline];
-            newOutline[sectionIndex] = section;
-
-            return {
-                ...map,
-                briefs: {
-                    ...(map.briefs || {}),
-                    [topicId]: { ...brief, structured_outline: newOutline }
-                }
-            };
-        }
-        case 'DELETE_BRIEF_SECTION': {
-            const { topicId, sectionIndex } = action.payload;
-            const brief = map.briefs?.[topicId];
-            if (!brief || !brief.structured_outline) return map;
-
-            const newOutline = brief.structured_outline.filter((_, idx) => idx !== sectionIndex);
-
-            return {
-                ...map,
-                briefs: {
-                    ...(map.briefs || {}),
-                    [topicId]: { ...brief, structured_outline: newOutline }
-                }
-            };
-        }
-        case 'ADD_BRIEF_SECTION': {
-            const { topicId, sectionIndex, section } = action.payload;
-            const brief = map.briefs?.[topicId];
-            if (!brief) return map;
-
-            const currentOutline = brief.structured_outline || [];
-            const newOutline = [
-                ...currentOutline.slice(0, sectionIndex),
-                section,
-                ...currentOutline.slice(sectionIndex)
-            ];
-
-            return {
-                ...map,
-                briefs: {
-                    ...(map.briefs || {}),
-                    [topicId]: { ...brief, structured_outline: newOutline }
-                }
-            };
-        }
-        case 'REORDER_BRIEF_SECTIONS': {
-            const { topicId, sections } = action.payload;
-            const brief = map.briefs?.[topicId];
-            if (!brief) return map;
-
-            return {
-                ...map,
-                briefs: {
-                    ...(map.briefs || {}),
-                    [topicId]: { ...brief, structured_outline: sections }
-                }
-            };
-        }
-        case 'REPLACE_BRIEF': {
-            const { topicId, brief } = action.payload;
-            return {
-                ...map,
-                briefs: {
-                    ...(map.briefs || {}),
-                    [topicId]: brief
-                }
-            };
-        }
         default: return map;
     }
 }

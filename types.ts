@@ -1463,7 +1463,7 @@ export interface ResolvedEntity {
   description?: string;
   properties: Record<string, unknown>;
   confidenceScore: number;
-  source: 'wikidata' | 'ai_inferred' | 'user_provided';
+  source: 'wikidata' | 'ai_inferred' | 'user_provided' | 'pattern_inference';
   lastVerifiedAt?: string;
   // Extended from EntityCandidate after resolution
   role?: 'subject' | 'author' | 'publisher' | 'mentioned' | 'about';
@@ -1668,7 +1668,7 @@ export interface EntityCacheEntry {
   resolvedData?: Record<string, unknown>;
   sameAsUrls: string[];
   confidenceScore: number;
-  resolutionSource: 'wikidata' | 'ai_inferred' | 'user_provided';
+  resolutionSource: 'wikidata' | 'ai_inferred' | 'user_provided' | 'pattern_inference';
   lastVerifiedAt?: string;
   createdAt: string;
   updatedAt: string;

@@ -281,7 +281,96 @@ function extractProperties(entity: WikidataEntity): Record<string, unknown> {
 }
 
 /**
- * Resolve a single entity to Wikidata
+ * Fallback entity resolution using schema.org type inference from name patterns.
+ * Used when Wikidata lookup fails (network error, no results, no valid matches).
+ * Returns a ResolvedEntity with lower confidence (0.6) and source 'pattern_inference'.
+ */
+export function fallbackEntityResolution(
+  entityName: string,
+  entityType?: SchemaEntityType
+): ResolvedEntity {
+  let inferredType: SchemaEntityType = entityType || 'Thing';
+
+  // Only infer type if not explicitly provided
+  if (!entityType) {
+    // Organization patterns: Inc, LLC, Ltd, Corp, Company, GmbH, etc.
+    if (
+      /\b(inc\.?|llc|ltd\.?|corp\.?|company|gmbh|plc|co\.|incorporated|corporation|limited|group|holdings)\b/i.test(entityName)
+    ) {
+      inferredType = 'Organization';
+    }
+    // EducationalOrganization patterns
+    else if (
+      /\b(university|college|school|academy|institute of technology|polytechnic)\b/i.test(entityName)
+    ) {
+      inferredType = 'Organization'; // schema:EducationalOrganization maps to Organization in our type system
+    }
+    // MedicalOrganization patterns
+    else if (
+      /\b(hospital|clinic|medical|healthcare|health center|health centre|pharmacy)\b/i.test(entityName)
+    ) {
+      inferredType = 'Organization'; // schema:MedicalOrganization maps to Organization in our type system
+    }
+    // Person patterns: likely "First Last" or "Title First Last"
+    else if (
+      /^(dr\.?|prof\.?|mr\.?|mrs\.?|ms\.?|sir|dame)\s+\w/i.test(entityName) ||
+      /^[A-Z][a-z]+\s+[A-Z][a-z]+$/.test(entityName.trim()) ||
+      /^[A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+$/.test(entityName.trim())
+    ) {
+      inferredType = 'Person';
+    }
+    // Place patterns: city, country, geographic indicators
+    else if (
+      /\b(city|county|country|state|province|republic|kingdom|island|mountain|river|lake|ocean|valley|district|territory|peninsula)\b/i.test(entityName)
+    ) {
+      inferredType = 'Place';
+    }
+    // Event patterns
+    else if (
+      /\b(conference|festival|summit|expo|exhibition|championship|olympics|ceremony|congress|symposium)\b/i.test(entityName)
+    ) {
+      inferredType = 'Event';
+    }
+    // CreativeWork patterns
+    else if (
+      /\b(book|journal|magazine|newspaper|film|movie|album|series|guide|handbook|manual|encyclopedia)\b/i.test(entityName)
+    ) {
+      inferredType = 'CreativeWork';
+    }
+    // Default remains 'Thing'
+  }
+
+  // Determine a more specific schema.org description based on inferred type
+  const typeDescriptions: Record<SchemaEntityType, string> = {
+    'Organization': 'Organization (inferred from name pattern)',
+    'Person': 'Person (inferred from name pattern)',
+    'Place': 'Place (inferred from name pattern)',
+    'Event': 'Event (inferred from name pattern)',
+    'CreativeWork': 'Creative work (inferred from name pattern)',
+    'Thing': 'Entity (type inferred by pattern matching)'
+  };
+
+  console.log(
+    `[WikidataService] Fallback resolution for "${entityName}" -> type: ${inferredType} (pattern_inference, confidence: 0.6)`
+  );
+
+  return {
+    name: entityName,
+    type: inferredType,
+    wikidataId: undefined,
+    wikipediaUrl: undefined,
+    sameAs: [],
+    description: typeDescriptions[inferredType],
+    properties: {},
+    confidenceScore: 0.6,
+    source: 'pattern_inference',
+    lastVerifiedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Resolve a single entity to Wikidata.
+ * Falls back to pattern-based inference when Wikidata lookup fails.
  */
 export async function resolveEntity(
   name: string,
@@ -295,120 +384,127 @@ export async function resolveEntity(
   name = sanitizeTextInput(name, 300);
   const safeContext = context || '';
 
-  // Search for the entity
-  const searchResults = await searchWikidata(name, type, language, 5);
+  try {
+    // Search for the entity
+    const searchResults = await searchWikidata(name, type, language, 5);
 
-  if (!searchResults.length) {
-    console.log(`[WikidataService] No results found for "${name}"`);
-    return null;
-  }
-
-  // Score results based on context and type, with context-aware validation
-  const scoredResults = searchResults.map(result => {
-    let score = 0;
-
-    // Exact match bonus
-    if (result.label.toLowerCase() === name.toLowerCase()) {
-      score += 10;
+    if (!searchResults.length) {
+      console.log(`[WikidataService] No Wikidata results for "${name}", using fallback resolution`);
+      return fallbackEntityResolution(name, type);
     }
 
-    // Description contains context words
-    if (result.description) {
-      const descWords = result.description.toLowerCase().split(/\s+/);
-      const contextWords = safeContext.toLowerCase().split(/\s+/);
-      const matches = contextWords.filter(w => descWords.includes(w)).length;
-      score += matches * 2;
+    // Score results based on context and type, with context-aware validation
+    const scoredResults = searchResults.map(result => {
+      let score = 0;
 
-      // CONTEXT-AWARE VALIDATION: Penalize clearly wrong entity types
-      // These are entity types that should never match technical/domain content
-      const wrongTypeIndicators = [
-        'family name', 'surname', 'given name', 'first name',
-        'disambiguation', 'wikimedia', 'taxon', 'species',
-        'gene', 'protein', 'chemical compound', 'mineral',
-        'fictional character', 'mythological', 'album',
-        'single', 'song', 'music video', 'television episode'
-      ];
+      // Exact match bonus
+      if (result.label.toLowerCase() === name.toLowerCase()) {
+        score += 10;
+      }
 
-      const descLower = result.description.toLowerCase();
-      for (const indicator of wrongTypeIndicators) {
-        if (descLower.includes(indicator)) {
-          // Heavy penalty for wrong type matches
-          score -= 20;
-          console.log(`[WikidataService] Penalizing "${result.label}" - wrong type: "${indicator}"`);
-          break;
+      // Description contains context words
+      if (result.description) {
+        const descWords = result.description.toLowerCase().split(/\s+/);
+        const contextWords = safeContext.toLowerCase().split(/\s+/);
+        const matches = contextWords.filter(w => descWords.includes(w)).length;
+        score += matches * 2;
+
+        // CONTEXT-AWARE VALIDATION: Penalize clearly wrong entity types
+        // These are entity types that should never match technical/domain content
+        const wrongTypeIndicators = [
+          'family name', 'surname', 'given name', 'first name',
+          'disambiguation', 'wikimedia', 'taxon', 'species',
+          'gene', 'protein', 'chemical compound', 'mineral',
+          'fictional character', 'mythological', 'album',
+          'single', 'song', 'music video', 'television episode'
+        ];
+
+        const descLower = result.description.toLowerCase();
+        for (const indicator of wrongTypeIndicators) {
+          if (descLower.includes(indicator)) {
+            // Heavy penalty for wrong type matches
+            score -= 20;
+            console.log(`[WikidataService] Penalizing "${result.label}" - wrong type: "${indicator}"`);
+            break;
+          }
+        }
+
+        // Bonus for domain-relevant descriptions
+        const domainIndicators = [
+          'construction', 'building', 'architecture', 'engineering',
+          'roofing', 'plumbing', 'electrical', 'hvac', 'insulation',
+          'material', 'technique', 'method', 'process', 'tool',
+          'professional', 'industry', 'trade', 'craft'
+        ];
+
+        for (const indicator of domainIndicators) {
+          if (descLower.includes(indicator)) {
+            score += 5;
+            break;
+          }
         }
       }
 
-      // Bonus for domain-relevant descriptions
-      const domainIndicators = [
-        'construction', 'building', 'architecture', 'engineering',
-        'roofing', 'plumbing', 'electrical', 'hvac', 'insulation',
-        'material', 'technique', 'method', 'process', 'tool',
-        'professional', 'industry', 'trade', 'craft'
-      ];
+      return { result, score };
+    });
 
-      for (const indicator of domainIndicators) {
-        if (descLower.includes(indicator)) {
-          score += 5;
-          break;
-        }
-      }
+    // Sort by score
+    scoredResults.sort((a, b) => b.score - a.score);
+
+    // Skip results with negative scores (clearly wrong matches)
+    const validResults = scoredResults.filter(r => r.score > 0);
+    if (!validResults.length) {
+      console.log(`[WikidataService] No valid Wikidata matches for "${name}" after context validation, using fallback`);
+      return fallbackEntityResolution(name, type);
     }
 
-    return { result, score };
-  });
+    // Get the best match
+    const bestMatch = validResults[0].result;
 
-  // Sort by score
-  scoredResults.sort((a, b) => b.score - a.score);
+    // Fetch full entity data
+    const entityData = await getWikidataEntity(bestMatch.id, language);
 
-  // Skip results with negative scores (clearly wrong matches)
-  const validResults = scoredResults.filter(r => r.score > 0);
-  if (!validResults.length) {
-    console.log(`[WikidataService] No valid matches found for "${name}" after context validation`);
-    return null;
+    if (!entityData) {
+      console.log(`[WikidataService] Could not fetch entity data for ${bestMatch.id}, using fallback`);
+      return fallbackEntityResolution(name, type);
+    }
+
+    // Determine type
+    const resolvedType = type || determineEntityType(entityData);
+
+    // Extract sameAs URLs
+    const sameAs = extractSameAsUrls(entityData);
+
+    // Extract additional properties
+    const properties = extractProperties(entityData);
+
+    // Get Wikipedia URL
+    const enWiki = entityData.sitelinks?.enwiki;
+    const wikipediaUrl = enWiki
+      ? `https://en.wikipedia.org/wiki/${encodeURIComponent(enWiki.title.replace(/ /g, '_'))}`
+      : undefined;
+
+    // Calculate confidence score
+    const confidenceScore = Math.min(1, (scoredResults[0].score / 20) + 0.5);
+
+    return {
+      name: entityData.labels[language]?.value || name,
+      type: resolvedType,
+      wikidataId: entityData.id,
+      wikipediaUrl,
+      sameAs,
+      description: entityData.descriptions[language]?.value,
+      properties,
+      confidenceScore,
+      source: 'wikidata',
+      lastVerifiedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    // Network error or unexpected failure - use fallback
+    console.error(`[WikidataService] Error resolving "${name}":`, error);
+    console.log(`[WikidataService] Using fallback resolution for "${name}" due to error`);
+    return fallbackEntityResolution(name, type);
   }
-
-  // Get the best match
-  const bestMatch = validResults[0].result;
-
-  // Fetch full entity data
-  const entityData = await getWikidataEntity(bestMatch.id, language);
-
-  if (!entityData) {
-    console.log(`[WikidataService] Could not fetch entity data for ${bestMatch.id}`);
-    return null;
-  }
-
-  // Determine type
-  const resolvedType = type || determineEntityType(entityData);
-
-  // Extract sameAs URLs
-  const sameAs = extractSameAsUrls(entityData);
-
-  // Extract additional properties
-  const properties = extractProperties(entityData);
-
-  // Get Wikipedia URL
-  const enWiki = entityData.sitelinks?.enwiki;
-  const wikipediaUrl = enWiki
-    ? `https://en.wikipedia.org/wiki/${encodeURIComponent(enWiki.title.replace(/ /g, '_'))}`
-    : undefined;
-
-  // Calculate confidence score
-  const confidenceScore = Math.min(1, (scoredResults[0].score / 20) + 0.5);
-
-  return {
-    name: entityData.labels[language]?.value || name,
-    type: resolvedType,
-    wikidataId: entityData.id,
-    wikipediaUrl,
-    sameAs,
-    description: entityData.descriptions[language]?.value,
-    properties,
-    confidenceScore,
-    source: 'wikidata',
-    lastVerifiedAt: new Date().toISOString()
-  };
 }
 
 /**
