@@ -165,7 +165,7 @@ function generateRelatedTopicsSection(
   // 1. Section heading that signals relationship to central entity
   // 2. Bridge paragraph that justifies the transition (annotation text) - if available
   // 3. Links with proper context
-  let section = `\n\n## ${sectionHeading}\n\n`;
+  let section = `\n\n<!-- related-topics -->\n## ${sectionHeading}\n\n`;
 
   // Add contextual bridge paragraph only if we have a custom one
   // Avoid generic boilerplate bridge text - it's not semantically valuable

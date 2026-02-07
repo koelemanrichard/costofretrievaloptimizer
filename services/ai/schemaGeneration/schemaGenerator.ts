@@ -237,8 +237,11 @@ function buildSchemaGraph(
   // 1. Organization schema (if enabled)
   if (config.includeOrganizationSchema) {
     const orgEntity = resolvedEntities.find(e => e.type === 'Organization');
+    const orgName = context.businessInfo.projectName
+      || context.businessInfo.domain?.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0]
+      || 'Organization';
     const orgSchema = createOrganizationSchema(
-      context.businessInfo.projectName || 'Organization',
+      orgName,
       baseUrl,
       undefined, // Logo URL would come from business info
       orgEntity?.sameAs || []
@@ -247,8 +250,11 @@ function buildSchemaGraph(
   }
 
   // 2. WebSite schema
+  const websiteName = context.businessInfo.projectName
+    || context.businessInfo.domain?.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0]
+    || 'Website';
   graphItems.push(createWebSiteSchema(
-    context.businessInfo.projectName || 'Website',
+    websiteName,
     baseUrl,
     getSchemaId(baseUrl, 'organization')
   ));
