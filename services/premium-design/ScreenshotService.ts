@@ -38,12 +38,8 @@ export class ScreenshotService {
     document.body.appendChild(iframe);
 
     try {
-      const doc = iframe.contentDocument;
-      if (!doc) throw new Error('Failed to access iframe document');
-
-      // Write full HTML document into iframe
-      doc.open();
-      doc.write(`<!DOCTYPE html>
+      // Build full HTML document
+      const fullDocument = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -55,27 +51,32 @@ ${css}
 </style>
 </head>
 <body>${html}</body>
-</html>`);
-      doc.close();
+</html>`;
 
-      // Wait for the iframe load event
+      // Use srcdoc instead of document.write() — never blocked by the browser,
+      // triggers a proper load event, and creates a same-origin document.
+      iframe.srcdoc = fullDocument;
+
+      // Wait for the iframe load event (srcdoc fires load when parsing is complete)
       await new Promise<void>((resolve) => {
-        if (doc.readyState === 'complete') {
-          resolve();
-        } else {
-          iframe.addEventListener('load', () => resolve(), { once: true });
-          // Fallback timeout in case load never fires
-          setTimeout(resolve, 2000);
-        }
+        iframe.addEventListener('load', () => resolve(), { once: true });
+        // Fallback timeout for large AI-generated CSS
+        setTimeout(resolve, 3000);
       });
+
+      // Access contentDocument AFTER load — with srcdoc the document
+      // isn't available until the iframe fires its load event.
+      const doc = iframe.contentDocument;
+      if (!doc) throw new Error('Failed to access iframe document');
 
       // Wait for fonts to load
       if (doc.fonts && doc.fonts.ready) {
         await doc.fonts.ready;
       }
 
-      // Wait for CSS paint and layout
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Wait for CSS paint and layout (load event implies parsing is complete,
+      // so a shorter delay suffices)
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Verify the body has dimensions before capturing
       const bodyRect = doc.body.getBoundingClientRect();

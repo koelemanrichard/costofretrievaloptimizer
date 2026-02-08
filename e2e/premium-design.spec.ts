@@ -742,3 +742,66 @@ test.describe('Premium Design HTML Structure Quality', () => {
     expect(hasProperStructure).toBeTruthy();
   });
 });
+
+// =============================================================================
+// Part H: ScreenshotService Capture
+// =============================================================================
+
+test.describe('ScreenshotService Capture', () => {
+  test('captureRenderedOutput produces valid JPEG', async ({ page }) => {
+    // Navigate to the app so we have a real browser context with Vite module system
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const testHtml = '<h1>Screenshot Test</h1><p>This is a test article for screenshot capture.</p>';
+    const testCss = 'body { font-family: sans-serif; padding: 40px; } h1 { color: #1a1a1a; }';
+
+    // Use page.evaluate to dynamically import ScreenshotService and capture
+    const base64 = await page.evaluate(async ({ html, css }) => {
+      const { ScreenshotService } = await import('/services/premium-design/ScreenshotService.ts');
+      const service = new ScreenshotService();
+      return await service.captureRenderedOutput(html, css);
+    }, { html: testHtml, css: testCss });
+
+    // Validate base64 starts with /9j/ (JPEG SOI marker in base64)
+    expect(base64).toBeTruthy();
+    expect(base64.startsWith('/9j/')).toBe(true);
+
+    // Decode and verify image dimensions via an Image element
+    const dimensions = await page.evaluate(async (b64) => {
+      return new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => reject(new Error('Failed to decode JPEG'));
+        img.src = 'data:image/jpeg;base64,' + b64;
+      });
+    }, base64);
+
+    expect(dimensions.width).toBeGreaterThanOrEqual(1200);
+    expect(dimensions.height).toBeGreaterThan(100);
+  });
+
+  test('captureRenderedOutput handles broken CSS gracefully', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const testHtml = '<h1>Broken CSS Test</h1><p>This should still produce a screenshot.</p>';
+    // Intentionally broken CSS: missing braces, invalid values
+    const brokenCss = `
+      body { font-family: sans-serif; padding: 40px;
+      h1 { color: notacolor; font-size: %%invalid; }
+      .nonexistent { display: banana; width: -999px; }
+    `;
+
+    // Should still produce a screenshot without crashing
+    const base64 = await page.evaluate(async ({ html, css }) => {
+      const { ScreenshotService } = await import('/services/premium-design/ScreenshotService.ts');
+      const service = new ScreenshotService();
+      return await service.captureRenderedOutput(html, css);
+    }, { html: testHtml, css: brokenCss });
+
+    expect(base64).toBeTruthy();
+    expect(typeof base64).toBe('string');
+    expect(base64.length).toBeGreaterThan(100);
+  });
+});
