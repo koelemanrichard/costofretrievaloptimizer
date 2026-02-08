@@ -17,7 +17,7 @@ export class AiCssGenerator {
     articleHtml: string,
     businessContext?: BusinessContext
   ): Promise<string> {
-    const htmlPreview = articleHtml.substring(0, 12000);
+    const htmlPreview = articleHtml.substring(0, 15000);
     const sectionManifest = this.extractSectionManifest(articleHtml);
     const prompt = this.buildInitialPrompt(crawledTokens, htmlPreview, sectionManifest, businessContext);
     const css = await this.callVisionAI(targetScreenshot, null, prompt);
@@ -92,42 +92,62 @@ ${htmlPreview}
 
 ${sectionManifest}
 
-Each section has a role, weight (1-5), and emphasis level (hero/featured/standard/supporting/minimal). The manifest shows design suggestions per section — follow them.
+Each section has a role, weight (1-5), and emphasis level. The manifest shows design suggestions — follow them.
 ${businessContext ? `\nIndustry: ${businessContext.industry} | Audience: ${businessContext.audience}` : ''}
 
 ## Design Requirements — Agency Quality
 
-Write a COMPLETE CSS stylesheet (400-700 lines, quality over quantity). The result must look like a premium page designed by a top agency — with bold visual components, not just styled paragraphs.
+Write a COMPLETE CSS stylesheet (400-700 lines, quality over quantity). The result must look like a premium page designed by a top agency — with bold visual components, not just styled paragraphs. MATCH THE TARGET WEBSITE STYLE from the screenshot.
 
-### Visual Hierarchy Philosophy
+### Mandatory CSS Seed Patterns — CUSTOMIZE to match the brand screenshot
 
-CRITICAL: Do NOT style all sections identically. Each emphasis level must look visually distinct:
+You MUST include ALL these patterns, adapted to the brand colors/style from the screenshot:
 
-- **hero** (weight 5): Bold treatment — generous padding (3-4rem), gradient or colored background, large heading (2rem+), accent borders, optional subtle animation
-- **featured** (weight 4): Prominent — accent left/top border, elevated shadow, larger heading, standout background
-- **standard** (weight 3): Clean card — surface/white background, standard shadow, normal heading
-- **supporting** (weight 2): Compact — reduced padding (1.5rem), smaller heading, minimal decoration, muted borders
-- **minimal** (weight 1): Lightweight — no shadow, tight padding, small heading, very subtle styling
+\`\`\`css
+/* === CONTENT LAYOUT === */
+[data-content-body] { display: flex; flex-direction: column; gap: 1.5rem; max-width: 780px; margin: 0 auto; padding: 2rem; }
 
-Section role → component guidance:
-- \`[data-section-role="introduction"]\` → Lead paragraph (larger text, subtle background)
-- \`[data-section-role="definition"]\` → Standout card with accent border
-- \`[data-section-role="steps"]\` → Numbered step cards or timeline
-- \`[data-section-role="comparison"]\` → Styled table with branded headers
-- \`[data-section-role="faq"]\` → Accordion cards, compact when supporting
-- \`[data-section-role="summary"]\` → Key takeaways box
-- \`[data-section-role="list"]\` → Feature grid cards
-- \`[data-section-role="testimonial"]\` → Decorative blockquote
+/* === BASE SECTION CARD === */
+section[data-section-id] { background: var(--brand-bg); border-radius: var(--brand-radius); padding: 2.5rem 2rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: box-shadow 0.2s, transform 0.2s; }
+section[data-section-id]:hover { box-shadow: var(--brand-shadow); }
+[data-variant="surface"] { background: var(--brand-surface); border: 1px solid var(--brand-border); }
 
-Use emphasis selectors for hierarchy: \`[data-emphasis="hero"]\`, \`[data-emphasis="featured"]\`, etc.
-Use weight selectors for fine-tuning: \`[data-semantic-weight="5"]\`, etc.
+/* === VISUAL HIERARCHY — each emphasis level MUST look different === */
+[data-emphasis="hero"] { padding: 3rem 2.5rem; background: linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 8%, var(--brand-bg)), var(--brand-bg)); border-left: 5px solid var(--brand-primary); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+[data-emphasis="hero"] h2 { font-size: 1.9rem; color: var(--brand-primary); }
+[data-emphasis="featured"] { padding: 2.5rem 2rem; border-left: 4px solid var(--brand-accent, var(--brand-primary)); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+[data-emphasis="featured"] h2 { font-size: 1.65rem; }
+[data-emphasis="standard"] { padding: 2rem 1.75rem; }
+[data-emphasis="supporting"] { padding: 1.5rem 1.5rem; opacity: 0.95; }
+[data-emphasis="supporting"] h2 { font-size: 1.3rem; }
+[data-emphasis="minimal"] { padding: 1.25rem 1.25rem; box-shadow: none; border: 1px solid var(--brand-border); }
+[data-emphasis="minimal"] h2 { font-size: 1.2rem; }
 
-TOC styling:
-- \`nav.toc[data-toc-count]\` for count-aware sizing
-- \`nav.toc[data-toc-compact]\` → 2-column layout for long TOCs (12+ sections)
-- Keep TOC compact — it should not dominate the page
+/* === SECTION ROLE STYLING === */
+[data-section-role="definition"] { border-left: 5px solid var(--brand-primary); background: linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 5%, white), var(--brand-bg)); }
+[data-section-role="introduction"] [data-intro-text] { font-size: 1.2rem; line-height: 1.8; }
+[data-section-role="faq"] { background: var(--brand-surface); }
+[data-section-role="summary"] { background: var(--brand-surface); border: 1px dashed var(--brand-border); }
 
-### Core Layout Patterns
+/* === h2 decorative treatment === */
+h2 { font-family: var(--font-heading); padding-bottom: 0.75rem; border-bottom: 3px solid transparent; border-image: linear-gradient(90deg, var(--brand-primary), transparent) 1; margin-bottom: 1.5rem; }
+
+/* === Intro text === */
+[data-intro-text] { font-size: 1.15rem; color: var(--brand-text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+
+/* === Prose sections — decorative left border === */
+[data-prose-section] { border-left: 4px solid transparent; border-image: linear-gradient(180deg, var(--brand-primary), var(--brand-accent, var(--brand-secondary))) 1; }
+
+/* === TOC — compact, must NOT dominate the page === */
+nav.toc { background: var(--brand-surface); border-radius: var(--brand-radius); padding: 1.25rem 1.5rem; margin: 1rem auto; max-width: 780px; border: 1px solid var(--brand-border); font-size: 0.85rem; }
+nav.toc .toc-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--brand-text); }
+nav.toc ul { list-style: none; padding: 0; margin: 0; columns: 1; }
+nav.toc li { padding: 0.2rem 0; }
+nav.toc a { color: var(--brand-primary); text-decoration: none; }
+nav.toc[data-toc-compact] ul { columns: 2; column-gap: 2rem; }
+\`\`\`
+
+### Mandatory Design Patterns
 
 1. **Page layout**: Full-width body. Content sections max-width 780px centered. Hero and CTA sections can break out to full width.
 
@@ -220,11 +240,21 @@ ${sectionManifest ? `\n## Section Manifest (full article structure)\n\n${section
 ## Required Fixes
 ${fixes}
 
-IMPORTANT: Visual hierarchy is critical. Sections with different \`data-emphasis\` values MUST look visually different:
-- \`[data-emphasis="hero"]\` and \`[data-emphasis="featured"]\` need more visual weight (bolder backgrounds, larger headings, accent borders) than \`[data-emphasis="supporting"]\` or \`[data-emphasis="minimal"]\`
-- Use \`[data-section-role="..."]\` selectors to give each content type appropriate styling (definition cards, step timelines, FAQ accordions, etc.)
-- At least 3 distinct visual treatments must be visible across the page
-- If all sections look identical → Layout Sophistication will score below 50
+IMPORTANT: Visual hierarchy and brand match are critical.
+
+If Layout Sophistication is below 75, you MUST add these visual hierarchy rules:
+- \`[data-emphasis="hero"]\` → generous padding (3rem+), gradient/colored background tint, large heading (1.9rem), thick accent border, elevated shadow
+- \`[data-emphasis="featured"]\` → accent left border (4px), slightly elevated shadow, larger heading
+- \`[data-emphasis="standard"]\` → clean card with subtle shadow, normal heading
+- \`[data-emphasis="supporting"]\` → compact padding (1.5rem), smaller heading, minimal decoration
+- \`[data-emphasis="minimal"]\` → no shadow, tight padding, muted border only
+- \`[data-section-role="definition"]\` → standout card with primary color accent
+- \`[data-section-role="faq"]\` → surface background, accordion styling
+- \`[data-prose-section]\` → decorative gradient left border
+- \`[data-intro-text]\` → larger/muted text (1.15rem)
+- h2 → decorative bottom gradient border
+- nav.toc → compact (font-size 0.85rem, max-height controlled), use \`columns: 2\` if \`[data-toc-compact]\`
+- At least 3 distinct visual treatments must be visible — if all sections look identical → score below 50
 
 ## Current CSS
 \`\`\`css

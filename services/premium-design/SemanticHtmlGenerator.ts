@@ -276,8 +276,10 @@ ${sectionsHtml}${ctaHtml}
 
     let result = tocHtml;
 
-    // Count H2-level TOC entries
-    const h2Count = (result.match(/<li class="toc-h2"/g) || []).length;
+    // Count H2-level TOC entries (H2 <li> tags have NO class, H3 have class="toc-h3")
+    const allLiCount = (result.match(/<li/g) || []).length;
+    const h3Count = (result.match(/<li class="toc-h3"/g) || []).length;
+    const h2Count = allLiCount - h3Count;
 
     // Add data-toc-count to the nav
     result = result.replace(/<nav class="toc">/, `<nav class="toc" data-toc-count="${h2Count}">`);
