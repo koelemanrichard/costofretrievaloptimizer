@@ -125,6 +125,27 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   const [repairingTopicId, setRepairingTopicId] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<'created_desc' | 'created_asc' | 'title_asc' | 'title_desc' | 'updated_desc' | 'updated_asc'>('created_desc');
   const [showUsageReport, setShowUsageReport] = useState(false);
+  const [pipelineFilter, setPipelineFilter] = useState<'all' | 'needs-brief' | 'needs-draft' | 'needs-audit' | 'published'>('all');
+
+  // Pipeline-filtered topic IDs (used to hide non-matching topics)
+  const pipelineFilteredIds = useMemo(() => {
+    if (pipelineFilter === 'all') return null; // null = show all
+    const ids = new Set<string>();
+    for (const t of [...coreTopics, ...outerTopics, ...childTopics]) {
+      const brief = briefs[t.id];
+      let matches = false;
+      switch (pipelineFilter) {
+        case 'needs-brief': matches = !brief; break;
+        case 'needs-draft': matches = !!brief && !(brief.articleDraft && brief.articleDraft.length > 100); break;
+        case 'needs-audit': matches = !!brief && !!(brief.articleDraft && brief.articleDraft.length > 100) && !brief.contentAudit?.algorithmicResults; break;
+        case 'published': matches = false; break; // TODO: wire up
+      }
+      if (matches) ids.add(t.id);
+      // Also show parent core topics when their children match
+      if (matches && t.parent_topic_id) ids.add(t.parent_topic_id);
+    }
+    return ids;
+  }, [pipelineFilter, coreTopics, outerTopics, childTopics, briefs]);
   // Template panel moved to AddTopicModal - no longer needed here
   // const [showTemplatePanel, setShowTemplatePanel] = useState(false);
   // const [showLocationManager, setShowLocationManager] = useState(false);
@@ -177,8 +198,12 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
     });
   }, [sortOption]);
 
-  // Sorted core topics
-  const sortedCoreTopics = useMemo(() => sortTopics(coreTopics), [coreTopics, sortTopics]);
+  // Sorted core topics (filtered by pipeline filter when active)
+  const sortedCoreTopics = useMemo(() => {
+    const sorted = sortTopics(coreTopics);
+    if (!pipelineFilteredIds) return sorted;
+    return sorted.filter(t => pipelineFilteredIds.has(t.id));
+  }, [coreTopics, sortTopics, pipelineFilteredIds]);
 
   const topicsByParent = useMemo(() => {
     const map = new Map<string, EnrichedTopic[]>();
@@ -196,8 +221,12 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
     return map;
   }, [outerTopics, sortTopics]);
 
-  // Sorted outer topics (flat list for table view)
-  const sortedOuterTopics = useMemo(() => sortTopics(outerTopics), [outerTopics, sortTopics]);
+  // Sorted outer topics (flat list for table view, filtered by pipeline)
+  const sortedOuterTopics = useMemo(() => {
+    const sorted = sortTopics(outerTopics);
+    if (!pipelineFilteredIds) return sorted;
+    return sorted.filter(t => pipelineFilteredIds.has(t.id));
+  }, [outerTopics, sortTopics, pipelineFilteredIds]);
 
   // Convert briefs object to Map (for table view)
   const briefsMap = useMemo(() => {
@@ -245,6 +274,39 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   }, [childTopics, outerTopics]);
 
   const allTopics = useMemo(() => [...coreTopics, ...outerTopics, ...childTopics], [coreTopics, outerTopics, childTopics]);
+
+  // Pipeline filter counts
+  const pipelineFilterCounts = useMemo(() => {
+    let needsBrief = 0, needsDraft = 0, needsAudit = 0, published = 0;
+    for (const t of allTopics) {
+      const brief = briefs[t.id];
+      if (!brief) { needsBrief++; continue; }
+      const hasDraft = !!(brief.articleDraft && brief.articleDraft.length > 100);
+      if (!hasDraft) { needsDraft++; continue; }
+      const hasAudit = !!(brief.contentAudit?.algorithmicResults);
+      if (!hasAudit) { needsAudit++; continue; }
+    }
+    return {
+      all: allTopics.length,
+      'needs-brief': needsBrief,
+      'needs-draft': needsDraft,
+      'needs-audit': needsAudit,
+      published,
+    };
+  }, [allTopics, briefs]);
+
+  // Filter function for pipeline filter
+  const matchesPipelineFilter = useCallback((topicId: string) => {
+    if (pipelineFilter === 'all') return true;
+    const brief = briefs[topicId];
+    switch (pipelineFilter) {
+      case 'needs-brief': return !brief;
+      case 'needs-draft': return !!brief && !(brief.articleDraft && brief.articleDraft.length > 100);
+      case 'needs-audit': return !!brief && !!(brief.articleDraft && brief.articleDraft.length > 100) && !brief.contentAudit?.algorithmicResults;
+      case 'published': return false; // TODO: wire up publication status
+      default: return true;
+    }
+  }, [pipelineFilter, briefs]);
 
   // Business View: Group topics by display_parent_id (visual hierarchy)
   const topicsByDisplayParent = useMemo(() => {
@@ -731,7 +793,31 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 </div>
             </div>
         </div>
-        
+
+        {/* Pipeline Filter Chips */}
+        {allTopics.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+                {([
+                    { key: 'all' as const, label: 'All' },
+                    { key: 'needs-brief' as const, label: 'Needs Brief' },
+                    { key: 'needs-draft' as const, label: 'Needs Draft' },
+                    { key: 'needs-audit' as const, label: 'Needs Audit' },
+                ]).map(chip => (
+                    <button
+                        key={chip.key}
+                        onClick={() => setPipelineFilter(chip.key)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            pipelineFilter === chip.key
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                    >
+                        {chip.label} ({pipelineFilterCounts[chip.key]})
+                    </button>
+                ))}
+            </div>
+        )}
+
         {coreTopics.length === 0 && outerTopics.length === 0 ? (
             <div className="p-12 border-2 border-dashed border-gray-700 rounded-xl bg-gray-800/30 flex flex-col items-center justify-center text-center">
                 <h3 className="text-xl font-semibold text-gray-300 mb-2">Topical Map is Empty</h3>

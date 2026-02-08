@@ -11,6 +11,7 @@ import { EnrichedTopic, ExpansionMode, ContentBrief } from '../types';
 import { Loader } from './ui/Loader';
 import { safeString } from '../utils/parsers';
 import { calculateBriefQualityScore, BriefQualityResult } from '../utils/briefQualityScore';
+import { TopicPipelineIndicator } from './ui/TopicPipelineIndicator';
 
 interface TopicCompactRowProps {
   topic: EnrichedTopic;
@@ -247,24 +248,14 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
         </span>
       </td>
 
-      {/* Brief Quality */}
-      <td className="w-12 px-1 py-1 text-center">
-        <span
-          className={`text-xs font-medium ${getBriefColor()}`}
-          title={hasBrief ? `Brief Quality: ${briefQuality?.score || 0}%` : 'No brief'}
-        >
-          {isGeneratingBrief ? '...' : hasBrief ? (briefQuality?.score || 0) : '--'}
-        </span>
-      </td>
-
-      {/* Draft Status */}
-      <td className="w-10 px-1 py-1 text-center">
-        <span
-          className={`text-xs ${hasDraft ? 'text-green-400' : hasBrief ? 'text-gray-600' : 'text-gray-700'}`}
-          title={hasDraft ? 'Draft available' : hasBrief ? 'No draft yet' : 'Generate brief first'}
-        >
-          {hasDraft ? '✓' : hasBrief ? '✗' : '-'}
-        </span>
+      {/* Pipeline Status */}
+      <td className="w-20 px-1 py-1 text-center">
+        <TopicPipelineIndicator
+          hasBrief={hasBrief}
+          hasDraft={hasDraft}
+          hasAudit={!!(brief?.contentAudit?.algorithmicResults)}
+          isPublished={false}
+        />
       </td>
 
       {/* Topic Class (Core/Author Section) */}
@@ -321,7 +312,7 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
 
       {/* Actions */}
       <td className="w-20 px-2 py-1">
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           {/* Generate/View Brief */}
           <button
             onClick={(e) => {

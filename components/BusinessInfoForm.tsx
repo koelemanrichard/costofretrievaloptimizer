@@ -365,6 +365,41 @@ const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
     );
 };
 
+// Collapsible form section
+const FormAccordion: React.FC<{
+    title: string;
+    defaultOpen?: boolean;
+    isComplete?: boolean;
+    children: React.ReactNode;
+}> = ({ title, defaultOpen = false, isComplete = false, children }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+            <button
+                type="button"
+                onClick={() => setIsOpen(o => !o)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors text-left"
+            >
+                <span className="font-medium text-gray-200 flex items-center gap-2">
+                    {title}
+                    {isComplete && (
+                        <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                    )}
+                </span>
+                <svg
+                    className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            {isOpen && <div className="p-4 space-y-4">{children}</div>}
+        </div>
+    );
+};
+
 // FIX: Added a strongly-typed props interface to ensure type safety and resolve compiler errors in parent components.
 interface BusinessInfoFormProps {
   onSave: (formData: Partial<BusinessInfo>) => void;
@@ -445,6 +480,20 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
     const [activeTooltip, setActiveTooltip] = useState<{ type: WebsiteType; rect: DOMRect } | null>(null);
     const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Website type category tabs
+    const WEBSITE_CATEGORIES: { label: string; types: WebsiteType[] }[] = [
+        { label: 'Commercial', types: ['ECOMMERCE', 'SAAS', 'MARKETPLACE', 'EVENTS'] },
+        { label: 'Lead Gen / Local', types: ['SERVICE_B2B', 'LEAD_GENERATION', 'REAL_ESTATE', 'HEALTHCARE', 'HOSPITALITY'] },
+        { label: 'Content / Media', types: ['INFORMATIONAL', 'AFFILIATE_REVIEW', 'NEWS_MEDIA', 'EDUCATION'] },
+        { label: 'Specialized', types: ['RECRUITMENT', 'DIRECTORY', 'COMMUNITY', 'NONPROFIT'] },
+    ];
+    // Auto-select the category containing the currently selected type
+    const [websiteCategory, setWebsiteCategory] = useState<number>(() => {
+        if (!localBusinessInfo.websiteType) return 0;
+        const idx = WEBSITE_CATEGORIES.findIndex(c => c.types.includes(localBusinessInfo.websiteType!));
+        return idx >= 0 ? idx : 0;
+    });
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setLocalBusinessInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -472,6 +521,7 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                     />
 
                     <div className="space-y-6">
+                        {/* Core Business - always visible */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <Label htmlFor="seedKeyword">Main Topic / Seed Keyword</Label>
@@ -491,9 +541,26 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                                     <InfoTooltip text="Select your website type to get optimized AI strategies for content structure, EAV priorities, and linking patterns. This affects how topical maps and briefs are generated." />
                                 </h3>
                             </div>
-                            <div className="max-h-80 overflow-y-auto pr-1">
+                            {/* Category tabs */}
+                            <div className="flex gap-1 mb-3 flex-wrap">
+                                {WEBSITE_CATEGORIES.map((cat, idx) => (
+                                    <button
+                                        key={cat.label}
+                                        type="button"
+                                        onClick={() => setWebsiteCategory(idx)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                            websiteCategory === idx
+                                                ? 'bg-cyan-600 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        }`}
+                                    >
+                                        {cat.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="pr-1">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {(Object.keys(WEBSITE_TYPE_CONFIG) as WebsiteType[]).map((type) => {
+                                    {WEBSITE_CATEGORIES[websiteCategory].types.map((type) => {
                                         const config = WEBSITE_TYPE_CONFIG[type];
                                         const isSelected = localBusinessInfo.websiteType === type;
                                         return (
@@ -554,51 +621,77 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                         </div>
                         <div>
                             <Label htmlFor="valueProp">Unique Value Proposition</Label>
-                            <Textarea id="valueProp" name="valueProp" value={localBusinessInfo.valueProp || ''} onChange={handleChange} rows={6} required />
+                            <Textarea id="valueProp" name="valueProp" value={localBusinessInfo.valueProp || ''} onChange={handleChange} rows={4} required />
                         </div>
                         <div>
                             <Label htmlFor="audience">Target Audience</Label>
                             <Input id="audience" name="audience" value={localBusinessInfo.audience || ''} onChange={handleChange} required />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <Label htmlFor="language">Language Code</Label>
-                                <Input id="language" name="language" value={localBusinessInfo.language || ''} onChange={handleChange} placeholder="e.g., en, nl, es" required />
-                            </div>
-                            <div>
-                                <Label htmlFor="targetMarket">Target Market (Country)</Label>
-                                <Input id="targetMarket" name="targetMarket" value={localBusinessInfo.targetMarket || ''} onChange={handleChange} placeholder="e.g., United States" required />
-                            </div>
-                        </div>
-                        
-                        {/* New Author Configuration Section */}
-                        <AuthorConfiguration localBusinessInfo={localBusinessInfo} setLocalBusinessInfo={setLocalBusinessInfo} />
 
-                        {/* Brand Kit Section */}
-                        <BrandKitEditor
-                          brandKit={localBusinessInfo.brandKit}
-                          onChange={(brandKit) => setLocalBusinessInfo(prev => ({ ...prev, brandKit }))}
-                        />
+                        {/* Market & Language - collapsed if filled */}
+                        <FormAccordion
+                            title="Market & Language"
+                            defaultOpen={!localBusinessInfo.language || !localBusinessInfo.targetMarket}
+                            isComplete={!!(localBusinessInfo.language && localBusinessInfo.targetMarket)}
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <Label htmlFor="language">Language Code</Label>
+                                    <Input id="language" name="language" value={localBusinessInfo.language || ''} onChange={handleChange} placeholder="e.g., en, nl, es" required />
+                                </div>
+                                <div>
+                                    <Label htmlFor="targetMarket">Target Market (Country)</Label>
+                                    <Input id="targetMarket" name="targetMarket" value={localBusinessInfo.targetMarket || ''} onChange={handleChange} placeholder="e.g., United States" required />
+                                </div>
+                            </div>
+                        </FormAccordion>
 
-                        <AIConfiguration
-                            localBusinessInfo={localBusinessInfo}
-                            setLocalBusinessInfo={setLocalBusinessInfo}
-                            globalBusinessInfo={state.businessInfo}
-                            onProviderChange={(provider, model) => {
-                                // Update global state so PillarDefinitionWizard uses the correct provider
-                                dispatch({
-                                    type: 'SET_BUSINESS_INFO',
-                                    payload: {
-                                        ...state.businessInfo,
-                                        aiProvider: provider as BusinessInfo['aiProvider'],
-                                        aiModel: model,
-                                    }
-                                });
-                            }}
-                        />
+                        {/* Author Identity - collapsed */}
+                        <FormAccordion
+                            title="Author Identity & Stylometry"
+                            defaultOpen={false}
+                            isComplete={!!(localBusinessInfo.authorProfile?.name)}
+                        >
+                            <AuthorConfiguration localBusinessInfo={localBusinessInfo} setLocalBusinessInfo={setLocalBusinessInfo} />
+                        </FormAccordion>
+
+                        {/* Brand Kit - collapsed */}
+                        <FormAccordion
+                            title="Brand Kit"
+                            defaultOpen={false}
+                            isComplete={!!(localBusinessInfo.brandKit?.colors?.length)}
+                        >
+                            <BrandKitEditor
+                              brandKit={localBusinessInfo.brandKit}
+                              onChange={(brandKit) => setLocalBusinessInfo(prev => ({ ...prev, brandKit }))}
+                            />
+                        </FormAccordion>
+
+                        {/* AI Configuration - collapsed */}
+                        <FormAccordion
+                            title="AI Configuration"
+                            defaultOpen={false}
+                            isComplete={!!(localBusinessInfo.aiProvider)}
+                        >
+                            <AIConfiguration
+                                localBusinessInfo={localBusinessInfo}
+                                setLocalBusinessInfo={setLocalBusinessInfo}
+                                globalBusinessInfo={state.businessInfo}
+                                onProviderChange={(provider, model) => {
+                                    dispatch({
+                                        type: 'SET_BUSINESS_INFO',
+                                        payload: {
+                                            ...state.businessInfo,
+                                            aiProvider: provider as BusinessInfo['aiProvider'],
+                                            aiModel: model,
+                                        }
+                                    });
+                                }}
+                            />
+                        </FormAccordion>
                     </div>
                 </div>
-                <footer className="p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center">
+                <footer className="sticky bottom-0 p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center z-10">
                     <Button type="button" onClick={onBack} variant="secondary">Back</Button>
                     <Button type="submit" disabled={isLoading}>
                         {isLoading ? <Loader className="w-5 h-5" /> : 'Save & Start Pillar Definition'}

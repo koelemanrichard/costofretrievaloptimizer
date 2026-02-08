@@ -72,7 +72,7 @@ import { FeatureErrorBoundary } from './ui/FeatureErrorBoundary';
 import TabNavigation, { createDashboardTabs, NavIcons } from './dashboard/TabNavigation';
 import StrategyOverview from './dashboard/StrategyOverview';
 import CompactMetricsStrip from './dashboard/CompactMetricsStrip';
-import NextStepsAlert from './dashboard/NextStepsAlert';
+import NextStepsAlert, { PipelineSummary } from './dashboard/NextStepsAlert';
 import CollapsiblePanel from './dashboard/CollapsiblePanel';
 import CannibalizationWarnings from './dashboard/CannibalizationWarnings';
 
@@ -279,6 +279,24 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const recommendations = useMemo(() =>
         calculateNextSteps(topicalMap, validationResult),
     [topicalMap, validationResult]);
+
+    // Pipeline summary for NextStepsAlert
+    const pipelineSummary = useMemo<PipelineSummary>(() => {
+        const total = allTopics.length;
+        let withBriefs = 0;
+        let withDrafts = 0;
+        let withAudit = 0;
+        let published = 0;
+        for (const topic of allTopics) {
+            const brief = briefs[topic.id];
+            if (brief) {
+                withBriefs++;
+                if (brief.articleDraft && brief.articleDraft.length > 100) withDrafts++;
+                if (brief.contentAudit?.algorithmicResults) withAudit++;
+            }
+        }
+        return { total, withBriefs, withDrafts, withAudit, published };
+    }, [allTopics, briefs]);
 
     const handleSelectTopicForBrief = useCallback((topic: EnrichedTopic) => {
         const briefExists = !!briefs[topic.id];
@@ -552,10 +570,8 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             {/* Tab Navigation - All actions in one place */}
             <TabNavigation tabs={dashboardTabs} />
 
-            {/* Next Steps Alert - Critical/High priority only, slim banner */}
-            {recommendations.length > 0 && (
-                <NextStepsAlert recommendations={recommendations} onAction={handleRecommendationAction} />
-            )}
+            {/* Next Steps Alert + Pipeline Summary */}
+            <NextStepsAlert recommendations={recommendations} onAction={handleRecommendationAction} pipelineSummary={pipelineSummary} />
 
             {/* Cannibalization Warnings - Show when topics are too similar */}
             <CannibalizationWarnings

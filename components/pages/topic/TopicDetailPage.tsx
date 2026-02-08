@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../../../state/appState';
 
 /**
@@ -29,6 +29,15 @@ const TopicDetailPage: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            {/* Breadcrumb navigation */}
+            <nav className="text-sm text-gray-400">
+                <Link to={`/p/${projectId}/m/${mapId}`} className="hover:text-white transition-colors">
+                    Map Dashboard
+                </Link>
+                <span className="mx-2">/</span>
+                <span className="text-gray-300">{topic.title}</span>
+            </nav>
+
             {/* Topic header */}
             <div>
                 <div className="flex items-center gap-3 mb-2">

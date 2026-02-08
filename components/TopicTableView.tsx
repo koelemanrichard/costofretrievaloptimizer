@@ -267,8 +267,7 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
               <th className="w-6 px-1 py-2 text-xs font-medium text-gray-500" title="Topic Type">Type</th>
               <th className="px-2 py-2 text-left text-xs font-medium text-gray-500">Title</th>
               <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 hidden lg:table-cell">Slug</th>
-              <th className="w-12 px-1 py-2 text-center text-xs font-medium text-gray-500" title="Brief Quality Score (0-100)">Brief</th>
-              <th className="w-10 px-1 py-2 text-center text-xs font-medium text-gray-500" title="Article Draft Available">Draft</th>
+              <th className="w-20 px-1 py-2 text-center text-xs font-medium text-gray-500" title="Pipeline: Brief > Draft > Audit > Published">Pipeline</th>
               <th className="w-10 px-1 py-2 text-center text-xs font-medium text-gray-500 hidden lg:table-cell" title="Topic Section: Core (monetization) or Auth (authority)">Class</th>
               <th className="w-12 px-1 py-2 text-center text-xs font-medium text-gray-500 hidden md:table-cell" title="Query Type: Def(initional), Cmp(arative), Ins(tructional), Grp(ouping), Bool(ean)">QType</th>
               <th className="w-10 px-1 py-2 text-center text-xs font-medium text-gray-500 hidden md:table-cell" title="Structured Outline Sections">Sect</th>

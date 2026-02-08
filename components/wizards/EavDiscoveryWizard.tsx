@@ -153,11 +153,29 @@ const EavDiscoveryWizard: React.FC<EavDiscoveryWizardProps> = ({ onFinalize, onB
                 )}
 
                 {isLoading && eavs.length === 0 && <div className="flex justify-center py-8"><Loader /></div>}
-                {error && <div className="text-red-400 bg-red-900/20 p-4 rounded-md text-center mb-4">{error}</div>}
+                {error && (
+                    <div className="text-red-400 bg-red-900/20 p-4 rounded-md mb-4 flex items-center justify-between gap-4">
+                        <p>{error}</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                setError(null);
+                                if (eavs.length === 0) {
+                                    fetchInitialEavs();
+                                } else {
+                                    handleExpand();
+                                }
+                            }}
+                        >
+                            Retry
+                        </Button>
+                    </div>
+                )}
 
                 {/* EAV List */}
                 {eavs.length > 0 && (
-                    <div className="space-y-2 max-h-64 overflow-y-auto pr-4">
+                    <div className="space-y-2 max-h-64 sm:max-h-96 overflow-y-auto pr-4">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
                                 <h3 className="text-sm font-medium text-gray-300">Semantic Triples ({eavs.length})</h3>
@@ -191,7 +209,7 @@ const EavDiscoveryWizard: React.FC<EavDiscoveryWizardProps> = ({ onFinalize, onB
                                         className={`p-1.5 rounded transition-colors ${
                                             triple.kpMetadata?.isKPEligible
                                                 ? 'bg-amber-600/30 text-amber-400 hover:bg-amber-600/40'
-                                                : 'text-gray-500 hover:text-amber-400 hover:bg-gray-700 opacity-0 group-hover:opacity-100'
+                                                : 'text-gray-500 hover:text-amber-400 hover:bg-gray-700 sm:opacity-0 sm:group-hover:opacity-100'
                                         }`}
                                         title={triple.kpMetadata?.isKPEligible ? 'Remove from KP' : 'Flag for Knowledge Panel'}
                                     >

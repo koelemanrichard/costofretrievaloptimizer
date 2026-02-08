@@ -456,9 +456,22 @@ export const SmartLoader: React.FC<{
   showText?: boolean;
   customText?: string;
   className?: string;
-}> = ({ context, size = 'sm', showText = true, customText, className = '' }) => {
+  showElapsed?: boolean;
+  onCancel?: () => void;
+  startedAt?: number;
+}> = ({ context, size = 'sm', showText = true, customText, className = '', showElapsed, onCancel, startedAt }) => {
   const config = contextConfig[context];
   const LoaderComponent = config.Loader;
+  const [elapsed, setElapsed] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!showElapsed) return;
+    const start = startedAt || Date.now();
+    const timer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showElapsed, startedAt]);
 
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
@@ -467,6 +480,18 @@ export const SmartLoader: React.FC<{
         customText
           ? <span>{customText}</span>
           : <ProgressText messages={config.messages} interval={2000} />
+      )}
+      {showElapsed && elapsed > 3 && (
+        <span className="text-xs text-gray-500">({elapsed}s)</span>
+      )}
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs text-gray-400 hover:text-white underline ml-1"
+        >
+          Cancel
+        </button>
       )}
     </span>
   );

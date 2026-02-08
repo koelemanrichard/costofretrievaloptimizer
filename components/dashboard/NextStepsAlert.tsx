@@ -8,18 +8,56 @@
 import React, { useState } from 'react';
 import { Recommendation, RecommendationType } from '../../services/recommendationEngine';
 
+export interface PipelineSummary {
+  total: number;
+  withBriefs: number;
+  withDrafts: number;
+  withAudit: number;
+  published: number;
+}
+
 interface NextStepsAlertProps {
   recommendations: Recommendation[];
   onAction: (type: RecommendationType) => void;
+  pipelineSummary?: PipelineSummary;
 }
 
-const NextStepsAlert: React.FC<NextStepsAlertProps> = ({ recommendations, onAction }) => {
+const PipelineSummaryBar: React.FC<{ summary: PipelineSummary }> = ({ summary }) => {
+  const { total, withBriefs, withDrafts, withAudit, published } = summary;
+  if (total === 0) return null;
+
+  const segments = [
+    { label: 'Brief', count: withBriefs, color: 'bg-blue-500' },
+    { label: 'Draft', count: withDrafts, color: 'bg-purple-500' },
+    { label: 'Audit', count: withAudit, color: 'bg-amber-500' },
+    { label: 'Live', count: published, color: 'bg-green-500' },
+  ];
+
+  return (
+    <div className="flex items-center gap-4 px-4 py-2 bg-gray-800/50 rounded-lg border border-gray-700 text-xs">
+      {segments.map(seg => (
+        <div key={seg.label} className="flex items-center gap-1.5">
+          <div className={`w-2 h-2 rounded-full ${seg.color}`} />
+          <span className="text-gray-400">{seg.label}:</span>
+          <span className="text-white font-medium">{seg.count}/{total}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const NextStepsAlert: React.FC<NextStepsAlertProps> = ({ recommendations, onAction, pipelineSummary }) => {
   const [expanded, setExpanded] = useState(false);
 
   // Only show CRITICAL and HIGH priority
   const urgent = recommendations.filter(r => r.priority === 'CRITICAL' || r.priority === 'HIGH');
 
-  if (urgent.length === 0) return null;
+  if (urgent.length === 0 && !pipelineSummary) return null;
+
+  // If only pipeline summary, no urgent alerts
+  if (urgent.length === 0 && pipelineSummary) {
+    return <PipelineSummaryBar summary={pipelineSummary} />;
+  }
 
   const primary = urgent[0];
   const remaining = urgent.slice(1);
@@ -33,6 +71,8 @@ const NextStepsAlert: React.FC<NextStepsAlertProps> = ({ recommendations, onActi
     : 'bg-blue-600 hover:bg-blue-700 text-white';
 
   return (
+    <div className="space-y-2">
+      {pipelineSummary && <PipelineSummaryBar summary={pipelineSummary} />}
     <div className={`border ${borderColor} ${bgColor} rounded-lg`}>
       {/* Primary recommendation */}
       <div className="flex items-center gap-3 px-4 py-2.5">
@@ -81,6 +121,7 @@ const NextStepsAlert: React.FC<NextStepsAlertProps> = ({ recommendations, onActi
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 };
