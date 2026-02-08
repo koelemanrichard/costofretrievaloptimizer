@@ -29,9 +29,12 @@ export class ScreenshotService {
   async captureRenderedOutput(html: string, css: string): Promise<string> {
     const html2canvas = await this.loadHtml2Canvas();
 
-    // Create hidden iframe
+    // Create iframe — visible but clipped so the browser actually renders it.
+    // Using left:-9999px can cause zero-dimension bodies in some browsers.
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1200px;height:900px;border:none;opacity:0;pointer-events:none;';
+    iframe.style.cssText =
+      'position:fixed;top:0;left:0;width:1200px;height:900px;border:none;' +
+      'clip:rect(0,0,0,0);clip-path:inset(50%);overflow:hidden;opacity:0;pointer-events:none;z-index:-1;';
     document.body.appendChild(iframe);
 
     try {
@@ -45,11 +48,26 @@ export class ScreenshotService {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1200">
-<style>${css}</style>
+<style>
+/* Ensure body has dimensions even if CSS resets everything */
+html, body { min-height: 100vh; min-width: 100%; margin: 0; padding: 0; }
+${css}
+</style>
 </head>
 <body>${html}</body>
 </html>`);
       doc.close();
+
+      // Wait for the iframe load event
+      await new Promise<void>((resolve) => {
+        if (doc.readyState === 'complete') {
+          resolve();
+        } else {
+          iframe.addEventListener('load', () => resolve(), { once: true });
+          // Fallback timeout in case load never fires
+          setTimeout(resolve, 2000);
+        }
+      });
 
       // Wait for fonts to load
       if (doc.fonts && doc.fonts.ready) {
@@ -57,7 +75,18 @@ export class ScreenshotService {
       }
 
       // Wait for CSS paint and layout
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Verify the body has dimensions before capturing
+      const bodyRect = doc.body.getBoundingClientRect();
+      if (bodyRect.width === 0 || bodyRect.height === 0) {
+        console.warn('[ScreenshotService] Body has zero dimensions, forcing layout');
+        // Force a reflow
+        doc.body.style.minHeight = '900px';
+        doc.body.style.minWidth = '1200px';
+        doc.body.offsetHeight; // trigger reflow
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
 
       // Capture screenshot
       const canvas = await html2canvas(doc.body, {
@@ -65,9 +94,16 @@ export class ScreenshotService {
         useCORS: true,
         backgroundColor: '#ffffff',
         width: 1200,
+        height: Math.min(doc.body.scrollHeight || 900, 4000),
         windowWidth: 1200,
+        windowHeight: 900,
         logging: false,
       });
+
+      // Verify canvas has content
+      if (canvas.width === 0 || canvas.height === 0) {
+        throw new Error('html2canvas produced a zero-dimension canvas');
+      }
 
       // Convert to base64 JPEG
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
@@ -75,7 +111,9 @@ export class ScreenshotService {
       return dataUrl.replace(/^data:image\/jpeg;base64,/, '');
     } finally {
       // Clean up iframe
-      document.body.removeChild(iframe);
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
     }
   }
 }
