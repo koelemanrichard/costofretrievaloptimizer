@@ -31,11 +31,18 @@ export class SemanticHtmlGenerator {
     const sections = this.splitIntoSections(baseHtml);
 
     // Build semantic article with design-friendly structure
+    const sectionCount = sections.length;
+    const enrichmentAttrs = ['data-feature-grid', 'data-pull-quote', 'data-step-list', 'data-highlight-box', 'data-comparison-table'];
     const sectionsHtml = sections
       .map((s, i) => {
         // Mark alternating sections for visual rhythm
         const variant = i % 3 === 1 ? ' data-variant="surface"' : '';
-        return `<section data-section-id="${s.id}" data-content-type="${s.contentType}"${variant}>\n<div data-section-inner>\n${s.html}\n</div>\n</section>`;
+        // Universal hooks: index and count on every section
+        const indexAttrs = ` data-section-index="${i}" data-section-count="${sectionCount}"`;
+        // Mark prose-only sections (no enrichment hooks)
+        const hasSomeEnrichment = enrichmentAttrs.some(attr => s.html.includes(attr));
+        const proseAttr = (!hasSomeEnrichment && s.contentType === 'prose') ? ' data-prose-section' : '';
+        return `<section data-section-id="${s.id}" data-content-type="${s.contentType}"${variant}${indexAttrs}${proseAttr}>\n<div data-section-inner>\n${s.html}\n</div>\n</section>`;
       })
       .join('\n\n');
 
@@ -178,6 +185,9 @@ ${sectionsHtml}${ctaHtml}
     if (contentType === 'comparison') {
       result = result.replace(/<table>([\s\S]*?)<\/table>/gi, '<div data-comparison-table><table>$1</table></div>');
     }
+
+    // 6. Intro text — first <p> after each <h2> gets data-intro-text
+    result = result.replace(/<\/h2>\s*\n?<p>/,  '</h2>\n<p data-intro-text>');
 
     return result;
   }

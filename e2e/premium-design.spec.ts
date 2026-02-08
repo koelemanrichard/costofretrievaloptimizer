@@ -357,6 +357,33 @@ test.describe('SemanticHtmlGenerator', () => {
     expect(result).toContain('data-section-inner');
   });
 
+  test('all prose sections have data-section-index, data-prose-section, and data-intro-text', async () => {
+    const { SemanticHtmlGenerator } = await import('../services/premium-design');
+
+    const generator = new SemanticHtmlGenerator();
+    const result = generator.generate(
+      '## Introduction\n\nThis is the intro paragraph about SEO.\n\n## Benefits\n\nSEO has many benefits for businesses.\n\n## How It Works\n\nSearch engines crawl and index your site.\n\n## Conclusion\n\nSEO is essential.',
+      'SEO Guide'
+    );
+
+    // Every section must have data-section-index
+    const sectionIndexMatches = result.match(/data-section-index="\d+"/g) || [];
+    expect(sectionIndexMatches.length).toBeGreaterThanOrEqual(4);
+
+    // Every section must have data-section-count
+    expect(result).toContain('data-section-count=');
+
+    // Pure prose sections (no feature-grid, pull-quote, etc.) must have data-prose-section
+    expect(result).toContain('data-prose-section');
+
+    // First paragraph after h2 must get data-intro-text
+    expect(result).toContain('data-intro-text');
+
+    // Count intro-text markers — should be at least one per section with content after h2
+    const introTextMatches = result.match(/data-intro-text/g) || [];
+    expect(introTextMatches.length).toBeGreaterThanOrEqual(4);
+  });
+
   test('business context CTA is added when provided', async () => {
     const { SemanticHtmlGenerator } = await import('../services/premium-design');
 

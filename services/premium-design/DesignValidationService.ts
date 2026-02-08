@@ -70,7 +70,13 @@ Score the output (IMAGE 2) against the target (IMAGE 1) on these 6 dimensions (0
 3. **spacingMatch** — Does padding, margins, section spacing match the target's rhythm?
 4. **visualDepth** — Do shadows, gradients, borders, layering match the target?
 5. **brandFit** — Overall, would a brand manager accept this as "on brand"?
-6. **layoutSophistication** — Does the output use visual components? Are there grid layouts for feature lists, card-style sections, bold hero treatment, visual variety between sections? Or is it just plain text with headings? Score 90+ for designs with 3+ distinct visual components (grids, cards, pull quotes, step indicators). Score below 50 for text-only layouts.
+6. **layoutSophistication** — Score using these specific criteria:
+   - Do ALL sections have card treatment (background, border-radius, padding, shadow)? If not → score below 60
+   - Are there at least 2 distinct background treatments (e.g. white + surface)? If uniform → score below 55
+   - Do h2 headings have decorative treatment (gradient border, underline, or accent)? If plain → subtract 10
+   - Is the intro paragraph ([data-intro-text]) styled differently from body text (larger, muted)? If not → subtract 5
+   - Are there 3+ distinct visual components (grids, cards, pull quotes, step indicators, highlight boxes)? Score 90+ only if yes
+   - Does the page look like unstyled prose with just font changes? → score below 50
 
 Also provide:
 - **overallScore**: Weighted average (color 20%, typography 15%, spacing 15%, depth 15%, brand 15%, layout 20%)

@@ -95,7 +95,17 @@ Minimaal jaarlijks, of na significante wijzigingen in uw IT-infrastructuur.`;
     // 8. FAQ detection
     expect(html).toContain('data-content-type="faq"');
 
-    // 9. Proper escaping (no raw HTML injection)
+    // 9. Universal hooks — data-section-index on every section
+    const sectionIndexMatches = html.match(/data-section-index="\d+"/g) || [];
+    expect(sectionIndexMatches.length).toBeGreaterThanOrEqual(5);
+
+    // 10. Prose sections get data-prose-section
+    expect(html).toContain('data-prose-section');
+
+    // 11. Intro text after h2
+    expect(html).toContain('data-intro-text');
+
+    // 12. Proper escaping (no raw HTML injection)
     expect(html).not.toContain('<script');
 
     // Log the enrichment markers for visual inspection
@@ -103,6 +113,7 @@ Minimaal jaarlijks, of na significante wijzigingen in uw IT-infrastructuur.`;
       'data-hero-content', 'data-hero-subtitle', 'data-feature-grid',
       'data-pull-quote', 'data-step-list', 'data-highlight-box',
       'data-comparison-table', 'data-content-type="cta"', 'data-content-type="faq"',
+      'data-section-index', 'data-prose-section', 'data-intro-text',
     ];
     for (const marker of markers) {
       const found = html.includes(marker);

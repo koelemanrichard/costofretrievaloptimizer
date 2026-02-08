@@ -17,9 +17,9 @@ export class AiCssGenerator {
     articleHtml: string,
     businessContext?: BusinessContext
   ): Promise<string> {
-    const htmlPreview = articleHtml.substring(0, 6000);
-    const sectionTypes = this.extractSectionTypes(articleHtml);
-    const prompt = this.buildInitialPrompt(crawledTokens, htmlPreview, sectionTypes, businessContext);
+    const htmlPreview = articleHtml.substring(0, 12000);
+    const sectionManifest = this.extractSectionManifest(articleHtml);
+    const prompt = this.buildInitialPrompt(crawledTokens, htmlPreview, sectionManifest, businessContext);
     const css = await this.callVisionAI(targetScreenshot, null, prompt);
     return this.sanitizeCss(css);
   }
@@ -28,9 +28,11 @@ export class AiCssGenerator {
     currentCss: string,
     targetScreenshot: string,
     outputScreenshot: string,
-    validationResult: ValidationResult
+    validationResult: ValidationResult,
+    articleHtml?: string
   ): Promise<string> {
-    const prompt = this.buildRefinementPrompt(currentCss, validationResult);
+    const sectionManifest = articleHtml ? this.extractSectionManifest(articleHtml) : '';
+    const prompt = this.buildRefinementPrompt(currentCss, validationResult, sectionManifest);
     const css = await this.callVisionAI(targetScreenshot, outputScreenshot, prompt);
     return this.sanitizeCss(css);
   }
@@ -38,7 +40,7 @@ export class AiCssGenerator {
   private buildInitialPrompt(
     tokens: CrawledCssTokens,
     htmlPreview: string,
-    sectionTypes: string[],
+    sectionManifest: string,
     businessContext?: BusinessContext
   ): string {
     const primary = tokens.colors.find(c => c.usage === 'primary')?.hex || '#1a1a2e';
@@ -86,12 +88,41 @@ SCREENSHOT: The attached image is the target website. Observe its:
 ${htmlPreview}
 \`\`\`
 
-Content types present: ${sectionTypes.join(', ')}
-${businessContext ? `Industry: ${businessContext.industry} | Audience: ${businessContext.audience}` : ''}
+## Section Manifest (full article structure)
+
+${sectionManifest}
+
+Sections marked (prose-only) have NO special content patterns — they MUST receive visual card treatment, decorative headings, and styled intro paragraphs to avoid looking like unstyled prose.
+${businessContext ? `\nIndustry: ${businessContext.industry} | Audience: ${businessContext.audience}` : ''}
 
 ## Design Requirements — Agency Quality
 
 Write a COMPLETE CSS stylesheet (400-700 lines, quality over quantity). The result must look like a premium page designed by a top agency — with bold visual components, not just styled paragraphs.
+
+### Mandatory CSS Seed Patterns — Customize these to match the brand
+
+You MUST include variations of ALL these patterns in your output, adapted to the brand colors and style:
+
+\`\`\`css
+/* Section card treatment — every section gets this */
+section[data-section-id] { background: var(--brand-bg); border-radius: var(--brand-radius); padding: 2.5rem 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: box-shadow 0.2s; }
+section[data-section-id]:hover { box-shadow: var(--brand-shadow); }
+
+/* Surface variant — visually distinct from default */
+[data-variant="surface"] { background: var(--brand-surface); border: 1px solid var(--brand-border); }
+
+/* Prose-only sections — gradient left border accent */
+[data-prose-section] { border-left: 4px solid transparent; border-image: linear-gradient(180deg, var(--brand-primary), var(--brand-accent, var(--brand-secondary))) 1; }
+
+/* Intro text — first paragraph after h2, larger muted text */
+[data-intro-text] { font-size: 1.15rem; color: var(--brand-text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+
+/* h2 decorative bottom gradient border */
+h2 { padding-bottom: 0.75rem; border-bottom: 3px solid transparent; border-image: linear-gradient(90deg, var(--brand-primary), transparent) 1; margin-bottom: 1.5rem; }
+
+/* Content body flex column with gap */
+[data-content-body] { display: flex; flex-direction: column; gap: 1.5rem; max-width: 780px; margin: 0 auto; padding: 2rem; }
+\`\`\`
 
 ### Mandatory Design Patterns
 
@@ -139,7 +170,8 @@ Return ONLY CSS. No markdown fences. No explanations. Start with \`:root {\`.`;
 
   private buildRefinementPrompt(
     currentCss: string,
-    validationResult: ValidationResult
+    validationResult: ValidationResult,
+    sectionManifest: string
   ): string {
     const fixes = validationResult.cssFixInstructions
       .map((fix, i) => `${i + 1}. ${fix}`)
@@ -155,14 +187,35 @@ Return ONLY CSS. No markdown fences. No explanations. Start with \`:root {\`.`;
 - Visual Depth: ${validationResult.visualDepth.score} — ${validationResult.visualDepth.notes}
 - Brand Fit: ${validationResult.brandFit.score} — ${validationResult.brandFit.notes}
 - Layout Sophistication: ${validationResult.layoutSophistication.score} — ${validationResult.layoutSophistication.notes}
+${sectionManifest ? `\n## Section Manifest (full article structure)\n\n${sectionManifest}\n` : ''}
+## Available data-* Selectors in the HTML
+
+- \`[data-hero]\`, \`[data-hero-content]\`, \`[data-hero-subtitle]\` — Hero header
+- \`[data-content-body]\` — Main content wrapper
+- \`[data-section-id]\` — Every section
+- \`[data-section-index="N"]\` — Section by index (0-based)
+- \`[data-section-count="N"]\` — Total section count
+- \`[data-content-type="prose|faq|steps|comparison|timeline|checklist|cta"]\`
+- \`[data-variant="surface"]\` — Alternating surface sections
+- \`[data-prose-section]\` — Prose-only sections (no enrichment hooks)
+- \`[data-intro-text]\` — First paragraph after each h2
+- \`[data-section-inner]\` — Inner wrapper in each section
+- \`[data-feature-grid]\` — Short list as card grid
+- \`[data-pull-quote]\` — Short blockquote
+- \`[data-step-list]\` — Ordered list with step styling
+- \`[data-highlight-box]\` — Important/tip callout
+- \`[data-comparison-table]\` — Comparison table wrapper
+- \`[data-cta-button]\` — CTA link button
+- \`[data-article-footer]\`, \`[data-footer-text]\` — Footer
 
 ## Required Fixes
 ${fixes}
 
 IMPORTANT: If Layout Sophistication is below 75, you MUST add visual components:
-- Transform plain <ul> lists into grid card layouts using [data-feature-grid]
-- Make the hero section bolder with gradients and larger text
-- Add visual treatments to highlight boxes and step lists
+- Every section must have card treatment (background, radius, shadow)
+- \`[data-prose-section]\` must get a decorative left border accent
+- \`[data-intro-text]\` must be styled larger/muted (1.15rem)
+- h2 must have decorative bottom gradient border
 - Create visual variety between sections — avoid uniform styling
 
 ## Current CSS
@@ -177,14 +230,43 @@ Apply ALL fixes. Return the COMPLETE revised CSS (not a diff). Enhance visual so
 Return ONLY CSS. No markdown fences. No explanations.`;
   }
 
-  private extractSectionTypes(html: string): string[] {
-    const types = new Set<string>();
-    const regex = /data-content-type="([^"]+)"/g;
+  private extractSectionManifest(html: string): string {
+    const lines: string[] = [];
+    const sectionRegex = /<section[^>]*data-section-id="([^"]*)"[^>]*data-content-type="([^"]*)"[^>]*>/gi;
     let match;
-    while ((match = regex.exec(html)) !== null) {
-      types.add(match[1]);
+    while ((match = sectionRegex.exec(html)) !== null) {
+      const tag = match[0];
+      const contentType = match[2];
+      const indexMatch = tag.match(/data-section-index="(\d+)"/);
+      const index = indexMatch ? indexMatch[1] : '?';
+
+      const flags: string[] = [];
+      if (tag.includes('data-variant="surface"')) flags.push('surface');
+      if (tag.includes('data-prose-section')) flags.push('prose-only');
+
+      // Find enrichment hooks in this section's content (up to next </section>)
+      const sectionStart = match.index;
+      const sectionEnd = html.indexOf('</section>', sectionStart);
+      const sectionContent = sectionEnd > sectionStart ? html.substring(sectionStart, sectionEnd) : '';
+      const hooks: string[] = [];
+      if (sectionContent.includes('data-feature-grid')) hooks.push('feature-grid');
+      if (sectionContent.includes('data-pull-quote')) hooks.push('pull-quote');
+      if (sectionContent.includes('data-step-list')) hooks.push('step-list');
+      if (sectionContent.includes('data-highlight-box')) hooks.push('highlight-box');
+      if (sectionContent.includes('data-comparison-table')) hooks.push('comparison-table');
+      if (sectionContent.includes('data-intro-text')) hooks.push('intro-text');
+
+      const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
+      const hookStr = hooks.length > 0 ? ` {${hooks.join(', ')}}` : '';
+      lines.push(`#${index} [${contentType}]${flagStr}${hookStr}`);
     }
-    return Array.from(types);
+
+    // Check for CTA section
+    if (html.includes('data-content-type="cta"')) {
+      lines.push('#cta [cta]');
+    }
+
+    return lines.length > 0 ? lines.join('\n') : 'No sections detected';
   }
 
   private async callVisionAI(

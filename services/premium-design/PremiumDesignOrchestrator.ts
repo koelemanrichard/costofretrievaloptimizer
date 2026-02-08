@@ -131,7 +131,8 @@ export class PremiumDesignOrchestrator {
             currentCss,
             session.targetScreenshot,
             lastIteration.screenshotBase64,
-            lastIteration.validationResult
+            lastIteration.validationResult,
+            session.articleHtml
           );
         }
 
