@@ -27,6 +27,7 @@ import { ScreenshotService } from './ScreenshotService';
 import { DesignValidationService } from './DesignValidationService';
 import { savePremiumDesign } from './designPersistence';
 import { QUICK_EXPORT_CSS } from '../quickExportStylesheet';
+import { generateComponentStyles } from '../publishing/renderer/ComponentStyles';
 import type {
   PremiumDesignSession,
   PremiumDesignConfig,
@@ -234,6 +235,11 @@ export class PremiumDesignOrchestrator {
       emit();
 
       // ── Step 4: CSS → Render → Validate → Iterate ──
+      // CRITICAL: Always include ComponentStyles CSS — it provides the visual
+      // styling for all component class names (.section, .prose, .feature-grid,
+      // .step-list, .faq-accordion, .timeline, .card, .cta-banner, etc.)
+      // used by PremiumHtmlRenderer.
+      const componentStylesCss = this.generateComponentStylesCss(session.designDna);
       let currentCss = '';
 
       for (let iteration = 1; iteration <= this.config.maxIterations; iteration++) {
@@ -244,21 +250,31 @@ export class PremiumDesignOrchestrator {
         emit();
 
         if (iteration === 1) {
-          // First iteration: use BrandDesignSystem CSS or legacy fallback
+          // First iteration: use BrandDesignSystem CSS + ComponentStyles
+          let brandCss = '';
           if (session.brandDesignSystem) {
-            currentCss = this.cssGenerator.getInitialCssFromBrandSystem(
+            brandCss = this.cssGenerator.getInitialCssFromBrandSystem(
               session.brandDesignSystem,
               session.crawledCssTokens.googleFontsUrl
             );
           } else {
             // Legacy fallback
-            currentCss = await this.cssGenerator.generateInitialCssLegacy(
+            brandCss = await this.cssGenerator.generateInitialCssLegacy(
               session.targetScreenshot,
               session.crawledCssTokens,
               session.articleHtml,
               businessContext
             );
           }
+
+          // Assemble complete CSS: Brand CSS first (variables, base),
+          // then ComponentStyles (visual components) which takes precedence
+          currentCss = brandCss + '\n\n/* ============================================\n   Component Styles - Visual Components\n   (.article-header, .section, .prose, .feature-grid,\n    .step-list, .faq-accordion, .timeline, .card, etc.)\n   ============================================ */\n\n' + componentStylesCss;
+          console.log('[PremiumDesignOrchestrator] CSS assembled:', {
+            brandCssLength: brandCss.length,
+            componentStylesLength: componentStylesCss.length,
+            totalCssLength: currentCss.length,
+          });
         } else {
           // Subsequent iterations: refine CSS with DesignDNA context
           const lastIteration = session.iterations[session.iterations.length - 1];
@@ -402,6 +418,36 @@ export class PremiumDesignOrchestrator {
   }
 
   // ─── Private Helpers ─────────────────────────────────────────────────────
+
+  /**
+   * Generate ComponentStyles CSS with brand colors from DesignDNA.
+   * This CSS provides the visual styling for all component class names
+   * (.section, .prose, .feature-grid, .step-list, .faq-accordion, etc.)
+   * used by PremiumHtmlRenderer.
+   */
+  private generateComponentStylesCss(designDna?: NonNullable<PremiumDesignSession['designDna']>): string {
+    if (!designDna) {
+      return generateComponentStyles();
+    }
+
+    return generateComponentStyles({
+      primaryColor: designDna.colors?.primary?.hex,
+      primaryDark: designDna.colors?.primaryDark?.hex,
+      secondaryColor: designDna.colors?.secondary?.hex,
+      accentColor: designDna.colors?.accent?.hex,
+      textColor: designDna.colors?.neutrals?.darkest || '#1f2937',
+      textMuted: designDna.colors?.neutrals?.medium || '#6b7280',
+      backgroundColor: '#ffffff',
+      surfaceColor: designDna.colors?.neutrals?.lightest || '#f9fafb',
+      borderColor: designDna.colors?.neutrals?.light || '#e5e7eb',
+      headingFont: designDna.typography?.headingFont?.family || 'system-ui, sans-serif',
+      bodyFont: designDna.typography?.bodyFont?.family || 'system-ui, sans-serif',
+      radiusSmall: designDna.shapes?.borderRadius?.small || '4px',
+      radiusMedium: designDna.shapes?.borderRadius?.medium || '8px',
+      radiusLarge: designDna.shapes?.borderRadius?.large || '16px',
+      personality: designDna.personality?.overall as any,
+    });
+  }
 
   /**
    * Capture target website using BrandDiscoveryService.

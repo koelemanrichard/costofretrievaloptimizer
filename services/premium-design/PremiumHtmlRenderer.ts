@@ -1,231 +1,27 @@
 // =============================================================================
-// PremiumHtmlRenderer — Bridges LayoutEngine blueprint to component-rich HTML
+// PremiumHtmlRenderer — Bridges LayoutEngine blueprint to styled HTML
 // =============================================================================
-// Adapter between the layout-engine's BlueprintSection output and the
-// componentLibrary's rich component renderers. Produces HTML with .ctc-*
-// classes that match the CSS from BrandDesignSystemGenerator.
+// Renders HTML using class names from ComponentStyles.ts:
+//   .article-header, .section, .section-heading, .prose, .feature-grid,
+//   .step-list, .faq-accordion, .timeline, .card, .cta-banner, etc.
+//
+// These class names are styled by generateComponentStyles() which produces
+// 1700+ lines of production CSS with brand colors, visual rhythm, and
+// responsive layouts.
 
 import type { LayoutBlueprintOutput } from '../layout-engine/LayoutEngine';
 import type { BlueprintSection, ComponentType as LayoutComponentType } from '../layout-engine/types';
-import type { ComponentType as PublishingComponentType } from '../publishing/architect/blueprintTypes';
-import { getComponentRenderer, type RenderContext } from '../publishing/renderer/componentLibrary';
 import { convertMarkdownToSemanticHtml } from '../contentAssemblyService';
-import { injectHeadingIds, generateTableOfContentsHtml } from '../quickExportStylesheet';
 import type { DesignDNA } from '../../types/designDna';
 import type { BusinessContext } from './types';
 
-// =============================================================================
-// COMPONENT TYPE MAPPING
-// =============================================================================
-
-/**
- * Map layout-engine ComponentType to publishing ComponentType.
- * The componentLibrary expects publishing ComponentTypes.
- */
-const COMPONENT_TYPE_MAP: Record<LayoutComponentType, PublishingComponentType> = {
-  'prose': 'prose',
-  'card': 'card-grid',
-  'hero': 'prose',           // hero is handled by the hero section renderer
-  'feature-grid': 'card-grid',
-  'accordion': 'faq-accordion',
-  'timeline': 'timeline-vertical',
-  'comparison-table': 'comparison-table',
-  'testimonial-card': 'testimonial-single',
-  'key-takeaways': 'key-takeaways',
-  'cta-banner': 'cta-banner',
-  'step-list': 'steps-numbered',
-  'checklist': 'checklist',
-  'stat-highlight': 'stat-cards',
-  'blockquote': 'pull-quote',
-  'definition-box': 'highlight-box',
-  'faq-accordion': 'faq-accordion',
-  'alert-box': 'callout',
-  'info-box': 'highlight-box',
-  'lead-paragraph': 'lead-paragraph',
-};
-
-/**
- * Map layout-engine emphasis level to publishing SectionEmphasis
- */
-function mapEmphasis(level: string): 'background' | 'normal' | 'featured' | 'hero-moment' {
-  switch (level) {
-    case 'hero': return 'hero-moment';
-    case 'featured': return 'featured';
-    case 'supporting':
-    case 'minimal': return 'background';
-    default: return 'normal';
-  }
-}
-
-/**
- * Map layout-engine spacing to publishing SectionSpacing
- */
-function mapSpacing(spacingBefore: string): 'tight' | 'normal' | 'breathe' {
-  switch (spacingBefore) {
-    case 'tight': return 'tight';
-    case 'generous':
-    case 'dramatic': return 'breathe';
-    default: return 'normal';
-  }
-}
-
-// =============================================================================
-// HERO RENDERER
-// =============================================================================
-
-/**
- * Render hero section based on DesignDNA heroStyle
- */
-function renderHero(
-  title: string,
-  subtitle: string,
-  designDna?: DesignDNA,
-  businessContext?: BusinessContext
-): string {
-  const heroStyle = designDna?.layout?.heroStyle || 'contained';
-  const ctaHtml = businessContext?.ctaText && businessContext?.ctaUrl
-    ? `<div class="ctc-hero-actions">
-        <a href="${escapeHtml(businessContext.ctaUrl)}" class="ctc-btn ctc-btn-primary ctc-btn-lg">${escapeHtml(businessContext.ctaText)}</a>
-      </div>`
-    : '';
-
-  const subtitleHtml = subtitle
-    ? `<p class="ctc-hero-subtitle">${escapeHtml(subtitle)}</p>`
-    : '';
-
-  const industryBadge = businessContext?.industry
-    ? `<div class="ctc-hero-badge">${escapeHtml(businessContext.industry)}</div>`
-    : '';
-
-  switch (heroStyle) {
-    case 'minimal':
-      return `
-<header class="ctc-hero ctc-hero--minimal" role="banner">
-  <div class="ctc-hero-content">
-    <h1 class="ctc-hero-title">${escapeHtml(title)}</h1>
-    ${subtitleHtml}
-  </div>
-</header>`;
-
-    case 'full-bleed':
-      return `
-<header class="ctc-hero ctc-hero--full-bleed" role="banner">
-  ${industryBadge}
-  <div class="ctc-hero-content">
-    <h1 class="ctc-hero-title">${escapeHtml(title)}</h1>
-    ${subtitleHtml}
-    ${ctaHtml}
-  </div>
-</header>`;
-
-    case 'split':
-      return `
-<header class="ctc-hero ctc-hero--split" role="banner">
-  <div class="ctc-container">
-    <div class="ctc-hero-grid">
-      <div class="ctc-hero-content">
-        ${industryBadge}
-        <h1 class="ctc-hero-title">${escapeHtml(title)}</h1>
-        ${subtitleHtml}
-        ${ctaHtml}
-      </div>
-      <div class="ctc-hero-visual">
-        <div class="ctc-hero-visual-glow"></div>
-      </div>
-    </div>
-  </div>
-</header>`;
-
-    case 'video':
-    case 'animated':
-      return `
-<header class="ctc-hero ctc-hero--dynamic" role="banner">
-  <div class="ctc-hero-overlay"></div>
-  <div class="ctc-hero-content">
-    ${industryBadge}
-    <h1 class="ctc-hero-title">${escapeHtml(title)}</h1>
-    ${subtitleHtml}
-    ${ctaHtml}
-  </div>
-</header>`;
-
-    case 'contained':
-    default:
-      // Clean contained header — NO gradient, matching target sites like NFIR
-      return `
-<header class="ctc-hero ctc-hero--contained" role="banner">
-  <div class="ctc-hero-content">
-    ${industryBadge}
-    <h1 class="ctc-hero-title">${escapeHtml(title)}</h1>
-    ${subtitleHtml}
-    ${ctaHtml}
-  </div>
-</header>`;
-  }
-}
-
-// =============================================================================
-// TOC RENDERER
-// =============================================================================
-
-function renderToc(sections: BlueprintSection[]): string {
-  const headings = sections
-    .filter(s => s.heading && s.headingLevel === 2)
-    .map(s => ({ id: s.id, text: s.heading }));
-
-  if (headings.length < 3) return '';
-
-  const isCompact = headings.length >= 12;
-  const compactClass = isCompact ? ' ctc-toc--compact' : '';
-
-  return `
-<nav class="ctc-toc${compactClass}" aria-label="Table of Contents" data-toc-count="${headings.length}">
-  <div class="ctc-toc-header">
-    <h2 class="ctc-toc-title">Contents</h2>
-  </div>
-  <ul class="ctc-toc-list">
-    ${headings.map(h => `
-    <li class="ctc-toc-item">
-      <a href="#${h.id}" class="ctc-toc-link">
-        <span class="ctc-toc-arrow">&rarr;</span>
-        <span>${escapeHtml(h.text)}</span>
-      </a>
-    </li>`).join('')}
-  </ul>
-</nav>`;
-}
-
-// =============================================================================
-// CTA RENDERER
-// =============================================================================
-
-function renderCta(designDna?: DesignDNA, businessContext?: BusinessContext): string {
-  if (!businessContext?.ctaText) return '';
-
-  const ctaStyle = designDna?.componentPreferences?.ctaStyle || 'button';
-
-  return `
-<aside class="ctc-cta-banner">
-  <div class="ctc-cta-banner-inner">
-    <h2 class="ctc-cta-banner-title">${escapeHtml(businessContext.ctaText)}</h2>
-    <div class="ctc-cta-banner-actions">
-      <a href="${escapeHtml(businessContext.ctaUrl || '#contact')}" class="ctc-btn ctc-btn-primary ctc-btn-lg">
-        ${escapeHtml(businessContext.ctaText)}
-        <span class="ctc-btn-arrow">&rarr;</span>
-      </a>
-    </div>
-  </div>
-</aside>`;
-}
+// Import extraction functions from componentLibrary (NOT the renderers)
+import { extractListItems, extractFaqItems, extractSteps } from '../publishing/renderer/componentLibrary';
 
 // =============================================================================
 // MARKDOWN PARSER
 // =============================================================================
 
-/**
- * Split markdown into per-heading sections.
- * Returns array of { heading, headingLevel, content }.
- */
 function splitMarkdownIntoSections(markdown: string): Array<{
   heading: string;
   headingLevel: number;
@@ -240,7 +36,6 @@ function splitMarkdownIntoSections(markdown: string): Array<{
   for (const line of lines) {
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch && headingMatch[1].length <= 3) {
-      // Save previous section
       if (currentContent.length > 0 || currentHeading) {
         sections.push({
           heading: currentHeading,
@@ -256,7 +51,6 @@ function splitMarkdownIntoSections(markdown: string): Array<{
     }
   }
 
-  // Save final section
   if (currentContent.length > 0 || currentHeading) {
     sections.push({
       heading: currentHeading,
@@ -269,126 +63,8 @@ function splitMarkdownIntoSections(markdown: string): Array<{
 }
 
 // =============================================================================
-// MAIN RENDERER
-// =============================================================================
-
-export class PremiumHtmlRenderer {
-  /**
-   * Render component-rich HTML from a LayoutBlueprint + article markdown.
-   *
-   * Uses the componentLibrary renderers to produce visual components
-   * (timelines, feature grids, FAQ accordions, etc.) instead of flat text blocks.
-   */
-  static render(
-    blueprint: LayoutBlueprintOutput,
-    articleMarkdown: string,
-    title: string,
-    designDna?: DesignDNA,
-    businessContext?: BusinessContext
-  ): string {
-    // Convert markdown to base HTML for content
-    let baseHtml = convertMarkdownToSemanticHtml(articleMarkdown, { semantic: true });
-    baseHtml = injectHeadingIds(baseHtml);
-
-    // Split markdown into sections to match with blueprint sections
-    const markdownSections = splitMarkdownIntoSections(articleMarkdown);
-
-    // Extract first paragraph for hero subtitle
-    const firstParagraph = markdownSections.length > 0
-      ? extractFirstParagraph(markdownSections[0].content || markdownSections[0].heading)
-      : '';
-
-    // Build HTML parts
-    const htmlParts: string[] = [];
-
-    // 1. Hero
-    htmlParts.push(renderHero(title, firstParagraph, designDna, businessContext));
-
-    // 2. TOC
-    htmlParts.push(renderToc(blueprint.sections));
-
-    // 3. Main content
-    htmlParts.push('<main class="ctc-main" role="main">');
-    htmlParts.push('<article class="ctc-article" itemscope itemtype="https://schema.org/Article">');
-    htmlParts.push(`<meta itemprop="headline" content="${escapeHtml(title)}">`);
-
-    for (let i = 0; i < blueprint.sections.length; i++) {
-      const bpSection = blueprint.sections[i];
-
-      // Find matching markdown section content
-      const mdSection = findMatchingSection(bpSection, markdownSections, i);
-      const sectionHtml = mdSection
-        ? convertMarkdownToSemanticHtml(mdSection.content, { semantic: true })
-        : '';
-
-      // Map to publishing component type
-      const publishingType = COMPONENT_TYPE_MAP[bpSection.component.primaryComponent] || 'prose';
-
-      // Build render context
-      const ctx: RenderContext = {
-        sectionId: bpSection.id,
-        content: sectionHtml,
-        heading: bpSection.heading,
-        headingLevel: bpSection.headingLevel || 2,
-        emphasis: mapEmphasis(bpSection.emphasis.level),
-        spacing: mapSpacing(bpSection.layout.verticalSpacingBefore),
-        hasBackground: bpSection.emphasis.hasBackgroundTreatment,
-        hasDivider: false,
-        variant: bpSection.component.componentVariant || 'default',
-      };
-
-      // Get the component renderer and render
-      const renderer = getComponentRenderer(publishingType);
-      const rendered = renderer(ctx);
-      htmlParts.push(rendered.html);
-    }
-
-    htmlParts.push('</article>');
-    htmlParts.push('</main>');
-
-    // 4. CTA
-    htmlParts.push(renderCta(designDna, businessContext));
-
-    // 5. Interactive scripts
-    htmlParts.push(INTERACTIVE_SCRIPT);
-
-    // Wrap everything
-    const personality = designDna?.personality?.overall || 'corporate';
-    return `<div class="ctc-root ctc-styled ctc-personality-${personality}" data-ctc-version="2.0" data-blueprint-rendered="true">
-${htmlParts.join('\n')}
-</div>`;
-  }
-}
-
-// =============================================================================
 // HELPERS
 // =============================================================================
-
-/**
- * Find the markdown section that matches a blueprint section by heading
- */
-function findMatchingSection(
-  bpSection: BlueprintSection,
-  mdSections: Array<{ heading: string; headingLevel: number; content: string }>,
-  index: number
-): { heading: string; headingLevel: number; content: string } | undefined {
-  if (!bpSection.heading) {
-    return mdSections[index];
-  }
-
-  // Try exact heading match first
-  const exactMatch = mdSections.find(s =>
-    normalizeHeading(s.heading) === normalizeHeading(bpSection.heading)
-  );
-  if (exactMatch) return exactMatch;
-
-  // Fall back to index-based matching
-  return mdSections[index];
-}
-
-function normalizeHeading(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-}
 
 function escapeHtml(str: string): string {
   return str
@@ -397,6 +73,21 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').substring(0, 50);
+}
+
+/** Convert inline markdown (bold, italic, links) to HTML */
+function inlineMarkdown(text: string): string {
+  let html = text;
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  return html;
 }
 
 function extractFirstParagraph(content: string): string {
@@ -411,23 +102,436 @@ function extractFirstParagraph(content: string): string {
   return '';
 }
 
+function normalizeHeading(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+}
+
+function findMatchingSection(
+  bpSection: BlueprintSection,
+  mdSections: Array<{ heading: string; headingLevel: number; content: string }>,
+  index: number
+): { heading: string; headingLevel: number; content: string } | undefined {
+  if (!bpSection.heading) {
+    return mdSections[index];
+  }
+  const exactMatch = mdSections.find(s =>
+    normalizeHeading(s.heading) === normalizeHeading(bpSection.heading)
+  );
+  if (exactMatch) return exactMatch;
+  return mdSections[index];
+}
+
+/** Map emphasis level to heading size class */
+function emphasisToHeadingSize(emphasis: string): string {
+  switch (emphasis) {
+    case 'hero': return 'heading-xl';
+    case 'featured': return 'heading-lg';
+    case 'standard': return 'heading-md';
+    case 'supporting': return 'heading-sm';
+    case 'minimal': return 'heading-sm';
+    default: return 'heading-md';
+  }
+}
+
+/** Map emphasis level to CSS class */
+function emphasisToClass(level: string): string {
+  switch (level) {
+    case 'hero': return 'emphasis-hero';
+    case 'featured': return 'emphasis-featured';
+    case 'supporting': return 'emphasis-supporting';
+    case 'minimal': return 'emphasis-minimal';
+    default: return 'emphasis-standard';
+  }
+}
+
+// =============================================================================
+// HERO RENDERER
+// =============================================================================
+
+function renderHero(
+  title: string,
+  subtitle: string,
+  businessContext?: BusinessContext
+): string {
+  const ctaHtml = businessContext?.ctaText && businessContext?.ctaUrl
+    ? `<a href="${escapeHtml(businessContext.ctaUrl)}" class="cta-button">${escapeHtml(businessContext.ctaText)}</a>`
+    : '';
+
+  const subtitleHtml = subtitle
+    ? `<p class="article-subtitle">${escapeHtml(subtitle)}</p>`
+    : '';
+
+  const industryBadge = businessContext?.industry
+    ? `<p class="subtitle">${escapeHtml(businessContext.industry)}${businessContext?.audience ? ` &middot; ${escapeHtml(businessContext.audience)}` : ''}</p>`
+    : '';
+
+  return `
+<header class="article-header" role="banner">
+  <h1>${escapeHtml(title)}</h1>
+  ${industryBadge}
+  ${subtitleHtml}
+  ${ctaHtml}
+</header>`;
+}
+
+// =============================================================================
+// TOC RENDERER
+// =============================================================================
+
+function renderToc(sections: BlueprintSection[]): string {
+  const headings = sections
+    .filter(s => s.heading && s.headingLevel === 2)
+    .map(s => ({ id: s.id, text: s.heading }));
+
+  if (headings.length < 3) return '';
+
+  return `
+<nav class="article-toc" aria-label="Table of Contents">
+  <ul>
+    ${headings.map(h => `<li><a href="#${h.id}">${escapeHtml(h.text)}</a></li>`).join('\n    ')}
+  </ul>
+</nav>`;
+}
+
+// =============================================================================
+// CTA RENDERER
+// =============================================================================
+
+function renderCta(businessContext?: BusinessContext): string {
+  if (!businessContext?.ctaText) return '';
+
+  return `
+<div class="cta-banner">
+  <div class="cta-content">
+    <p class="cta-text">${escapeHtml(businessContext.ctaText)}</p>
+  </div>
+  <div class="cta-actions">
+    <a href="${escapeHtml(businessContext.ctaUrl || '#contact')}" class="cta-button cta-primary">
+      ${escapeHtml(businessContext.ctaText)} &rarr;
+    </a>
+  </div>
+</div>`;
+}
+
+// =============================================================================
+// SECTION CONTENT RENDERERS
+// =============================================================================
+
+function renderProse(markdownContent: string): string {
+  const html = convertMarkdownToSemanticHtml(markdownContent, { semantic: true });
+  return `<div class="prose">${html}</div>`;
+}
+
+function renderFeatureGrid(items: string[]): string {
+  const columns = items.length <= 4 ? 2 : 3;
+  const icons = ['✨', '🎯', '🚀', '💡', '⭐', '🔥', '💪', '🎨', '📈', '🎁'];
+
+  return `<div class="feature-grid columns-${columns}">
+  ${items.map((item, i) => {
+    const parts = item.split(/[:\-–]/).map(p => p.trim());
+    const title = parts[0] || item;
+    const desc = parts[1] || '';
+    return `<div class="feature-card">
+    <div class="feature-icon">${icons[i % icons.length]}</div>
+    <div class="feature-content">
+      <div class="feature-title">${inlineMarkdown(title)}</div>
+      ${desc ? `<div class="feature-desc">${inlineMarkdown(desc)}</div>` : ''}
+    </div>
+  </div>`;
+  }).join('\n  ')}
+</div>`;
+}
+
+function renderStepList(extracted: { introProse: string; steps: Array<{ title: string; description: string }> }): string {
+  const introHtml = extracted.introProse
+    ? `<div class="prose"><p>${inlineMarkdown(extracted.introProse)}</p></div>`
+    : '';
+
+  return `${introHtml}
+<div class="step-list">
+  ${extracted.steps.map((step, i) => `<div class="step-item">
+    <div class="step-indicator">
+      <div class="step-number">${i + 1}</div>
+    </div>
+    <div class="step-content">
+      <strong>${inlineMarkdown(step.title)}</strong>
+      ${step.description ? `<br>${inlineMarkdown(step.description)}` : ''}
+    </div>
+  </div>`).join('\n  ')}
+</div>`;
+}
+
+function renderFaqAccordion(faqs: Array<{ question: string; answer: string }>, sectionId: string): string {
+  return `<div class="faq-accordion">
+  ${faqs.map((faq, i) => `<div class="faq-item">
+    <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-${sectionId}-${i}">
+      <div class="faq-icon">Q</div>
+      <div class="faq-question-text">${inlineMarkdown(faq.question)}</div>
+      <div class="faq-toggle">+</div>
+    </button>
+    <div id="faq-${sectionId}-${i}" class="faq-answer" hidden>
+      <div class="faq-answer-icon">A</div>
+      <div class="faq-answer-text">${inlineMarkdown(faq.answer)}</div>
+    </div>
+  </div>`).join('\n  ')}
+</div>`;
+}
+
+function renderTimeline(extracted: { introProse: string; steps: Array<{ title: string; description: string }> }): string {
+  const introHtml = extracted.introProse
+    ? `<div class="prose"><p>${inlineMarkdown(extracted.introProse)}</p></div>`
+    : '';
+
+  return `${introHtml}
+<div class="timeline">
+  ${extracted.steps.map((step, i) => `<div class="timeline-item">
+    <div class="timeline-marker">
+      <div class="timeline-number">${i + 1}</div>
+    </div>
+    <div class="timeline-content">
+      <strong>${inlineMarkdown(step.title)}</strong>
+      <div class="timeline-body">${step.description ? inlineMarkdown(step.description) : ''}</div>
+    </div>
+  </div>`).join('\n  ')}
+</div>`;
+}
+
+function renderKeyTakeaways(items: string[], heading?: string): string {
+  return `<div class="key-takeaways">
+  <div class="takeaways-header">
+    <span class="takeaways-icon">💡</span>
+    <span class="takeaways-title">${escapeHtml(heading || 'Key Takeaways')}</span>
+  </div>
+  <ul class="takeaways-list">
+    ${items.map(item => `<li class="takeaway-item">
+      <span class="takeaway-icon">✓</span>
+      <span class="takeaway-text">${inlineMarkdown(item)}</span>
+    </li>`).join('\n    ')}
+  </ul>
+</div>`;
+}
+
+function renderChecklist(items: string[]): string {
+  return `<ul class="checklist">
+  ${items.map(item => `<li class="checklist-item">
+    <span class="checklist-check">✓</span>
+    <span class="checklist-text">${inlineMarkdown(item)}</span>
+  </li>`).join('\n  ')}
+</ul>`;
+}
+
+function renderStatGrid(items: string[]): string {
+  return `<div class="stat-grid">
+  ${items.map(item => {
+    const match = item.match(/(\d+[%+]?|\d+\.\d+)/);
+    const stat = match ? match[1] : '•';
+    const label = item.replace(/\d+[%+]?|\d+\.\d+/, '').trim() || item;
+    return `<div class="stat-item">
+    <span class="stat-value">${escapeHtml(stat)}</span>
+    <span class="stat-label">${inlineMarkdown(label)}</span>
+  </div>`;
+  }).join('\n  ')}
+</div>`;
+}
+
+function renderTestimonial(markdownContent: string): string {
+  const quoteMatch = markdownContent.match(/>\s*(.+)/);
+  const text = quoteMatch ? quoteMatch[1].trim() : markdownContent.split('\n')[0].trim();
+  return `<div class="testimonial-card">
+  <div class="testimonial-quote-mark">&ldquo;</div>
+  <p class="testimonial-text">${inlineMarkdown(text)}</p>
+</div>`;
+}
+
+function renderBlockquote(markdownContent: string): string {
+  const text = markdownContent.replace(/^>\s*/gm, '').trim();
+  return `<div class="blockquote">
+  <p>${inlineMarkdown(text)}</p>
+</div>`;
+}
+
+function renderAlertBox(markdownContent: string): string {
+  const html = convertMarkdownToSemanticHtml(markdownContent, { semantic: true });
+  return `<div class="alert-box">
+  <div class="alert-box-icon">⚠️</div>
+  <div class="alert-box-content">${html}</div>
+</div>`;
+}
+
+function renderInfoBox(markdownContent: string): string {
+  const html = convertMarkdownToSemanticHtml(markdownContent, { semantic: true });
+  return `<div class="info-box">
+  ${html}
+</div>`;
+}
+
+function renderDefinitionBox(markdownContent: string): string {
+  const html = convertMarkdownToSemanticHtml(markdownContent, { semantic: true });
+  return `<div class="definition-box">
+  <div class="definition-icon">📖</div>
+  <div class="definition-content">${html}</div>
+</div>`;
+}
+
+function renderLeadParagraph(markdownContent: string): string {
+  const firstPara = markdownContent.split(/\n\n+/)[0] || markdownContent;
+  return `<div class="lead-paragraph">
+  <div class="lead-text">${inlineMarkdown(firstPara.trim())}</div>
+</div>`;
+}
+
+function renderComparisonTable(markdownContent: string): string {
+  const html = convertMarkdownToSemanticHtml(markdownContent, { semantic: true });
+  // Wrap any <table> in comparison-table-wrapper
+  const wrapped = html.replace(/<table>/g, '<div class="comparison-table-wrapper"><table class="comparison-table">')
+                       .replace(/<\/table>/g, '</table></div>');
+  return wrapped;
+}
+
+// =============================================================================
+// SECTION CONTENT DISPATCHER
+// =============================================================================
+
+function renderSectionContent(
+  componentType: LayoutComponentType,
+  markdownContent: string,
+  sectionId: string,
+  heading?: string
+): string {
+  // Try component-specific rendering; fall back to prose if no structured data found
+  switch (componentType) {
+    case 'feature-grid':
+    case 'card': {
+      const items = extractListItems(markdownContent);
+      if (items.length >= 2) return renderFeatureGrid(items);
+      return renderProse(markdownContent);
+    }
+
+    case 'step-list': {
+      const extracted = extractSteps(markdownContent);
+      if (extracted.steps.length >= 2) return renderStepList(extracted);
+      return renderProse(markdownContent);
+    }
+
+    case 'accordion':
+    case 'faq-accordion': {
+      const faqs = extractFaqItems(markdownContent);
+      if (faqs.length >= 1) return renderFaqAccordion(faqs, sectionId);
+      return renderProse(markdownContent);
+    }
+
+    case 'timeline': {
+      const extracted = extractSteps(markdownContent);
+      if (extracted.steps.length >= 2) return renderTimeline(extracted);
+      return renderProse(markdownContent);
+    }
+
+    case 'key-takeaways': {
+      const items = extractListItems(markdownContent);
+      if (items.length >= 1) return renderKeyTakeaways(items, heading);
+      return renderProse(markdownContent);
+    }
+
+    case 'checklist': {
+      const items = extractListItems(markdownContent);
+      if (items.length >= 1) return renderChecklist(items);
+      return renderProse(markdownContent);
+    }
+
+    case 'stat-highlight': {
+      const items = extractListItems(markdownContent);
+      if (items.length >= 1) return renderStatGrid(items);
+      return renderProse(markdownContent);
+    }
+
+    case 'comparison-table':
+      return renderComparisonTable(markdownContent);
+
+    case 'testimonial-card':
+      return renderTestimonial(markdownContent);
+
+    case 'blockquote':
+      return renderBlockquote(markdownContent);
+
+    case 'alert-box':
+      return renderAlertBox(markdownContent);
+
+    case 'info-box':
+      return renderInfoBox(markdownContent);
+
+    case 'definition-box':
+      return renderDefinitionBox(markdownContent);
+
+    case 'lead-paragraph':
+      return renderLeadParagraph(markdownContent);
+
+    case 'cta-banner':
+      return renderProse(markdownContent);
+
+    case 'prose':
+    case 'hero':
+    default:
+      return renderProse(markdownContent);
+  }
+}
+
+// =============================================================================
+// SECTION RENDERER
+// =============================================================================
+
+function renderSection(
+  bpSection: BlueprintSection,
+  markdownContent: string,
+  index: number
+): string {
+  const componentType = bpSection.component.primaryComponent;
+  const emphasisLevel = bpSection.emphasis.level;
+  const emphasisClass = emphasisToClass(emphasisLevel);
+  const layoutClass = `layout-${bpSection.layout.width || 'medium'}`;
+  const spacingBefore = `spacing-before-${bpSection.layout.verticalSpacingBefore || 'normal'}`;
+  const spacingAfter = `spacing-after-${bpSection.layout.verticalSpacingAfter || 'normal'}`;
+  const sectionTypeClass = `section-${componentType}`;
+
+  const headingSize = emphasisToHeadingSize(emphasisLevel);
+  const headingHtml = bpSection.heading
+    ? `<h2 id="${bpSection.id}" class="section-heading ${headingSize}">${escapeHtml(bpSection.heading)}</h2>`
+    : '';
+
+  const contentHtml = renderSectionContent(componentType, markdownContent, bpSection.id, bpSection.heading);
+
+  return `
+<section class="section ${emphasisClass} ${sectionTypeClass} ${layoutClass} ${spacingBefore} ${spacingAfter}">
+  <div class="section-container">
+    ${headingHtml}
+    <div class="section-content">
+      ${contentHtml}
+    </div>
+  </div>
+</section>`;
+}
+
+// =============================================================================
+// INTERACTIVE SCRIPT
+// =============================================================================
+
 const INTERACTIVE_SCRIPT = `
 <script>
 (function() {
   // FAQ Accordion Toggle
-  document.querySelectorAll('.ctc-faq-trigger').forEach(function(trigger) {
+  document.querySelectorAll('.faq-question').forEach(function(trigger) {
     trigger.addEventListener('click', function() {
-      var answer = document.getElementById(trigger.getAttribute('aria-controls'));
-      var icon = trigger.querySelector('.ctc-faq-icon');
+      var answerId = trigger.getAttribute('aria-controls');
+      var answer = answerId ? document.getElementById(answerId) : trigger.nextElementSibling;
+      var toggle = trigger.querySelector('.faq-toggle');
       var isExpanded = trigger.getAttribute('aria-expanded') === 'true';
       trigger.setAttribute('aria-expanded', !isExpanded);
       if (answer) answer.hidden = isExpanded;
-      if (icon) icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(45deg)';
+      if (toggle) toggle.textContent = isExpanded ? '+' : '−';
     });
   });
 
   // Smooth scroll for TOC links
-  document.querySelectorAll('.ctc-toc a[href^="#"]').forEach(function(link) {
+  document.querySelectorAll('.article-toc a[href^="#"]').forEach(function(link) {
     link.addEventListener('click', function(e) {
       var target = document.querySelector(this.getAttribute('href'));
       if (target) {
@@ -438,3 +542,72 @@ const INTERACTIVE_SCRIPT = `
   });
 })();
 </script>`;
+
+// =============================================================================
+// MAIN RENDERER
+// =============================================================================
+
+export class PremiumHtmlRenderer {
+  /**
+   * Render component-rich HTML from a LayoutBlueprint + article markdown.
+   *
+   * Uses ComponentStyles class names (.section, .prose, .feature-grid, etc.)
+   * so the output is properly styled by generateComponentStyles() CSS.
+   */
+  static render(
+    blueprint: LayoutBlueprintOutput,
+    articleMarkdown: string,
+    title: string,
+    designDna?: DesignDNA,
+    businessContext?: BusinessContext
+  ): string {
+    // Split markdown into sections to match with blueprint sections
+    const markdownSections = splitMarkdownIntoSections(articleMarkdown);
+
+    // Extract first paragraph for hero subtitle
+    const firstParagraph = markdownSections.length > 0
+      ? extractFirstParagraph(markdownSections[0].content || markdownSections[0].heading)
+      : '';
+
+    // Build HTML parts
+    const htmlParts: string[] = [];
+
+    // 1. Hero (uses .article-header classes from ComponentStyles)
+    htmlParts.push(renderHero(title, firstParagraph, businessContext));
+
+    // 2. TOC (uses .article-toc classes from ComponentStyles)
+    const tocHtml = renderToc(blueprint.sections);
+    if (tocHtml) htmlParts.push(tocHtml);
+
+    // 3. Main content (semantic article structure)
+    htmlParts.push('<main role="main">');
+    htmlParts.push(`<article itemscope itemtype="https://schema.org/Article">`);
+    htmlParts.push(`<meta itemprop="headline" content="${escapeHtml(title)}">`);
+
+    for (let i = 0; i < blueprint.sections.length; i++) {
+      const bpSection = blueprint.sections[i];
+
+      // Find matching markdown section content
+      const mdSection = findMatchingSection(bpSection, markdownSections, i);
+      const markdownContent = mdSection?.content || '';
+
+      htmlParts.push(renderSection(bpSection, markdownContent, i));
+    }
+
+    htmlParts.push('</article>');
+    htmlParts.push('</main>');
+
+    // 4. CTA (uses .cta-banner classes from ComponentStyles)
+    const ctaHtml = renderCta(businessContext);
+    if (ctaHtml) htmlParts.push(ctaHtml);
+
+    // 5. Interactive scripts (FAQ accordion, smooth scroll)
+    htmlParts.push(INTERACTIVE_SCRIPT);
+
+    // Wrap in styled-article container
+    const personality = designDna?.personality?.overall || 'corporate';
+    return `<div class="styled-article" data-ctc-version="2.0" data-blueprint-rendered="true" data-personality="${personality}">
+${htmlParts.join('\n')}
+</div>`;
+  }
+}

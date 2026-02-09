@@ -117,25 +117,6 @@ test.describe('Premium Design Visual Quality', () => {
 <style>
 body { margin: 0; padding: 0; font-family: "Inter", system-ui, sans-serif; background: #fff; color: #212121; }
 ${componentCss}
-/* CTC root styles */
-.ctc-root { max-width: 1200px; margin: 0 auto; }
-.ctc-main { padding: 0 2rem; }
-.ctc-hero { padding: 3rem 2rem; }
-.ctc-hero-title { font-size: 2.5rem; font-weight: 700; margin: 0 0 1rem; color: #212121; }
-.ctc-hero-subtitle { font-size: 1.125rem; color: #757575; max-width: 600px; }
-.ctc-toc { padding: 1.5rem 2rem; background: #fafafa; border-radius: 8px; margin: 0 2rem 2rem; }
-.ctc-toc-title { font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem; }
-.ctc-toc-list { list-style: none; padding: 0; margin: 0; }
-.ctc-toc-item { padding: 0.5rem 0; }
-.ctc-toc-link { color: #e65100; text-decoration: none; }
-.ctc-toc-arrow { margin-right: 0.5rem; }
-.ctc-cta-banner { background: linear-gradient(135deg, #e65100, #bf360c); color: white; padding: 3rem 2rem; text-align: center; margin-top: 3rem; border-radius: 12px; }
-.ctc-cta-banner-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 1.5rem; color: white; }
-.ctc-btn { display: inline-block; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; text-decoration: none; }
-.ctc-btn-primary { background: white; color: #e65100; }
-.ctc-btn-arrow { margin-left: 0.5rem; }
-.ctc-section { padding: 2rem 0; }
-.ctc-section-heading { font-size: 1.75rem; font-weight: 700; color: #212121; margin: 0 0 1.5rem; }
 </style>
 </head>
 <body>${html}</body>
@@ -153,16 +134,16 @@ ${componentCss}
     const componentTypes = await page.evaluate(() => {
       const types = new Set<string>();
       // Check for rich component types in the HTML
-      if (document.querySelector('.ctc-toc')) types.add('toc');
-      if (document.querySelector('.ctc-hero')) types.add('hero');
-      if (document.querySelector('.ctc-cta-banner')) types.add('cta');
-      if (document.querySelector('.section-component-faq-accordion, .faq-item, details')) types.add('faq');
-      if (document.querySelector('.section-component-steps-numbered, .step-item, ol[data-step-list]')) types.add('steps');
-      if (document.querySelector('.section-component-card-grid, .feature-card')) types.add('cards');
-      if (document.querySelector('.section-component-comparison-table, table')) types.add('table');
-      if (document.querySelector('.section-component-prose, .ctc-section')) types.add('prose');
-      if (document.querySelector('.section-component-key-takeaways, .takeaway')) types.add('takeaways');
-      if (document.querySelector('.section-component-timeline-vertical, .timeline-item')) types.add('timeline');
+      if (document.querySelector('.article-toc')) types.add('toc');
+      if (document.querySelector('.article-header')) types.add('hero');
+      if (document.querySelector('.cta-banner')) types.add('cta');
+      if (document.querySelector('.faq-accordion, .faq-item, details')) types.add('faq');
+      if (document.querySelector('.step-list, .step-item, ol[data-step-list]')) types.add('steps');
+      if (document.querySelector('.feature-grid, .feature-card')) types.add('cards');
+      if (document.querySelector('.comparison-table, table')) types.add('table');
+      if (document.querySelector('.prose, .section')) types.add('prose');
+      if (document.querySelector('.key-takeaways, .takeaway-item')) types.add('takeaways');
+      if (document.querySelector('.timeline, .timeline-item')) types.add('timeline');
       // Also check blueprint-rendered section types
       document.querySelectorAll('[class*="section-component-"]').forEach(el => {
         const match = el.className.match(/section-component-(\S+)/);
@@ -257,10 +238,10 @@ ${componentCss}
     // The hero/header must be visually distinct from body content
     // =================================================================
     const heroPresence = await page.evaluate(() => {
-      const hero = document.querySelector('.ctc-hero, [class*="hero"]');
+      const hero = document.querySelector('.article-header, [class*="article-header"]');
       if (!hero) return { exists: false, height: 0, hasTitle: false };
       const rect = hero.getBoundingClientRect();
-      const h1 = hero.querySelector('h1, .ctc-hero-title');
+      const h1 = hero.querySelector('h1');
       return {
         exists: true,
         height: rect.height,
@@ -278,7 +259,7 @@ ${componentCss}
     // VISUAL QUALITY CHECK 7: CTA is prominent and clickable
     // =================================================================
     const ctaPresence = await page.evaluate(() => {
-      const cta = document.querySelector('.ctc-cta-banner, [class*="cta"]');
+      const cta = document.querySelector('.cta-banner');
       if (!cta) return { exists: false };
       const link = cta.querySelector('a');
       return {
@@ -343,7 +324,7 @@ ${componentCss}
     // VISUAL QUALITY CHECK 10: Table of Contents present and linked
     // =================================================================
     const tocQuality = await page.evaluate(() => {
-      const toc = document.querySelector('.ctc-toc, nav[aria-label*="Contents"]');
+      const toc = document.querySelector('.article-toc, nav[aria-label*="Contents"]');
       if (!toc) return { exists: false, linkCount: 0 };
       const links = toc.querySelectorAll('a[href^="#"]');
       let validLinks = 0;
@@ -408,15 +389,6 @@ ${componentCss}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body { margin: 0; padding: 0; font-family: system-ui, sans-serif; }
-.ctc-root { max-width: 100%; overflow-x: hidden; }
-.ctc-main { padding: 0 1rem; }
-.ctc-hero { padding: 2rem 1rem; }
-.ctc-hero-title { font-size: 1.75rem; font-weight: 700; }
-.ctc-hero-subtitle { font-size: 1rem; }
-.ctc-toc { padding: 1rem; margin: 0 1rem 1.5rem; }
-.ctc-cta-banner { padding: 2rem 1rem; margin-top: 2rem; }
-.ctc-section { padding: 1.5rem 0; }
-.ctc-section-heading { font-size: 1.25rem; }
 table { display: block; overflow-x: auto; }
 ${componentCss}
 </style>
@@ -499,19 +471,18 @@ ${componentCss}
     expect(html).toContain('itemprop="headline"');
 
     // Has hero section
-    expect(html).toContain('ctc-hero');
-    expect(html).toContain('ctc-hero-title');
+    expect(html).toContain('article-header');
 
     // Has CTA section
-    expect(html).toContain('ctc-cta-banner');
-    expect(html).toContain('ctc-btn');
+    expect(html).toContain('cta-banner');
+    expect(html).toContain('cta-button');
 
-    // Has section structure
-    expect(html).toContain('ctc-main');
-    expect(html).toContain('ctc-article');
+    // Has section structure with semantic elements
+    expect(html).toContain('class="section');
+    expect(html).toContain('section-heading');
 
     // Has interactive scripts
-    expect(html).toContain('ctc-faq-trigger');
+    expect(html).toContain('faq-question');
     expect(html).toContain('scrollIntoView');
 
     // No template artifacts
@@ -563,19 +534,6 @@ ${componentCss}
     await page.setContent(`<!DOCTYPE html>
 <html><head><style>
 body { margin: 0; font-family: system-ui; }
-.ctc-root { max-width: 1200px; margin: 0 auto; }
-.ctc-main { padding: 0 2rem; }
-.ctc-hero { padding: 3rem 2rem; }
-.ctc-hero-title { font-size: 2.5rem; font-weight: 700; }
-.ctc-toc { padding: 1.5rem 2rem; background: #fafafa; border-radius: 8px; margin: 0 2rem 2rem; }
-.ctc-toc-list { list-style: none; padding: 0; }
-.ctc-toc-link { color: #e65100; text-decoration: none; }
-.ctc-toc-arrow { margin-right: 0.5rem; }
-.ctc-toc-title { font-weight: 600; }
-.ctc-cta-banner { background: #e65100; color: white; padding: 3rem; text-align: center; border-radius: 12px; }
-.ctc-cta-banner-title { color: white; }
-.ctc-btn-primary { background: white; color: #e65100; padding: 0.75rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; }
-.ctc-section { padding: 2rem 0; }
 ${componentCss}
 </style></head>
 <body>${premiumHtml}</body></html>`);
