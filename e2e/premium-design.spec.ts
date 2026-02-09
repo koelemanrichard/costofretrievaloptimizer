@@ -447,9 +447,9 @@ test.describe('SemanticHtmlGenerator', () => {
       'Pentest Gids'
     );
 
-    // Extract all semantic weights
-    const weights = (result.match(/data-semantic-weight="(\d)"/g) || [])
-      .map(m => m.match(/\d/)![0]);
+    // Extract all semantic weights (may be decimals like "3.5")
+    const weights = (result.match(/data-semantic-weight="([\d.]+)"/g) || [])
+      .map(m => m.match(/[\d.]+/)![0]);
 
     // Should have some variation — not all the same value
     const uniqueWeights = new Set(weights);
@@ -617,7 +617,8 @@ test.describe('Premium Design Services', () => {
     });
 
     expect(generator).toBeDefined();
-    expect(typeof generator.generateInitialCss).toBe('function');
+    expect(typeof generator.generateInitialCssLegacy).toBe('function');
+    expect(typeof generator.getInitialCssFromBrandSystem).toBe('function');
     expect(typeof generator.refineCss).toBe('function');
   });
 });

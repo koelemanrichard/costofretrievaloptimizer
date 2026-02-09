@@ -1,11 +1,26 @@
 // =============================================================================
 // PremiumDesignOrchestrator — Orchestrates the premium design pipeline
 // =============================================================================
-// Flow: Capture target → Generate HTML → AI CSS → Render → Validate → Iterate
+// Flow: Capture target → Extract DesignDNA → Generate BrandDesignSystem CSS
+//       → Layout blueprint → Component-rich HTML → Validate → Iterate CSS
+//
+// NEW PIPELINE (bridging existing sophisticated systems):
+// 1. BrandDiscoveryService → screenshot + basic tokens
+// 2. AIDesignAnalyzer → 180+ field DesignDNA (heroStyle, cardStyle, etc.)
+// 3. BrandDesignSystemGenerator → 5-pass AI CSS (10-50KB production CSS)
+// 4. LayoutEngine → component-rich layout blueprint
+// 5. PremiumHtmlRenderer → visual components (timelines, grids, cards, etc.)
+// 6. Validate → Refine CSS (small targeted fixes only)
+//
+// FALLBACK CHAIN: Each step falls back to the previous approach if it fails.
 
 import { v4 as uuidv4 } from 'uuid';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { BrandDiscoveryService } from '../design-analysis/BrandDiscoveryService';
+import { AIDesignAnalyzer } from '../design-analysis/AIDesignAnalyzer';
+import { BrandDesignSystemGenerator } from '../design-analysis/BrandDesignSystemGenerator';
+import { LayoutEngine } from '../layout-engine/LayoutEngine';
+import { PremiumHtmlRenderer } from './PremiumHtmlRenderer';
 import { SemanticHtmlGenerator } from './SemanticHtmlGenerator';
 import { AiCssGenerator } from './AiCssGenerator';
 import { ScreenshotService } from './ScreenshotService';
@@ -32,14 +47,35 @@ export interface PersistenceOptions {
   mapId?: string;
 }
 
+// =============================================================================
+// DESIGN DNA CACHE
+// =============================================================================
+
+interface CachedDesignData {
+  designDna: NonNullable<PremiumDesignSession['designDna']>;
+  brandDesignSystem: NonNullable<PremiumDesignSession['brandDesignSystem']>;
+  timestamp: number;
+}
+
+const designDnaCache = new Map<string, CachedDesignData>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getCacheKey(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+// =============================================================================
+// ORCHESTRATOR
+// =============================================================================
+
 /**
- * Orchestrates the full premium design pipeline:
- * 1. Capture target website screenshot + CSS tokens
- * 2. Generate semantic HTML from article
- * 3. AI CSS generation from target screenshot
- * 4. Render + screenshot the output
- * 5. Validate against target
- * 6. Iterate if score < threshold
+ * Orchestrates the full premium design pipeline.
+ * Uses the sophisticated existing design-analysis and layout-engine systems
+ * instead of simplified parallel implementations.
  */
 export class PremiumDesignOrchestrator {
   private config: PremiumDesignConfig;
@@ -62,13 +98,6 @@ export class PremiumDesignOrchestrator {
 
   /**
    * Run the full design pipeline.
-   *
-   * @param articleMarkdown - The article content in markdown
-   * @param title - Article title
-   * @param targetUrl - URL of the target website to match
-   * @param onProgress - Callback for progress updates
-   * @param businessContext - Optional business context for CTA/industry-specific styling
-   * @returns The completed design session
    */
   async run(
     articleMarkdown: string,
@@ -105,29 +134,133 @@ export class PremiumDesignOrchestrator {
       session.crawledCssTokens = this.convertToCrawledTokens(report);
       emit();
 
-      // ── Step 2: Generate semantic HTML ──
-      session.articleHtml = this.htmlGenerator.generate(articleMarkdown, title, businessContext, structuredOutline);
+      // ── Step 2: Deep brand extraction (DesignDNA + BrandDesignSystem) ──
+      // Check cache first
+      const cacheKey = getCacheKey(targetUrl);
+      const cached = designDnaCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        console.log('[PremiumDesignOrchestrator] Using cached DesignDNA + BrandDesignSystem for:', cacheKey);
+        session.designDna = cached.designDna;
+        session.brandDesignSystem = cached.brandDesignSystem;
+      } else {
+        // Extract DesignDNA (180+ fields) from screenshot
+        try {
+          console.log('[PremiumDesignOrchestrator] Extracting DesignDNA from target screenshot...');
+          const analyzerProvider = this.config.aiProvider === 'openai' ? 'gemini' : this.config.aiProvider;
+          const analyzer = new AIDesignAnalyzer({
+            provider: analyzerProvider as 'gemini' | 'anthropic',
+            apiKey: this.config.apiKey,
+            model: this.config.model,
+          });
+          const dnaResult = await analyzer.extractDesignDNA(report.screenshotBase64, targetUrl);
+          session.designDna = dnaResult.designDna;
+          console.log('[PremiumDesignOrchestrator] DesignDNA extracted:', {
+            heroStyle: session.designDna.layout?.heroStyle,
+            cardStyle: session.designDna.shapes?.cardStyle,
+            personality: session.designDna.personality?.overall,
+            gradientUsage: session.designDna.effects?.gradients?.usage,
+          });
+        } catch (dnaErr) {
+          console.warn('[PremiumDesignOrchestrator] DesignDNA extraction failed, using minimal DNA from tokens:', dnaErr);
+          // Construct minimal DesignDNA from crawled tokens (fallback)
+          session.designDna = this.buildMinimalDesignDna(session.crawledCssTokens);
+        }
+
+        // Generate BrandDesignSystem CSS (5-pass AI generation)
+        try {
+          console.log('[PremiumDesignOrchestrator] Generating BrandDesignSystem CSS...');
+          const analyzerProvider = this.config.aiProvider === 'openai' ? 'gemini' : this.config.aiProvider;
+          const cssGen = new BrandDesignSystemGenerator({
+            provider: analyzerProvider as 'gemini' | 'anthropic',
+            apiKey: this.config.apiKey,
+            model: this.config.model,
+          });
+          session.brandDesignSystem = await cssGen.generate(
+            session.designDna!,
+            cacheKey,
+            targetUrl,
+            report.screenshotBase64,
+            report.googleFontsUrl
+          );
+          console.log('[PremiumDesignOrchestrator] BrandDesignSystem generated:',
+            session.brandDesignSystem.compiledCss.length, 'chars CSS');
+
+          // Cache the results
+          designDnaCache.set(cacheKey, {
+            designDna: session.designDna!,
+            brandDesignSystem: session.brandDesignSystem,
+            timestamp: Date.now(),
+          });
+        } catch (cssGenErr) {
+          console.warn('[PremiumDesignOrchestrator] BrandDesignSystem generation failed, will use legacy CSS:', cssGenErr);
+          session.brandDesignSystem = undefined;
+        }
+      }
+
+      // ── Step 3: Generate layout blueprint + component-rich HTML ──
+      let usedPremiumHtml = false;
+      try {
+        if (session.designDna) {
+          console.log('[PremiumDesignOrchestrator] Generating layout blueprint...');
+          session.layoutBlueprint = LayoutEngine.generateBlueprint(
+            articleMarkdown,
+            structuredOutline,
+            session.designDna,
+            { mainIntent: businessContext?.articlePurpose }
+          );
+          console.log('[PremiumDesignOrchestrator] Layout blueprint generated:',
+            session.layoutBlueprint.sections.length, 'sections,',
+            session.layoutBlueprint.sections.map(s => s.component.primaryComponent).filter((v, i, a) => a.indexOf(v) === i).join(', '));
+
+          // Render component-rich HTML
+          session.articleHtml = PremiumHtmlRenderer.render(
+            session.layoutBlueprint,
+            articleMarkdown,
+            title,
+            session.designDna,
+            businessContext
+          );
+          usedPremiumHtml = true;
+          console.log('[PremiumDesignOrchestrator] Component-rich HTML generated:', session.articleHtml.length, 'chars');
+        }
+      } catch (layoutErr) {
+        console.warn('[PremiumDesignOrchestrator] LayoutEngine/PremiumHtmlRenderer failed, falling back to SemanticHtmlGenerator:', layoutErr);
+      }
+
+      // Fallback to SemanticHtmlGenerator
+      if (!usedPremiumHtml) {
+        session.articleHtml = this.htmlGenerator.generate(articleMarkdown, title, businessContext, structuredOutline);
+      }
       emit();
 
-      // ── Step 3–6: Generate CSS → Render → Validate → Iterate ──
+      // ── Step 4: CSS → Render → Validate → Iterate ──
       let currentCss = '';
 
       for (let iteration = 1; iteration <= this.config.maxIterations; iteration++) {
         session.currentIteration = iteration;
         const startTime = Date.now();
 
-        // Generate or refine CSS
         session.status = iteration === 1 ? 'generating-css' : 'iterating';
         emit();
 
         if (iteration === 1) {
-          currentCss = await this.cssGenerator.generateInitialCss(
-            session.targetScreenshot,
-            session.crawledCssTokens,
-            session.articleHtml,
-            businessContext
-          );
+          // First iteration: use BrandDesignSystem CSS or legacy fallback
+          if (session.brandDesignSystem) {
+            currentCss = this.cssGenerator.getInitialCssFromBrandSystem(
+              session.brandDesignSystem,
+              session.crawledCssTokens.googleFontsUrl
+            );
+          } else {
+            // Legacy fallback
+            currentCss = await this.cssGenerator.generateInitialCssLegacy(
+              session.targetScreenshot,
+              session.crawledCssTokens,
+              session.articleHtml,
+              businessContext
+            );
+          }
         } else {
+          // Subsequent iterations: refine CSS with DesignDNA context
           const lastIteration = session.iterations[session.iterations.length - 1];
           currentCss = await this.cssGenerator.refineCss(
             currentCss,
@@ -135,7 +268,8 @@ export class PremiumDesignOrchestrator {
             lastIteration.screenshotBase64,
             lastIteration.validationResult,
             session.articleHtml,
-            session.crawledCssTokens
+            session.crawledCssTokens,
+            session.designDna
           );
         }
 
@@ -151,7 +285,6 @@ export class PremiumDesignOrchestrator {
           );
         } catch (err) {
           console.warn('[PremiumDesignOrchestrator] Screenshot failed, retrying:', err);
-          // Retry once
           await new Promise(resolve => setTimeout(resolve, 1000));
           outputScreenshot = await this.screenshotService.captureRenderedOutput(
             session.articleHtml,
@@ -159,7 +292,7 @@ export class PremiumDesignOrchestrator {
           );
         }
 
-        // Validate
+        // Validate (now with DesignDNA context)
         session.status = 'validating';
         emit();
 
@@ -167,7 +300,8 @@ export class PremiumDesignOrchestrator {
           session.targetScreenshot,
           outputScreenshot,
           session.crawledCssTokens,
-          currentCss
+          currentCss,
+          session.designDna
         );
 
         const iterationResult: DesignIteration = {
@@ -190,7 +324,12 @@ export class PremiumDesignOrchestrator {
       }
 
       // Build final HTML document
-      session.finalHtml = this.buildFinalDocument(session.articleHtml, session.finalCss, title, session.crawledCssTokens.googleFontsUrl);
+      session.finalHtml = this.buildFinalDocument(
+        session.articleHtml,
+        session.finalCss,
+        title,
+        session.crawledCssTokens.googleFontsUrl
+      );
       session.status = 'complete';
       emit();
 
@@ -235,7 +374,6 @@ export class PremiumDesignOrchestrator {
 
   /**
    * Accept the current design early (stop iterations).
-   * Called from UI when user clicks "Accept Current Design".
    */
   buildFinalFromIteration(session: PremiumDesignSession, iterationIndex?: number): string {
     const idx = iterationIndex ?? session.iterations.length - 1;
@@ -244,6 +382,26 @@ export class PremiumDesignOrchestrator {
 
     return this.buildFinalDocument(session.articleHtml, iteration.css, '', session.crawledCssTokens.googleFontsUrl);
   }
+
+  /**
+   * Clear the DesignDNA + BrandDesignSystem cache for a specific URL.
+   * Called when user clicks "Refresh brand analysis".
+   */
+  static clearCache(targetUrl: string): void {
+    const cacheKey = getCacheKey(targetUrl);
+    designDnaCache.delete(cacheKey);
+    console.log('[PremiumDesignOrchestrator] Cache cleared for:', cacheKey);
+  }
+
+  /**
+   * Clear the entire cache.
+   */
+  static clearAllCache(): void {
+    designDnaCache.clear();
+    console.log('[PremiumDesignOrchestrator] All cache cleared');
+  }
+
+  // ─── Private Helpers ─────────────────────────────────────────────────────
 
   /**
    * Capture target website using BrandDiscoveryService.
@@ -268,7 +426,6 @@ export class PremiumDesignOrchestrator {
     if (findings.accentColor) colors.push({ hex: findings.accentColor.value, usage: 'accent', source: findings.accentColor.source });
     if (findings.backgroundColor) colors.push({ hex: findings.backgroundColor.value, usage: 'background', source: findings.backgroundColor.source });
 
-    // Add derived token colors
     if (tokens.colors) {
       if (tokens.colors.surface) colors.push({ hex: tokens.colors.surface, usage: 'surface', source: 'derived' });
       if (tokens.colors.text) colors.push({ hex: tokens.colors.text, usage: 'text', source: 'derived' });
@@ -288,6 +445,126 @@ export class PremiumDesignOrchestrator {
       shadows: findings.shadowStyle ? [findings.shadowStyle.value] : [],
       spacingPatterns: [],
       googleFontsUrl: report.googleFontsUrl || null,
+    };
+  }
+
+  /**
+   * Build minimal DesignDNA from CrawledCssTokens when AIDesignAnalyzer fails.
+   */
+  private buildMinimalDesignDna(tokens: CrawledCssTokens): NonNullable<PremiumDesignSession['designDna']> {
+    const primary = tokens.colors.find(c => c.usage === 'primary')?.hex || '#3b82f6';
+    const secondary = tokens.colors.find(c => c.usage === 'secondary')?.hex || '#1f2937';
+    const accent = tokens.colors.find(c => c.usage === 'accent')?.hex || primary;
+    const bg = tokens.colors.find(c => c.usage === 'background')?.hex || '#ffffff';
+    const headingFont = tokens.fonts.find(f => f.usage === 'heading')?.family || 'system-ui';
+    const bodyFont = tokens.fonts.find(f => f.usage === 'body')?.family || 'system-ui';
+
+    return {
+      colors: {
+        primary: { hex: primary, usage: 'primary', confidence: 80 },
+        primaryLight: { hex: primary, usage: 'light variant', confidence: 50 },
+        primaryDark: { hex: secondary, usage: 'dark variant', confidence: 50 },
+        secondary: { hex: secondary, usage: 'secondary', confidence: 70 },
+        accent: { hex: accent, usage: 'accent', confidence: 70 },
+        neutrals: { darkest: '#111827', dark: '#374151', medium: '#6b7280', light: '#d1d5db', lightest: '#f9fafb' },
+        semantic: { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6' },
+        harmony: 'monochromatic' as const,
+        dominantMood: 'corporate',
+        contrastLevel: 'medium' as const,
+      },
+      typography: {
+        headingFont: { family: headingFont, fallback: 'sans-serif', weight: 700, style: 'sans-serif', character: 'modern' },
+        bodyFont: { family: bodyFont, fallback: 'sans-serif', weight: 400, style: 'sans-serif', lineHeight: 1.6 },
+        scaleRatio: 1.25,
+        baseSize: '16px',
+        headingCase: 'none' as const,
+        headingLetterSpacing: 'normal',
+        usesDropCaps: false,
+        headingUnderlineStyle: 'none' as const,
+        linkStyle: 'underline' as const,
+      },
+      spacing: {
+        baseUnit: 16,
+        density: 'comfortable' as const,
+        sectionGap: 'moderate' as const,
+        contentWidth: 'medium' as const,
+        whitespacePhilosophy: 'balanced' as const,
+      },
+      shapes: {
+        borderRadius: {
+          style: 'rounded' as const,
+          small: tokens.borderRadius[0] || '4px',
+          medium: tokens.borderRadius[0] || '8px',
+          large: '16px',
+          full: '9999px',
+        },
+        buttonStyle: 'rounded' as const,
+        cardStyle: 'subtle-shadow' as const,
+        inputStyle: 'bordered' as const,
+      },
+      effects: {
+        shadows: {
+          style: 'subtle' as const,
+          cardShadow: tokens.shadows[0] || '0 1px 3px rgba(0,0,0,0.1)',
+          buttonShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          elevatedShadow: '0 10px 25px rgba(0,0,0,0.15)',
+        },
+        gradients: {
+          usage: 'subtle' as const,
+          primaryGradient: `linear-gradient(135deg, ${primary}, ${secondary})`,
+          heroGradient: `linear-gradient(135deg, ${bg} 0%, #f3f4f6 100%)`,
+          ctaGradient: `linear-gradient(135deg, ${primary}, ${accent})`,
+        },
+        backgrounds: { usesPatterns: false, usesTextures: false, usesOverlays: false },
+        borders: { style: 'subtle' as const, defaultColor: '#e5e7eb', accentBorderUsage: false },
+      },
+      decorative: {
+        dividerStyle: 'line' as const,
+        usesFloatingShapes: false,
+        usesCornerAccents: false,
+        usesWaveShapes: false,
+        usesGeometricPatterns: false,
+        iconStyle: 'outline' as const,
+        decorativeAccentColor: primary,
+      },
+      layout: {
+        gridStyle: 'fluid' as const,
+        alignment: 'center' as const,
+        heroStyle: 'contained' as const,
+        cardLayout: 'grid' as const,
+        ctaPlacement: 'section-end' as const,
+        navigationStyle: 'standard' as const,
+      },
+      motion: {
+        overall: 'subtle' as const,
+        transitionSpeed: 'normal' as const,
+        easingStyle: 'ease',
+        hoverEffects: { buttons: 'darken' as const, cards: 'lift' as const, links: 'color' as const },
+        scrollAnimations: false,
+        parallaxEffects: false,
+      },
+      images: {
+        treatment: 'natural' as const,
+        frameStyle: 'rounded' as const,
+        hoverEffect: 'none' as const,
+        aspectRatioPreference: '16:9' as const,
+      },
+      componentPreferences: {
+        preferredListStyle: 'bullets' as const,
+        preferredCardStyle: 'elevated' as const,
+        testimonialStyle: 'card' as const,
+        faqStyle: 'accordion' as const,
+        ctaStyle: 'button' as const,
+      },
+      personality: {
+        overall: 'corporate' as const,
+        formality: 3,
+        energy: 3,
+        warmth: 3,
+        trustSignals: 'moderate' as const,
+      },
+      confidence: { overall: 40, colorsConfidence: 60, typographyConfidence: 50, layoutConfidence: 30 },
+      analysisNotes: ['Built from crawled tokens — limited analysis'],
     };
   }
 

@@ -14,6 +14,7 @@ export type {
 
 export { SemanticHtmlGenerator } from './SemanticHtmlGenerator';
 export { AiCssGenerator } from './AiCssGenerator';
+export { PremiumHtmlRenderer } from './PremiumHtmlRenderer';
 export { ScreenshotService } from './ScreenshotService';
 export { DesignValidationService } from './DesignValidationService';
 export { PremiumDesignOrchestrator } from './PremiumDesignOrchestrator';

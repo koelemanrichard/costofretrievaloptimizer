@@ -4,6 +4,7 @@
 // Wraps DesignQualityValidator with premium-pipeline-specific logic:
 // adds spacingMatch dimension and actionable CSS fix instructions.
 
+import type { DesignDNA } from '../../types/designDna';
 import type { CrawledCssTokens, ValidationResult, PremiumDesignConfig } from './types';
 
 /**
@@ -19,14 +20,18 @@ export class DesignValidationService {
 
   /**
    * Validate the rendered output against the target screenshot.
+   * When DesignDNA is provided, validation becomes pattern-aware —
+   * comparing against specific design decisions (heroStyle, cardStyle, etc.)
+   * instead of just generic "brand fit".
    */
   async validate(
     targetScreenshot: string,
     outputScreenshot: string,
     crawledTokens: CrawledCssTokens,
-    currentCss: string
+    currentCss: string,
+    designDna?: DesignDNA
   ): Promise<ValidationResult> {
-    const prompt = this.buildValidationPrompt(crawledTokens, currentCss);
+    const prompt = this.buildValidationPrompt(crawledTokens, currentCss, designDna);
 
     try {
       const result = await this.callVisionAI(targetScreenshot, outputScreenshot, prompt);
@@ -38,12 +43,33 @@ export class DesignValidationService {
   }
 
   /**
-   * Build the validation prompt with crawled token references.
+   * Build the validation prompt with crawled token references and DesignDNA patterns.
    */
-  private buildValidationPrompt(tokens: CrawledCssTokens, currentCss: string): string {
+  private buildValidationPrompt(tokens: CrawledCssTokens, currentCss: string, designDna?: DesignDNA): string {
     const primaryColors = tokens.colors.slice(0, 5).map(c => c.hex).join(', ');
     const fonts = tokens.fonts.map(f => f.family).join(', ');
     const cssSnippet = currentCss.substring(0, 3000);
+
+    // Build DesignDNA context for pattern-aware validation
+    const dnaContext = designDna ? `
+## Target Website Design Patterns (extracted by AI)
+
+The target website uses these SPECIFIC design patterns:
+- Hero style: ${designDna.layout?.heroStyle || 'unknown'}${designDna.effects?.gradients?.usage === 'none' ? ' — NO gradient hero' : ''}
+- Card style: ${designDna.shapes?.cardStyle || 'unknown'}
+- Spacing density: ${designDna.spacing?.density || 'comfortable'}
+- Heading font: "${designDna.typography?.headingFont?.family || 'system-ui'}" (${designDna.typography?.headingFont?.character || 'modern'})
+- Body font: "${designDna.typography?.bodyFont?.family || 'system-ui'}"
+- Gradient usage: ${designDna.effects?.gradients?.usage || 'subtle'}
+- Shadow style: ${designDna.effects?.shadows?.style || 'subtle'}
+- Border radius: ${designDna.shapes?.borderRadius?.style || 'rounded'}
+- Design personality: ${designDna.personality?.overall || 'corporate'}
+- Heading decoration: ${designDna.typography?.headingUnderlineStyle || 'none'}
+
+CRITICAL: Score the output against these SPECIFIC patterns, not just generic visual quality.
+If the target uses NO gradients but the output has gradients → penalize brandFit and visualDepth.
+If the target uses "contained" hero but output has a full-width gradient hero → penalize structuralMatch heavily.
+` : '';
 
     return `You are an expert visual design validator. Compare these two images:
 
@@ -55,7 +81,7 @@ IMAGE 2: The CURRENT article output (generated from CSS)
 - Fonts: ${fonts}
 - Border radius: ${tokens.borderRadius.join(', ') || 'none'}
 - Shadows: ${tokens.shadows.join('; ') || 'none'}
-
+${dnaContext}
 ## Current CSS (first 3000 chars)
 \`\`\`css
 ${cssSnippet}
@@ -68,22 +94,19 @@ Score the output (IMAGE 2) against the target (IMAGE 1) on these 6 dimensions (0
 1. **colorMatch** — Do the brand colors match? Are primary, secondary, accent colors used correctly?
 2. **typographyMatch** — Do fonts, sizes, weights, line-heights match the target?
 3. **spacingMatch** — Does padding, margins, section spacing match the target's rhythm?
-4. **visualDepth** — Do shadows, gradients, borders, layering match the target?
-5. **brandFit** — Overall, would a brand manager accept this as "on brand"?
+4. **visualDepth** — Do shadows, gradients, borders, layering match the target? ${designDna ? `The target uses "${designDna.effects?.shadows?.style}" shadows and "${designDna.effects?.gradients?.usage}" gradients — match these, don't add what isn't there.` : ''}
+5. **brandFit** — Overall, would a brand manager accept this as "on brand"? ${designDna ? `The target's personality is "${designDna.personality?.overall}" — does the output match this tone?` : ''}
 6. **layoutSophistication** — Score using these specific criteria:
-   - Do sections with different \`data-emphasis\` values (hero/featured/standard/supporting/minimal) look visually different? If all sections look identical regardless of emphasis → score below 50
-   - Do hero/featured sections (\`[data-emphasis="hero"]\`, \`[data-emphasis="featured"]\`) have noticeably more visual weight (bolder bg, larger heading, accent border) than supporting/minimal? If not → subtract 15
-   - Are there at least 3 distinct visual treatments across all sections? If uniform → score below 55
+   - Are there 3+ distinct visual components (grids, cards, pull quotes, step indicators, timelines, highlight boxes)? Score 90+ only if yes
    - Is there clear visual rhythm (alternating treatments, breathing room between sections)? If yes → add 10 bonus
-   - Is the TOC appropriately sized (not dominating the page for long articles)? If oversized → subtract 5
-   - Do ALL sections have card treatment (background, border-radius, padding, shadow)? If not → score below 60
-   - Are there at least 2 distinct background treatments (e.g. white + surface)? If uniform → score below 55
-   - Are there 3+ distinct visual components (grids, cards, pull quotes, step indicators, highlight boxes)? Score 90+ only if yes
    - Does the page look like unstyled prose with just font changes? → score below 50
+   - Are sections visually differentiated based on content type (FAQ, steps, comparison, etc.)?
+   ${designDna ? `- Does the hero style match "${designDna.layout?.heroStyle}"? If not → subtract 15` : ''}
+   ${designDna ? `- Do cards match "${designDna.shapes?.cardStyle}" style? If not → subtract 10` : ''}
 
 Also provide:
 - **overallScore**: Weighted average (color 20%, typography 15%, spacing 15%, depth 15%, brand 15%, layout 20%)
-- **cssFixInstructions**: Array of 3-8 SPECIFIC CSS fix instructions. Each must reference an exact CSS selector and property to change. Example: "Change \`article > section:first-child\` background from \`#f9fafb\` to \`#0a2540\` to match the dark hero section"
+- **cssFixInstructions**: Array of 3-8 SPECIFIC CSS fix instructions. Each must reference an exact CSS selector and property to change.
 - **passesThreshold**: true if overallScore >= ${this.config.targetScore}
 
 ## Response Format (JSON only)
@@ -96,10 +119,10 @@ Also provide:
   "spacingMatch": { "score": 70, "notes": "Section gaps too tight" },
   "visualDepth": { "score": 75, "notes": "Missing box shadows on cards" },
   "brandFit": { "score": 68, "notes": "Close but header area doesn't match" },
-  "layoutSophistication": { "score": 55, "notes": "No grid layouts or card components — just styled text" },
+  "layoutSophistication": { "score": 55, "notes": "No grid layouts or card components" },
   "cssFixInstructions": [
-    "Change article h1 font-size from 2rem to 2.5rem",
-    "Add box-shadow: 0 2px 8px rgba(0,0,0,0.1) to section elements"
+    "Change .ctc-hero background from gradient to solid white to match contained hero",
+    "Add box-shadow: 0 2px 8px rgba(0,0,0,0.1) to .ctc-section elements"
   ],
   "passesThreshold": false
 }

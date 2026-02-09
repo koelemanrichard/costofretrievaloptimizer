@@ -60,7 +60,7 @@ const INTRODUCTION_PATTERNS = [
   /^inleiding$/i,
   /^introductie/i,
   /^overzicht/i,
-  /^wat\s+is\b/i,
+  // Note: "Wat is X?" is a definition question, matched by DEFINITION_PATTERNS
   /^over\s+dit/i,
   /^welkom\b/i,
 ];

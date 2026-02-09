@@ -2,6 +2,9 @@
 // Premium Design Studio — Type Definitions
 // =============================================================================
 
+import type { DesignDNA, BrandDesignSystem } from '../../types/designDna';
+import type { LayoutBlueprintOutput } from '../layout-engine/LayoutEngine';
+
 export interface PremiumDesignSession {
   id: string;
   articleHtml: string;
@@ -15,6 +18,9 @@ export interface PremiumDesignSession {
   finalCss: string;
   finalHtml: string;
   errorMessage?: string;
+  designDna?: DesignDNA;                       // Deep visual analysis (180+ fields)
+  brandDesignSystem?: BrandDesignSystem;        // Generated CSS system (5-pass AI)
+  layoutBlueprint?: LayoutBlueprintOutput;      // Component-rich layout plan
 }
 
 export interface CrawledCssTokens {

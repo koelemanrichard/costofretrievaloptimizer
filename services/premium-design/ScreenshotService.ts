@@ -97,7 +97,7 @@ ${css}
         useCORS: true,
         backgroundColor: '#ffffff',
         width: 1200,
-        height: Math.min(doc.body.scrollHeight || 900, 4000),
+        height: Math.min(doc.body.scrollHeight || 900, 6000),
         windowWidth: 1200,
         windowHeight: 900,
         logging: false,
