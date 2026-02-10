@@ -161,6 +161,7 @@ export const StyleGuideGenerator = {
         elementScreenshotBase64: raw.elementScreenshotBase64,
         sourcePageUrl: raw.sourcePageUrl,
         hoverCss: raw.hoverCss,
+        ancestorBackground: raw.ancestorBackground,
       });
     }
 
@@ -434,6 +435,86 @@ Return ONLY the updated HTML element (no explanation, no markdown fences).`;
 
     return { selfContainedHtml: html, computedCss: updatedCss };
   },
+
+  /**
+   * Visual Validation & Repair Loop — AI compares element screenshots against page screenshots
+   * to detect mismatches, then repairs broken elements by regenerating HTML from screenshots.
+   *
+   * Phase 1: VISUAL VALIDATION — score each element 0-100 via image comparison
+   *   Score >= 60 → approved
+   *   Score 30-59 → repair queue
+   *   Score < 30 → rejected
+   * Phase 2: VISUAL REPAIR — regenerate HTML for elements scoring 30-59 (max 5)
+   * Phase 3: FALLBACK GENERATION — handled separately (existing generateFallbackElements)
+   */
+  async visualValidateAndRepair(
+    guide: StyleGuide,
+    aiConfig: AiRefineConfig,
+    onProgress?: (phase: 'validating' | 'repairing', done: number, total: number) => void,
+  ): Promise<StyleGuide> {
+    const elementsWithScreenshots = guide.elements.filter(e => e.elementScreenshotBase64);
+    const pageScreenshot = guide.screenshotBase64 || guide.pageScreenshots?.[0]?.base64;
+
+    if (!pageScreenshot || elementsWithScreenshots.length === 0) {
+      return guide;
+    }
+
+    // ── Phase 1: Visual Validation ──
+    let validated = 0;
+    const repairQueue: StyleGuideElement[] = [];
+
+    for (const el of elementsWithScreenshots) {
+      try {
+        const result = await visualValidateElement(el, pageScreenshot, aiConfig);
+        const guideEl = guide.elements.find(e => e.id === el.id);
+        if (guideEl) {
+          guideEl.qualityScore = result.score;
+          guideEl.aiValidated = true;
+          guideEl.visualIssues = result.issues;
+          if (result.suggestedBackground) {
+            guideEl.suggestedBackground = result.suggestedBackground;
+          }
+
+          if (result.score >= 60) {
+            guideEl.approvalStatus = 'approved';
+          } else if (result.score >= 30) {
+            repairQueue.push(guideEl);
+          } else {
+            guideEl.approvalStatus = 'rejected';
+          }
+        }
+      } catch (err) {
+        console.warn('[StyleGuideGenerator] Visual validation failed for element:', el.id, err);
+      }
+
+      validated++;
+      onProgress?.('validating', validated, elementsWithScreenshots.length);
+    }
+
+    // ── Phase 2: Visual Repair (max 5 elements) ──
+    const toRepair = repairQueue.slice(0, 5);
+    let repaired = 0;
+
+    for (const el of toRepair) {
+      try {
+        const repairedHtml = await repairElementVisually(el, pageScreenshot, aiConfig);
+        if (repairedHtml && repairedHtml.length >= 10) {
+          el.selfContainedHtml = repairedHtml;
+          el.aiRepaired = true;
+          el.approvalStatus = 'approved';
+          // Bump score slightly since we repaired it
+          el.qualityScore = Math.max(el.qualityScore || 0, 60);
+        }
+      } catch (err) {
+        console.warn('[StyleGuideGenerator] Visual repair failed for element:', el.id, err);
+      }
+
+      repaired++;
+      onProgress?.('repairing', repaired, toRepair.length);
+    }
+
+    return guide;
+  },
 };
 
 // =============================================================================
@@ -577,4 +658,92 @@ function parseFallbackElements(raw: string): { category: string; subcategory: st
   } catch {
     return [];
   }
+}
+
+// =============================================================================
+// Visual Validation & Repair Helpers
+// =============================================================================
+
+interface VisualValidationResult {
+  score: number;
+  issues: string[];
+  suggestedBackground: string | null;
+}
+
+/**
+ * Validate a single element by sending both page screenshot (IMAGE 1) and
+ * element screenshot (IMAGE 2) to the AI for visual comparison.
+ */
+async function visualValidateElement(
+  element: StyleGuideElement,
+  pageScreenshot: string,
+  aiConfig: AiRefineConfig,
+): Promise<VisualValidationResult> {
+  const prompt = `You are a web design QA inspector. I'm showing you:
+- IMAGE 1: Full-page screenshot of a website
+- IMAGE 2: Screenshot of a specific "${element.category}" element (${element.subcategory}) extracted from that page
+
+Evaluate visual accuracy of how well this element could be reproduced as a standalone HTML snippet:
+1. BACKGROUND: Does the element appear on a dark/colored section? If so, what background color is needed?
+2. COLORS: Do the text and accent colors match what's visible on the page?
+3. COMPLETENESS: Is the element truncated or missing visible parts?
+4. LEGITIMACY: Is this a real design element (not cookie banner/popup/overlay)?
+
+Return ONLY valid JSON (no markdown):
+{ "score": 0-100, "issues": ["issue1", "issue2"], "suggestedBackground": "rgb(R, G, B)" or null }
+
+Score guide:
+- 80-100: Element looks correct and complete
+- 60-79: Minor issues (slightly off colors, small truncation)
+- 30-59: Significant issues (wrong background, badly truncated, missing key parts)
+- 0-29: Wrong element entirely (noise, popup, invisible)`;
+
+  const result = await callRefineAI(aiConfig, prompt, pageScreenshot, element.elementScreenshotBase64);
+
+  try {
+    let text = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        score: typeof parsed.score === 'number' ? parsed.score : 50,
+        issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+        suggestedBackground: parsed.suggestedBackground || null,
+      };
+    }
+  } catch {
+    // parse failed
+  }
+
+  return { score: 50, issues: ['Validation parse failed'], suggestedBackground: null };
+}
+
+/**
+ * Repair a broken element by asking AI to regenerate self-contained HTML
+ * from the element screenshot + page context.
+ */
+async function repairElementVisually(
+  element: StyleGuideElement,
+  pageScreenshot: string,
+  aiConfig: AiRefineConfig,
+): Promise<string> {
+  const prompt = `You are an HTML/CSS expert. IMAGE 1 shows a full website page for context.
+IMAGE 2 shows how a specific "${element.category}" element (${element.subcategory}) looks on that website.
+
+Generate corrected self-contained HTML with ONLY inline styles that visually matches IMAGE 2.
+Include the correct background color, fonts, colors, spacing, and border styles.
+The HTML must be self-contained — no external CSS, no class names, only inline styles.
+Max 2000 characters.
+
+Return ONLY the HTML — no explanation, no markdown fences.`;
+
+  const result = await callRefineAI(aiConfig, prompt, pageScreenshot, element.elementScreenshotBase64);
+
+  // Clean any markdown fencing
+  let html = result.trim();
+  if (html.startsWith('```')) {
+    html = html.replace(/^```(?:html)?\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  return html;
 }

@@ -29,6 +29,30 @@ function cssPropsToString(css: Record<string, string>): string {
     .join('\n');
 }
 
+/** Determine the correct preview background for an element */
+function getPreviewBackground(el: StyleGuideElement): string {
+  // AI-suggested background takes priority
+  if (el.suggestedBackground) return el.suggestedBackground;
+
+  // Use ancestor background if non-white/non-transparent
+  if (el.ancestorBackground?.backgroundColor) {
+    const bg = el.ancestorBackground.backgroundColor;
+    if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)') {
+      return bg;
+    }
+  }
+
+  // Fall back to light-text heuristic
+  const textColor = el.computedCss.color || '';
+  const match = textColor.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (match) {
+    const avg = (parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3])) / 3;
+    if (avg > 180) return '#1a1a2e';
+  }
+
+  return '#fff';
+}
+
 /**
  * Generate a self-contained HTML document showing all approved elements.
  */
@@ -89,10 +113,11 @@ export function generateStyleGuideHtml(styleGuide: StyleGuide): string {
             ${escapeHtml(el.label)}
             ${el.qualityScore !== undefined ? `<span class="sg-quality-badge" style="background:${el.qualityScore >= 70 ? '#22c55e22' : el.qualityScore >= 40 ? '#eab30822' : '#ef444422'};color:${el.qualityScore >= 70 ? '#22c55e' : el.qualityScore >= 40 ? '#eab308' : '#ef4444'};padding:2px 6px;border-radius:4px;font-size:11px;margin-left:8px;">${el.qualityScore}%</span>` : ''}
             ${el.aiGenerated ? '<span style="background:#a855f722;color:#a855f7;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:8px;">AI Generated</span>' : ''}
+            ${el.aiRepaired ? '<span style="background:#06b6d422;color:#06b6d4;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:8px;">AI Repaired</span>' : ''}
           </h3>
           <span class="sg-meta">${el.subcategory} &middot; ${el.pageRegion}${el.sourcePageUrl ? ` &middot; ${escapeHtml(el.sourcePageUrl)}` : ''}</span>
         </div>
-        <div class="sg-preview">
+        <div class="sg-preview" style="background: ${getPreviewBackground(el)}">
           ${el.selfContainedHtml}
         </div>
         <details class="sg-code">

@@ -402,6 +402,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
       setSelectedPageUrls([]);
       setCustomUrl('');
       setIsGuideApproved(false);
+      setCachedGuideAvailable(false);
     }
   }, [isOpen, initialView]);
 
@@ -413,18 +414,18 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     }
   }, [initialView]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check memory cache when opening in styleGuideMode — restore previously generated guide
+  // Check if a cached style guide exists — show a "cached available" banner on the URL input,
+  // but do NOT auto-navigate to the style guide view (let the user choose).
+  const [cachedGuideAvailable, setCachedGuideAvailable] = useState(false);
   useEffect(() => {
-    if (!isOpen || !styleGuideMode || !targetUrl || styleGuide) return;
+    if (!isOpen || !styleGuideMode || !targetUrl) {
+      setCachedGuideAvailable(false);
+      return;
+    }
     const hostname = getHostnameFromUrl(targetUrl);
     const cached = styleGuideMemoryCache.get(hostname);
-    if (cached) {
-      console.log('[PremiumDesignModal] Restored style guide from memory cache for:', hostname);
-      setStyleGuide(cached);
-      setIsGuideApproved(cached.isApproved || false);
-      setView('style-guide');
-    }
-  }, [isOpen, styleGuideMode, targetUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+    setCachedGuideAvailable(!!cached);
+  }, [isOpen, styleGuideMode, targetUrl]);
 
   // Generate Quick Export HTML
   const generateQuickExport = useCallback(() => {
@@ -550,18 +551,12 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     }
   }, [dispatch]);
 
-  // Start page discovery (first step — leads to page selection)
-  const startPageDiscovery = useCallback(async () => {
+  // Load cached style guide (memory or DB) — used when user clicks "View Cached"
+  const loadCachedStyleGuide = useCallback(async () => {
     if (!targetUrl.trim()) return;
-    const bi = state.businessInfo;
-    const apifyToken = bi?.apifyToken || '';
-    if (!apifyToken) {
-      dispatch({ type: 'SET_ERROR', payload: 'Apify API token required for style guide extraction. Add it in Settings.' });
-      return;
-    }
+    const hostname = getHostnameFromUrl(targetUrl);
 
     // Check memory cache first
-    const hostname = getHostnameFromUrl(targetUrl);
     const memoryCached = styleGuideMemoryCache.get(hostname);
     if (memoryCached) {
       console.log('[PremiumDesignModal] Restored style guide from memory cache');
@@ -571,7 +566,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
       return;
     }
 
-    // Check DB cache (best-effort, table may not exist)
+    // Check DB cache
     const supabase = getSupabase();
     const userId = state.user?.id;
     if (supabase && userId) {
@@ -581,12 +576,62 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
           console.log('[PremiumDesignModal] Loaded cached style guide from DB for:', hostname);
           setStyleGuide(cached.style_guide);
           styleGuideMemoryCache.set(hostname, cached.style_guide);
+          setIsGuideApproved(cached.style_guide.isApproved || false);
           setView('style-guide');
           return;
         }
       } catch {
-        // Table may not exist — ignore silently
+        // Table may not exist
       }
+    }
+  }, [targetUrl, state.user?.id, getSupabase]);
+
+  // Start page discovery (first step — leads to page selection)
+  // skipCache=true bypasses memory/DB cache (used by re-extract)
+  const startPageDiscovery = useCallback(async (skipCache?: boolean) => {
+    if (!targetUrl.trim()) return;
+    const bi = state.businessInfo;
+    const apifyToken = bi?.apifyToken || '';
+    if (!apifyToken) {
+      dispatch({ type: 'SET_ERROR', payload: 'Apify API token required for style guide extraction. Add it in Settings.' });
+      return;
+    }
+
+    if (!skipCache) {
+      // Check memory cache first
+      const hostname = getHostnameFromUrl(targetUrl);
+      const memoryCached = styleGuideMemoryCache.get(hostname);
+      if (memoryCached) {
+        console.log('[PremiumDesignModal] Restored style guide from memory cache');
+        setStyleGuide(memoryCached);
+        setIsGuideApproved(memoryCached.isApproved || false);
+        setView('style-guide');
+        return;
+      }
+
+      // Check DB cache (best-effort, table may not exist)
+      const supabase = getSupabase();
+      const userId = state.user?.id;
+      if (supabase && userId) {
+        try {
+          const cached = await loadStyleGuide(supabase, userId, hostname);
+          if (cached) {
+            console.log('[PremiumDesignModal] Loaded cached style guide from DB for:', hostname);
+            setStyleGuide(cached.style_guide);
+            styleGuideMemoryCache.set(hostname, cached.style_guide);
+            setView('style-guide');
+            return;
+          }
+        } catch {
+          // Table may not exist — ignore silently
+        }
+      }
+    }
+
+    // Clear memory cache for this hostname when re-extracting
+    if (skipCache) {
+      const hostname = getHostnameFromUrl(targetUrl);
+      styleGuideMemoryCache.delete(hostname);
     }
 
     setIsDiscovering(true);
@@ -648,12 +693,18 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
       const rawExtraction = await StyleGuideExtractor.extractStyleGuide(urlsToExtract, apifyToken, proxyConfig);
       let guide = StyleGuideGenerator.generate(rawExtraction, rawExtraction.screenshotBase64, Array.isArray(urlsToExtract) ? urlsToExtract[0] : urlsToExtract);
 
-      // AI Validation: score elements using vision
+      // AI Visual Validation & Repair: compare element screenshots against page
       const aiConfig = getAiConfig();
       if (aiConfig && guide.elements.some(e => e.elementScreenshotBase64)) {
         setExtractionPhase('validating');
-        guide = await StyleGuideGenerator.validateElements(guide, aiConfig, (done, total) => {
-          setExtractionProgress(`Validating ${done}/${total} elements...`);
+        guide = await StyleGuideGenerator.visualValidateAndRepair(guide, aiConfig, (phase, done, total) => {
+          if (phase === 'validating') {
+            setExtractionPhase('validating');
+            setExtractionProgress(`Validating ${done}/${total} elements...`);
+          } else if (phase === 'repairing') {
+            setExtractionPhase('repairing');
+            setExtractionProgress(`Repairing element ${done}/${total}...`);
+          }
         });
       }
 
@@ -845,7 +896,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
           <h2 className="text-sm font-medium text-zinc-200">
@@ -1029,12 +1080,21 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                   <p className="text-xs text-zinc-500">
                     We'll extract actual design elements from this website. You can review and approve each element before generating your article design.
                   </p>
+                  {cachedGuideAvailable && (
+                    <button
+                      onClick={loadCachedStyleGuide}
+                      className="w-full px-4 py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      View Existing Style Guide
+                    </button>
+                  )}
                   <button
-                    onClick={startPageDiscovery}
+                    onClick={() => startPageDiscovery()}
                     disabled={!targetUrl.trim() || isDiscovering || isExtractingGuide}
                     className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-lg transition-colors"
                   >
-                    {isDiscovering ? 'Discovering pages...' : 'Extract Style Guide'}
+                    {isDiscovering ? 'Discovering pages...' : cachedGuideAvailable ? 'Re-extract Style Guide' : 'Extract Style Guide'}
                   </button>
                   <button
                     onClick={startPremiumDesign}
@@ -1177,7 +1237,9 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
               <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm text-zinc-300">
                 {extractionPhase === 'validating'
-                  ? extractionProgress || 'Validating elements with AI...'
+                  ? extractionProgress || 'Validating elements with AI vision...'
+                  : extractionPhase === 'repairing'
+                    ? extractionProgress || 'Repairing broken elements...'
                   : extractionPhase === 'enriching'
                     ? 'Generating missing design elements...'
                     : selectedPageUrls.length > 1
@@ -1192,7 +1254,10 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                 </p>
               )}
               {extractionPhase === 'validating' && (
-                <p className="text-xs text-zinc-500">AI is scoring each element for quality</p>
+                <p className="text-xs text-zinc-500">AI compares each element screenshot against the page</p>
+              )}
+              {extractionPhase === 'repairing' && (
+                <p className="text-xs text-zinc-500">AI regenerates HTML for elements that don't match visually</p>
               )}
               {extractionPhase === 'enriching' && (
                 <p className="text-xs text-zinc-500">Creating fallback elements for empty categories</p>
@@ -1217,7 +1282,8 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                 onReextract={() => {
                   setStyleGuide(null);
                   setIsGuideApproved(false);
-                  startPageDiscovery();
+                  setCachedGuideAvailable(false);
+                  startPageDiscovery(true);
                 }}
                 onExport={handleStyleGuideExport}
                 onRefineElement={handleRefineElement}

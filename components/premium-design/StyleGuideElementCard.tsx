@@ -52,14 +52,31 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
     }
     return false;
   })();
-  const bgColor = isLightText ? '#1a1a2e' : '#ffffff';
+
+  // Use ancestorBackground for correct preview bg, fall back to light-text heuristic
+  const bgColor = (() => {
+    if (element.suggestedBackground) return element.suggestedBackground;
+    if (element.ancestorBackground?.backgroundColor) {
+      const bg = element.ancestorBackground.backgroundColor;
+      if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)') {
+        return bg;
+      }
+    }
+    return isLightText ? '#1a1a2e' : '#ffffff';
+  })();
+
+  // Strip <script> tags and inline event handlers to prevent "Blocked script execution" errors
+  const sanitizedHtml = element.selfContainedHtml
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<script\b[^>]*\/>/gi, '')
+    .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
 
   const iframeContent = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
   body { margin: 16px; background: ${bgColor}; font-family: system-ui, sans-serif; }
   * { max-width: 100%; box-sizing: border-box; }
   img { max-height: 120px; }
-</style></head><body>${element.selfContainedHtml}</body></html>`;
+</style></head><body>${sanitizedHtml}</body></html>`;
 
   // Auto-resize iframe
   useEffect(() => {
@@ -125,53 +142,77 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
               AI Generated
             </span>
           )}
+          {element.aiRepaired && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 shrink-0">
+              AI Repaired
+            </span>
+          )}
         </div>
         <span className="text-[10px] text-zinc-600 shrink-0">{element.pageRegion}</span>
       </div>
 
-      {/* Preview: side-by-side layout */}
-      <div className="flex border-t border-zinc-700/50" style={{ minHeight: 100 }}>
-        {/* Left: Visual (screenshot or iframe) */}
-        <div className="w-1/2 bg-white overflow-hidden border-r border-zinc-700/50 flex items-center justify-center" style={{ maxHeight: 220 }}>
+      {/* Preview: Original vs Rendered comparison */}
+      <div className="border-t border-zinc-700/50" style={{ minHeight: 100 }}>
+        <div className="flex" style={{ minHeight: 100 }}>
           {element.elementScreenshotBase64 ? (
-            <img
-              src={`data:image/jpeg;base64,${element.elementScreenshotBase64}`}
-              alt={element.label}
-              className="max-w-full max-h-[220px] object-contain"
-            />
+            <>
+              {/* Left: Original screenshot */}
+              <div className="w-1/2 overflow-hidden border-r border-zinc-700/50 flex flex-col" style={{ maxHeight: 220 }}>
+                <span className="text-[9px] text-zinc-500 uppercase tracking-wider px-2 pt-1">Original</span>
+                <div className="flex-1 flex items-center justify-center bg-white p-1">
+                  <img
+                    src={`data:image/jpeg;base64,${element.elementScreenshotBase64}`}
+                    alt={element.label}
+                    className="max-w-full max-h-[200px] object-contain"
+                  />
+                </div>
+              </div>
+              {/* Right: Rendered iframe */}
+              <div className="w-1/2 overflow-hidden flex flex-col" style={{ maxHeight: 220 }}>
+                <span className="text-[9px] text-zinc-500 uppercase tracking-wider px-2 pt-1">Rendered</span>
+                <div className="flex-1">
+                  <iframe
+                    ref={iframeRef}
+                    srcDoc={iframeContent}
+                    title={element.label}
+                    className="w-full border-0"
+                    style={{ height: 200 }}
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              </div>
+            </>
           ) : (
-            <iframe
-              ref={iframeRef}
-              srcDoc={iframeContent}
-              title={element.label}
-              className="w-full border-0"
-              style={{ height: 100 }}
-              sandbox="allow-same-origin"
-            />
+            /* No screenshot: full-width iframe render */
+            <div className="w-full overflow-hidden">
+              <iframe
+                ref={iframeRef}
+                srcDoc={iframeContent}
+                title={element.label}
+                className="w-full border-0"
+                style={{ height: 100 }}
+                sandbox="allow-same-origin"
+              />
+            </div>
           )}
         </div>
 
-        {/* Right: HTML + CSS code */}
-        <div className="w-1/2 overflow-hidden flex flex-col">
-          {/* HTML preview */}
-          <div className="flex-1 overflow-auto p-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider">HTML</span>
-            </div>
+        {/* Collapsible HTML + CSS code */}
+        <details className="border-t border-zinc-700/30">
+          <summary className="text-[10px] text-zinc-500 uppercase tracking-wider px-2 py-1.5 cursor-pointer hover:text-zinc-400">
+            HTML + CSS
+          </summary>
+          <div className="p-2 space-y-2">
             <pre className="text-[10px] text-zinc-400 bg-zinc-900/50 rounded p-2 overflow-auto max-h-[100px] whitespace-pre-wrap break-all">
               <code>{element.selfContainedHtml.substring(0, 500)}</code>
             </pre>
-          </div>
-          {/* CSS properties */}
-          <div className="border-t border-zinc-700/30 p-2">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">CSS</span>
-            <pre className="text-[10px] text-zinc-400 bg-zinc-900/50 rounded p-2 mt-1 overflow-auto max-h-[80px]">
+            <pre className="text-[10px] text-zinc-400 bg-zinc-900/50 rounded p-2 overflow-auto max-h-[80px]">
               <code>{Object.entries(element.computedCss).map(([k, v]) =>
                 `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v};`
               ).join('\n')}</code>
             </pre>
             {element.hoverCss && Object.keys(element.hoverCss).length > 0 && (
-              <div className="mt-1">
+              <div>
                 <span className="text-[10px] text-purple-400">:hover</span>
                 <pre className="text-[10px] text-zinc-400 bg-zinc-900/50 rounded p-1 mt-0.5 overflow-auto max-h-[40px]">
                   <code>{Object.entries(element.hoverCss).map(([k, v]) =>
@@ -181,7 +222,20 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </details>
+
+        {/* Visual issues from AI validation */}
+        {element.visualIssues && element.visualIssues.length > 0 && (
+          <div className="px-2 py-1.5 border-t border-zinc-700/30">
+            <div className="flex flex-wrap gap-1">
+              {element.visualIssues.map((issue, i) => (
+                <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                  {issue}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}

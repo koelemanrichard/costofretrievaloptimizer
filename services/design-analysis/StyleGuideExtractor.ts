@@ -77,6 +77,7 @@ export interface RawExtractedElement {
   childCount?: number;
   outerHtmlLength?: number;
   hoverCss?: Record<string, string>;
+  ancestorBackground?: { backgroundColor: string; backgroundImage: string };
 }
 
 /** Raw extraction result from Apify */
@@ -649,20 +650,55 @@ function buildPageFunction(): string {
             return 'unknown';
           }
 
+          // ── Helper: Find nearest ancestor with a non-transparent background ──
+          function getAncestorBackground(el) {
+            var current = el;
+            while (current && current !== document.documentElement) {
+              var style = window.getComputedStyle(current);
+              var bg = style.backgroundColor;
+              var bgImg = style.backgroundImage;
+              if (bgImg && bgImg !== 'none') return { backgroundColor: bg, backgroundImage: bgImg };
+              if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return { backgroundColor: bg, backgroundImage: 'none' };
+              current = current.parentElement;
+            }
+            return { backgroundColor: 'rgb(255, 255, 255)', backgroundImage: 'none' };
+          }
+
           // ── v2: Depth-limited self-contained HTML builder ──
           function buildSelfContained(el, computedCss, maxDepth) {
             maxDepth = maxDepth || 3;
+
+            // Compact property list for child elements
+            var childProps = ['fontFamily','fontSize','fontWeight','color','lineHeight',
+              'letterSpacing','textTransform','textDecoration','background','backgroundColor',
+              'border','borderRadius','padding','margin','display','flexDirection',
+              'alignItems','justifyContent','gap','boxShadow','textAlign','width','maxWidth','opacity'];
 
             function cloneWithDepth(node, depth) {
               if (depth > maxDepth) return null;
               var clone = node.cloneNode(false);
 
-              // Apply inline styles to root
-              if (depth === 0) {
-                var styleStr = Object.entries(computedCss)
-                  .map(function(pair) { return pair[0].replace(/([A-Z])/g, '-$1').toLowerCase() + ': ' + pair[1]; })
-                  .join('; ');
-                clone.setAttribute('style', styleStr);
+              // Apply computed styles to ALL element nodes (not just root)
+              if (clone.nodeType === 1 && clone.setAttribute) {
+                if (depth === 0) {
+                  // Root: use the pre-computed CSS from category-specific props
+                  var styleStr = Object.entries(computedCss)
+                    .map(function(pair) { return pair[0].replace(/([A-Z])/g, '-$1').toLowerCase() + ': ' + pair[1]; })
+                    .join('; ');
+                  clone.setAttribute('style', styleStr);
+                } else {
+                  // Children: compute their styles fresh from a compact property list
+                  var childStyle = window.getComputedStyle(node);
+                  var entries = [];
+                  for (var ci = 0; ci < childProps.length; ci++) {
+                    var val = childStyle[childProps[ci]];
+                    if (val && val !== '' && val !== 'none' && val !== 'normal'
+                        && val !== '0px' && val !== 'rgba(0, 0, 0, 0)') {
+                      entries.push(childProps[ci].replace(/([A-Z])/g, '-$1').toLowerCase() + ': ' + val);
+                    }
+                  }
+                  if (entries.length > 0) clone.setAttribute('style', entries.join('; '));
+                }
               }
 
               // Clone children with depth limit
@@ -915,10 +951,11 @@ function buildPageFunction(): string {
                       classNames: Array.from(el.classList || []),
                       outerHtml: outerHtml,
                       computedCss: computed,
-                      selfContainedHtml: truncateHtml(selfContained, 5000),
+                      selfContainedHtml: truncateHtml(selfContained, 8000),
                       pageRegion: getPageRegion(el),
                       childCount: el.children.length,
                       outerHtmlLength: originalHtmlLen,
+                      ancestorBackground: getAncestorBackground(el),
                     };
 
                     // Capture hover styles for buttons and links

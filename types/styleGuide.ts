@@ -35,6 +35,10 @@ export interface StyleGuideElement {
   aiValidated?: boolean;              // Whether AI has validated this element
   aiGenerated?: boolean;              // Whether AI created this element (fallback)
   hoverCss?: Record<string, string>;  // Captured :hover pseudo-class styles
+  ancestorBackground?: { backgroundColor: string; backgroundImage: string };
+  visualIssues?: string[];            // Issues detected during visual validation
+  aiRepaired?: boolean;               // Whether AI regenerated the HTML
+  suggestedBackground?: string;       // AI-suggested background color
 }
 
 export interface StyleGuideColor {
