@@ -54,7 +54,7 @@ export async function executePass9(
     .eq('id', jobId)
     .single();
 
-  const currentPassesStatus = currentJob?.passes_status || {};
+  const currentPassesStatus = (currentJob?.passes_status || {}) as Record<string, string>;
 
   try {
     onProgress?.('Starting Pass 9: Schema Generation');
@@ -327,7 +327,7 @@ export async function regenerateSchema(
     .eq('id', jobId)
     .single();
 
-  const currentPassesStatus = currentJob?.passes_status || {};
+  const currentPassesStatus = (currentJob?.passes_status || {}) as Record<string, string>;
 
   await supabase
     .from('content_generation_jobs')

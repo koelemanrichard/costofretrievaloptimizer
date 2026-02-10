@@ -49,7 +49,7 @@ export async function executePass8(
 
   // Detect soft validation failures from Pass 1 (marked with HTML comments)
   const softValidationFailures = sections.filter(s =>
-    (s.content || '').includes('<!-- SOFT_VALIDATION_FAILED:')
+    (s.current_content || '').includes('<!-- SOFT_VALIDATION_FAILED:')
   ).length;
   if (softValidationFailures > 0) {
     log.warn(` ${softValidationFailures} section(s) have soft validation failures from Pass 1`);

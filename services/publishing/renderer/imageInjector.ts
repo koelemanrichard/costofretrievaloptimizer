@@ -10,7 +10,7 @@
  * @module services/publishing/renderer/imageInjector
  */
 
-import type { ImagePlaceholder } from '../../../types';
+import type { ImagePlaceholder, ImageType } from '../../../types';
 
 // ============================================================================
 // TYPES
@@ -24,7 +24,7 @@ export interface InjectableImage {
   url: string;
   description?: string;
   altText?: string;
-  type?: 'HERO' | 'SECTION' | 'INFOGRAPHIC' | 'CHART' | 'DIAGRAM' | 'AUTHOR';
+  type?: ImageType;
   width?: number;
   height?: number;
   /** Figcaption text for the image (falls back to altText if not provided) */

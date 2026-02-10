@@ -367,7 +367,7 @@ generate appropriate images based on the content.
 ## VISUAL PLACEMENT MAP (EAV-grounded)
 This section has a specific image placement from the content brief:
 - **Entity Anchor:** ${placementEntry.entity_anchor || 'N/A'}
-- **Placement:** ${placementEntry.placement || 'after first paragraph'}
+- **Placement:** ${placementEntry.placement_rationale || 'after first paragraph'}
 - **Image Type:** ${placementEntry.image_type || 'SCENE'}${placementEntry.eav_reference ? `
 - **EAV Reference:** ${placementEntry.eav_reference.subject || '?'} → ${placementEntry.eav_reference.predicate || '?'} → ${placementEntry.eav_reference.object || '?'}
 - Use this EAV in the alt text to ground the image semantically.` : ''}
