@@ -252,7 +252,10 @@ export function useCatalog(mapId: string | null) {
   }, [categories]);
 
   const hasCatalog = catalog !== null;
-  const isEcommerce = businessInfo.websiteType === 'ECOMMERCE';
+  // websiteType is stored per-map in business_info, so check both map-level and global state
+  const activeMap = state.topicalMaps.find(m => m.id === mapId);
+  const mapBizInfo = activeMap?.business_info as Record<string, unknown> | undefined;
+  const isEcommerce = (mapBizInfo?.websiteType || businessInfo.websiteType) === 'ECOMMERCE';
 
   return {
     // State

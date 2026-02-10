@@ -27,7 +27,10 @@ const SetupWizardLayout: React.FC = () => {
     const basePath = `/p/${projectId}/m/${mapId}/setup`;
 
     // Conditionally include catalog step for ecommerce projects
-    const isEcommerce = state.businessInfo.websiteType === 'ECOMMERCE';
+    // websiteType is stored per-map in business_info, so check both map-level and global state
+    const activeMap = state.topicalMaps.find(m => m.id === mapId);
+    const mapBusinessInfo = activeMap?.business_info as Record<string, unknown> | undefined;
+    const isEcommerce = (mapBusinessInfo?.websiteType || state.businessInfo.websiteType) === 'ECOMMERCE';
 
     const WIZARD_STEPS = useMemo(() => {
         if (!isEcommerce) return BASE_WIZARD_STEPS;
