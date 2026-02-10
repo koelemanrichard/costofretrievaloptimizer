@@ -311,6 +311,9 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [forceRegenerate, setForceRegenerate] = useState(false);
 
+  // Style guide mode — entered from "Style Guide" menu, skips saved design preview
+  const [styleGuideMode, setStyleGuideMode] = useState(initialView === 'premium-url');
+
   // Style guide state
   const [styleGuide, setStyleGuide] = useState<StyleGuide | null>(null);
   const [isExtractingGuide, setIsExtractingGuide] = useState(false);
@@ -367,6 +370,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
       setForceRegenerate(false);
       setStyleGuide(null);
       setExtractionError(null);
+      setStyleGuideMode(initialView === 'premium-url');
     }
   }, [isOpen, initialView]);
 
@@ -374,6 +378,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setView(initialView);
+      setStyleGuideMode(initialView === 'premium-url');
     }
   }, [initialView]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -711,6 +716,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
               : view === 'quick-export' ? 'Quick Export'
               : view === 'style-guide' ? 'Style Guide Review'
               : view === 'extracting' ? 'Extracting Style Guide...'
+              : view === 'premium-url' && styleGuideMode ? 'Style Guide Extraction'
               : view === 'premium-url' ? 'Premium Design Studio'
               : 'Premium Design Studio'}
           </h2>
@@ -848,8 +854,8 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
           {/* ── Premium URL Input View ── */}
           {view === 'premium-url' && (
             <div className="space-y-5">
-              {/* Show saved design if available and not forcing regeneration */}
-              {hasSavedDesign && !session && (
+              {/* Show saved design if available and not forcing regeneration (skip in style guide mode) */}
+              {hasSavedDesign && !session && !styleGuideMode && (
                 <SavedDesignPreview
                   design={savedDesign}
                   onDownload={handleDownload}
@@ -858,8 +864,8 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                 />
               )}
 
-              {/* URL Input */}
-              {!hasSavedDesign && (
+              {/* URL Input — always visible in style guide mode */}
+              {(!hasSavedDesign || styleGuideMode) && (
                 <div className="space-y-3 max-w-lg mx-auto mt-4">
                   {forceRegenerate && (
                     <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg mb-2">
