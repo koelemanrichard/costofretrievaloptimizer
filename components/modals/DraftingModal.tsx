@@ -207,6 +207,7 @@ const DraftingModal: React.FC<DraftingModalProps> = ({ isOpen, onClose, brief: b
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showStylePublishModal, setShowStylePublishModal] = useState(false);
   const [showPremiumDesignModal, setShowPremiumDesignModal] = useState(false);
+  const [premiumDesignInitialView, setPremiumDesignInitialView] = useState<'fork' | 'premium-url'>('fork');
 
   // Social Media Posts State
   const [showSocialModal, setShowSocialModal] = useState(false);
@@ -3895,15 +3896,18 @@ ${schemaScript}`;
                                 id: 'premium-design',
                                 label: 'Export & Design',
                                 icon: '🎨',
-                                onClick: () => setShowPremiumDesignModal(true),
+                                onClick: () => {
+                                    setPremiumDesignInitialView('fork');
+                                    setShowPremiumDesignModal(true);
+                                },
                             },
                             {
                                 id: 'style-guide',
                                 label: 'Style Guide',
                                 icon: '📋',
                                 onClick: () => {
+                                    setPremiumDesignInitialView('premium-url');
                                     setShowPremiumDesignModal(true);
-                                    // The modal will be opened; style guide is accessible from there
                                 },
                                 divider: true
                             },
@@ -4250,12 +4254,13 @@ ${schemaScript}`;
       {activeBriefTopic && draftContent && (
         <PremiumDesignModal
           isOpen={showPremiumDesignModal}
-          onClose={() => setShowPremiumDesignModal(false)}
+          onClose={() => { setShowPremiumDesignModal(false); setPremiumDesignInitialView('fork'); }}
           topic={activeBriefTopic}
           articleDraft={draftContent}
           brief={brief}
           topicalMap={activeMap}
           projectId={activeMap?.project_id}
+          initialView={premiumDesignInitialView}
         />
       )}
 

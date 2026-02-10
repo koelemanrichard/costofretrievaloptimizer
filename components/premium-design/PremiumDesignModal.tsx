@@ -37,6 +37,7 @@ interface PremiumDesignModalProps {
   brief?: ContentBrief;
   topicalMap?: TopicalMap;
   projectId?: string;
+  initialView?: 'fork' | 'premium-url';
 }
 
 type ModalView = 'fork' | 'quick-export' | 'premium-url' | 'extracting' | 'style-guide' | 'premium-design';
@@ -292,9 +293,10 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
   brief,
   topicalMap,
   projectId,
+  initialView = 'fork',
 }) => {
   const { state, dispatch } = useAppState();
-  const [view, setView] = useState<ModalView>('fork');
+  const [view, setView] = useState<ModalView>(initialView);
   const [targetUrl, setTargetUrl] = useState(
     topicalMap?.business_info?.domain || ''
   );
@@ -357,15 +359,23 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
   }, [isOpen, topic?.id, getSupabase, state.user?.id]);
 
   // Reset state when modal closes
+  // Reset to initialView when modal opens/closes; also react to initialView changes while open
   useEffect(() => {
     if (!isOpen) {
-      setView('fork');
+      setView(initialView);
       setSession(null);
       setForceRegenerate(false);
       setStyleGuide(null);
       setExtractionError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialView]);
+
+  // When initialView changes while modal is already open, navigate to it
+  useEffect(() => {
+    if (isOpen) {
+      setView(initialView);
+    }
+  }, [initialView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate Quick Export HTML
   const generateQuickExport = useCallback(() => {
@@ -470,7 +480,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     setSavedDesign(null);
     setSession(null);
     setForceRegenerate(true);
-    setView('premium-design');
+    setView('premium-url');
   }, []);
 
   // Download final HTML
