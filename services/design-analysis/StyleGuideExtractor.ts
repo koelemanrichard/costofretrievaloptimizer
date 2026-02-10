@@ -120,8 +120,8 @@ export const StyleGuideExtractor = {
       startUrls: [{ url }],
       pageFunction,
       proxyConfiguration: { useApifyProxy: true },
-      maxConcurrency: 2,
-      maxRequestsPerCrawl: 4,
+      maxConcurrency: 1,
+      maxRequestsPerCrawl: 2,
       linkSelector: 'a[href]',
       pseudoUrls: [
         { purl: `https://${hostname}[.*]` },
@@ -134,7 +134,7 @@ export const StyleGuideExtractor = {
       requestHandlerTimeoutSecs: 120,
     };
 
-    console.log('[StyleGuideExtractor] Starting multi-page extraction for:', url, '(up to 4 pages on', hostname, ')');
+    console.log('[StyleGuideExtractor] Starting multi-page extraction for:', url, '(up to 2 pages on', hostname, ')');
     const results = await runApifyActor(PLAYWRIGHT_SCRAPER_ACTOR_ID, apiToken, runInput, proxyConfig);
 
     if (!results || results.length === 0) {
@@ -716,7 +716,7 @@ function buildPageFunction(): string {
         }, cssPropsMap);
 
         // ── v2: Capture per-element screenshots ──
-        var MAX_SCREENSHOTS = 25;
+        var MAX_SCREENSHOTS = 15;
         var elementCount = extractionResult.elements.length;
         log.info('Capturing element screenshots (max ' + MAX_SCREENSHOTS + ' of ' + elementCount + ')...');
 

@@ -953,7 +953,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                     : `Extracting design elements from ${targetUrl}...`}
               </p>
               {extractionPhase === '' && (
-                <p className="text-xs text-zinc-500">Scanning up to 4 pages... this may take 60-90 seconds</p>
+                <p className="text-xs text-zinc-500">Scanning up to 2 pages... this may take 60-90 seconds</p>
               )}
               {extractionPhase === 'validating' && (
                 <p className="text-xs text-zinc-500">AI is scoring each element for quality</p>
