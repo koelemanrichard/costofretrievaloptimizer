@@ -26,3 +26,4 @@ export {
   loadDesignById,
   deleteDesign,
 } from './designPersistence';
+export { StyleGuideCssGenerator } from './StyleGuideCssGenerator';

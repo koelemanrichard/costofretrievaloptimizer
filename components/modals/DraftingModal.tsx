@@ -3896,6 +3896,15 @@ ${schemaScript}`;
                                 label: 'Export & Design',
                                 icon: '🎨',
                                 onClick: () => setShowPremiumDesignModal(true),
+                            },
+                            {
+                                id: 'style-guide',
+                                label: 'Style Guide',
+                                icon: '📋',
+                                onClick: () => {
+                                    setShowPremiumDesignModal(true);
+                                    // The modal will be opened; style guide is accessible from there
+                                },
                                 divider: true
                             },
                             {

@@ -4,6 +4,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { EnrichedTopic, ContentBrief, TopicalMap } from '../../types';
+import type { StyleGuide } from '../../types/styleGuide';
 import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { buildFullHtmlDocument, extractCenterpiece, cleanForExport, generateSlug } from '../../services/contentAssemblyService';
@@ -18,6 +19,11 @@ import {
   loadDesignHistory,
   savePremiumDesign,
 } from '../../services/premium-design';
+import { StyleGuideExtractor } from '../../services/design-analysis/StyleGuideExtractor';
+import { StyleGuideGenerator } from '../../services/design-analysis/StyleGuideGenerator';
+import { loadStyleGuide, saveStyleGuide, getHostnameFromUrl } from '../../services/design-analysis/styleGuidePersistence';
+import { StyleGuideView } from './StyleGuideView';
+import { generateStyleGuideHtml } from './StyleGuideExport';
 
 // =============================================================================
 // Types
@@ -33,7 +39,7 @@ interface PremiumDesignModalProps {
   projectId?: string;
 }
 
-type ModalView = 'fork' | 'quick-export' | 'premium-design';
+type ModalView = 'fork' | 'quick-export' | 'premium-url' | 'extracting' | 'style-guide' | 'premium-design';
 type PipelineStep = 'capturing' | 'generating-css' | 'rendering' | 'validating' | 'iterating' | 'complete' | 'error';
 
 interface DesignHistoryEntry {
@@ -303,6 +309,12 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [forceRegenerate, setForceRegenerate] = useState(false);
 
+  // Style guide state
+  const [styleGuide, setStyleGuide] = useState<StyleGuide | null>(null);
+  const [isExtractingGuide, setIsExtractingGuide] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [isRefiningElement, setIsRefiningElement] = useState(false);
+
   // Get Supabase client helper
   const getSupabase = useCallback(() => {
     const bi = state.businessInfo;
@@ -350,6 +362,8 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
       setView('fork');
       setSession(null);
       setForceRegenerate(false);
+      setStyleGuide(null);
+      setExtractionError(null);
     }
   }, [isOpen]);
 
@@ -477,6 +491,201 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     }
   }, [dispatch]);
 
+  // Start style guide extraction
+  const startStyleGuideExtraction = useCallback(async () => {
+    if (!targetUrl.trim()) return;
+    const bi = state.businessInfo;
+    const apifyToken = bi?.apifyToken || '';
+    if (!apifyToken) {
+      dispatch({ type: 'SET_ERROR', payload: 'Apify API token required for style guide extraction. Add it in Settings.' });
+      return;
+    }
+
+    setIsExtractingGuide(true);
+    setExtractionError(null);
+    setView('extracting');
+
+    // Check cache first
+    const supabase = getSupabase();
+    const userId = state.user?.id;
+    const hostname = getHostnameFromUrl(targetUrl);
+
+    if (supabase && userId) {
+      try {
+        const cached = await loadStyleGuide(supabase, userId, hostname);
+        if (cached) {
+          console.log('[PremiumDesignModal] Loaded cached style guide for:', hostname);
+          setStyleGuide(cached.style_guide);
+          setView('style-guide');
+          setIsExtractingGuide(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('[PremiumDesignModal] Failed to load cached style guide:', err);
+      }
+    }
+
+    try {
+      const proxyConfig = bi?.supabaseUrl && bi?.supabaseAnonKey
+        ? { supabaseUrl: bi.supabaseUrl, supabaseAnonKey: bi.supabaseAnonKey }
+        : undefined;
+
+      const rawExtraction = await StyleGuideExtractor.extractStyleGuide(targetUrl, apifyToken, proxyConfig);
+      const guide = StyleGuideGenerator.generate(rawExtraction, rawExtraction.screenshotBase64, targetUrl);
+      setStyleGuide(guide);
+      setView('style-guide');
+
+      // Save to cache
+      if (supabase && userId) {
+        try {
+          await saveStyleGuide(supabase, userId, guide);
+        } catch (err) {
+          console.warn('[PremiumDesignModal] Failed to save style guide:', err);
+        }
+      }
+    } catch (err) {
+      console.error('[PremiumDesignModal] Style guide extraction failed:', err);
+      setExtractionError(err instanceof Error ? err.message : String(err));
+      setView('premium-url');
+    } finally {
+      setIsExtractingGuide(false);
+    }
+  }, [targetUrl, state.businessInfo, state.user?.id, dispatch, getSupabase]);
+
+  // Handle style guide approval → continue to premium design pipeline
+  const handleStyleGuideApproved = useCallback(async (approvedGuide: StyleGuide) => {
+    setStyleGuide(approvedGuide);
+
+    // Save approved guide
+    const supabase = getSupabase();
+    const userId = state.user?.id;
+    if (supabase && userId) {
+      try {
+        await saveStyleGuide(supabase, userId, approvedGuide);
+      } catch (err) {
+        console.warn('[PremiumDesignModal] Failed to save approved style guide:', err);
+      }
+    }
+
+    // Start the premium design pipeline with the approved style guide
+    if (!brief) return;
+    const bi = state.businessInfo;
+    const apiKey = bi?.geminiApiKey || bi?.anthropicApiKey || bi?.openAiApiKey || '';
+    const provider: PremiumDesignConfig['aiProvider'] =
+      bi?.geminiApiKey ? 'gemini' :
+      bi?.anthropicApiKey ? 'anthropic' :
+      bi?.openAiApiKey ? 'openai' : 'gemini';
+
+    if (!apiKey) {
+      dispatch({ type: 'SET_ERROR', payload: 'No AI API key configured.' });
+      return;
+    }
+
+    const config: PremiumDesignConfig = {
+      targetScore: 85,
+      maxIterations: 3,
+      aiProvider: provider,
+      apiKey,
+      apifyToken: bi?.apifyToken || '',
+      proxyConfig: bi?.supabaseUrl && bi?.supabaseAnonKey
+        ? { supabaseUrl: bi.supabaseUrl, supabaseAnonKey: bi.supabaseAnonKey }
+        : undefined,
+    };
+
+    setView('premium-design');
+    setIsRunning(true);
+    setSavedDesign(null);
+    const orchestrator = new PremiumDesignOrchestrator(config);
+    orchestratorRef.current = orchestrator;
+
+    const persistenceOpts = supabase && userId ? {
+      supabase,
+      userId,
+      topicId: topic.id,
+      briefId: brief.id,
+      mapId: topicalMap?.id,
+    } : undefined;
+
+    try {
+      const result = await orchestrator.run(
+        articleDraft,
+        brief.title,
+        targetUrl,
+        (progressSession) => setSession(structuredClone(progressSession)),
+        {
+          industry: topicalMap?.business_info?.industry || '',
+          audience: topicalMap?.business_info?.audience || '',
+          articlePurpose: 'informational',
+        },
+        persistenceOpts,
+        brief?.structured_outline,
+        approvedGuide
+      );
+      setSession(result);
+
+      if ((result as any).savedDesign) {
+        setSavedDesign((result as any).savedDesign);
+        if (supabase && userId) {
+          const history = await loadDesignHistory(supabase, userId, topic.id);
+          setDesignHistory(history as DesignHistoryEntry[]);
+        }
+      }
+    } catch (err) {
+      console.error('[PremiumDesignModal] Pipeline error:', err);
+      dispatch({ type: 'SET_ERROR', payload: `Design pipeline failed: ${err instanceof Error ? err.message : String(err)}` });
+    } finally {
+      setIsRunning(false);
+    }
+  }, [brief, targetUrl, articleDraft, topicalMap, state.businessInfo, state.user?.id, topic, dispatch, getSupabase]);
+
+  // Handle AI element refinement
+  const handleRefineElement = useCallback(async (elementId: string) => {
+    if (!styleGuide) return;
+    const element = styleGuide.elements.find(e => e.id === elementId);
+    if (!element?.userComment) return;
+
+    const bi = state.businessInfo;
+    const apiKey = bi?.geminiApiKey || bi?.anthropicApiKey || bi?.openAiApiKey || '';
+    const provider =
+      bi?.geminiApiKey ? 'gemini' :
+      bi?.anthropicApiKey ? 'anthropic' :
+      bi?.openAiApiKey ? 'openai' : 'gemini';
+
+    if (!apiKey) return;
+
+    setIsRefiningElement(true);
+    try {
+      const result = await StyleGuideGenerator.refineElement(
+        element,
+        element.userComment,
+        element.referenceImageBase64,
+        styleGuide.screenshotBase64,
+        { provider: provider as 'gemini' | 'anthropic' | 'openai', apiKey }
+      );
+      setStyleGuide({
+        ...styleGuide,
+        elements: styleGuide.elements.map(el =>
+          el.id === elementId
+            ? { ...el, selfContainedHtml: result.selfContainedHtml, computedCss: result.computedCss }
+            : el
+        ),
+      });
+    } catch (err) {
+      console.error('[PremiumDesignModal] Element refinement failed:', err);
+    } finally {
+      setIsRefiningElement(false);
+    }
+  }, [styleGuide, state.businessInfo]);
+
+  // Handle style guide export
+  const handleStyleGuideExport = useCallback(() => {
+    if (!styleGuide) return;
+    const html = generateStyleGuideHtml(styleGuide);
+    const filename = `${styleGuide.hostname}-style-guide.html`;
+    downloadFile(new Blob([html], { type: 'text/html' }), filename);
+    dispatch({ type: 'SET_NOTIFICATION', payload: `Downloaded: ${filename}` });
+  }, [styleGuide, dispatch]);
+
   if (!isOpen) return null;
 
   const latestIteration = session?.iterations[session.iterations.length - 1];
@@ -488,14 +697,23 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
           <h2 className="text-sm font-medium text-zinc-200">
-            {view === 'fork' ? 'Export & Design' : view === 'quick-export' ? 'Quick Export' : 'Premium Design Studio'}
+            {view === 'fork' ? 'Export & Design'
+              : view === 'quick-export' ? 'Quick Export'
+              : view === 'style-guide' ? 'Style Guide Review'
+              : view === 'extracting' ? 'Extracting Style Guide...'
+              : view === 'premium-url' ? 'Premium Design Studio'
+              : 'Premium Design Studio'}
           </h2>
           <div className="flex items-center gap-2">
             {view !== 'fork' && (
               <button
-                onClick={() => { setView('fork'); setSession(null); setForceRegenerate(false); }}
+                onClick={() => {
+                  if (view === 'style-guide') { setView('premium-url'); }
+                  else if (view === 'premium-design' && !isRunning) { setView('style-guide'); }
+                  else { setView('fork'); setSession(null); setForceRegenerate(false); setStyleGuide(null); }
+                }}
                 className="text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1"
-                disabled={isRunning}
+                disabled={isRunning || isExtractingGuide}
               >
                 Back
               </button>
@@ -535,7 +753,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
 
                 {/* Premium Design Card */}
                 <button
-                  onClick={() => setView('premium-design')}
+                  onClick={() => setView('premium-url')}
                   className="p-6 rounded-xl border border-zinc-700 hover:border-purple-500/50 bg-zinc-800/50 hover:bg-zinc-800 text-left transition-all group relative"
                 >
                   <div className="text-2xl mb-3">&#127912;</div>
@@ -617,8 +835,8 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
             </div>
           )}
 
-          {/* ── Premium Design View ── */}
-          {view === 'premium-design' && (
+          {/* ── Premium URL Input View ── */}
+          {view === 'premium-url' && (
             <div className="space-y-5">
               {/* Show saved design if available and not forcing regeneration */}
               {hasSavedDesign && !session && (
@@ -630,14 +848,19 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                 />
               )}
 
-              {/* URL Input (no saved design or regenerating) */}
-              {!hasSavedDesign && !session && (
+              {/* URL Input */}
+              {!hasSavedDesign && (
                 <div className="space-y-3 max-w-lg mx-auto mt-4">
                   {forceRegenerate && (
                     <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg mb-2">
                       <p className="text-xs text-yellow-400">
                         Starting fresh. A new version will be created (previous versions are kept).
                       </p>
+                    </div>
+                  )}
+                  {extractionError && (
+                    <div className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg mb-2">
+                      <p className="text-xs text-red-400">Extraction failed: {extractionError}</p>
                     </div>
                   )}
                   <label className="block text-xs text-zinc-400">Target Website URL</label>
@@ -649,17 +872,57 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
                     className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500"
                   />
                   <p className="text-xs text-zinc-500">
-                    Enter the website whose visual style you want to match. We'll capture a screenshot and extract design tokens.
+                    We'll extract actual design elements from this website. You can review and approve each element before generating your article design.
                   </p>
                   <button
-                    onClick={startPremiumDesign}
-                    disabled={!targetUrl.trim() || isRunning}
+                    onClick={startStyleGuideExtraction}
+                    disabled={!targetUrl.trim() || isExtractingGuide}
                     className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-lg transition-colors"
                   >
-                    {isRunning ? 'Running...' : forceRegenerate ? 'Re-generate Design' : 'Start Design'}
+                    {isExtractingGuide ? 'Extracting...' : 'Extract Style Guide'}
+                  </button>
+                  <button
+                    onClick={startPremiumDesign}
+                    disabled={!targetUrl.trim() || isRunning || isExtractingGuide}
+                    className="w-full px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-xs rounded-lg transition-colors"
+                  >
+                    Skip Style Guide (legacy pipeline)
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Extracting View ── */}
+          {view === 'extracting' && (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-zinc-300">Extracting design elements from {targetUrl}...</p>
+              <p className="text-xs text-zinc-500">This may take 30-60 seconds</p>
+            </div>
+          )}
+
+          {/* ── Style Guide Review View ── */}
+          {view === 'style-guide' && styleGuide && (
+            <div style={{ minHeight: '50vh' }}>
+              <StyleGuideView
+                styleGuide={styleGuide}
+                onApprove={handleStyleGuideApproved}
+                onReextract={() => {
+                  setStyleGuide(null);
+                  startStyleGuideExtraction();
+                }}
+                onExport={handleStyleGuideExport}
+                onRefineElement={handleRefineElement}
+                isRefining={isRefiningElement}
+                onChange={setStyleGuide}
+              />
+            </div>
+          )}
+
+          {/* ── Premium Design View ── */}
+          {view === 'premium-design' && (
+            <div className="space-y-5">
 
               {/* Pipeline Progress */}
               {session && session.status !== 'complete' && session.status !== 'error' && (

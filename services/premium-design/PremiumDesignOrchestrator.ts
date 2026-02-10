@@ -37,6 +37,8 @@ import type {
   SavedPremiumDesign,
 } from './types';
 import type { BriefSection } from '../../types';
+import type { StyleGuide } from '../../types/styleGuide';
+import { StyleGuideCssGenerator } from './StyleGuideCssGenerator';
 
 // =============================================================================
 // CSS LAYER HELPER
@@ -141,7 +143,8 @@ export class PremiumDesignOrchestrator {
     onProgress?: ProgressCallback,
     businessContext?: BusinessContext,
     persistence?: PersistenceOptions,
-    structuredOutline?: BriefSection[]
+    structuredOutline?: BriefSection[],
+    approvedStyleGuide?: StyleGuide
   ): Promise<PremiumDesignSession & { savedDesign?: SavedPremiumDesign | null }> {
     const session: PremiumDesignSession = {
       id: uuidv4(),
@@ -288,8 +291,14 @@ export class PremiumDesignOrchestrator {
         emit();
 
         if (iteration === 1) {
-          // First iteration: use BrandDesignSystem CSS
-          if (session.brandDesignSystem) {
+          // First iteration: choose CSS source
+          if (approvedStyleGuide) {
+            // PRIMARY PATH: Use real CSS from approved style guide elements
+            console.log('[PremiumDesignOrchestrator] Using approved style guide CSS (' +
+              approvedStyleGuide.elements.filter(e => e.approvalStatus === 'approved').length + ' approved elements)');
+            currentBrandCss = StyleGuideCssGenerator.generate(approvedStyleGuide);
+          } else if (session.brandDesignSystem) {
+            // Secondary: use BrandDesignSystem CSS
             currentBrandCss = this.cssGenerator.getInitialCssFromBrandSystem(
               session.brandDesignSystem,
               session.crawledCssTokens.googleFontsUrl
