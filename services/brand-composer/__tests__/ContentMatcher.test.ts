@@ -23,7 +23,7 @@ describe('ContentMatcher', () => {
   describe('matchContentToComponent', () => {
     it('matches heading content to hero component', async () => {
       const matcher = new ContentMatcher(mockComponents);
-      const content = { type: 'section', heading: 'Welcome', headingLevel: 1, body: 'Introduction.' };
+      const content = { type: 'section' as const, heading: 'Welcome', headingLevel: 1, body: 'Introduction.' };
 
       const match = await matcher.matchContentToComponent(content);
 

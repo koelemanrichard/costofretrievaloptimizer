@@ -5,7 +5,7 @@ import { LayoutPlanner } from '../LayoutPlanner';
 import { ComponentSelector } from '../ComponentSelector';
 import { VisualEmphasizer } from '../VisualEmphasizer';
 import { ImageHandler } from '../ImageHandler';
-import { BriefSection, FormatCode, ContentZone } from '../../../types';
+import { BriefSection } from '../../../types';
 import { DesignDNA } from '../../../types/designDna';
 import { LayoutBlueprint, SectionAnalysis } from '../types';
 
@@ -168,36 +168,36 @@ const createMockBriefSections = (): BriefSection[] => [
     heading: 'What is Test Topic',
     level: 2,
     order: 0,
-    format_code: FormatCode.FS,
+    format_code: 'FS',
     attribute_category: 'UNIQUE',
-    content_zone: ContentZone.MAIN,
+    content_zone: 'MAIN',
   },
   {
     key: 'section-1',
     heading: 'How to Use Test Topic',
     level: 2,
     order: 1,
-    format_code: FormatCode.LISTING,
+    format_code: 'LISTING',
     attribute_category: 'RARE',
-    content_zone: ContentZone.MAIN,
+    content_zone: 'MAIN',
   },
   {
     key: 'section-2',
     heading: 'Test Topic Benefits',
     level: 2,
     order: 2,
-    format_code: FormatCode.PROSE,
+    format_code: 'PROSE',
     attribute_category: 'COMMON',
-    content_zone: ContentZone.SUPPLEMENTARY,
+    content_zone: 'SUPPLEMENTARY',
   },
   {
     key: 'section-3',
     heading: 'Test Topic FAQ',
     level: 2,
     order: 3,
-    format_code: FormatCode.PAA,
+    format_code: 'PAA',
     attribute_category: 'COMMON',
-    content_zone: ContentZone.SUPPLEMENTARY,
+    content_zone: 'SUPPLEMENTARY',
   },
 ];
 
@@ -433,7 +433,7 @@ This is a normal section.
 Another normal section.
 `;
       const briefSections: BriefSection[] = [
-        { heading: 'FS Protected Section', level: 2, order: 0, format_code: FormatCode.FS, attribute_category: 'UNIQUE' },
+        { heading: 'FS Protected Section', level: 2, order: 0, format_code: 'FS', attribute_category: 'UNIQUE' },
         { heading: 'Normal Section One', level: 2, order: 1, attribute_category: 'COMMON' },
         { heading: 'Normal Section Two', level: 2, order: 2, attribute_category: 'COMMON' },
       ];

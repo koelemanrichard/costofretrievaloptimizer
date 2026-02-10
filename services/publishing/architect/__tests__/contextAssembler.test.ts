@@ -142,7 +142,7 @@ describe('contextAssembler', () => {
         }
       );
 
-      const input = toArchitectInput(context, mockBusinessInfo as BusinessInfo);
+      const input = toArchitectInput(context, mockArticleContent, 'How to Analyze Data with AI');
 
       expect(input).toBeDefined();
       expect(input.articleContent).toBeDefined();
@@ -161,7 +161,7 @@ describe('contextAssembler', () => {
         }
       );
 
-      const input = toArchitectInput(context, mockBusinessInfo as BusinessInfo);
+      const input = toArchitectInput(context, mockArticleContent, 'Test Article');
 
       expect(input.business.name).toBeDefined();
       expect(input.business.industry).toBe('technology');

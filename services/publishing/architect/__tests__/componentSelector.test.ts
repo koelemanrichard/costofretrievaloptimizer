@@ -20,14 +20,9 @@ import type { ParsedSection, IndustryDesignNorms, SectionSemanticType } from '..
 const mockIndustryNorms: IndustryDesignNorms = {
   preferredStyle: 'minimal',
   colorIntensity: 'subtle',
-  componentPreferences: {
-    preferredListStyle: 'icon-list',
-    preferredTimelineStyle: 'steps-numbered',
-    preferredFaqStyle: 'accordion',
-    preferredTestimonialStyle: 'testimonial-grid',
-  },
-  trustSignals: ['certifications', 'stats'],
-  ctaPlacement: ['after-benefits', 'end'],
+  pacing: 'balanced',
+  commonComponents: ['prose', 'icon-list', 'faq-accordion'] as ComponentType[],
+  ctaApproach: 'moderate',
 };
 
 // Helper to create a parsed section
@@ -90,33 +85,27 @@ describe('componentSelector', () => {
 
   describe('isComponentAppropriate', () => {
     it('should return boolean for component/section combination', () => {
-      const section = createParsedSection('benefits');
-      const result = isComponentAppropriate('icon-list', section);
+      const result = isComponentAppropriate('icon-list', 'benefits');
       expect(typeof result).toBe('boolean');
     });
 
     it('should reject FAQ components for benefits sections', () => {
-      const benefitsSection = createParsedSection('benefits');
-      const result = isComponentAppropriate('faq-accordion', benefitsSection);
+      const result = isComponentAppropriate('faq-accordion', 'benefits');
       expect(result).toBe(false);
     });
 
     it('should handle comparison sections', () => {
-      const comparisonSection = createParsedSection('comparison');
       // Comparison table should be appropriate for comparison sections
-      const result = isComponentAppropriate('comparison-table', comparisonSection);
+      const result = isComponentAppropriate('comparison-table', 'comparison');
       expect(typeof result).toBe('boolean');
     });
   });
 
   describe('getRecommendedComponent', () => {
     it('should return a component for benefits section', () => {
-      const benefitsSection = createParsedSection('benefits');
-
       const component = getRecommendedComponent(
-        benefitsSection,
-        'minimal',
-        mockIndustryNorms
+        'benefits',
+        'minimal'
       );
 
       expect(component).toBeDefined();
@@ -124,48 +113,36 @@ describe('componentSelector', () => {
     });
 
     it('should return component for process section', () => {
-      const processSection = createParsedSection('process');
-
       const component = getRecommendedComponent(
-        processSection,
-        'editorial',
-        mockIndustryNorms
+        'process',
+        'editorial'
       );
 
       expect(component).toBeDefined();
     });
 
     it('should return component for FAQ section', () => {
-      const faqSection = createParsedSection('faq');
-
       const component = getRecommendedComponent(
-        faqSection,
-        'minimal',
-        mockIndustryNorms
+        'faq',
+        'minimal'
       );
 
       expect(component).toBeDefined();
     });
 
     it('should return component for testimonial section', () => {
-      const testimonialSection = createParsedSection('testimonial');
-
       const component = getRecommendedComponent(
-        testimonialSection,
-        'bold',
-        mockIndustryNorms
+        'testimonial',
+        'bold'
       );
 
       expect(component).toBeDefined();
     });
 
     it('should respect industry preferences for list style', () => {
-      const benefitsSection = createParsedSection('benefits');
-
       const component = getRecommendedComponent(
-        benefitsSection,
-        'minimal',
-        mockIndustryNorms
+        'benefits',
+        'minimal'
       );
 
       // Should respect the industry preference for list style
@@ -173,11 +150,10 @@ describe('componentSelector', () => {
     });
 
     it('should work with different visual styles', () => {
-      const section = createParsedSection('benefits');
       const styles = ['minimal', 'editorial', 'marketing', 'bold', 'warm-modern'] as const;
 
       styles.forEach(style => {
-        const component = getRecommendedComponent(section, style, mockIndustryNorms);
+        const component = getRecommendedComponent('benefits', style);
         expect(component).toBeDefined();
         expect(typeof component).toBe('string');
       });

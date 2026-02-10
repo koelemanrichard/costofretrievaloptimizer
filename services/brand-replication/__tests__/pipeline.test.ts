@@ -209,7 +209,7 @@ const createCodeGenInput = (brandId: string): CodeGenInput => ({
       medium: 8,
       large: 16,
     },
-  },
+  } as unknown as CodeGenInput['designDna'],
 });
 
 const createCodeGenOutput = (brandId: string): CodeGenOutput => ({

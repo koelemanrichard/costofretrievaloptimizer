@@ -52,6 +52,7 @@ import type {
   SectionDesignDecision,
   ContentContext,
 } from '../../interfaces';
+import type { TopicalMap } from '../../../../types';
 
 // Test fixtures
 const createArticleSection = (
@@ -456,12 +457,12 @@ describe('ContextBuilder', () => {
         name: 'Test Map',
         created_at: new Date().toISOString(),
         business_info: {
-          business_name: 'Acme Corp',
-          business_description: 'A software company',
-          primary_goal: 'Generate leads',
-          target_audience: 'Developers',
+          projectName: 'Acme Corp',
+          valueProp: 'A software company',
+          conversionGoal: 'Generate leads',
+          audience: 'Developers',
         },
-      };
+      } as TopicalMap;
 
       const ctx = contextBuilder.buildContentContext(input, topicalMap);
 
@@ -477,7 +478,7 @@ describe('ContextBuilder', () => {
         project_id: 'proj-1',
         name: 'Test Map',
         created_at: new Date().toISOString(),
-      };
+      } as TopicalMap;
 
       const ctx = contextBuilder.buildContentContext(input, topicalMap);
 

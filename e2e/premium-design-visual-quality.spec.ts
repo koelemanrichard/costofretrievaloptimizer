@@ -86,7 +86,7 @@ test.describe('Premium Design Visual Quality', () => {
       SAMPLE_MARKDOWN,
       'De Complete Gids voor Penetratietesten',
       undefined,
-      { ctaText: 'Vraag een pentest aan', ctaUrl: 'https://example.com/contact' }
+      { industry: 'technology', audience: 'general', articlePurpose: 'informational', ctaText: 'Vraag een pentest aan', ctaUrl: 'https://example.com/contact' }
     );
 
     // Generate component CSS (no AI, deterministic)
@@ -461,7 +461,7 @@ ${componentCss}
       SAMPLE_MARKDOWN,
       'Pentest Gids',
       undefined,
-      { ctaText: 'Contact', ctaUrl: '#contact' }
+      { industry: 'technology', audience: 'general', articlePurpose: 'informational', ctaText: 'Contact', ctaUrl: '#contact' }
     );
 
     // Has semantic article structure
@@ -584,7 +584,7 @@ ${componentCss}
     const html = PremiumHtmlRenderer.render(
       blueprint, SAMPLE_MARKDOWN, 'Pentest Gids',
       undefined,
-      { ctaText: 'Vraag een pentest aan', ctaUrl: 'https://example.com/contact' }
+      { industry: 'technology', audience: 'general', articlePurpose: 'informational', ctaText: 'Vraag een pentest aan', ctaUrl: 'https://example.com/contact' }
     );
 
     const componentCss = generateComponentStyles({
@@ -669,7 +669,7 @@ ${assembledCss}
     const html = PremiumHtmlRenderer.render(
       blueprint, SAMPLE_MARKDOWN, 'De Complete Gids voor Penetratietesten',
       undefined,
-      { ctaText: 'Vraag een pentest aan', ctaUrl: 'https://example.com/contact' }
+      { industry: 'technology', audience: 'general', articlePurpose: 'informational', ctaText: 'Vraag een pentest aan', ctaUrl: 'https://example.com/contact' }
     );
     const componentCss = generateComponentStyles({ personality: 'corporate' });
 

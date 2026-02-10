@@ -113,13 +113,13 @@ test.describe('Checkpoint 4 - CSS Generation Inspection', () => {
     // Get compiledCss from window debug variable (exposed by BrandIntelligenceStep)
     // Wait a bit for it to be set
     for (let i = 0; i < 10; i++) {
-      const hasCSS = await page.evaluate(() => !!(window as Record<string, unknown>).__BRAND_COMPILED_CSS__);
+      const hasCSS = await page.evaluate(() => !!(window as unknown as Record<string, unknown>).__BRAND_COMPILED_CSS__);
       if (hasCSS) break;
       await page.waitForTimeout(2000);
     }
 
     const cssData = await page.evaluate(() => {
-      const css = (window as Record<string, unknown>).__BRAND_COMPILED_CSS__ as string | undefined;
+      const css = (window as unknown as Record<string, unknown>).__BRAND_COMPILED_CSS__ as string | undefined;
       if (!css) return null;
       return { compiledCss: css, tokens: {} };
     });

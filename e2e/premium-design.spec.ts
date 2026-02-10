@@ -912,7 +912,7 @@ test.describe('ScreenshotService Capture', () => {
 
     // Use page.evaluate to dynamically import ScreenshotService and capture
     const base64 = await page.evaluate(async ({ html, css }) => {
-      const { ScreenshotService } = await import('/services/premium-design/ScreenshotService.ts');
+      const { ScreenshotService } = await import('../services/premium-design/ScreenshotService.ts');
       const service = new ScreenshotService();
       return await service.captureRenderedOutput(html, css);
     }, { html: testHtml, css: testCss });
@@ -949,7 +949,7 @@ test.describe('ScreenshotService Capture', () => {
 
     // Should still produce a screenshot without crashing
     const base64 = await page.evaluate(async ({ html, css }) => {
-      const { ScreenshotService } = await import('/services/premium-design/ScreenshotService.ts');
+      const { ScreenshotService } = await import('../services/premium-design/ScreenshotService.ts');
       const service = new ScreenshotService();
       return await service.captureRenderedOutput(html, css);
     }, { html: testHtml, css: brokenCss });

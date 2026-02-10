@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderContent, type ArticleContent } from '../publishing/renderer';
 import { htmlToArticleContent } from '../publishing/renderer/contentAdapter';
 import { ComponentLibrary } from '../brand-extraction/ComponentLibrary';
-import { BrandAwareComposer } from '../brand-composer/BrandAwareComposer';
+import { BrandAwareComposer, type ArticleContent as ComposerArticleContent } from '../brand-composer/BrandAwareComposer';
 import type { ExtractedComponent, BrandReplicationOutput } from '../../types/brandExtraction';
 import type { StyledContentOutput } from '../../types/publishing';
 
@@ -192,7 +192,7 @@ describe('Brand Replication Integration', () => {
         apiKey: 'test-key'
       });
 
-      const result = await composer.compose(createMockArticleContent());
+      const result = await composer.compose(createMockArticleContent() as ComposerArticleContent);
 
       // Assert: Output should contain brand styling
       expect(result.html).toContain('brand-article');
@@ -212,7 +212,7 @@ describe('Brand Replication Integration', () => {
         apiKey: 'test-key'
       });
 
-      const result = await composer.compose(createMockArticleContent());
+      const result = await composer.compose(createMockArticleContent() as ComposerArticleContent);
 
       // Assert
       expect(result.metadata).toBeDefined();
@@ -271,7 +271,7 @@ describe('Brand Replication Integration', () => {
       });
 
       // Act
-      const result = await composer.compose(createMockArticleContent());
+      const result = await composer.compose(createMockArticleContent() as ComposerArticleContent);
 
       // Assert: Should produce fallback CSS
       expect(result.standaloneCss).toBeTruthy();
@@ -447,7 +447,7 @@ describe('Brand Replication Integration', () => {
         apiKey: 'test-key'
       });
 
-      const result = await composer.compose(createMockArticleContent());
+      const result = await composer.compose(createMockArticleContent() as ComposerArticleContent);
 
       // CSS should be complete and standalone
       expect(result.standaloneCss).toBeTruthy();

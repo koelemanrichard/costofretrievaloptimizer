@@ -219,7 +219,7 @@ test.describe('Checkpoint 3 - DesignDNA Inspection', () => {
         const fiberKey = Object.keys(root).find(k => k.startsWith('__reactFiber$'));
         if (!fiberKey) return null;
 
-        const fiber = (root as Record<string, unknown>)[fiberKey] as Record<string, unknown>;
+        const fiber = (root as unknown as Record<string, unknown>)[fiberKey] as Record<string, unknown>;
         let current: Record<string, unknown> | null = fiber;
         const visited = new Set<Record<string, unknown>>();
 

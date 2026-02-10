@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { UrlDiscoveryService, type UrlSuggestion } from '../UrlDiscoveryService';
+import { UrlDiscoveryService, type UrlSuggestion, type PageCrawlerLike } from '../UrlDiscoveryService';
 import { PageCrawler } from '../PageCrawler';
 
 const mockHtml = `
@@ -42,7 +42,7 @@ describe('UrlDiscoveryService', () => {
     };
 
     // Use dependency injection to pass mock crawler factory
-    service = new UrlDiscoveryService(() => mockCrawler);
+    service = new UrlDiscoveryService(() => mockCrawler as PageCrawlerLike);
   });
 
   afterEach(() => {
