@@ -91,20 +91,42 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
           <span className="text-xs text-zinc-300 truncate" title={element.label}>
             {element.label}
           </span>
+          {element.qualityScore !== undefined && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+              element.qualityScore >= 70 ? 'bg-green-500/20 text-green-400' :
+              element.qualityScore >= 40 ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-red-500/20 text-red-400'
+            }`}>
+              {element.qualityScore}%
+            </span>
+          )}
+          {element.aiGenerated && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">
+              AI Generated
+            </span>
+          )}
         </div>
         <span className="text-[10px] text-zinc-600 shrink-0">{element.pageRegion}</span>
       </div>
 
-      {/* Preview iframe */}
+      {/* Preview: element screenshot (if available) or iframe */}
       <div className="bg-white overflow-hidden" style={{ maxHeight: 200 }}>
-        <iframe
-          ref={iframeRef}
-          srcDoc={iframeContent}
-          title={element.label}
-          className="w-full border-0"
-          style={{ height: 80 }}
-          sandbox="allow-same-origin"
-        />
+        {element.elementScreenshotBase64 ? (
+          <img
+            src={`data:image/jpeg;base64,${element.elementScreenshotBase64}`}
+            alt={element.label}
+            className="w-full max-h-[200px] object-contain bg-white"
+          />
+        ) : (
+          <iframe
+            ref={iframeRef}
+            srcDoc={iframeContent}
+            title={element.label}
+            className="w-full border-0"
+            style={{ height: 80 }}
+            sandbox="allow-same-origin"
+          />
+        )}
       </div>
 
       {/* Actions */}

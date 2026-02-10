@@ -29,6 +29,11 @@ export interface StyleGuideElement {
   userComment?: string;
   referenceImageBase64?: string;
   referenceUrl?: string;
+  qualityScore?: number;              // AI validation score 0-100
+  elementScreenshotBase64?: string;   // Playwright element screenshot
+  sourcePageUrl?: string;             // Which page this element was found on
+  aiValidated?: boolean;              // Whether AI has validated this element
+  aiGenerated?: boolean;              // Whether AI created this element (fallback)
 }
 
 export interface StyleGuideColor {
@@ -55,6 +60,8 @@ export interface StyleGuide {
   extractionDurationMs: number;
   elementCount: number;
   version: number;
+  pageScreenshots?: { url: string; base64: string }[];  // Screenshots per crawled page
+  pagesScanned?: number;              // Number of pages crawled
 }
 
 export interface SavedStyleGuide {

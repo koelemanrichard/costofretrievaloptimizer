@@ -3,6 +3,7 @@
 // =============================================================================
 // Uses Apify playwright-scraper to capture real design elements, not AI guesses.
 // Each element is extracted as self-contained HTML with inline styles.
+// v2: Smart filtering, complexity limits, multi-page crawling, element screenshots.
 
 import { runApifyActor, ApifyProxyConfig } from '../apifyService';
 
@@ -64,6 +65,10 @@ export interface RawExtractedElement {
   computedCss: Record<string, string>;
   selfContainedHtml: string;
   pageRegion: string;
+  elementScreenshotBase64?: string;
+  sourcePageUrl?: string;
+  childCount?: number;
+  outerHtmlLength?: number;
 }
 
 /** Raw extraction result from Apify */
@@ -75,11 +80,15 @@ export interface RawStyleGuideExtraction {
   url: string;
   extractionDurationMs: number;
   error?: string;
+  colorMap?: Record<string, { count: number; sources: string[] }>;
+  pageScreenshots?: { url: string; base64: string }[];
+  pagesScanned?: number;
 }
 
 export const StyleGuideExtractor = {
   /**
    * Extract style guide elements from a target URL using Apify playwright-scraper.
+   * v2: Crawls up to 4 pages on the same domain, merges results.
    */
   async extractStyleGuide(
     url: string,
@@ -90,9 +99,19 @@ export const StyleGuideExtractor = {
       throw new Error('Apify API token is required');
     }
 
+    const startTime = Date.now();
+
     // Ensure URL has protocol
     if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
+    }
+
+    // Extract hostname for same-domain restriction
+    let hostname = '';
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      hostname = url.replace(/^https?:\/\//, '').split('/')[0];
     }
 
     const pageFunction = buildPageFunction();
@@ -101,9 +120,13 @@ export const StyleGuideExtractor = {
       startUrls: [{ url }],
       pageFunction,
       proxyConfiguration: { useApifyProxy: true },
-      maxConcurrency: 1,
-      maxRequestsPerCrawl: 1,
-      linkSelector: '',
+      maxConcurrency: 2,
+      maxRequestsPerCrawl: 4,
+      linkSelector: 'a[href]',
+      pseudoUrls: [
+        { purl: `https://${hostname}[.*]` },
+        { purl: `http://${hostname}[.*]` },
+      ],
       launchContext: {
         launchOptions: { headless: true },
       },
@@ -111,29 +134,82 @@ export const StyleGuideExtractor = {
       requestHandlerTimeoutSecs: 120,
     };
 
-    console.log('[StyleGuideExtractor] Starting extraction for:', url);
+    console.log('[StyleGuideExtractor] Starting multi-page extraction for:', url, '(up to 4 pages on', hostname, ')');
     const results = await runApifyActor(PLAYWRIGHT_SCRAPER_ACTOR_ID, apiToken, runInput, proxyConfig);
 
     if (!results || results.length === 0) {
       throw new Error('No results from style guide extraction — Apify returned empty dataset');
     }
 
-    const result = results[0];
-    if (result.error) {
-      throw new Error(`Style guide extraction failed: ${result.error}`);
+    // Merge results from all crawled pages
+    const allElements: RawExtractedElement[] = [];
+    const pageScreenshots: { url: string; base64: string }[] = [];
+    let googleFontsUrls: string[] = [];
+    let googleFontFamilies: string[] = [];
+    const colorMaps: Record<string, { count: number; sources: string[] }>[] = [];
+    let firstScreenshot = '';
+    let pagesScanned = 0;
+
+    for (const result of results) {
+      if (result.error) {
+        console.warn('[StyleGuideExtractor] Page error:', result.url, result.error);
+        continue;
+      }
+      pagesScanned++;
+
+      if (result.elements) {
+        for (const el of result.elements) {
+          el.sourcePageUrl = result.url;
+          allElements.push(el);
+        }
+      }
+
+      if (result.screenshotBase64) {
+        pageScreenshots.push({ url: result.url, base64: result.screenshotBase64 });
+        if (!firstScreenshot) firstScreenshot = result.screenshotBase64;
+      }
+
+      if (result.googleFontsUrls) googleFontsUrls.push(...result.googleFontsUrls);
+      if (result.googleFontFamilies) googleFontFamilies.push(...result.googleFontFamilies);
+      if (result.colorMap) colorMaps.push(result.colorMap);
     }
 
-    console.log('[StyleGuideExtractor] Extracted', result.elements?.length || 0, 'elements');
-    return result as RawStyleGuideExtraction;
+    // Deduplicate fonts
+    googleFontsUrls = [...new Set(googleFontsUrls)];
+    googleFontFamilies = [...new Set(googleFontFamilies)];
+
+    // Merge colorMaps
+    const mergedColorMap: Record<string, { count: number; sources: string[] }> = {};
+    for (const cm of colorMaps) {
+      for (const [color, data] of Object.entries(cm)) {
+        if (!mergedColorMap[color]) mergedColorMap[color] = { count: 0, sources: [] };
+        mergedColorMap[color].count += data.count;
+        mergedColorMap[color].sources.push(...(data.sources || []));
+      }
+    }
+
+    console.log('[StyleGuideExtractor] Merged', allElements.length, 'elements from', pagesScanned, 'pages');
+
+    return {
+      elements: allElements,
+      screenshotBase64: firstScreenshot,
+      pageScreenshots,
+      googleFontsUrls,
+      googleFontFamilies,
+      colorMap: mergedColorMap,
+      url,
+      extractionDurationMs: Date.now() - startTime,
+      pagesScanned,
+    };
   },
 };
 
 /**
  * Build the Apify page function string for style guide extraction.
  * This runs inside the Playwright browser context.
+ * v2: Smart filtering, complexity limits, depth-limited cloning, element screenshots.
  */
 function buildPageFunction(): string {
-  // Stringify the CSS props map for injection into the page function
   const cssPropsMapStr = JSON.stringify(CSS_PROPS_MAP);
 
   return `
@@ -205,7 +281,7 @@ function buildPageFunction(): string {
 
         await page.waitForTimeout(500);
 
-        // ── Capture screenshot ──
+        // ── Capture page screenshot ──
         const screenshot = await page.screenshot({ type: 'jpeg', quality: 80, fullPage: false });
         const screenshotBase64 = screenshot.toString('base64');
 
@@ -216,6 +292,24 @@ function buildPageFunction(): string {
           const MAX_PER_SUBCATEGORY = 3;
           const MAX_TOTAL = 50;
           const elements = [];
+
+          // ── v2: Noise ancestor check — skip elements inside cookie/consent/widget containers ──
+          const NOISE_SELECTOR = '[class*="cookie"],[id*="cookie"],[class*="Cookie"],[id*="Cookie"],[class*="consent"],[id*="consent"],[id*="CookieBot"],[id*="Cookiebot"],[id*="CybotCookiebotDialog"],[class*="gdpr"],[id*="gdpr"],[class*="popup"],[class*="modal"],[class*="overlay"],[class*="chat-widget"],[class*="intercom"],[id*="hubspot"],[class*="cookie-banner"],[class*="notice-banner"]';
+
+          function isInsideNoise(el) {
+            try {
+              return !!el.closest(NOISE_SELECTOR);
+            } catch (e) { return false; }
+          }
+
+          // ── v2: Complexity check — reject elements that are too large ──
+          function isElementTooComplex(el) {
+            const html = el.outerHTML;
+            if (html.length > 8000) return true;
+            if (el.children.length > 25) return true;
+            if (el.querySelectorAll('*').length > 100) return true;
+            return false;
+          }
 
           // ── Helper: Get computed CSS properties ──
           function getComputedProps(el, propNames) {
@@ -244,33 +338,64 @@ function buildPageFunction(): string {
             return 'unknown';
           }
 
-          // ── Helper: Build self-contained HTML ──
-          function buildSelfContained(el, computedCss) {
-            const clone = el.cloneNode(true);
-            // Remove data-* attributes and scripts
-            clone.querySelectorAll('script').forEach(s => s.remove());
-            const allEls = [clone, ...clone.querySelectorAll('*')];
-            for (const child of allEls) {
-              const attrs = Array.from(child.attributes || []);
-              for (const attr of attrs) {
-                if (attr.name.startsWith('data-') || attr.name === 'onclick' || attr.name === 'onload') {
-                  child.removeAttribute(attr.name);
+          // ── v2: Depth-limited self-contained HTML builder ──
+          function buildSelfContained(el, computedCss, maxDepth) {
+            maxDepth = maxDepth || 3;
+
+            function cloneWithDepth(node, depth) {
+              if (depth > maxDepth) return null;
+              var clone = node.cloneNode(false);
+
+              // Apply inline styles to root
+              if (depth === 0) {
+                var styleStr = Object.entries(computedCss)
+                  .map(function(pair) { return pair[0].replace(/([A-Z])/g, '-$1').toLowerCase() + ': ' + pair[1]; })
+                  .join('; ');
+                clone.setAttribute('style', styleStr);
+              }
+
+              // Clone children with depth limit
+              for (var i = 0; i < node.childNodes.length; i++) {
+                var child = node.childNodes[i];
+                if (child.nodeType === 3) { // Text node
+                  clone.appendChild(child.cloneNode(false));
+                } else if (child.nodeType === 1) { // Element node
+                  var childClone = cloneWithDepth(child, depth + 1);
+                  if (childClone) clone.appendChild(childClone);
                 }
               }
+
+              // Remove noise attributes
+              if (clone.removeAttribute) {
+                var attrs = Array.from(clone.attributes || []);
+                for (var j = 0; j < attrs.length; j++) {
+                  var attr = attrs[j];
+                  if (attr.name.startsWith('data-') && attr.name !== 'data-sg-id') {
+                    clone.removeAttribute(attr.name);
+                  }
+                  if (attr.name === 'onclick' || attr.name === 'onload') {
+                    clone.removeAttribute(attr.name);
+                  }
+                }
+              }
+
+              // Remove script elements
+              if (clone.querySelectorAll) {
+                clone.querySelectorAll('script').forEach(function(s) { s.remove(); });
+              }
+
+              return clone;
             }
-            // Apply computed styles inline
-            const styleStr = Object.entries(computedCss)
-              .map(([k, v]) => k.replace(/([A-Z])/g, '-$1').toLowerCase() + ': ' + v)
-              .join('; ');
-            clone.setAttribute('style', styleStr);
-            return clone.outerHTML;
+
+            var result = cloneWithDepth(el, 0);
+            return result ? result.outerHTML : '';
           }
 
           // ── Helper: Hash computed CSS for dedup ──
           function hashCss(css) {
-            const keys = ['fontFamily', 'fontSize', 'fontWeight', 'color', 'backgroundColor',
+            var keys = ['fontFamily', 'fontSize', 'fontWeight', 'color', 'backgroundColor',
                           'borderRadius', 'padding', 'border', 'boxShadow'];
-            return keys.map(k => css[k] || '').join('|');
+            return keys.map(function(k) { return css[k] || ''; }).join('|');
           }
 
           // ── Helper: Truncate outerHTML ──
@@ -279,8 +404,17 @@ function buildPageFunction(): string {
             return html.substring(0, maxLen) + '<!-- truncated -->';
           }
 
-          // ── Category extraction configs ──
-          const categories = [
+          // ── v2: Size filter check ──
+          function passesSizeFilter(el, filter) {
+            if (!filter) return true;
+            var rect = el.getBoundingClientRect();
+            if (filter.maxWidth && rect.width > filter.maxWidth) return false;
+            if (filter.maxHeight && rect.height > filter.maxHeight) return false;
+            return true;
+          }
+
+          // ── v2: Improved category extraction configs ──
+          var categories = [
             {
               category: 'typography',
               subcategories: [
@@ -297,12 +431,15 @@ function buildPageFunction(): string {
               category: 'buttons',
               subcategories: [
                 {
-                  name: 'button',
+                  name: 'cta-button',
                   selectors: [
-                    'button:not([class*="cookie"]):not([class*="consent"])',
-                    '.btn', '[class*="button"]:not([class*="cookie"])',
-                    'a[class*="btn"]', '[role="button"]',
+                    'a[class*="btn"]:not(nav a)',
+                    'a[class*="cta"]',
+                    'button[class*="btn"]:not([class*="menu"]):not([class*="toggle"]):not([class*="close"]):not([class*="nav"])',
+                    '.wp-block-button a',
                     'input[type="submit"]',
+                    'a[class*="button"]:not(nav a):not(header a)',
+                    'button[type="submit"]',
                   ],
                 },
               ],
@@ -313,9 +450,12 @@ function buildPageFunction(): string {
                 {
                   name: 'card',
                   selectors: [
-                    '.card', '[class*="card"]', 'article',
-                    '[class*="feature"]', '[class*="pricing"]',
+                    '.card:not(body > .card)',
+                    '[class*="feature-box"]', '[class*="pricing-table"]',
+                    '[class*="service-item"]', '[class*="team-member"]',
+                    '[class*="post-card"]', '[class*="blog-card"]',
                   ],
+                  sizeFilter: { maxWidth: 800, maxHeight: 1000 },
                 },
               ],
             },
@@ -323,8 +463,13 @@ function buildPageFunction(): string {
               category: 'navigation',
               subcategories: [
                 {
-                  name: 'nav',
-                  selectors: ['nav', '[role="navigation"]', '.breadcrumbs', '.breadcrumb'],
+                  name: 'nav-bar',
+                  selectors: ['nav > ul', 'nav > div > ul', '[role="navigation"] > ul'],
+                  simplifyNav: true,
+                },
+                {
+                  name: 'breadcrumb',
+                  selectors: ['.breadcrumbs', '.breadcrumb', '[class*="breadcrumb"]'],
                 },
               ],
             },
@@ -372,49 +517,69 @@ function buildPageFunction(): string {
             },
           ];
 
-          const seenHashes = new Map(); // subcategory -> Set<hash>
+          var seenHashes = {}; // subcategory -> { hash: true }
 
-          for (const cat of categories) {
+          for (var ci = 0; ci < categories.length; ci++) {
+            var cat = categories[ci];
             if (elements.length >= MAX_TOTAL) break;
 
-            const cssProps = cssPropsMap[cat.category] || cssPropsMap['typography'];
+            var cssProps = cssPropsMap[cat.category] || cssPropsMap['typography'];
 
-            for (const sub of cat.subcategories) {
+            for (var si = 0; si < cat.subcategories.length; si++) {
+              var sub = cat.subcategories[si];
               if (elements.length >= MAX_TOTAL) break;
 
-              const hashSet = seenHashes.get(sub.name) || new Set();
-              seenHashes.set(sub.name, hashSet);
-              let count = 0;
+              if (!seenHashes[sub.name]) seenHashes[sub.name] = {};
+              var hashSet = seenHashes[sub.name];
+              var count = 0;
 
-              for (const selector of sub.selectors) {
+              // Determine clone depth: simplified nav gets depth 2
+              var cloneDepth = sub.simplifyNav ? 2 : 3;
+
+              for (var seli = 0; seli < sub.selectors.length; seli++) {
+                var selector = sub.selectors[seli];
                 if (count >= MAX_PER_SUBCATEGORY) break;
 
                 try {
-                  const matched = document.querySelectorAll(selector);
-                  const limit = cat.category === 'images' ? 5 : matched.length;
+                  var matched = document.querySelectorAll(selector);
+                  var limit = cat.category === 'images' ? 5 : matched.length;
 
-                  for (let i = 0; i < Math.min(limit, matched.length); i++) {
+                  for (var i = 0; i < Math.min(limit, matched.length); i++) {
                     if (count >= MAX_PER_SUBCATEGORY) break;
                     if (elements.length >= MAX_TOTAL) break;
 
-                    const el = matched[i];
+                    var el = matched[i];
+
+                    // v2: Skip elements inside noise ancestors
+                    if (isInsideNoise(el)) continue;
 
                     // Skip hidden/tiny elements
-                    const rect = el.getBoundingClientRect();
+                    var rect = el.getBoundingClientRect();
                     if (rect.width < 10 || rect.height < 5) continue;
                     // Skip offscreen
                     if (rect.top > 5000) continue;
 
-                    const computed = getComputedProps(el, cssProps);
-                    const hash = hashCss(computed);
+                    // v2: Complexity check
+                    if (isElementTooComplex(el)) continue;
+
+                    // v2: Size filter for cards etc.
+                    if (!passesSizeFilter(el, sub.sizeFilter)) continue;
+
+                    var computed = getComputedProps(el, cssProps);
+                    var hash = hashCss(computed);
 
                     // Deduplicate
-                    if (hashSet.has(hash)) continue;
-                    hashSet.add(hash);
+                    if (hashSet[hash]) continue;
+                    hashSet[hash] = true;
                     count++;
 
-                    const outerHtml = truncateHtml(el.outerHTML, 3000);
-                    const selfContained = buildSelfContained(el, computed);
+                    var originalHtmlLen = el.outerHTML.length;
+                    var outerHtml = truncateHtml(el.outerHTML, 3000);
+                    var selfContained = buildSelfContained(el, computed, cloneDepth);
+
+                    // Tag element for screenshot capture
+                    var sgId = elements.length;
+                    el.setAttribute('data-sg-id', String(sgId));
 
                     elements.push({
                       category: cat.category,
@@ -422,10 +587,12 @@ function buildPageFunction(): string {
                       selector: selector,
                       elementTag: el.tagName.toLowerCase(),
                       classNames: Array.from(el.classList || []),
-                      outerHtml,
+                      outerHtml: outerHtml,
                       computedCss: computed,
                       selfContainedHtml: truncateHtml(selfContained, 5000),
                       pageRegion: getPageRegion(el),
+                      childCount: el.children.length,
+                      outerHtmlLength: originalHtmlLen,
                     });
                   }
                 } catch (e) {
@@ -438,24 +605,32 @@ function buildPageFunction(): string {
           // ── Extract background sections ──
           if (elements.length < MAX_TOTAL) {
             try {
-              const sections = document.querySelectorAll('section, [class*="section"], .hero, [class*="hero"], [class*="banner"]');
-              let bgCount = 0;
-              const bgProps = cssPropsMap['backgrounds'];
+              var sections = document.querySelectorAll('section, [class*="section"], .hero, [class*="hero"], [class*="banner"]');
+              var bgCount = 0;
+              var bgProps = cssPropsMap['backgrounds'];
 
-              for (const section of sections) {
+              for (var bi = 0; bi < sections.length; bi++) {
+                var section = sections[bi];
                 if (bgCount >= 3 || elements.length >= MAX_TOTAL) break;
-                const style = window.getComputedStyle(section);
-                const bg = style.backgroundColor;
-                const bgImage = style.backgroundImage;
+
+                // v2: Skip noise ancestors
+                if (isInsideNoise(section)) continue;
+
+                var style = window.getComputedStyle(section);
+                var bg = style.backgroundColor;
+                var bgImage = style.backgroundImage;
 
                 // Skip white/transparent backgrounds
                 if ((!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgb(255, 255, 255)') &&
                     (!bgImage || bgImage === 'none')) continue;
 
-                const computed = getComputedProps(section, bgProps);
-                const selfContained = '<div style="' +
-                  Object.entries(computed).map(([k, v]) => k.replace(/([A-Z])/g, '-$1').toLowerCase() + ':' + v).join(';') +
+                var computed = getComputedProps(section, bgProps);
+                var selfContained = '<div style="' +
+                  Object.entries(computed).map(function(pair) { return pair[0].replace(/([A-Z])/g, '-$1').toLowerCase() + ':' + pair[1]; }).join(';') +
                   ';min-height:80px;width:100%"></div>';
+
+                var bgSgId = elements.length;
+                section.setAttribute('data-sg-id', String(bgSgId));
 
                 elements.push({
                   category: 'backgrounds',
@@ -467,6 +642,8 @@ function buildPageFunction(): string {
                   computedCss: computed,
                   selfContainedHtml: selfContained,
                   pageRegion: 'main',
+                  childCount: section.children.length,
+                  outerHtmlLength: 0,
                 });
                 bgCount++;
               }
@@ -474,32 +651,32 @@ function buildPageFunction(): string {
           }
 
           // ── Extract Google Fonts ──
-          const googleFontsUrls = [];
-          const googleFontFamilies = [];
+          var googleFontsUrls = [];
+          var googleFontFamilies = [];
           try {
-            const links = document.querySelectorAll('link[href*="fonts.googleapis.com"], link[href*="fonts.gstatic.com"]');
-            links.forEach(link => {
-              const href = link.getAttribute('href');
+            var links = document.querySelectorAll('link[href*="fonts.googleapis.com"], link[href*="fonts.gstatic.com"]');
+            links.forEach(function(link) {
+              var href = link.getAttribute('href');
               if (href) googleFontsUrls.push(href);
             });
 
-            const styles = document.querySelectorAll('style');
-            styles.forEach(style => {
-              const text = style.textContent || '';
-              const importMatches = text.match(/@import\\s+url\\(['"]?(https?:\\/\\/fonts\\.googleapis\\.com[^'")]+)['"]?\\)/g);
+            var styles = document.querySelectorAll('style');
+            styles.forEach(function(style) {
+              var text = style.textContent || '';
+              var importMatches = text.match(/@import\\s+url\\(['"]?(https?:\\/\\/fonts\\.googleapis\\.com[^'")]+)['"]?\\)/g);
               if (importMatches) {
-                importMatches.forEach(m => {
-                  const urlMatch = m.match(/url\\(['"]?(https?:\\/\\/fonts\\.googleapis\\.com[^'")]+)['"]?\\)/);
+                importMatches.forEach(function(m) {
+                  var urlMatch = m.match(/url\\(['"]?(https?:\\/\\/fonts\\.googleapis\\.com[^'")]+)['"]?\\)/);
                   if (urlMatch) googleFontsUrls.push(urlMatch[1]);
                 });
               }
             });
 
-            googleFontsUrls.forEach(url => {
-              const familyMatches = url.match(/family=([^&]+)/g);
+            googleFontsUrls.forEach(function(url) {
+              var familyMatches = url.match(/family=([^&]+)/g);
               if (familyMatches) {
-                familyMatches.forEach(fm => {
-                  const name = fm.replace('family=', '').split(':')[0].replace(/\\+/g, ' ');
+                familyMatches.forEach(function(fm) {
+                  var name = fm.replace('family=', '').split(':')[0].replace(/\\+/g, ' ');
                   if (name && !googleFontFamilies.includes(name)) googleFontFamilies.push(name);
                 });
               }
@@ -507,13 +684,16 @@ function buildPageFunction(): string {
           } catch (e) { /* ignore */ }
 
           // ── Extract colors from all elements ──
-          const colorMap = {};
+          var colorMap = {};
           try {
-            const colorEls = document.querySelectorAll('a, button, h1, h2, h3, h4, p, [class*="btn"], [class*="cta"], nav a, header, footer');
-            colorEls.forEach(el => {
-              const style = window.getComputedStyle(el);
-              const bg = style.backgroundColor;
-              const color = style.color;
+            var colorEls = document.querySelectorAll('a, button, h1, h2, h3, h4, p, [class*="btn"], [class*="cta"], nav a, header, footer');
+            colorEls.forEach(function(el) {
+              // v2: Skip noise
+              if (isInsideNoise(el)) return;
+
+              var style = window.getComputedStyle(el);
+              var bg = style.backgroundColor;
+              var color = style.color;
               if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
                 colorMap[bg] = (colorMap[bg] || { count: 0, sources: [] });
                 colorMap[bg].count++;
@@ -528,15 +708,32 @@ function buildPageFunction(): string {
           } catch (e) { /* ignore */ }
 
           return {
-            elements,
-            googleFontsUrls,
-            googleFontFamilies,
-            colorMap,
+            elements: elements,
+            googleFontsUrls: googleFontsUrls,
+            googleFontFamilies: googleFontFamilies,
+            colorMap: colorMap,
           };
         }, cssPropsMap);
 
-        const extractionDurationMs = Date.now() - startTime;
+        // ── v2: Capture per-element screenshots ──
+        var MAX_SCREENSHOTS = 25;
+        var elementCount = extractionResult.elements.length;
+        log.info('Capturing element screenshots (max ' + MAX_SCREENSHOTS + ' of ' + elementCount + ')...');
 
+        for (var i = 0; i < Math.min(elementCount, MAX_SCREENSHOTS); i++) {
+          try {
+            var loc = page.locator('[data-sg-id="' + i + '"]').first();
+            var isVis = await loc.isVisible({ timeout: 1000 }).catch(function() { return false; });
+            if (isVis) {
+              var shot = await loc.screenshot({ type: 'jpeg', quality: 70, timeout: 3000 });
+              extractionResult.elements[i].elementScreenshotBase64 = shot.toString('base64');
+            }
+          } catch (e) {
+            // Skip screenshot for this element
+          }
+        }
+
+        var extractionDurationMs = Date.now() - startTime;
         log.info('Extraction complete:', extractionResult.elements.length, 'elements in', extractionDurationMs, 'ms');
 
         return {
@@ -544,9 +741,9 @@ function buildPageFunction(): string {
           googleFontsUrls: extractionResult.googleFontsUrls,
           googleFontFamilies: extractionResult.googleFontFamilies,
           colorMap: extractionResult.colorMap,
-          screenshotBase64,
+          screenshotBase64: screenshotBase64,
           url: request.url,
-          extractionDurationMs,
+          extractionDurationMs: extractionDurationMs,
         };
       } catch (error) {
         log.error('Style guide extraction failed:', error.message);

@@ -158,6 +158,8 @@ export const StyleGuideGenerator = {
         elementTag: raw.elementTag,
         classNames: raw.classNames || [],
         approvalStatus: 'approved', // Opt-out model: approved by default
+        elementScreenshotBase64: raw.elementScreenshotBase64,
+        sourcePageUrl: raw.sourcePageUrl,
       });
     }
 
@@ -213,7 +215,145 @@ export const StyleGuideGenerator = {
       extractionDurationMs: rawExtraction.extractionDurationMs || (Date.now() - startTime),
       elementCount: elements.length,
       version: 1,
+      pageScreenshots: rawExtraction.pageScreenshots,
+      pagesScanned: rawExtraction.pagesScanned,
     };
+  },
+
+  /**
+   * Validate extracted elements using AI vision.
+   * Sends element screenshots + page screenshot to AI for quality scoring (0-100).
+   * Auto-rejects elements scoring below 40.
+   */
+  async validateElements(
+    guide: StyleGuide,
+    aiConfig: AiRefineConfig,
+    onProgress?: (validated: number, total: number) => void,
+  ): Promise<StyleGuide> {
+    const elementsWithScreenshots = guide.elements.filter(e => e.elementScreenshotBase64);
+    const pageScreenshot = guide.screenshotBase64 || guide.pageScreenshots?.[0]?.base64;
+
+    if (!pageScreenshot || elementsWithScreenshots.length === 0) {
+      return guide;
+    }
+
+    // Batch elements for efficient AI calls (4 per batch)
+    const batches = chunkArray(elementsWithScreenshots, 4);
+    let validated = 0;
+
+    for (const batch of batches) {
+      const prompt = buildValidationPrompt(batch);
+      try {
+        const result = await callRefineAI(aiConfig, prompt, pageScreenshot);
+        const scores = parseValidationScores(result, batch.length);
+
+        for (let i = 0; i < batch.length; i++) {
+          const el = guide.elements.find(e => e.id === batch[i].id);
+          if (el && scores[i] !== undefined) {
+            el.qualityScore = scores[i].score;
+            el.aiValidated = true;
+            if (scores[i].score < 40) {
+              el.approvalStatus = 'rejected';
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[StyleGuideGenerator] Validation batch failed:', err);
+      }
+
+      validated += batch.length;
+      onProgress?.(validated, elementsWithScreenshots.length);
+    }
+
+    return guide;
+  },
+
+  /**
+   * Generate AI fallback elements for categories with 0 approved elements.
+   * Uses page screenshot + brand colors/fonts to create matching HTML elements.
+   */
+  async generateFallbackElements(
+    guide: StyleGuide,
+    aiConfig: AiRefineConfig,
+  ): Promise<StyleGuide> {
+    const pageScreenshot = guide.screenshotBase64 || guide.pageScreenshots?.[0]?.base64;
+    if (!pageScreenshot) return guide;
+
+    // Find categories with 0 approved elements
+    const approvedByCategory = new Map<string, number>();
+    for (const el of guide.elements) {
+      if (el.approvalStatus === 'approved') {
+        approvedByCategory.set(el.category, (approvedByCategory.get(el.category) || 0) + 1);
+      }
+    }
+
+    const requiredCategories = ['buttons', 'cards', 'navigation', 'backgrounds'];
+    const missingCategories = requiredCategories.filter(cat => !approvedByCategory.get(cat));
+
+    if (missingCategories.length === 0) return guide;
+
+    const colorContext = guide.colors
+      .filter(c => c.approvalStatus === 'approved')
+      .slice(0, 6)
+      .map(c => `${c.hex} (${c.usage})`)
+      .join(', ');
+    const fontContext = guide.googleFontFamilies.join(', ') || 'system-ui';
+
+    const prompt = `You are an expert web designer. I'm showing you a screenshot of a website (IMAGE 1).
+
+The following design element categories could NOT be extracted from the DOM:
+${missingCategories.map(c => `- ${c}`).join('\n')}
+
+Website's colors: ${colorContext || 'not detected'}
+Website's fonts: ${fontContext}
+
+For EACH missing category, create a realistic self-contained HTML element that matches this website's visual style. Use inline styles only. The HTML should be a clean, minimal example (not the whole page).
+
+Requirements per category:
+- **buttons**: A primary CTA button + a secondary button. Match the site's color scheme, border-radius, font.
+- **cards**: A content card with image placeholder, title, and excerpt. Match the site's card style.
+- **navigation**: A simplified top nav bar with 4-5 menu items. Match the site's nav style.
+- **backgrounds**: A section with the site's accent/brand background color and white text.
+
+Return ONLY valid JSON array:
+[
+  {
+    "category": "buttons",
+    "subcategory": "cta-button",
+    "label": "Primary CTA Button",
+    "selfContainedHtml": "<a style='...' href='#'>Get Started</a>",
+    "computedCss": { "backgroundColor": "#2a4eef", "color": "#ffffff", "borderRadius": "4px" }
+  }
+]`;
+
+    try {
+      const result = await callRefineAI(aiConfig, prompt, pageScreenshot);
+      const fallbacks = parseFallbackElements(result);
+
+      for (const fb of fallbacks) {
+        guide.elements.push({
+          id: uuidv4(),
+          category: fb.category as StyleGuideCategory,
+          subcategory: fb.subcategory || 'ai-fallback',
+          label: (fb.label || fb.category) + ' (AI-generated)',
+          pageRegion: 'main',
+          outerHtml: fb.selfContainedHtml || '',
+          computedCss: fb.computedCss || {},
+          selfContainedHtml: fb.selfContainedHtml || '',
+          selector: 'ai-generated',
+          elementTag: 'div',
+          classNames: [],
+          approvalStatus: 'approved',
+          aiGenerated: true,
+          qualityScore: 75,
+        });
+      }
+    } catch (err) {
+      console.warn('[StyleGuideGenerator] Fallback generation failed:', err);
+    }
+
+    guide.elementCount = guide.elements.length;
+    return guide;
   },
 
   /**
@@ -356,4 +496,71 @@ async function callOpenAIRefine(config: AiRefineConfig, prompt: string, img1?: s
   });
   const data = await response.json();
   return data.choices?.[0]?.message?.content || '';
+}
+
+// =============================================================================
+// AI Validation & Fallback Helpers
+// =============================================================================
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function buildValidationPrompt(elements: StyleGuideElement[]): string {
+  const descriptions = elements.map((el, i) =>
+    `Element ${i + 1}: Category="${el.category}", Subcategory="${el.subcategory}", Label="${el.label}", Tag=<${el.elementTag}>, Classes=[${el.classNames.slice(0, 3).join(', ')}]`
+  ).join('\n');
+
+  return `You are a design system expert. I'm showing you a screenshot of a website (IMAGE 1).
+
+I extracted these ${elements.length} design elements from the site's DOM:
+
+${descriptions}
+
+For each element, score it 0-100 on whether it's a GENUINE, USEFUL design element of its stated category:
+- 90-100: Perfect representative element (e.g., a real CTA button for "buttons" category)
+- 70-89: Good element, minor issues (slightly wrong subcategory but still useful)
+- 40-69: Questionable (might be a navigation item labeled as button, or a page wrapper labeled as card)
+- 0-39: Wrong (cookie widget, consent banner, builder chrome, page wrapper, off-screen element)
+
+Consider: Does this element represent a reusable design pattern from this website? Would a designer include it in a style guide?
+
+Return ONLY valid JSON array:
+[
+  { "index": 1, "score": 85, "reason": "Real CTA button with brand styling" },
+  { "index": 2, "score": 20, "reason": "Cookie consent widget, not a design element" }
+]`;
+}
+
+function parseValidationScores(raw: string, expectedCount: number): { score: number; reason: string }[] {
+  try {
+    let text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return Array(expectedCount).fill({ score: 50, reason: 'Parse failed' });
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed)) return Array(expectedCount).fill({ score: 50, reason: 'Parse failed' });
+    return parsed.map((item: any) => ({
+      score: typeof item.score === 'number' ? item.score : 50,
+      reason: item.reason || '',
+    }));
+  } catch {
+    return Array(expectedCount).fill({ score: 50, reason: 'Parse failed' });
+  }
+}
+
+function parseFallbackElements(raw: string): { category: string; subcategory: string; label: string; selfContainedHtml: string; computedCss: Record<string, string> }[] {
+  try {
+    let text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item: any) => item.category && item.selfContainedHtml);
+  } catch {
+    return [];
+  }
 }

@@ -85,8 +85,12 @@ export function generateStyleGuideHtml(styleGuide: StyleGuide): string {
       ${elements.map(el => `
       <div class="sg-element">
         <div class="sg-element-header">
-          <h3>${escapeHtml(el.label)}</h3>
-          <span class="sg-meta">${el.subcategory} &middot; ${el.pageRegion}</span>
+          <h3>
+            ${escapeHtml(el.label)}
+            ${el.qualityScore !== undefined ? `<span class="sg-quality-badge" style="background:${el.qualityScore >= 70 ? '#22c55e22' : el.qualityScore >= 40 ? '#eab30822' : '#ef444422'};color:${el.qualityScore >= 70 ? '#22c55e' : el.qualityScore >= 40 ? '#eab308' : '#ef4444'};padding:2px 6px;border-radius:4px;font-size:11px;margin-left:8px;">${el.qualityScore}%</span>` : ''}
+            ${el.aiGenerated ? '<span style="background:#a855f722;color:#a855f7;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:8px;">AI Generated</span>' : ''}
+          </h3>
+          <span class="sg-meta">${el.subcategory} &middot; ${el.pageRegion}${el.sourcePageUrl ? ` &middot; ${escapeHtml(el.sourcePageUrl)}` : ''}</span>
         </div>
         <div class="sg-preview">
           ${el.selfContainedHtml}
@@ -218,6 +222,7 @@ export function generateStyleGuideHtml(styleGuide: StyleGuide): string {
       <h1>Style Guide &mdash; ${escapeHtml(styleGuide.hostname)}</h1>
       <p>
         ${approved.length} elements &middot; ${approvedColors.length} colors
+        ${styleGuide.pagesScanned ? `&middot; ${styleGuide.pagesScanned} pages scanned` : ''}
         &middot; Extracted from <a href="${escapeHtml(styleGuide.sourceUrl)}">${escapeHtml(styleGuide.sourceUrl)}</a>
         &middot; ${new Date(styleGuide.extractedAt).toLocaleDateString()}
       </p>

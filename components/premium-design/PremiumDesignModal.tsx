@@ -20,7 +20,7 @@ import {
   savePremiumDesign,
 } from '../../services/premium-design';
 import { StyleGuideExtractor } from '../../services/design-analysis/StyleGuideExtractor';
-import { StyleGuideGenerator } from '../../services/design-analysis/StyleGuideGenerator';
+import { StyleGuideGenerator, type AiRefineConfig } from '../../services/design-analysis/StyleGuideGenerator';
 import { loadStyleGuide, saveStyleGuide, getHostnameFromUrl } from '../../services/design-analysis/styleGuidePersistence';
 import { StyleGuideView } from './StyleGuideView';
 import { generateStyleGuideHtml } from './StyleGuideExport';
@@ -319,6 +319,8 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
   const [isExtractingGuide, setIsExtractingGuide] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [isRefiningElement, setIsRefiningElement] = useState(false);
+  const [extractionPhase, setExtractionPhase] = useState<string>('');
+  const [extractionProgress, setExtractionProgress] = useState<string>('');
 
   // Get Supabase client helper
   const getSupabase = useCallback(() => {
@@ -329,6 +331,15 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     } catch {
       return null;
     }
+  }, [state.businessInfo]);
+
+  // Get AI config for validation/fallback
+  const getAiConfig = useCallback((): AiRefineConfig | null => {
+    const bi = state.businessInfo;
+    if (bi?.geminiApiKey) return { provider: 'gemini', apiKey: bi.geminiApiKey };
+    if (bi?.anthropicApiKey) return { provider: 'anthropic', apiKey: bi.anthropicApiKey };
+    if (bi?.openAiApiKey) return { provider: 'openai', apiKey: bi.openAiApiKey };
+    return null;
   }, [state.businessInfo]);
 
   // Load saved design when modal opens
@@ -545,8 +556,27 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
         ? { supabaseUrl: bi.supabaseUrl, supabaseAnonKey: bi.supabaseAnonKey }
         : undefined;
 
+      setExtractionPhase('');
+      setExtractionProgress('');
       const rawExtraction = await StyleGuideExtractor.extractStyleGuide(targetUrl, apifyToken, proxyConfig);
-      const guide = StyleGuideGenerator.generate(rawExtraction, rawExtraction.screenshotBase64, targetUrl);
+      let guide = StyleGuideGenerator.generate(rawExtraction, rawExtraction.screenshotBase64, targetUrl);
+
+      // AI Validation: score elements using vision
+      const aiConfig = getAiConfig();
+      if (aiConfig && guide.elements.some(e => e.elementScreenshotBase64)) {
+        setExtractionPhase('validating');
+        guide = await StyleGuideGenerator.validateElements(guide, aiConfig, (done, total) => {
+          setExtractionProgress(`Validating ${done}/${total} elements...`);
+        });
+      }
+
+      // AI Fallback: generate missing category elements
+      if (aiConfig) {
+        setExtractionPhase('enriching');
+        setExtractionProgress('');
+        guide = await StyleGuideGenerator.generateFallbackElements(guide, aiConfig);
+      }
+
       setStyleGuide(guide);
       setView('style-guide');
 
@@ -564,8 +594,10 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
       setView('premium-url');
     } finally {
       setIsExtractingGuide(false);
+      setExtractionPhase('');
+      setExtractionProgress('');
     }
-  }, [targetUrl, state.businessInfo, state.user?.id, dispatch, getSupabase]);
+  }, [targetUrl, state.businessInfo, state.user?.id, dispatch, getSupabase, getAiConfig]);
 
   // Handle style guide approval → continue to premium design pipeline
   const handleStyleGuideApproved = useCallback(async (approvedGuide: StyleGuide) => {
@@ -913,8 +945,22 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
           {view === 'extracting' && (
             <div className="flex flex-col items-center justify-center py-16 space-y-4">
               <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-zinc-300">Extracting design elements from {targetUrl}...</p>
-              <p className="text-xs text-zinc-500">This may take 30-60 seconds</p>
+              <p className="text-sm text-zinc-300">
+                {extractionPhase === 'validating'
+                  ? extractionProgress || 'Validating elements with AI...'
+                  : extractionPhase === 'enriching'
+                    ? 'Generating missing design elements...'
+                    : `Extracting design elements from ${targetUrl}...`}
+              </p>
+              {extractionPhase === '' && (
+                <p className="text-xs text-zinc-500">Scanning up to 4 pages... this may take 60-90 seconds</p>
+              )}
+              {extractionPhase === 'validating' && (
+                <p className="text-xs text-zinc-500">AI is scoring each element for quality</p>
+              )}
+              {extractionPhase === 'enriching' && (
+                <p className="text-xs text-zinc-500">Creating fallback elements for empty categories</p>
+              )}
             </div>
           )}
 
