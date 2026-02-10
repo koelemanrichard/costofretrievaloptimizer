@@ -1,22 +1,41 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Outlet, useParams, useLocation, NavLink } from 'react-router-dom';
+import { useAppState } from '../../../state/appState';
 
-const WIZARD_STEPS = [
+const BASE_WIZARD_STEPS = [
     { label: 'Business Info', path: 'business' },
     { label: 'SEO Pillars', path: 'pillars' },
     { label: 'Semantic Triples', path: 'eavs' },
     { label: 'Competitors', path: 'competitors' },
+    // Catalog step inserted conditionally for ecommerce
     { label: 'Blueprint', path: 'blueprint' },
 ];
+
+const CATALOG_STEP = { label: 'Product Catalog', path: 'catalog' };
 
 /**
  * SetupWizardLayout - Provides a progress indicator and layout wrapper
  * for the multi-step setup wizard. Uses <Outlet /> for step content.
+ *
+ * When websiteType is ECOMMERCE, an optional "Product Catalog" step
+ * is inserted between Competitors and Blueprint.
  */
 const SetupWizardLayout: React.FC = () => {
     const { projectId, mapId } = useParams<{ projectId: string; mapId: string }>();
     const location = useLocation();
+    const { state } = useAppState();
     const basePath = `/p/${projectId}/m/${mapId}/setup`;
+
+    // Conditionally include catalog step for ecommerce projects
+    const isEcommerce = state.businessInfo.websiteType === 'ECOMMERCE';
+
+    const WIZARD_STEPS = useMemo(() => {
+        if (!isEcommerce) return BASE_WIZARD_STEPS;
+        // Insert catalog step after competitors (index 3), before blueprint
+        const steps = [...BASE_WIZARD_STEPS];
+        steps.splice(4, 0, CATALOG_STEP); // Insert at position 4 (after competitors at 3)
+        return steps;
+    }, [isEcommerce]);
 
     // Determine current step index
     const currentStepPath = location.pathname.replace(`${basePath}/`, '').replace(basePath, '');

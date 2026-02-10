@@ -838,6 +838,76 @@ export const CONTENT_TEMPLATES: Record<TemplateName, TemplateConfig> = {
   },
 
   // ============================================================================
+  // ECOMMERCE_CATEGORY - For ecommerce category/collection pages
+  // ============================================================================
+  ECOMMERCE_CATEGORY: {
+    templateName: 'ECOMMERCE_CATEGORY',
+    label: 'E-commerce Category Page',
+    description: 'Category page content with product data, buying guides, and comparison tables',
+    sectionStructure: [
+      {
+        headingPattern: '{entity}: Category Overview',
+        formatCode: FormatCode.PROSE,
+        attributeCategory: 'CORE_DEFINITION',
+        contentZone: ContentZone.MAIN,
+        required: true,
+        order: 1,
+      },
+      {
+        headingPattern: 'Top {entity} Picks',
+        formatCode: FormatCode.LISTING,
+        attributeCategory: 'CORE_DEFINITION',
+        contentZone: ContentZone.MAIN,
+        required: true,
+        order: 2,
+      },
+      {
+        headingPattern: 'How to Choose the Right {entity}',
+        formatCode: FormatCode.PROSE,
+        attributeCategory: 'CORE_DEFINITION',
+        contentZone: ContentZone.MAIN,
+        required: true,
+        order: 3,
+      },
+      {
+        headingPattern: '{entity} Comparison',
+        formatCode: FormatCode.TABLE,
+        attributeCategory: 'SEARCH_DEMAND',
+        contentZone: ContentZone.MAIN,
+        required: true,
+        order: 4,
+      },
+      {
+        headingPattern: 'Frequently Asked Questions',
+        formatCode: FormatCode.PAA,
+        attributeCategory: 'SEARCH_DEMAND',
+        contentZone: ContentZone.SUPPLEMENTARY,
+        required: false,
+        order: 5,
+      },
+      {
+        headingPattern: 'Related Categories',
+        formatCode: FormatCode.PROSE,
+        attributeCategory: 'COMPETITIVE_EXPANSION',
+        contentZone: ContentZone.SUPPLEMENTARY,
+        required: false,
+        order: 6,
+      },
+    ],
+    formatCodeDefaults: {
+      overview: FormatCode.PROSE,
+      picks: FormatCode.LISTING,
+      guide: FormatCode.PROSE,
+      comparison: FormatCode.TABLE,
+    },
+    attributeOrderOverride: ['CORE_DEFINITION', 'SEARCH_DEMAND', 'COMPETITIVE_EXPANSION'],
+    maxSections: 8,
+    minSections: 4,
+    csiPredicates: ['features', 'compares', 'recommends', 'includes'],
+    stylometry: 'PERSUASIVE_SALES',
+  },
+
+  // ============================================================================
   // LOCATION_REALESTATE - For real estate and location-based content
   // ============================================================================
   LOCATION_REALESTATE: {

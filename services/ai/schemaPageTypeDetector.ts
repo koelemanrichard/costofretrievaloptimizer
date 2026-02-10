@@ -365,7 +365,16 @@ export function detectPageType(
     });
   }
 
-  // 5. Featured snippet target
+  // 5. Category page context (strong signal for CollectionPage)
+  if (brief.categoryContext) {
+    signals.push({
+      type: 'CollectionPage',
+      weight: 0.6,
+      source: `Category page context (${brief.categoryContext.totalProductCount} products)`
+    });
+  }
+
+  // 6. Featured snippet target
   if (brief.featured_snippet_target) {
     if (brief.featured_snippet_target.target_type === 'LIST') {
       signals.push({ type: 'HowTo', weight: 0.15, source: 'Featured snippet target (list)' });

@@ -28,6 +28,10 @@ const EavsPage = lazy(() => import('../pages/setup/EavsPage'));
 const CompetitorsPage = lazy(() => import('../pages/setup/CompetitorsPage'));
 const BlueprintPage = lazy(() => import('../pages/setup/BlueprintPage'));
 
+// Product Catalog
+const CatalogPage = lazy(() => import('../pages/setup/CatalogPage'));
+const CatalogDashboardPage = lazy(() => import('../pages/map/CatalogDashboardPage'));
+
 // Phase 4: Dashboard decomposition
 const AuditPage = lazy(() => import('../pages/map/AuditPage'));
 const InsightsPage = lazy(() => import('../pages/map/InsightsPage'));
@@ -92,6 +96,7 @@ const AppRouter: React.FC = () => {
                                     <Route path="pillars" element={<PillarsPage />} />
                                     <Route path="eavs" element={<EavsPage />} />
                                     <Route path="competitors" element={<CompetitorsPage />} />
+                                    <Route path="catalog" element={<CatalogPage />} />
                                     <Route path="blueprint" element={<BlueprintPage />} />
                                 </Route>
 
@@ -102,6 +107,9 @@ const AppRouter: React.FC = () => {
                                     <Route path="draft" element={<DraftPage />} />
                                     <Route path="style" element={<StylePage />} />
                                 </Route>
+
+                                {/* Product Catalog */}
+                                <Route path="catalog" element={<CatalogDashboardPage />} />
 
                                 {/* Analysis & audit routes */}
                                 <Route path="audit" element={<AuditPage />} />

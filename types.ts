@@ -48,6 +48,7 @@ export * from './types/quotation';
 export * from './types/designDna';
 export * from './types/entityHealth';
 export * from './types/brandExtraction';
+export * from './types/catalog';
 
 export enum AppStep {
   AUTH,
@@ -1020,6 +1021,9 @@ export interface ContentBrief {
 
   /** Resolved conflict choice */
   conflictResolution?: 'template' | 'brief' | 'merge';
+
+  // Ecommerce category page context (product catalog data for content grounding)
+  categoryContext?: import('./types/catalog').CategoryPageContext;
 }
 
 export interface SerpResult {

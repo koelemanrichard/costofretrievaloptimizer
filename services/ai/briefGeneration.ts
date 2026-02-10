@@ -1,6 +1,7 @@
 
 import { BusinessInfo, ResponseCode, ContentBrief, EnrichedTopic, SEOPillars, KnowledgeGraph, ContentIntegrityResult, SchemaGenerationResult, AuditRuleResult, BriefVisualSemantics, StreamingProgressCallback, HolisticSummary, CompetitorSpecs, SemanticTriple } from '../../types';
 import { MarketPatterns } from '../../types/competitiveIntelligence';
+import type { CategoryPageContext } from '../../types/catalog';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
@@ -424,7 +425,8 @@ export const generateContentBrief = async (
     responseCode: ResponseCode,
     dispatch: React.Dispatch<any>,
     marketPatterns?: MarketPatterns,  // Optional: competitor-derived market patterns
-    eavs?: SemanticTriple[]  // Semantic triples from topical map
+    eavs?: SemanticTriple[],  // Semantic triples from topical map
+    categoryContext?: CategoryPageContext  // Optional: ecommerce category page data
 ): Promise<Omit<ContentBrief, 'id' | 'topic_id' | 'articleDraft'>> => {
     // Validate language and region settings before generation
     validateLanguageAndRegion(businessInfo, dispatch);
@@ -503,6 +505,7 @@ export const generateContentBrief = async (
         suggestedLengthReason: lengthSuggestion.reason,
         competitorSpecs,
         eavs: eavs || [],
+        ...(categoryContext ? { categoryContext } : {}),
     };
 };
 

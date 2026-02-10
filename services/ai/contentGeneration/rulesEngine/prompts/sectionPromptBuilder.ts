@@ -1,6 +1,7 @@
 // services/ai/contentGeneration/rulesEngine/prompts/sectionPromptBuilder.ts
 
 import { SectionGenerationContext, BriefSection, FormatCode, BusinessInfo, SectionFlowGuidance, ContextualBridgeLink, ContentBrief } from '../../../../../types';
+import type { CategoryPageContext } from '../../../../../types/catalog';
 import type { ContentGenerationPriorities } from '../../../../../types/contentGeneration';
 import { BriefCodeParser } from '../briefCodeParser';
 import { PROHIBITED_PATTERNS } from '../validators/prohibitedLanguage';
@@ -477,6 +478,11 @@ ${isShortContent ? `**SHORT CONTENT MODE**: Be concise and dense. Every sentence
       prompt += this.buildSerpAnalysisGuidance(brief.serpAnalysis, section, context.allSections || []);
     }
 
+    // Add category page context (real product data for ecommerce)
+    if (brief.categoryContext) {
+      prompt += this.buildCategoryContextGuidance(brief.categoryContext, section);
+    }
+
     // Add fix instructions if this is a retry
     if (fixInstructions) {
       prompt += `## CORRECTIONS REQUIRED (from previous attempt)
@@ -800,6 +806,88 @@ ${this.getQueryTypeGuidance(serpAnalysis.query_type)}
     }
 
     return section;
+  }
+
+  /**
+   * Build category page context guidance for ecommerce sections.
+   * Injects real product data (names, prices, attributes) into section prompts.
+   */
+  private static buildCategoryContextGuidance(
+    ctx: CategoryPageContext,
+    section: BriefSection
+  ): string {
+    const headingLower = section.heading?.toLowerCase() || '';
+    let guidance = `## REAL PRODUCT DATA (Category Page: "${ctx.categoryName}")
+Total Products: ${ctx.totalProductCount}
+`;
+
+    if (ctx.priceRange) {
+      guidance += `Price Range: ${ctx.priceRange.currency} ${ctx.priceRange.min.toFixed(2)} – ${ctx.priceRange.max.toFixed(2)}
+`;
+    }
+
+    if (ctx.subcategories.length > 0) {
+      guidance += `Subcategories: ${ctx.subcategories.map(s => `${s.name} (${s.productCount})`).join(', ')}
+`;
+    }
+
+    // Determine which product details to include based on section type
+    const isTopPicks = headingLower.includes('top') || headingLower.includes('pick') || headingLower.includes('best') || headingLower.includes('recommend');
+    const isComparison = headingLower.includes('compar') || headingLower.includes('vs') || section.format_code === 'TABLE';
+    const isBuyingGuide = headingLower.includes('buy') || headingLower.includes('choos') || headingLower.includes('how to');
+    const isOverview = headingLower.includes('overview') || headingLower.includes('intro') || headingLower.includes('what');
+
+    if (ctx.products.length > 0) {
+      const productLimit = isComparison || isTopPicks ? 10 : 5;
+      const products = ctx.products.slice(0, productLimit);
+
+      guidance += `\n**Products to reference:**\n`;
+      for (const p of products) {
+        const details = [p.name];
+        if (p.brand) details.push(`by ${p.brand}`);
+        if (p.price) details.push(`${p.currency || 'USD'} ${p.price.toFixed(2)}`);
+        if (p.rating) details.push(`${p.rating}/5 (${p.reviewCount || 0} reviews)`);
+        if (p.availability) details.push(p.availability);
+        guidance += `- ${details.join(' | ')}\n`;
+      }
+
+      // For comparison/table sections, list common attributes for table columns
+      if (isComparison) {
+        const attrKeys = new Map<string, number>();
+        for (const p of ctx.products) {
+          for (const key of Object.keys(p.attributes)) {
+            attrKeys.set(key, (attrKeys.get(key) || 0) + 1);
+          }
+        }
+        const commonAttrs = [...attrKeys.entries()]
+          .filter(([, count]) => count >= 3)
+          .map(([key]) => key);
+
+        if (commonAttrs.length > 0) {
+          guidance += `\n**Use these as comparison table columns:** ${commonAttrs.join(', ')}\n`;
+          guidance += `Build a real comparison table using actual product attribute values.\n`;
+        }
+      }
+
+      // For buying guide sections, highlight attribute keys as buying criteria
+      if (isBuyingGuide) {
+        const attrKeys = new Set<string>();
+        for (const p of ctx.products) {
+          for (const key of Object.keys(p.attributes)) attrKeys.add(key);
+        }
+        if (attrKeys.size > 0) {
+          guidance += `\n**Buying criteria (from real product attributes):** ${[...attrKeys].slice(0, 10).join(', ')}\n`;
+        }
+      }
+    }
+
+    if (ctx.isSketchMode) {
+      guidance += `\n**SKETCH MODE:** Some products lack real URLs and prices. Use estimated/placeholder language where data is missing.\n`;
+    }
+
+    guidance += `\n**CRITICAL:** Use REAL product names and prices from above. Do NOT invent products that are not listed.\n\n`;
+
+    return guidance;
   }
 
   /**

@@ -37,7 +37,8 @@ export type TemplateName =
   | 'EVENT_EXPERIENCE'
   | 'COURSE_EDUCATION'
   | 'IMPACT_NONPROFIT'
-  | 'LOCATION_REALESTATE';
+  | 'LOCATION_REALESTATE'
+  | 'ECOMMERCE_CATEGORY';
 
 // ============================================================================
 // STYLOMETRY

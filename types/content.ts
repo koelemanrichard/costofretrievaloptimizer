@@ -352,6 +352,9 @@ export interface ContentBrief {
   // Generation change tracking (populated during content generation)
   generation_changes?: BriefChangeLogEntry[];
   generation_summary?: BriefGenerationSummary;
+
+  // Ecommerce category page context (product catalog data for content grounding)
+  categoryContext?: import('./catalog').CategoryPageContext;
 }
 
 /**

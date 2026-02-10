@@ -484,13 +484,69 @@ function buildMainContentSchema(
     }
 
     case 'CollectionPage': {
-      return {
+      const collectionSchema: Record<string, any> = {
         '@type': 'CollectionPage',
         '@id': pageUrl,
         name: context.brief.title,
         description: context.brief.metaDescription,
         url: pageUrl
       };
+
+      // Enrich with real product data from CategoryPageContext
+      const catCtx = context.brief.categoryContext;
+      if (catCtx && catCtx.products.length > 0) {
+        const productItems = catCtx.products.slice(0, 20).map((p, idx) => {
+          const item: Record<string, any> = {
+            '@type': 'Product',
+            position: idx + 1,
+            name: p.name,
+          };
+          if (p.sku) item.sku = p.sku;
+          if (p.brand) item.brand = { '@type': 'Brand', name: p.brand };
+          if (p.productUrl) item.url = p.productUrl;
+          if (p.imageUrl) item.image = p.imageUrl;
+
+          // Offer with real price data
+          if (p.price) {
+            const offer: Record<string, any> = {
+              '@type': 'Offer',
+              priceCurrency: p.currency || 'USD',
+              price: p.price,
+              availability: `https://schema.org/${p.availability === 'OutOfStock' ? 'OutOfStock' : p.availability === 'PreOrder' ? 'PreOrder' : 'InStock'}`,
+            };
+            if (p.productUrl) offer.url = p.productUrl;
+            item.offers = offer;
+          }
+
+          // Aggregate rating
+          if (p.rating && p.reviewCount) {
+            item.aggregateRating = {
+              '@type': 'AggregateRating',
+              ratingValue: p.rating,
+              reviewCount: p.reviewCount,
+            };
+          }
+
+          return item;
+        });
+
+        collectionSchema.mainEntity = {
+          '@type': 'ItemList',
+          numberOfItems: catCtx.totalProductCount,
+          itemListElement: productItems,
+        };
+
+        // Add breadcrumb hint via parent category
+        if (catCtx.parentCategory) {
+          collectionSchema.isPartOf = {
+            '@type': 'CollectionPage',
+            name: catCtx.parentCategory.name,
+            ...(catCtx.parentCategory.url && { url: catCtx.parentCategory.url }),
+          };
+        }
+      }
+
+      return collectionSchema;
     }
 
     case 'HomePage':

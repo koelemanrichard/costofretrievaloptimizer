@@ -38,6 +38,13 @@ import {
 } from './slices/publicationPlanningSlice';
 
 import {
+  type CatalogState,
+  type CatalogAction,
+  initialCatalogState,
+  catalogReducer,
+} from './slices/catalogSlice';
+
+import {
   topicOperationsReducer,
   isTopicOperationsAction,
 } from './slices/topicOperationsSlice';
@@ -190,6 +197,9 @@ export interface AppState {
 
     // Publication Planning state - delegated to publicationPlanningSlice
     publicationPlanning: PublicationPlanningState;
+
+    // Product Catalog state - delegated to catalogSlice
+    catalog: CatalogState;
 }
 
 export type AppAction =
@@ -311,7 +321,9 @@ export type AppAction =
   | { type: 'SET_TOPIC_PUBLICATION_DATE'; payload: { mapId: string; topicId: string; dateType: 'optimal' | 'scheduled' | 'actual'; date: string | null } }
   | { type: 'BULK_UPDATE_PUBLICATION_PHASE'; payload: { mapId: string; topicIds: string[]; phase: PublicationPhase } }
   | { type: 'APPLY_PUBLICATION_PLAN'; payload: { mapId: string; planResult: PublicationPlanResult } }
-  | { type: 'RESET_PUBLICATION_PLANNING' };
+  | { type: 'RESET_PUBLICATION_PLANNING' }
+  // Product Catalog actions - delegated to catalogSlice
+  | CatalogAction;
 
 export const initialState: AppState = {
     user: null,
@@ -379,6 +391,7 @@ export const initialState: AppState = {
         lastAuditId: null,
     },
     publicationPlanning: initialPublicationPlanningState,
+    catalog: initialCatalogState,
 };
 
 export const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -667,6 +680,28 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
                     fixHistory: [],
                     lastAuditId: null,
                 }
+            };
+
+        // Product Catalog reducers - delegated to catalogSlice
+        case 'SET_CATALOG':
+        case 'SET_CATALOG_CATEGORIES':
+        case 'ADD_CATALOG_CATEGORY':
+        case 'UPDATE_CATALOG_CATEGORY':
+        case 'DELETE_CATALOG_CATEGORY':
+        case 'SET_CATALOG_PRODUCTS':
+        case 'ADD_CATALOG_PRODUCT':
+        case 'ADD_CATALOG_PRODUCTS':
+        case 'UPDATE_CATALOG_PRODUCT':
+        case 'DELETE_CATALOG_PRODUCT':
+        case 'SET_CATALOG_LOADING':
+        case 'SET_CATALOG_IMPORT_PROGRESS':
+        case 'SET_SELECTED_CATEGORY':
+        case 'SET_SELECTED_PRODUCT':
+        case 'LINK_CATEGORY_TO_TOPIC':
+        case 'RESET_CATALOG':
+            return {
+                ...state,
+                catalog: catalogReducer(state.catalog, action as CatalogAction)
             };
 
         // Publication Planning reducers - delegated to publicationPlanningSlice
