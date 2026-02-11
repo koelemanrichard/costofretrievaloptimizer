@@ -45,6 +45,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
 import { logAiUsage, estimateTokens } from './telemetryService';
 import { getSupabaseClient } from './supabaseClient';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { geminiLogger } from './apiCallLogger';
 
 // Shared provider context (replaces duplicated context pattern)
@@ -204,7 +205,7 @@ const callApi = async <T>(
     const validatedModel = modelOverride || validateModel(businessInfo.aiModel, dispatch);
 
     // Get supabase client for database logging (if available)
-    let supabase: any;
+    let supabase: SupabaseClient | undefined;
     try {
         if (businessInfo.supabaseUrl && businessInfo.supabaseAnonKey) {
             supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
@@ -612,19 +613,30 @@ export const generateInitialTopicalMap = async (businessInfo: BusinessInfo, pill
     const coreTopics: EnrichedTopic[] = [];
     const outerTopics: EnrichedTopic[] = [];
 
+    // Shape of topic data returned from the AI response (before enrichment)
+    interface AITopicData {
+        title: string;
+        description?: string;
+        freshness?: string;
+        canonical_query?: string;
+        query_network?: string[];
+        url_slug_hint?: string;
+        spokes?: AITopicData[];
+    }
+
     // Helper to process sections and flatten the nested AI response
-    const processSection = (sectionData: any[], sectionType: 'monetization' | 'informational') => {
+    const processSection = (sectionData: AITopicData[], sectionType: 'monetization' | 'informational') => {
         if (!Array.isArray(sectionData)) return;
 
-        sectionData.forEach((core: any) => {
-            const tempId = `temp_${Math.random().toString(36).substr(2, 9)}`; 
-            
+        sectionData.forEach((core: AITopicData) => {
+            const tempId = `temp_${Math.random().toString(36).substr(2, 9)}`;
+
             const coreTopic: EnrichedTopic = {
                 id: tempId,
-                map_id: '', 
+                map_id: '',
                 parent_topic_id: null,
                 title: core.title,
-                slug: '', 
+                slug: '',
                 description: core.description,
                 type: 'core',
                 freshness: (core.freshness as FreshnessProfile) || FreshnessProfile.EVERGREEN,
@@ -633,17 +645,17 @@ export const generateInitialTopicalMap = async (businessInfo: BusinessInfo, pill
                 query_network: Array.isArray(core.query_network) ? core.query_network : [],
                 url_slug_hint: core.url_slug_hint
             };
-            
+
             coreTopics.push(coreTopic);
 
             if (Array.isArray(core.spokes)) {
-                core.spokes.forEach((spoke: any) => {
+                core.spokes.forEach((spoke: AITopicData) => {
                     const outerTopic: EnrichedTopic = {
                         id: `temp_${Math.random().toString(36).substr(2, 9)}`,
                         map_id: '',
                         parent_topic_id: tempId,
                         title: spoke.title,
-                        slug: '', 
+                        slug: '',
                         description: spoke.description,
                         type: 'outer',
                         freshness: (spoke.freshness as FreshnessProfile) || FreshnessProfile.STANDARD,
@@ -1209,19 +1221,30 @@ export const generateTopicBlueprints = async (
         }
     };
 
-    const fallback: any[] = [];
-    
+    interface FlatBlueprintResult {
+        id: string;
+        contextual_vector: string;
+        methodology: string;
+        subordinate_hint: string;
+        perspective: string;
+        interlinking_strategy: string;
+        anchor_text: string;
+        annotation_hint: string;
+    }
+
+    const fallback: FlatBlueprintResult[] = [];
+
     const rawResults = await callApi(
         prompt,
         businessInfo,
         dispatch,
-        (text) => sanitizer.sanitizeArray(text, fallback),
+        (text) => sanitizer.sanitizeArray<FlatBlueprintResult>(text, fallback),
         true,
         flatApiSchema
     );
 
     // Transform flat results to nested structure
-    return rawResults.map((item: any) => ({
+    return rawResults.map((item: FlatBlueprintResult) => ({
         id: item.id,
         blueprint: {
             contextual_vector: item.contextual_vector,
@@ -1257,7 +1280,7 @@ export const analyzeContextualFlow = async (text: string, centralEntity: string,
 
     // Map Vector Issues
     if(vectorResult.vectorIssues) {
-        vectorResult.vectorIssues.forEach((vi: any) => {
+        vectorResult.vectorIssues.forEach((vi: { issue: string; heading: string; remediation: string }) => {
             issues.push({
                 category: 'VECTOR',
                 rule: 'Vector Straightness',
@@ -1271,21 +1294,21 @@ export const analyzeContextualFlow = async (text: string, centralEntity: string,
 
     // Map Attribute Order Issues
     if(vectorResult.attributeOrderIssues) {
-        vectorResult.attributeOrderIssues.forEach((ai: any) => {
+        vectorResult.attributeOrderIssues.forEach((attrIssue: { issue: string; section: string; remediation: string }) => {
             issues.push({
                 category: 'MACRO',
                 rule: 'Attribute Order',
                 score: 0,
-                details: ai.issue,
-                offendingSnippet: ai.section,
-                remediation: ai.remediation
+                details: attrIssue.issue,
+                offendingSnippet: attrIssue.section,
+                remediation: attrIssue.remediation
             });
         });
     }
 
     // Map Discourse Gaps
     if(discourseResult.gapDetails) {
-        discourseResult.gapDetails.forEach((gap: any) => {
+        discourseResult.gapDetails.forEach((gap: { details: string; paragraphIndex: number; suggestedBridge: string }) => {
             issues.push({
                 category: 'LINGUISTIC',
                 rule: 'Discourse Integration',
@@ -1427,13 +1450,14 @@ export const classifyTopicSections = async (
             true
         );
 
-        const validResults = result.filter((item: any) =>
+        type ClassificationResult = { id: string; topic_class: 'monetization' | 'informational'; suggestedType?: 'core' | 'outer' | null; suggestedParentTitle?: string | null; typeChangeReason?: string | null };
+        const validResults = result.filter((item: ClassificationResult) =>
             item.id && (item.topic_class === 'monetization' || item.topic_class === 'informational')
         );
 
         dispatch({ type: 'LOG_EVENT', payload: {
             service: 'Gemini',
-            message: `Classification complete. Monetization: ${validResults.filter((r: any) => r.topic_class === 'monetization').length}, Informational: ${validResults.filter((r: any) => r.topic_class === 'informational').length}`,
+            message: `Classification complete. Monetization: ${validResults.filter((r: ClassificationResult) => r.topic_class === 'monetization').length}, Informational: ${validResults.filter((r: ClassificationResult) => r.topic_class === 'informational').length}`,
             status: 'info',
             timestamp: Date.now()
         }});
@@ -1471,7 +1495,7 @@ export const classifyTopicSections = async (
             true
         );
 
-        const validBatchResults = result.filter((item: any) =>
+        const validBatchResults = result.filter((item: { id?: string; topic_class?: string }) =>
             item.id && (item.topic_class === 'monetization' || item.topic_class === 'informational')
         );
 

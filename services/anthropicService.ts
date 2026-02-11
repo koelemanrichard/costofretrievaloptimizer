@@ -8,7 +8,7 @@ import {
     PublicationPlan, ContentIntegrityResult, SchemaGenerationResult,
     TopicViabilityResult, TopicBlueprint, FlowAuditResult, ContextualFlowIssue,
     KnowledgeGraph, MapMergeAnalysis, TopicSimilarityResult, TopicMergeDecision, TopicalMap,
-    StreamingProgressCallback
+    StreamingProgressCallback, ExpansionMode
 } from '../types';
 import * as prompts from '../config/prompts';
 import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
@@ -146,7 +146,7 @@ const callApiWithStreaming = async <T>(
             if (data.error) {
                 throw new Error(data.error);
             }
-            const textBlock = data.content?.find((b: any) => b.type === 'text');
+            const textBlock = data.content?.find((b: { type: string; text?: string }) => b.type === 'text');
             const fullText = textBlock?.text || '';
             console.log('[Anthropic STREAMING] JSON response text length:', fullText.length);
             return sanitizerFn(fullText);
@@ -729,9 +729,19 @@ export const generateInitialTopicalMap = async (info: BusinessInfo, pillars: SEO
     const monetizationTopics = monetizationResult.topics || [];
     const informationalTopics = informationalResult.topics || [];
 
+    interface AIMapTopic {
+        title: string;
+        description?: string;
+        freshness?: string;
+        canonical_query?: string;
+        query_network?: string[];
+        url_slug_hint?: string;
+        spokes?: AIMapTopic[];
+    }
+
     // Log the parsed result for debugging with topic_class info
-    const monetizationWithSpokes = monetizationTopics.reduce((acc: number, t: any) => acc + (t.spokes?.length || 0), 0);
-    const informationalWithSpokes = informationalTopics.reduce((acc: number, t: any) => acc + (t.spokes?.length || 0), 0);
+    const monetizationWithSpokes = monetizationTopics.reduce((acc: number, t: AIMapTopic) => acc + (t.spokes?.length || 0), 0);
+    const informationalWithSpokes = informationalTopics.reduce((acc: number, t: AIMapTopic) => acc + (t.spokes?.length || 0), 0);
 
     dispatch({ type: 'LOG_EVENT', payload: {
         service: 'Anthropic',
@@ -741,20 +751,22 @@ export const generateInitialTopicalMap = async (info: BusinessInfo, pillars: SEO
     }});
 
     // Flatten into coreTopics and outerTopics
-    const coreTopics: any[] = [];
-    const outerTopics: any[] = [];
+    // These arrays accumulate AI-derived topic data with added fields (id, type, topic_class, parent_topic_id)
+    // They are structurally partial EnrichedTopic objects; cast at return boundary
+    const coreTopics: Array<AIMapTopic & { id: string; topic_class: string; type: string; parent_topic_id: null }> = [];
+    const outerTopics: Array<AIMapTopic & { id: string; topic_class: string; type: string; parent_topic_id: string }> = [];
 
-    const process = (list: any[], cls: string) => {
+    const process = (list: AIMapTopic[], cls: 'monetization' | 'informational') => {
          if(!list) return;
-         list.forEach(c => {
+         list.forEach((c: AIMapTopic) => {
              const tid = Math.random().toString();
              coreTopics.push({...c, id: tid, topic_class: cls, type: 'core', parent_topic_id: null});
-             if(c.spokes) c.spokes.forEach((s: any) => outerTopics.push({...s, id: Math.random().toString(), parent_topic_id: tid, topic_class: cls, type: 'outer'}));
+             if(c.spokes) c.spokes.forEach((s: AIMapTopic) => outerTopics.push({...s, id: Math.random().toString(), parent_topic_id: tid, topic_class: cls, type: 'outer'}));
          });
     };
     process(monetizationTopics, 'monetization');
     process(informationalTopics, 'informational');
-    return { coreTopics, outerTopics };
+    return { coreTopics: coreTopics as unknown as EnrichedTopic[], outerTopics: outerTopics as unknown as EnrichedTopic[] };
 };
 
 export const suggestResponseCode = async (info: BusinessInfo, topic: string, dispatch: React.Dispatch<any>) => {
@@ -928,12 +940,12 @@ export const analyzeContextualCoverage = async (info: BusinessInfo, topics: Enri
     return callApi(prompts.ANALYZE_CONTEXTUAL_COVERAGE_PROMPT(info, topics, pillars), info, dispatch, t => sanitizer.sanitize(t, { summary: String, macroCoverage: Number, microCoverage: Number, temporalCoverage: Number, intentionalCoverage: Number, gaps: Array }, { summary: '', macroCoverage: 0, microCoverage: 0, temporalCoverage: 0, intentionalCoverage: 0, gaps: [] }), 'analyzeContextualCoverage');
 };
 
-export const auditInternalLinking = async (topics: EnrichedTopic[], briefs: any, info: BusinessInfo, dispatch: React.Dispatch<any>) => {
+export const auditInternalLinking = async (topics: EnrichedTopic[], briefs: Record<string, ContentBrief>, info: BusinessInfo, dispatch: React.Dispatch<AppAction>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompts.AUDIT_INTERNAL_LINKING_PROMPT(topics, briefs, info), info, dispatch, t => sanitizer.sanitize(t, { summary: String, missedLinks: Array, dilutionRisks: Array }, { summary: '', missedLinks: [], dilutionRisks: [] }), 'auditInternalLinking');
 };
 
-export const calculateTopicalAuthority = async (topics: EnrichedTopic[], briefs: any, kg: KnowledgeGraph, info: BusinessInfo, dispatch: React.Dispatch<any>) => {
+export const calculateTopicalAuthority = async (topics: EnrichedTopic[], briefs: Record<string, ContentBrief>, kg: KnowledgeGraph, info: BusinessInfo, dispatch: React.Dispatch<AppAction>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompts.CALCULATE_TOPICAL_AUTHORITY_PROMPT(topics, briefs, kg, info), info, dispatch, t => sanitizer.sanitize(t, { overallScore: Number, summary: String, breakdown: Object }, { overallScore: 0, summary: '', breakdown: { contentDepth: 0, contentBreadth: 0, interlinking: 0, semanticRichness: 0 } }), 'calculateTopicalAuthority');
 };
@@ -953,7 +965,7 @@ export const addTopicIntelligently = async (title: string, desc: string, all: En
     return callApi(prompts.ADD_TOPIC_INTELLIGENTLY_PROMPT(title, desc, all, info), info, dispatch, t => sanitizer.sanitize(t, { parentTopicId: String, type: String }, { parentTopicId: null, type: 'outer' }), 'addTopicIntelligently');
 };
 
-export const expandCoreTopic = async (info: BusinessInfo, pillars: SEOPillars, core: EnrichedTopic, all: EnrichedTopic[], kg: KnowledgeGraph, dispatch: React.Dispatch<any>, mode: any, context?: string) => {
+export const expandCoreTopic = async (info: BusinessInfo, pillars: SEOPillars, core: EnrichedTopic, all: EnrichedTopic[], kg: KnowledgeGraph, dispatch: React.Dispatch<AppAction>, mode: ExpansionMode = 'CONTEXT', context?: string) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompts.EXPAND_CORE_TOPIC_PROMPT(info, pillars, core, all, kg, mode, context), info, dispatch, t => sanitizer.sanitizeArray(t, []), 'expandCoreTopic');
 };
@@ -968,20 +980,20 @@ export const generateCoreTopicSuggestions = async (thoughts: string, info: Busin
     return callApi(prompts.GENERATE_CORE_TOPIC_SUGGESTIONS_PROMPT(thoughts, info), info, dispatch, t => sanitizer.sanitizeArray(t, []), 'generateCoreTopicSuggestions');
 };
 
-export const generateStructuredTopicSuggestions = async (thoughts: string, existing: any[], info: BusinessInfo, dispatch: React.Dispatch<any>) => {
+export const generateStructuredTopicSuggestions = async (thoughts: string, existing: { title: string; id: string }[], info: BusinessInfo, dispatch: React.Dispatch<AppAction>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompts.GENERATE_STRUCTURED_TOPIC_SUGGESTIONS_PROMPT(thoughts, existing, info), info, dispatch, t => sanitizer.sanitizeArray(t, []), 'generateStructuredTopicSuggestions');
 };
 
-export const enrichTopicMetadata = async (topics: any[], info: BusinessInfo, dispatch: React.Dispatch<any>) => {
+export const enrichTopicMetadata = async (topics: { id: string; title: string; description: string }[], info: BusinessInfo, dispatch: React.Dispatch<AppAction>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     return callApi(prompts.ENRICH_TOPIC_METADATA_PROMPT(topics, info), info, dispatch, t => sanitizer.sanitizeArray(t, []), 'enrichTopicMetadata');
 };
 
-export const generateTopicBlueprints = async (topics: any[], info: BusinessInfo, pillars: SEOPillars, dispatch: React.Dispatch<any>) => {
+export const generateTopicBlueprints = async (topics: { title: string; id: string }[], info: BusinessInfo, pillars: SEOPillars, dispatch: React.Dispatch<AppAction>) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
     const flatResults = await callApi(prompts.GENERATE_TOPIC_BLUEPRINT_PROMPT(topics, info, pillars), info, dispatch, t => sanitizer.sanitizeArray(t, []), 'generateTopicBlueprints');
-    return flatResults.map((item: any) => ({ id: item.id, blueprint: { ...item } }));
+    return flatResults.map((item: { id: string; [key: string]: unknown }) => ({ id: item.id, blueprint: { ...item } }));
 };
 
 // Use streaming for flow analysis to avoid timeouts with large drafts
@@ -1026,9 +1038,9 @@ export const analyzeContextualFlow = async (
     const [vRes, dRes] = await Promise.all([vProm, dProm]);
 
     const issues: ContextualFlowIssue[] = [];
-    if(vRes.vectorIssues) vRes.vectorIssues.forEach((i: any) => issues.push({ category: 'VECTOR', rule: 'Vector Straightness', score: 0, details: i.issue, offendingSnippet: i.heading, remediation: i.remediation }));
-    if(vRes.attributeOrderIssues) vRes.attributeOrderIssues.forEach((i: any) => issues.push({ category: 'MACRO', rule: 'Attribute Order', score: 0, details: i.issue, offendingSnippet: i.section, remediation: i.remediation }));
-    if(dRes.gapDetails) dRes.gapDetails.forEach((i: any) => issues.push({ category: 'LINGUISTIC', rule: 'Discourse Integration', score: 0, details: i.details, offendingSnippet: `Gap #${i.paragraphIndex}`, remediation: i.suggestedBridge }));
+    if(vRes.vectorIssues) vRes.vectorIssues.forEach((i: { issue: string; heading: string; remediation: string }) => issues.push({ category: 'VECTOR', rule: 'Vector Straightness', score: 0, details: i.issue, offendingSnippet: i.heading, remediation: i.remediation }));
+    if(vRes.attributeOrderIssues) vRes.attributeOrderIssues.forEach((i: { issue: string; section: string; remediation: string }) => issues.push({ category: 'MACRO', rule: 'Attribute Order', score: 0, details: i.issue, offendingSnippet: i.section, remediation: i.remediation }));
+    if(dRes.gapDetails) dRes.gapDetails.forEach((i: { details: string; paragraphIndex: number; suggestedBridge: string }) => issues.push({ category: 'LINGUISTIC', rule: 'Discourse Integration', score: 0, details: i.details, offendingSnippet: `Gap #${i.paragraphIndex}`, remediation: i.suggestedBridge }));
 
     return { overallFlowScore: 85, vectorStraightness: 80, informationDensity: 90, issues, headingVector: vRes.headingVector || [], discourseGaps: dRes.discourseGaps || [] };
 };
@@ -1326,7 +1338,7 @@ export const generateText = async (
             if (data.error) {
                 throw new Error(data.error);
             }
-            const textBlock = data.content?.find((b: any) => b.type === 'text');
+            const textBlock = data.content?.find((b: { type: string; text?: string }) => b.type === 'text');
             const fullText = textBlock?.text || '';
 
             anthropicLogger.success(apiCallLog.id, {
