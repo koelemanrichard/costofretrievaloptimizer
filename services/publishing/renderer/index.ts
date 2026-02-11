@@ -949,35 +949,12 @@ export async function renderContent(
     : 'No AI API key and no DesignDNA');
   console.log('[Renderer] Using BlueprintRenderer legacy fallback for project:', options.projectId);
 
-  // DEBUG: Log what brand data we're passing to the renderer
-  console.log('[STYLING PIPELINE] Brand data being passed to BlueprintRenderer:', {
-    hasBrandDesignSystem: !!options.brandDesignSystem,
-    hasCompiledCss: !!options.brandDesignSystem?.compiledCss,
-    compiledCssLength: options.brandDesignSystem?.compiledCss?.length || 0,
-    brandName: options.brandDesignSystem?.brandName,
-    designDnaHash: options.brandDesignSystem?.designDnaHash,
-    hasDesignTokens: !!options.designTokens,
-    designTokenColors: options.designTokens?.colors ? {
-      primary: options.designTokens.colors.primary,
-      secondary: options.designTokens.colors.secondary,
-    } : 'NO TOKENS',
-  });
-
   if (!options.blueprint) {
     throw new Error('No brand extraction, no DesignDNA, and no blueprint provided');
   }
 
   // Import and call renderBlueprint
   const { renderBlueprint } = await import('./blueprintRenderer');
-
-  // THE KEY FIX: Pass processedContent (with injected images) to renderBlueprint
-  // Without this, the blueprint uses brief summaries instead of actual article content
-  console.log('[STYLING PIPELINE] Passing articleContent to renderBlueprint:', {
-    hasProcessedContent: !!processedContent,
-    sectionCount: processedContent.sections.length,
-    firstSectionContentLength: processedContent.sections[0]?.content?.length || 0,
-    hasImages: processedContent.sections.some(s => s.content?.includes('<img') || s.content?.includes('!['))
-  });
 
   const blueprintResult = renderBlueprint(options.blueprint, processedContent.title, {
     brief: options.brief,
@@ -997,25 +974,6 @@ export async function renderContent(
     // This ensures the REAL article is rendered, not brief summaries
     articleContent: processedContent,
   });
-
-  // DEBUG: Log the output CSS info
-  console.log('-'.repeat(80));
-  console.log('[STYLING PIPELINE] STEP 5: BlueprintRenderer OUTPUT');
-  console.log('[STYLING PIPELINE] Output summary:', {
-    htmlLength: blueprintResult.html.length,
-    cssLength: blueprintResult.css.length,
-    sectionsRendered: blueprintResult.metadata.sectionsRendered,
-    componentsUsed: blueprintResult.metadata.componentsUsed,
-    visualStyle: blueprintResult.metadata.blueprint.visualStyle,
-    renderDurationMs: blueprintResult.metadata.renderDurationMs,
-  });
-  console.log('[STYLING PIPELINE] CSS source:', blueprintResult.css.includes('Brand Design System')
-    ? 'BrandDesignSystem.compiledCss (AI-GENERATED)'
-    : 'generateDesignSystemCss (FALLBACK TEMPLATE)');
-  console.log('[STYLING PIPELINE] CSS first 300 chars:', blueprintResult.css.substring(0, 300));
-  console.log('='.repeat(80));
-  console.log('[STYLING PIPELINE] COMPLETE');
-  console.log('='.repeat(80));
 
   // Convert BlueprintRenderOutput to StyledContentOutput format
   return {

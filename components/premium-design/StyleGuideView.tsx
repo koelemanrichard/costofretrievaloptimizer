@@ -16,7 +16,7 @@ interface StyleGuideViewProps {
   onApprove: (guide: StyleGuide) => void;
   onReextract: () => void;
   onExport: () => void;
-  onRefineElement?: (elementId: string) => void;
+  onRefineElement?: (elementId: string, commentOverride?: string) => void;
   isRefining?: boolean;
   onChange?: (guide: StyleGuide) => void;
 }
@@ -158,7 +158,7 @@ export const StyleGuideView: React.FC<StyleGuideViewProps> = ({
     updateGuide(updated);
   }, [guide, updateGuide]);
 
-  // AI Redo handler — sets a redo comment and triggers refinement
+  // AI Redo handler — passes comment directly to avoid stale-closure race condition
   const handleAiRedo = useCallback((id: string) => {
     const el = guide.elements.find(e => e.id === id);
     if (!el) return;
@@ -166,6 +166,7 @@ export const StyleGuideView: React.FC<StyleGuideViewProps> = ({
     const issues = el.visualIssues?.join(', ') || 'low quality score';
     const redoComment = `AUTO-REDO: Fix visual issues — ${issues}. Regenerate HTML to match the original screenshot more accurately.`;
 
+    // Update guide state with the comment for persistence
     const updated = {
       ...guide,
       elements: guide.elements.map(e =>
@@ -173,7 +174,8 @@ export const StyleGuideView: React.FC<StyleGuideViewProps> = ({
       ),
     };
     updateGuide(updated);
-    onRefineElement?.(id);
+    // Pass comment directly — don't rely on state being committed yet
+    onRefineElement?.(id, redoComment);
   }, [guide, updateGuide, onRefineElement]);
 
   // Bulk approve all elements in current category

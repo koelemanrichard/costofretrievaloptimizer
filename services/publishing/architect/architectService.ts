@@ -587,20 +587,6 @@ export function generateBlueprintHeuristicV2(
   // Generate sections with enhanced heuristics
   const sections = generateEnhancedHeuristicSections(analysis, contentSignals, visualStyle);
 
-  // DEBUG: Log component selection for verification
-  console.log('[Architect V2] Blueprint section components:', {
-    totalSections: sections.length,
-    components: sections.map(s => ({
-      heading: s.heading?.substring(0, 30) || '(intro)',
-      component: s.presentation.component,
-      emphasis: s.presentation.emphasis,
-    })),
-    componentDistribution: sections.reduce((acc, s) => {
-      acc[s.presentation.component] = (acc[s.presentation.component] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-  });
-
   let blueprint: LayoutBlueprint = {
     version: '1.0',
     id: `blueprint-${Date.now()}`,

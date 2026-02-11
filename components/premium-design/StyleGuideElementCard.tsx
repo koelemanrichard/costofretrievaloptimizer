@@ -10,7 +10,7 @@ interface StyleGuideElementCardProps {
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onComment: (id: string, comment: string) => void;
-  onRefine?: (id: string) => void;
+  onRefine?: (id: string, commentOverride?: string) => void;
   onReferenceImage?: (id: string, base64: string) => void;
   onReferenceUrl?: (id: string, url: string) => void;
   onAiRedo?: (id: string) => void;
@@ -227,7 +227,7 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
                     title={element.label}
                     className="w-full border-0"
                     style={{ height: previewHeight }}
-                    sandbox="allow-same-origin"
+                    sandbox="allow-same-origin allow-scripts"
                   />
                 </div>
               </div>
@@ -241,7 +241,7 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
                 title={element.label}
                 className="w-full border-0"
                 style={{ height: 100 }}
-                sandbox="allow-same-origin"
+                sandbox="allow-same-origin allow-scripts"
               />
             </div>
           )}
@@ -323,7 +323,7 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
         )}
         {onRefine && (element.userComment || element.referenceImageBase64 || element.referenceUrl) && (
           <button
-            onClick={() => onRefine(element.id)}
+            onClick={() => onRefine(element.id, element.userComment || undefined)}
             className="px-2 py-1 text-[11px] rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 transition-colors ml-auto"
           >
             Refine with AI
@@ -331,23 +331,36 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
         )}
       </div>
 
-      {/* Comment textarea */}
+      {/* Comment textarea — instructions for AI refinement */}
       {showComment && (
         <div className="px-3 py-2 border-t border-zinc-700/50 space-y-2">
+          <p className="text-[10px] text-zinc-500">Describe what AI should change about this element:</p>
           <textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            placeholder="E.g., 'Make this button rounder' or 'Use a bolder font'"
+            placeholder="E.g., 'Make this button rounder' or 'Use a bolder font' or 'Fix the background color'"
             className="w-full px-2 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 placeholder-zinc-600 resize-none focus:outline-none focus:border-blue-500"
             rows={2}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-1.5">
             <button
               onClick={handleCommentSave}
-              className="px-2 py-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors"
+              className="px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded transition-colors"
             >
-              Save Comment
+              Save
             </button>
+            {onRefine && commentText.trim() && (
+              <button
+                onClick={() => {
+                  onComment(element.id, commentText);
+                  setShowComment(false);
+                  onRefine(element.id, commentText);
+                }}
+                className="px-2 py-1 text-[11px] bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors"
+              >
+                Save & Refine with AI
+              </button>
+            )}
           </div>
         </div>
       )}

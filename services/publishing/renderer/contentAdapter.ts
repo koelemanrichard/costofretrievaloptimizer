@@ -116,16 +116,6 @@ export function htmlToArticleContent(html: string, title: string): ArticleConten
   const hasHtmlHeadings = /<h[2-6][^>]*>/i.test(html);
   const hasMarkdownHeadings = /^#{2,6}\s+/m.test(html);
 
-  // DEBUG: Log the incoming content to diagnose parsing issues
-  console.log('[htmlToArticleContent] INPUT:', {
-    title,
-    contentLength: html.length,
-    contentFirst500: html.substring(0, 500),
-    format: hasHtmlHeadings ? 'HTML' : hasMarkdownHeadings ? 'MARKDOWN' : 'UNKNOWN',
-    hasHtmlHeadings,
-    hasMarkdownHeadings,
-  });
-
   // If content is in Markdown format, use markdown parser
   if (hasMarkdownHeadings && !hasHtmlHeadings) {
     console.log('[htmlToArticleContent] Using MARKDOWN parser');
@@ -247,13 +237,6 @@ export function htmlToArticleContent(html: string, title: string): ArticleConten
       type: 'section',
     });
   }
-
-  // DEBUG: Log the parsing result
-  console.log('[htmlToArticleContent] OUTPUT:', {
-    sectionCount: sections.length,
-    headingsFound: headings.length,
-    sectionTypes: sections.map(s => ({ id: s.id, type: s.type, headingLevel: s.headingLevel, heading: s.heading?.substring(0, 50) })),
-  });
 
   return {
     title,
@@ -383,13 +366,6 @@ function markdownToArticleContent(markdown: string, title: string): ArticleConte
     console.warn('[markdownToArticleContent] NO HEADINGS FOUND AT ALL');
     sections.push({ id: 'section-0', content: markdown.trim(), type: 'section' });
   }
-
-  // DEBUG: Log the parsing result
-  console.log('[markdownToArticleContent] OUTPUT:', {
-    sectionCount: sections.length,
-    headingsFound: headings.length,
-    sectionTypes: sections.map(s => ({ id: s.id, type: s.type, headingLevel: s.headingLevel, heading: s.heading?.substring(0, 50) })),
-  });
 
   return {
     title,

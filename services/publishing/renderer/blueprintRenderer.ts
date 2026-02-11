@@ -394,17 +394,6 @@ export function renderBlueprint(
 
   let css: string;
 
-  // DEBUG: Log what brandDesignSystem we received
-  console.log('-'.repeat(80));
-  console.log('[STYLING PIPELINE] STEP 4: BlueprintRenderer CSS GENERATION DECISION');
-  console.log('[STYLING PIPELINE] brandDesignSystem check:', {
-    hasBrandDesignSystem: !!options.brandDesignSystem,
-    hasCompiledCss: !!options.brandDesignSystem?.compiledCss,
-    compiledCssLength: options.brandDesignSystem?.compiledCss?.length || 0,
-    brandName: options.brandDesignSystem?.brandName || '(none)',
-    designDnaHash: options.brandDesignSystem?.designDnaHash || '(none)',
-  });
-
   if (options.brandDesignSystem?.compiledCss) {
     // THE KEY FIX: Use full brand design system CSS
     // IMPORTANT: compiledCss already includes the tokens CSS (:root declaration)

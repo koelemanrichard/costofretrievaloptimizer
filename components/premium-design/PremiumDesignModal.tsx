@@ -892,11 +892,14 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     }
   }, [brief, styleGuide, targetUrl, articleDraft, topicalMap, state.businessInfo, state.user?.id, topic, dispatch, getSupabase]);
 
-  // Handle AI element refinement
-  const handleRefineElement = useCallback(async (elementId: string) => {
+  // Handle AI element refinement — accepts optional comment override to avoid stale-closure issues
+  const handleRefineElement = useCallback(async (elementId: string, commentOverride?: string) => {
     if (!styleGuide) return;
     const element = styleGuide.elements.find(e => e.id === elementId);
-    if (!element?.userComment) return;
+    if (!element) return;
+
+    const comment = commentOverride || element.userComment;
+    if (!comment) return;
 
     const bi = state.businessInfo;
     const apiKey = bi?.geminiApiKey || bi?.anthropicApiKey || bi?.openAiApiKey || '';
@@ -911,7 +914,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
     try {
       const result = await StyleGuideGenerator.refineElement(
         element,
-        element.userComment,
+        comment,
         element.referenceImageBase64,
         styleGuide.screenshotBase64,
         { provider: provider as 'gemini' | 'anthropic' | 'openai', apiKey }
@@ -920,7 +923,7 @@ export const PremiumDesignModal: React.FC<PremiumDesignModalProps> = ({
         ...styleGuide,
         elements: styleGuide.elements.map(el =>
           el.id === elementId
-            ? { ...el, selfContainedHtml: result.selfContainedHtml, computedCss: result.computedCss }
+            ? { ...el, selfContainedHtml: result.selfContainedHtml, computedCss: result.computedCss, aiRepaired: true }
             : el
         ),
       });
