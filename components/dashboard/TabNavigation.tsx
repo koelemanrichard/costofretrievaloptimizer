@@ -79,6 +79,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ tabs, primaryAction, clas
             >
               <button
                 onClick={() => setOpenDropdown(openDropdown === tab.id ? null : tab.id)}
+                aria-expanded={openDropdown === tab.id}
+                aria-haspopup="true"
+                aria-controls={openDropdown === tab.id ? `dropdown-${tab.id}` : undefined}
                 className={`
                   flex items-center gap-2 px-4 py-3 text-sm font-medium
                   transition-colors
@@ -102,7 +105,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ tabs, primaryAction, clas
 
               {/* Dropdown Menu */}
               {openDropdown === tab.id && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div id={`dropdown-${tab.id}`} role="menu" aria-label={`${tab.label} menu`} className="absolute top-full left-0 mt-1 w-64 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
                   {tab.helpText && (
                     <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-800">
                       {tab.helpText}
@@ -111,6 +114,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ tabs, primaryAction, clas
                   {tab.actions.map((action, idx) => (
                     <button
                       key={action.id}
+                      role="menuitem"
                       onClick={() => {
                         if (!action.disabled && !action.loading) {
                           action.onClick();

@@ -221,6 +221,8 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
               onToggleRowExpand();
             }}
             className="text-gray-500 hover:text-gray-300 text-xs"
+            aria-label={isRowExpanded ? 'Collapse child topics' : 'Expand child topics'}
+            aria-expanded={isRowExpanded}
           >
             {isRowExpanded ? '▼' : '▶'}
           </button>
@@ -344,6 +346,7 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
               hasBrief ? 'text-green-400' : 'text-gray-500 hover:text-blue-400'
             } disabled:opacity-30 disabled:cursor-not-allowed`}
             title={hasBrief ? 'View Brief' : canGenerateBriefs ? 'Generate Brief' : 'Enable briefs first'}
+            aria-label={hasBrief ? 'View Brief' : canGenerateBriefs ? 'Generate Brief' : 'Enable briefs first'}
           >
             📝
           </button>
@@ -358,6 +361,7 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
               disabled={isExpanding || !canExpand}
               className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
               title={canExpand ? 'Expand Topic' : 'Enable expansion first'}
+              aria-label={canExpand ? 'Expand Topic' : 'Enable expansion first'}
             >
               {isExpanding ? <Loader className="w-4 h-4" /> : '➕'}
             </button>
@@ -371,6 +375,7 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
             }}
             className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-red-400"
             title="Delete Topic"
+            aria-label="Delete Topic"
           >
             🗑️
           </button>
@@ -380,4 +385,4 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
   );
 };
 
-export default TopicCompactRow;
+export default React.memo(TopicCompactRow);

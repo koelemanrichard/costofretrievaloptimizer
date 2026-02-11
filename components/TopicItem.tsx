@@ -51,6 +51,7 @@ interface TopicItemProps {
 const ActionButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode }> = ({ icon, ...props }) => (
     <button
         {...props}
+        aria-label={props['aria-label'] || props.title}
         onClick={(e) => {
             e.stopPropagation();
             if (props.onClick) props.onClick(e);
@@ -421,4 +422,4 @@ const TopicItem: React.FC<TopicItemProps> = ({
     );
 };
 
-export default TopicItem;
+export default React.memo(TopicItem);

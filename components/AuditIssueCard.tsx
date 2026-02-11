@@ -131,6 +131,8 @@ const AuditIssueCard: React.FC<AuditIssueCardProps> = ({
           )}
           <button
             className="text-gray-400 hover:text-white transition-colors"
+            aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
+            aria-expanded={isExpanded}
             onClick={e => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
@@ -206,4 +208,4 @@ const AuditIssueCard: React.FC<AuditIssueCardProps> = ({
   );
 };
 
-export default AuditIssueCard;
+export default React.memo(AuditIssueCard);

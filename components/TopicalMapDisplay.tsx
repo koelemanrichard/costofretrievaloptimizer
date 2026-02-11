@@ -769,11 +769,13 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 )}
                 {/* Hierarchy Mode Toggle - SEO vs Business view */}
                 {viewMode === 'list' && (
-                    <div className="flex rounded-lg bg-gray-700 p-1" title="SEO View shows behavioral hierarchy (affects SEO). Business View shows visual groupings (for presentations).">
+                    <div className="flex rounded-lg bg-gray-700 p-1" role="tablist" aria-label="Hierarchy mode" title="SEO View shows behavioral hierarchy (affects SEO). Business View shows visual groupings (for presentations).">
                         <Button
                             onClick={() => setHierarchyMode('seo')}
                             variant={hierarchyMode === 'seo' ? 'primary' : 'secondary'}
                             className="!py-1 !px-3 text-sm"
+                            role="tab"
+                            aria-selected={hierarchyMode === 'seo'}
                         >
                             SEO View
                         </Button>
@@ -781,22 +783,24 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                             onClick={() => setHierarchyMode('business')}
                             variant={hierarchyMode === 'business' ? 'primary' : 'secondary'}
                             className="!py-1 !px-3 text-sm"
+                            role="tab"
+                            aria-selected={hierarchyMode === 'business'}
                         >
                             Business View
                         </Button>
                     </div>
                 )}
-                <div className="flex rounded-lg bg-gray-700 p-1">
-                    <Button onClick={() => setViewMode('list')} variant={viewMode === 'list' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">Cards</Button>
-                    <Button onClick={() => setViewMode('table')} variant={viewMode === 'table' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">Table</Button>
-                    <Button onClick={() => setViewMode('graph')} variant={viewMode === 'graph' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm">Graph</Button>
+                <div className="flex rounded-lg bg-gray-700 p-1" role="tablist" aria-label="View mode">
+                    <Button onClick={() => setViewMode('list')} variant={viewMode === 'list' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm" role="tab" aria-selected={viewMode === 'list'} aria-controls="topic-view-panel">Cards</Button>
+                    <Button onClick={() => setViewMode('table')} variant={viewMode === 'table' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm" role="tab" aria-selected={viewMode === 'table'} aria-controls="topic-view-panel">Table</Button>
+                    <Button onClick={() => setViewMode('graph')} variant={viewMode === 'graph' ? 'primary' : 'secondary'} className="!py-1 !px-3 text-sm" role="tab" aria-selected={viewMode === 'graph'} aria-controls="topic-view-panel">Graph</Button>
                 </div>
             </div>
         </div>
 
         {/* Pipeline Filter Chips */}
         {allTopics.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap" role="tablist" aria-label="Pipeline filter">
                 {([
                     { key: 'all' as const, label: 'All' },
                     { key: 'needs-brief' as const, label: 'Needs Brief' },
@@ -805,6 +809,8 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 ]).map(chip => (
                     <button
                         key={chip.key}
+                        role="tab"
+                        aria-selected={pipelineFilter === chip.key}
                         onClick={() => setPipelineFilter(chip.key)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                             pipelineFilter === chip.key
@@ -864,7 +870,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                                 <div key={topic.id} className="rounded-lg border-l-4 border-purple-500 bg-purple-900/10 p-2">
                                     <div className="flex items-center gap-2">
                                         {hasDisplayChildren && (
-                                            <button onClick={() => handleToggleCollapse(topic.id)} className="p-1 text-gray-500 hover:text-white">
+                                            <button onClick={() => handleToggleCollapse(topic.id)} className="p-1 text-gray-500 hover:text-white" aria-label={isCollapsed ? 'Expand section' : 'Collapse section'} aria-expanded={!isCollapsed}>
                                                 <svg className={`w-5 h-5 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                                 </svg>
@@ -1040,7 +1046,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                     return (
                         <div key={core.id} className={`rounded-lg border-l-4 ${isMonetization ? 'border-yellow-500 bg-yellow-900/5' : 'border-blue-500 bg-blue-900/5'} p-2`}>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => handleToggleCollapse(core.id)} className="p-1 text-gray-500 hover:text-white">
+                                <button onClick={() => handleToggleCollapse(core.id)} className="p-1 text-gray-500 hover:text-white" aria-label={isCollapsed ? 'Expand section' : 'Collapse section'} aria-expanded={!isCollapsed}>
                                     <svg className={`w-5 h-5 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                     </svg>
