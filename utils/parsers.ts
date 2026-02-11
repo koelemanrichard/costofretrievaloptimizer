@@ -413,6 +413,11 @@ export const sanitizeBriefFromDb = (dbBrief: any): ContentBrief => {
         featured_snippet_target: parseFeaturedSnippetTarget(dbBrief.featured_snippet_target),
         visual_semantics: parseVisualSemantics(dbBrief.visual_semantics),
         discourse_anchors: sanitizeStringArray(dbBrief.discourse_anchors),
+
+        // Ecommerce catalog context
+        categoryContext: dbBrief.category_context ? safeJson(dbBrief.category_context, undefined)
+            : dbBrief.categoryContext ? safeJson(dbBrief.categoryContext, undefined)
+            : undefined,
     };
 };
 

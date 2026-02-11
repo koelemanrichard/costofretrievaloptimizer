@@ -45,6 +45,8 @@ import { AnalysisDepth, DEPTH_CONFIG } from '../../types/competitiveIntelligence
 import TemplateConfirmationFlow from '../generation/TemplateConfirmationFlow';
 import { syncBriefWithTemplate } from '../../services/briefTemplateSync';
 import { TemplateName, DepthMode } from '../../types/contentTemplates';
+import { findCategoryByLinkedTopicId, buildCategoryPageContext } from '../../services/catalog/catalogService';
+import type { CategoryPageContext } from '../../types/catalog';
 
 interface ContentBriefModalProps {
   allTopics: EnrichedTopic[];
@@ -219,8 +221,25 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
             // Determine response code (default to INFORMATIONAL for existing content)
             const responseCode = (activeBriefTopic.metadata?.response_code as ResponseCode) || ResponseCode.INFORMATIONAL;
 
+            // Look up linked catalog category for this topic
+            let categoryContext: CategoryPageContext | undefined;
+            const catalogCategories = state.catalog?.categories;
+            if (catalogCategories && catalogCategories.length > 0) {
+                const linkedCategory = findCategoryByLinkedTopicId(catalogCategories, activeBriefTopic.id);
+                if (linkedCategory) {
+                    try {
+                        const supabaseForCatalog = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+                        categoryContext = await buildCategoryPageContext(supabaseForCatalog, linkedCategory.id, catalogCategories);
+                    } catch (e) {
+                        console.warn('[ContentBriefModal] Failed to build catalog context:', e);
+                    }
+                }
+            }
+
             dispatch({ type: 'SET_LOADING', payload: { key: 'brief', value: true } });
-            dispatch({ type: 'SET_NOTIFICATION', payload: 'Analyzing competitors and regenerating brief...' });
+            dispatch({ type: 'SET_NOTIFICATION', payload: categoryContext
+                ? `Analyzing competitors and regenerating brief (with catalog: ${categoryContext.categoryName})...`
+                : 'Analyzing competitors and regenerating brief...' });
 
             // Use enhanced brief generation with competitor analysis
             const result = await generateEnhancedBrief(
@@ -236,7 +255,9 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                     cacheMaxAgeDays: 30,
                     forceReanalysis: false, // Use cached data if available and fresh
                     skipAnalysis: false,
-                }
+                },
+                activeMap.eavs || [],
+                categoryContext
             );
 
             if (result.error) {
@@ -259,6 +280,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         query_type_format: result.brief.query_type_format,
                         discourse_anchors: result.brief.discourse_anchors as any,
                         competitor_specs: result.brief.competitorSpecs as any, // NEW: Save competitor data
+                        ...(result.brief.categoryContext ? { category_context: result.brief.categoryContext as any } : {}),
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', brief.id)
@@ -300,7 +322,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
             setIsRegeneratingBrief(false);
             dispatch({ type: 'SET_LOADING', payload: { key: 'brief', value: false } });
         }
-    }, [brief, activeMapId, activeBriefTopic, activeMap?.pillars, effectiveBusinessInfo, allTopics, knowledgeGraph, dispatch, generateEnhancedBrief, analysisDepth]);
+    }, [brief, activeMapId, activeBriefTopic, activeMap?.pillars, activeMap?.eavs, effectiveBusinessInfo, allTopics, knowledgeGraph, dispatch, generateEnhancedBrief, analysisDepth, state.catalog?.categories]);
 
     // Handle repair missing fields
     const handleRepairMissing = useCallback(async (missingFields: string[]) => {
@@ -1108,6 +1130,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                     error={error}
                                     templateName={brief?.selectedTemplate}
                                     templateConfidence={brief?.templateConfidence}
+                                    categoryContext={brief?.categoryContext}
                                 />
                             )}
 
@@ -1227,6 +1250,61 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                             businessInfo={effectiveBusinessInfo}
                                         />
                                     </div>
+                                )}
+                            </Card>
+                        )}
+
+                        {/* Product Catalog Data */}
+                        {brief.categoryContext && (
+                            <Card className="p-4 bg-cyan-900/20 border border-cyan-700/50">
+                                <h3 className="font-semibold text-lg text-cyan-300 mb-2 flex items-center gap-2">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                    </svg>
+                                    Product Catalog Data
+                                </h3>
+                                <p className="text-cyan-100 text-sm mb-3">
+                                    This brief uses real product data from your catalog category <strong>{brief.categoryContext.categoryName}</strong>. Content generation will reference actual products, prices, and attributes.
+                                </p>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                                    <div className="bg-cyan-900/30 rounded p-2 text-center">
+                                        <div className="text-lg font-bold text-cyan-300">{brief.categoryContext.totalProductCount}</div>
+                                        <div className="text-xs text-cyan-500">Products</div>
+                                    </div>
+                                    <div className="bg-cyan-900/30 rounded p-2 text-center">
+                                        <div className="text-lg font-bold text-cyan-300">
+                                            {brief.categoryContext.priceRange
+                                                ? `${brief.categoryContext.priceRange.currency} ${brief.categoryContext.priceRange.min}–${brief.categoryContext.priceRange.max}`
+                                                : '—'}
+                                        </div>
+                                        <div className="text-xs text-cyan-500">Price Range</div>
+                                    </div>
+                                    <div className="bg-cyan-900/30 rounded p-2 text-center">
+                                        <div className="text-lg font-bold text-cyan-300">{brief.categoryContext.subcategories.length}</div>
+                                        <div className="text-xs text-cyan-500">Subcategories</div>
+                                    </div>
+                                    <div className="bg-cyan-900/30 rounded p-2 text-center">
+                                        <div className="text-lg font-bold text-cyan-300">{brief.categoryContext.isSketchMode ? 'Sketch' : 'Full'}</div>
+                                        <div className="text-xs text-cyan-500">Data Mode</div>
+                                    </div>
+                                </div>
+                                {brief.categoryContext.products.length > 0 && (
+                                    <details className="text-sm">
+                                        <summary className="cursor-pointer text-cyan-400 hover:text-cyan-300">
+                                            View {brief.categoryContext.products.length} referenced products
+                                        </summary>
+                                        <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
+                                            {brief.categoryContext.products.map((p: any, i: number) => (
+                                                <div key={i} className="flex items-center justify-between text-xs text-gray-300 bg-gray-800/50 rounded px-2 py-1">
+                                                    <span className="truncate mr-2">{p.name}</span>
+                                                    <span className="flex-shrink-0 text-cyan-400">
+                                                        {p.brand && <span className="mr-2 text-gray-500">{p.brand}</span>}
+                                                        {p.price != null ? `${p.currency || '$'}${p.price}` : '—'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
                                 )}
                             </Card>
                         )}

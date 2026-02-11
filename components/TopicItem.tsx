@@ -10,6 +10,7 @@ import { BriefHealthIndicator } from './ui/BriefHealthBadge';
 import { calculateBriefQualityScore } from '../utils/briefQualityScore';
 import { PublicationStatus } from '../types/wordpress';
 import { TopicPipelineIndicator } from './ui/TopicPipelineIndicator';
+import { useAppState } from '../state/appState';
 
 interface TopicItemProps {
   topic: EnrichedTopic;
@@ -105,6 +106,16 @@ const TopicItem: React.FC<TopicItemProps> = ({
     const briefQuality = useMemo(() => {
         return calculateBriefQualityScore(brief);
     }, [brief]);
+
+    // Catalog category lookup
+    const { state: appState } = useAppState();
+    const linkedCatalogInfo = useMemo(() => {
+        const categories = appState.catalog?.categories;
+        if (!categories || categories.length === 0) return null;
+        const linked = categories.find(c => c.linked_topic_id === topic.id && c.status === 'active');
+        if (!linked) return null;
+        return { name: linked.name, productCount: linked.product_count };
+    }, [appState.catalog?.categories, topic.id]);
 
     // Edit mode state
     const [editableTitle, setEditableTitle] = useState(title);
@@ -332,6 +343,17 @@ const TopicItem: React.FC<TopicItemProps> = ({
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                             {brief.contentAudit.overallScore || 0}%
+                                        </span>
+                                    )}
+                                    {linkedCatalogInfo && (
+                                        <span
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                                            title={`Linked to catalog: ${linkedCatalogInfo.name} (${linkedCatalogInfo.productCount} products)`}
+                                        >
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                            </svg>
+                                            {linkedCatalogInfo.name}
                                         </span>
                                     )}
                                 </h4>

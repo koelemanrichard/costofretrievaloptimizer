@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
 import { ContentGenerationJob, ContentGenerationSection, PASS_NAMES, PassesStatus } from '../types';
 import { SimpleMarkdown } from './ui/SimpleMarkdown';
+import type { CategoryPageContext } from '../types/catalog';
 
 // Memoized section preview to prevent unnecessary re-renders
 const SectionPreview = memo(({ section, index }: { section: ContentGenerationSection; index: number }) => {
@@ -63,6 +64,8 @@ interface ContentGenerationProgressProps {
   templateName?: string;
   /** Template selection confidence score (0-100) */
   templateConfidence?: number;
+  /** Catalog category context for ecommerce content */
+  categoryContext?: CategoryPageContext;
 }
 
 // Estimated average seconds per section per pass (based on historical data)
@@ -264,7 +267,8 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
   onApproveCheckpoint,
   error,
   templateName,
-  templateConfidence
+  templateConfidence,
+  categoryContext
 }) => {
   const [showLivePreview, setShowLivePreview] = useState(false);
   const [activityMessageIndex, setActivityMessageIndex] = useState(0);
@@ -368,6 +372,19 @@ export const ContentGenerationProgress: React.FC<ContentGenerationProgressProps>
                 {templateConfidence && (
                   <span className="text-[10px] opacity-70">{templateConfidence}%</span>
                 )}
+              </span>
+            )}
+            {/* Catalog Data Badge */}
+            {categoryContext && (
+              <span
+                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border bg-cyan-900/30 border-cyan-600/50 text-cyan-400"
+                title={`Draft generation is using real product data from catalog category "${categoryContext.categoryName}" (${categoryContext.totalProductCount} products)`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                {categoryContext.categoryName}
+                <span className="text-[10px] opacity-70">{categoryContext.totalProductCount} products</span>
               </span>
             )}
           </div>

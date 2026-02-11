@@ -12,6 +12,7 @@ import { Loader } from './ui/Loader';
 import { safeString } from '../utils/parsers';
 import { calculateBriefQualityScore, BriefQualityResult } from '../utils/briefQualityScore';
 import { TopicPipelineIndicator } from './ui/TopicPipelineIndicator';
+import { useAppState } from '../state/appState';
 
 interface TopicCompactRowProps {
   topic: EnrichedTopic;
@@ -121,6 +122,15 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
   const title = safeString(topic.title);
   const slug = safeString(topic.slug);
   const typeInfo = TYPE_ICONS[topic.type] || TYPE_ICONS.outer;
+
+  // Catalog category lookup
+  const { state: appState } = useAppState();
+  const catalogCategoryName = useMemo(() => {
+    const categories = appState.catalog?.categories;
+    if (!categories || categories.length === 0) return null;
+    const linked = categories.find(c => c.linked_topic_id === topic.id && c.status === 'active');
+    return linked?.name || null;
+  }, [appState.catalog?.categories, topic.id]);
 
   // Calculate brief quality
   const briefQuality = useMemo(() => {
@@ -238,6 +248,16 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
           >
             {title}
           </span>
+          {catalogCategoryName && (
+            <span
+              className="ml-1 text-cyan-400 flex-shrink-0"
+              title={`Linked to catalog: ${catalogCategoryName}`}
+            >
+              <svg className="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </span>
+          )}
         </div>
       </td>
 

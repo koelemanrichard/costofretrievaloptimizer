@@ -10,6 +10,8 @@ import React from 'react';
 import { sanitizeBriefFromDb } from '../utils/parsers';
 import { verifiedInsert } from './verifiedDatabaseService';
 import type { Json } from '../database.types';
+import { findCategoryByLinkedTopicId, buildCategoryPageContext } from './catalog/catalogService';
+import type { CategoryPageContext } from '../types/catalog';
 
 export class BatchProcessor {
     private dispatch: React.Dispatch<AppAction>;
@@ -97,7 +99,26 @@ export class BatchProcessor {
             }
 
             const topic = topicsWithoutBriefs[i];
-            const statusMessage = topic.title;
+
+            // Look up linked catalog category for this topic
+            let categoryContext: CategoryPageContext | undefined;
+            const catalogCategories = currentState.catalog?.categories;
+            if (catalogCategories && catalogCategories.length > 0) {
+                const linkedCategory = findCategoryByLinkedTopicId(catalogCategories, topic.id);
+                if (linkedCategory) {
+                    try {
+                        const supabaseForCatalog = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+                        categoryContext = await buildCategoryPageContext(supabaseForCatalog, linkedCategory.id, catalogCategories);
+                    } catch (e) {
+                        this.dispatch({ type: 'LOG_EVENT', payload: { service: 'BatchProcessor', message: `Failed to build catalog context for "${topic.title}": ${e instanceof Error ? e.message : 'Unknown error'}`, status: 'warning', timestamp: Date.now() } });
+                    }
+                }
+            }
+
+            const catalogSuffix = categoryContext
+                ? ` [Catalog: ${categoryContext.categoryName} — ${categoryContext.totalProductCount} products]`
+                : '';
+            const statusMessage = topic.title + catalogSuffix;
 
             // Update progress with current/total counts
             this.dispatch({
@@ -128,7 +149,8 @@ export class BatchProcessor {
                     ResponseCode.INFORMATIONAL,
                     this.dispatch,
                     undefined,
-                    activeMap.eavs || []
+                    activeMap.eavs || [],
+                    categoryContext
                 );
 
                 const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
@@ -164,6 +186,8 @@ export class BatchProcessor {
                         featured_snippet_target: briefData.featured_snippet_target as unknown as Json,
                         visual_semantics: briefData.visual_semantics as unknown as Json,
                         discourse_anchors: briefData.discourse_anchors as unknown as Json,
+                        // Ecommerce catalog context
+                        ...(briefData.categoryContext ? { category_context: briefData.categoryContext as unknown as Json } : {}),
                     }
                 );
 

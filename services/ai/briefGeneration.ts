@@ -444,6 +444,19 @@ export const generateContentBrief = async (
         });
     }
 
+    // Log if using catalog data
+    if (categoryContext) {
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'BriefGeneration',
+                message: `Using catalog data: "${categoryContext.categoryName}" with ${categoryContext.totalProductCount} products (${categoryContext.isSketchMode ? 'sketch' : 'full data'} mode)`,
+                status: 'info',
+                timestamp: Date.now()
+            }
+        });
+    }
+
     const brief = await dispatchToProvider(businessInfo, {
         gemini: () => geminiService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch, marketPatterns, eavs),
         openai: () => openAiService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch, marketPatterns, eavs),

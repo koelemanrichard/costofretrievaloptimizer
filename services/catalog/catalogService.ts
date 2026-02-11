@@ -429,3 +429,14 @@ export async function buildCategoryPageContext(
     isSketchMode,
   };
 }
+
+/**
+ * Find a category by its linked topic ID.
+ * Pure function — searches the in-memory categories array, no DB call needed.
+ */
+export function findCategoryByLinkedTopicId(
+  categories: CatalogCategory[],
+  topicId: string
+): CatalogCategory | undefined {
+  return categories.find(c => c.linked_topic_id === topicId && c.status === 'active');
+}
