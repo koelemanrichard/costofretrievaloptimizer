@@ -71,13 +71,6 @@ function emphasisClasses(emphasis: SectionEmphasis): string {
 }
 
 /**
- * DEPRECATED: Use emphasisClasses() instead.
- * Inline styles override brand CSS due to specificity.
- * This function is kept for reference but should NOT be used.
- */
-// function emphasisStyles(emphasis: SectionEmphasis): string { ... }
-
-/**
  * Generate CSS classes for spacing
  */
 function spacingClasses(spacing: SectionSpacing): string {
