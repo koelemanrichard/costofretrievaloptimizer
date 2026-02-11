@@ -135,7 +135,6 @@ export default [
   // Override for known large files (legacy - to be refactored)
   {
     files: [
-      '**/ProjectDashboardContainer.tsx',
       '**/DraftingModal.tsx',
       '**/PageAuditDetailV2.tsx',
       '**/NavigationDesigner.tsx',
