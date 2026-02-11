@@ -174,7 +174,9 @@ describe('pageExtractionService', () => {
 
       expect(apifyService.extractMultiplePagesTechnicalData).toHaveBeenCalledWith(
         ['https://example.com'],
-        'apify-token'
+        'apify-token',
+        undefined,
+        undefined
       );
       expect(result.technical).toEqual(mockApifyResult);
       expect(result.primaryProvider).toBe('apify');

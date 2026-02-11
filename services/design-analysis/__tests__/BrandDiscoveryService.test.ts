@@ -149,12 +149,12 @@ describe('BrandDiscoveryService', () => {
       expect(report.id).toBeDefined();
       expect(report.targetUrl).toBe('https://example.com');
       expect(report.screenshotBase64).toBe('test-screenshot');
-      expect(report.findings.primaryColor.value).toBe('rgb(234, 88, 12)');
+      expect(report.findings.primaryColor.value).toBe('#ea580c');
       expect(report.findings.primaryColor.confidence).toBe('found');
       expect(report.findings.headingFont.value).toContain('Playfair Display');
       expect(report.overallConfidence).toBeGreaterThan(0);
       expect(report.derivedTokens).toBeDefined();
-      expect(report.derivedTokens.colors.primary).toBe('rgb(234, 88, 12)');
+      expect(report.derivedTokens.colors.primary).toBe('#ea580c');
     });
     it('should use fallbacks when data is missing', () => {
       const emptyData = {

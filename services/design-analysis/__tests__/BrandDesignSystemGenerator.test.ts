@@ -363,7 +363,7 @@ describe('BrandDesignSystemGenerator', () => {
 
       const info = generator.getProviderInfo();
       expect(info.provider).toBe('anthropic');
-      expect(info.model).toBe('claude-sonnet-4-5-20250929');
+      expect(info.model).toBe('claude-haiku-4-5-20251001');
     });
 
     it('should allow custom model override', () => {

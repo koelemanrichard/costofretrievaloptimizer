@@ -140,7 +140,8 @@ The `services/layout-engine/` module transforms content into design-agency quali
 - `components/ui/` - Reusable UI primitives
 - `state/` - Global state management
 - `config/` - Centralized configuration:
-  - `apiEndpoints.ts` - All external API base URLs
+  - `serviceRegistry.ts` - **Single source of truth** for ALL external service config (models, URLs, pricing, limits)
+  - `apiEndpoints.ts` - Re-exports API URLs from `serviceRegistry.ts`
   - `scrapingConfig.ts` - HTML scraping selectors and settings
   - `prompts/` - Domain-specific AI prompt modules (9 modules)
 - `hooks/` - Custom React hooks (useKnowledgeGraph, useMapData, useTopicEnrichment)
@@ -152,6 +153,24 @@ The `services/layout-engine/` module transforms content into design-agency quali
 - `App.tsx` - Main application entry
 - `state/appState.ts` - State shape and reducer
 - `services/aiResponseSanitizer.ts` - Critical: sanitizes AI responses to prevent crashes
+- `config/serviceRegistry.ts` - Central registry for all external service configuration
+
+### Service Registry (`config/serviceRegistry.ts`)
+All external service configuration is centralized in the service registry. **Never hardcode** model names, API URLs, pricing rates, batch sizes, or timeout values in service files. Instead, import from the registry:
+
+```typescript
+import { getDefaultModel, getFastModel, getValidModels, isValidModel,
+         SERVICE_REGISTRY, getProviderEndpoint } from '../config/serviceRegistry';
+```
+
+**To update models/pricing/URLs**: Edit only `config/serviceRegistry.ts` (and its Deno mirror `supabase/functions/_shared/serviceConfig.ts` for edge functions).
+
+**Registry structure**:
+- `SERVICE_REGISTRY.providers.{anthropic|openai|gemini|perplexity|openrouter}` — models, endpoints, limits, pricing
+- `SERVICE_REGISTRY.services.{dataforseo|spaceserp|apify|firecrawl|jina|cloudinary|markupgo}` — endpoints, pricing
+- `SERVICE_REGISTRY.limits` — shared operational limits (maxTokens, batchSize, timeout)
+
+**Usage tracking**: All AI and non-AI service calls log to `ai_usage_logs` via `logAiUsage()` in `services/telemetryService.ts`. Anthropic and Gemini use actual API response tokens (not estimates).
 
 ## Testing
 
@@ -164,7 +183,7 @@ npx playwright test    # Run E2E tests (requires dev server running)
 - **Unit tests**: Vitest + React Testing Library in `__tests__/` directories
 - **E2E tests**: Playwright specs in `e2e/` (archived debug specs in `e2e/_archived/`)
 - **Test config**: `e2e/test-utils.ts` exports `TEST_CONFIG` with `BASE_URL`, credentials, timeouts
-- Pre-existing test failures (~38) in blueprintRenderer, ComponentStyles, contentTemplates are known
+- All 2,408 tests should pass with zero failures
 
 ## Database Schema (Supabase)
 

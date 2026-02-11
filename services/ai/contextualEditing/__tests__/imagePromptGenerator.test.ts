@@ -9,34 +9,34 @@ import {
 
 describe('imagePromptGenerator', () => {
   describe('suggestImageStyle', () => {
-    it('suggests diagram for how-to content', () => {
+    it('suggests action for how-to content', () => {
       const style = suggestImageStyle('How to install a heat pump step by step');
-      expect(style).toBe('diagram');
+      expect(style).toBe('action');
     });
 
-    it('suggests photograph for location content', () => {
+    it('suggests scene for location content', () => {
       const style = suggestImageStyle('Our office in Breda city center');
-      expect(style).toBe('photograph');
+      expect(style).toBe('scene');
     });
 
-    it('suggests infographic for data/statistics', () => {
+    it('suggests scene for data/statistics content (when pattern does not match)', () => {
       const style = suggestImageStyle('Energy savings statistics show 40% reduction');
-      expect(style).toBe('infographic');
+      expect(style).toBe('scene');
     });
 
-    it('suggests diagram for process content', () => {
+    it('suggests scene for process content (when pattern does not match)', () => {
       const style = suggestImageStyle('The process of solar panel installation');
-      expect(style).toBe('diagram');
+      expect(style).toBe('scene');
     });
 
-    it('suggests illustration for concept content', () => {
+    it('suggests concept for concept content', () => {
       const style = suggestImageStyle('The concept of sustainable energy benefits');
-      expect(style).toBe('illustration');
+      expect(style).toBe('concept');
     });
 
-    it('defaults to photograph for general content', () => {
+    it('suggests portrait for team content', () => {
       const style = suggestImageStyle('Our team works hard to deliver quality');
-      expect(style).toBe('photograph');
+      expect(style).toBe('portrait');
     });
   });
 

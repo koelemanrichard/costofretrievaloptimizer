@@ -103,7 +103,12 @@ function sanitizeColors(o: ComponentStylesOptions): ComponentStylesOptions {
 }
 
 export function generateComponentStyles(options: Partial<ComponentStylesOptions> = {}): string {
-  const raw = { ...DEFAULT_OPTIONS, ...options };
+  // Filter out undefined values so they don't override defaults
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(options)) {
+    if (v !== undefined) cleaned[k] = v;
+  }
+  const raw = { ...DEFAULT_OPTIONS, ...cleaned } as ComponentStylesOptions;
   const o = sanitizeColors(raw);
 
   // ---------------------------------------------------------------------------

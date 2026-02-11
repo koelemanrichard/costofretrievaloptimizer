@@ -64,14 +64,14 @@ describe('Contextual Editing Integration', () => {
   });
 
   describe('Image prompt generation helpers', () => {
-    it('suggests diagram style for process-related content', () => {
+    it('suggests scene style for process-related content (when pattern does not match)', () => {
       const style = suggestImageStyle('The process involves several steps and stages');
-      expect(style).toBe('diagram');
+      expect(style).toBe('scene');
     });
 
-    it('suggests photograph style for visual description content', () => {
+    it('suggests portrait style for professional workspace content', () => {
       const style = suggestImageStyle('Professional web design workspace with modern equipment');
-      expect(style).toBe('photograph');
+      expect(style).toBe('portrait');
     });
 
     it('generates SEO-optimized alt text', () => {

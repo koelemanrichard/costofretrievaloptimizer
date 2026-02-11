@@ -271,7 +271,7 @@ export class BrandDesignSystemGenerator {
         const b = parseInt(normalized.substring(4, 6), 16) / 255;
         const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
         const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-        if (luminance > 0.85 || luminance < 0.03) return true;
+        if (luminance > 0.85 || luminance < 0.01) return true;
       }
       return false;
     };
@@ -296,7 +296,7 @@ export class BrandDesignSystemGenerator {
       primaryLightHex = this.lightenHex(primaryHex, 0.85);
       console.log('[BrandDesignSystemGenerator] PrimaryLight computed from primary:', primaryLightHex);
     }
-    if (isUselessColor(primaryDarkHex)) {
+    if (!primaryDarkHex || primaryDarkHex === '#000000' || primaryDarkHex === '#ffffff') {
       primaryDarkHex = this.darkenHex(primaryHex, 0.2);
       console.log('[BrandDesignSystemGenerator] PrimaryDark computed from primary:', primaryDarkHex);
     }

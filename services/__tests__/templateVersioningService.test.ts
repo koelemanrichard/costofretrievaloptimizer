@@ -28,6 +28,8 @@ const mockOrder = vi.fn();
 const mockLimit = vi.fn();
 const mockRpc = vi.fn();
 
+const mockMaybeSingle = vi.fn();
+
 const createChainMock = () => {
   const chainMock = {
     insert: mockInsert,
@@ -39,6 +41,7 @@ const createChainMock = () => {
     order: mockOrder,
     limit: mockLimit,
     single: mockSingle,
+    maybeSingle: mockMaybeSingle,
   };
 
   // Setup chaining - all methods return chainMock except terminal ones
@@ -51,6 +54,10 @@ const createChainMock = () => {
   mockNeq.mockResolvedValue({ data: null, error: null });
   mockIn.mockResolvedValue({ data: [], error: null });
   mockSingle.mockResolvedValue({
+    data: { version_number: 1, id: 'version-1', template_name: 'TEST', is_active: true, config: {} },
+    error: null,
+  });
+  mockMaybeSingle.mockResolvedValue({
     data: { version_number: 1, id: 'version-1', template_name: 'TEST', is_active: true, config: {} },
     error: null,
   });

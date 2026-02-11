@@ -35,8 +35,8 @@ describe('StandaloneCssGenerator', () => {
 
       const css = generator.generate(components, [], mockTokens);
 
-      expect(css).toContain('Auto-generated');
-      expect(css).toContain('.brand-hero');
+      expect(css).toContain('Brand CSS');
+      expect(css).toContain('.hero');
       expect(css).toContain('background: #1a365d');
     });
   });

@@ -10,8 +10,8 @@ import {
 
 describe('contentTemplates', () => {
   describe('CONTENT_TEMPLATES', () => {
-    it('should have 12 template definitions', () => {
-      expect(Object.keys(CONTENT_TEMPLATES)).toHaveLength(12);
+    it('should have 13 template definitions', () => {
+      expect(Object.keys(CONTENT_TEMPLATES)).toHaveLength(13);
     });
 
     it('should have DEFINITIONAL template with required sections', () => {
@@ -61,9 +61,9 @@ describe('contentTemplates', () => {
   });
 
   describe('getAllTemplateNames', () => {
-    it('should return all 12 template names', () => {
+    it('should return all 13 template names', () => {
       const names = getAllTemplateNames();
-      expect(names).toHaveLength(12);
+      expect(names).toHaveLength(13);
       expect(names).toContain('DEFINITIONAL');
       expect(names).toContain('ECOMMERCE_PRODUCT');
     });
@@ -82,6 +82,7 @@ describe('contentTemplates', () => {
         'EVENT_EXPERIENCE',
         'COURSE_EDUCATION',
         'IMPACT_NONPROFIT',
+        'ECOMMERCE_CATEGORY',
         'LOCATION_REALESTATE',
       ];
       expectedTemplates.forEach(template => {

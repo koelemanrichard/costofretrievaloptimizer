@@ -762,7 +762,7 @@ function buildPageFunction(): string {
                 // Neutralize url() in inline style with external URLs
                 var inlineStyle = clone.getAttribute('style');
                 if (inlineStyle && inlineStyle.match(/url\s*\(\s*['"]?https?:\/\//)) {
-                  clone.setAttribute('style', inlineStyle.replace(/url\(\s*['"]?https?:\/\/[^'")]+['"]?\s*\)/gi, 'url(about:blank)'));
+                  clone.setAttribute('style', inlineStyle.replace(/url\(\s*['"]?https?:\/\/[^'")]+['"]?\s*\)/gi, 'url(data:,)'));
                 }
               }
 

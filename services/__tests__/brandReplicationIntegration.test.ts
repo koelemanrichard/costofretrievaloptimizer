@@ -227,19 +227,24 @@ describe('Brand Replication Integration', () => {
   // ==========================================================================
 
   describe('Fallback Behavior', () => {
-    it('uses BlueprintRenderer when no brand extraction exists', async () => {
+    it('uses CleanArticleRenderer fallback when no brand extraction exists', async () => {
       // Arrange: Mock ComponentLibrary to return empty array
       vi.spyOn(ComponentLibrary.prototype, 'getAll').mockResolvedValue([]);
 
       const articleContent = createMockArticleContent();
 
-      // Act & Assert: Should throw because no blueprint provided and no extraction
-      await expect(
-        renderContent(articleContent, {
-          projectId: 'proj-no-extraction',
-          aiApiKey: 'test-api-key'
-        })
-      ).rejects.toThrow('No brand extraction and no blueprint provided');
+      // Act: Should use CleanArticleRenderer with fallback DesignDNA
+      const result = await renderContent(articleContent, {
+        projectId: 'proj-no-extraction',
+        aiApiKey: 'test-api-key'
+      });
+
+      // Assert: Should successfully render with fallback DesignDNA
+      expect(result).toBeDefined();
+      expect(result.html).toBeTruthy();
+      expect(result.css).toBeTruthy();
+      expect(result.renderInfo.renderer).toBe('clean-article');
+      expect(result.renderInfo.message).toContain('design DNA');
     });
 
     it('falls back gracefully when component retrieval fails', async () => {
@@ -250,14 +255,17 @@ describe('Brand Replication Integration', () => {
 
       const articleContent = createMockArticleContent();
 
-      // Act & Assert: Should fall back to BlueprintRenderer path
-      // and fail because no blueprint provided
-      await expect(
-        renderContent(articleContent, {
-          projectId: 'proj-error',
-          aiApiKey: 'test-api-key'
-        })
-      ).rejects.toThrow();
+      // Act: Should catch the error and use CleanArticleRenderer with fallback DesignDNA
+      const result = await renderContent(articleContent, {
+        projectId: 'proj-error',
+        aiApiKey: 'test-api-key'
+      });
+
+      // Assert: Should successfully render with fallback despite error
+      expect(result).toBeDefined();
+      expect(result.html).toBeTruthy();
+      expect(result.css).toBeTruthy();
+      expect(result.renderInfo.renderer).toBe('clean-article');
     });
 
     it('produces fallback CSS when no components match', async () => {

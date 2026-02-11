@@ -11,7 +11,8 @@ const mockSupabase = {
   update: vi.fn().mockReturnThis(),
   eq: vi.fn().mockReturnThis(),
   is: vi.fn().mockReturnThis(),
-  single: vi.fn()
+  single: vi.fn(),
+  maybeSingle: vi.fn()
 };
 
 describe('ContentGenerationSettingsService', () => {
@@ -25,7 +26,7 @@ describe('ContentGenerationSettingsService', () => {
   describe('getOrCreateDefaultSettings', () => {
     it('returns default settings when none exist', async () => {
       // Mock: no existing settings found
-      mockSupabase.single.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
 
       // Mock: successful creation
       const createdRow = {
@@ -93,7 +94,7 @@ describe('ContentGenerationSettingsService', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       };
-      mockSupabase.single.mockResolvedValue({ data: existingSettings, error: null });
+      mockSupabase.maybeSingle.mockResolvedValue({ data: existingSettings, error: null });
 
       const result = await service.getOrCreateDefaultSettings('user-123');
 
@@ -105,7 +106,7 @@ describe('ContentGenerationSettingsService', () => {
 
     it('returns in-memory defaults if database creation fails', async () => {
       // Mock: no existing settings found
-      mockSupabase.single.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
 
       // Mock: creation fails
       mockSupabase.single.mockResolvedValueOnce({ data: null, error: { message: 'DB error' } });
@@ -147,7 +148,7 @@ describe('ContentGenerationSettingsService', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       };
-      mockSupabase.single.mockResolvedValue({ data: mapSettings, error: null });
+      mockSupabase.maybeSingle.mockResolvedValue({ data: mapSettings, error: null });
 
       const result = await service.getSettingsForMap('user-123', 'map-456');
 
@@ -157,7 +158,7 @@ describe('ContentGenerationSettingsService', () => {
 
     it('falls back to user defaults when no map-specific settings exist', async () => {
       // First call: no map-specific settings
-      mockSupabase.single.mockResolvedValueOnce({ data: null, error: null });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
 
       // Second call: return user defaults
       const defaultSettings = {
@@ -187,7 +188,7 @@ describe('ContentGenerationSettingsService', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
       };
-      mockSupabase.single.mockResolvedValueOnce({ data: defaultSettings, error: null });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: defaultSettings, error: null });
 
       const result = await service.getSettingsForMap('user-123', 'map-456');
 

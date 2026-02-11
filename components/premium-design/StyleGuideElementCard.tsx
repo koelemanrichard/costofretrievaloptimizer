@@ -11,40 +11,63 @@ import type { StyleGuideElement } from '../../types/styleGuide';
  * to prevent "Blocked script execution" and ERR_NAME_NOT_RESOLVED console errors.
  */
 export function sanitizeHtmlForPreview(html: string): string {
-  return html
-    // Strip <script> tags (including self-closing and multi-line)
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<script\b[^>]*\/>/gi, '')
-    // Strip <link> tags (prevents Tailwind CDN loading in iframes)
-    .replace(/<link\b[^>]*>/gi, '')
-    // Strip other dangerous/resource-loading tags
-    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
-    .replace(/<iframe\b[^>]*\/>/gi, '')
-    .replace(/<embed\b[^>]*>/gi, '')
-    .replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, '')
-    .replace(/<object\b[^>]*\/>/gi, '')
-    .replace(/<meta\b[^>]*>/gi, '')
-    .replace(/<base\b[^>]*>/gi, '')
-    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, '')
-    // Strip ALL on* event attributes (handles quoted, unquoted, and single-quoted values)
-    .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    // Neutralize javascript: URIs in href/src/action
-    .replace(/(href|src|action)\s*=\s*["']?\s*javascript:[^"'>]*/gi, '$1="about:blank"')
-    // Strip external src on <img> tags (http/https URLs cause ERR_NAME_NOT_RESOLVED; keep data: URIs)
-    .replace(/<img\b([^>]*)\ssrc\s*=\s*["'](https?:\/\/[^"']*)["']/gi, '<img$1 data-original-src="$2"')
-    // Strip external src on <source> tags
-    .replace(/<source\b([^>]*)\ssrc\s*=\s*["'](https?:\/\/[^"']*)["']/gi, '<source$1 data-original-src="$2"')
-    // Strip external srcset attributes (responsive images loading external URLs)
-    .replace(/\s+srcset\s*=\s*["'][^"']*https?:\/\/[^"']*["']/gi, '')
-    // Strip SVG external references: xlink:href and href with external URLs
-    .replace(/\s+xlink:href\s*=\s*["'](https?:\/\/[^"']*)["']/gi, ' data-original-xlink="$1"')
-    .replace(/<(use|image)\b([^>]*)\s+href\s*=\s*["'](https?:\/\/[^"']*)["']/gi, '<$1$2 data-original-href="$3"')
-    // Strip CSS url() references to external URLs (in inline styles)
-    .replace(/url\(\s*["']?(https?:\/\/[^"')]+)["']?\s*\)/gi, 'url(about:blank)')
-    // Strip data-src and lazy-loading attributes that may trigger external loads
-    .replace(/\s+data-src\s*=\s*["'](https?:\/\/[^"']*)["']/gi, '')
-    // Strip poster attributes with external URLs (video elements)
-    .replace(/\s+poster\s*=\s*["'](https?:\/\/[^"']*)["']/gi, '');
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  // 1. Remove dangerous elements
+  doc.querySelectorAll('script, link, iframe, embed, object, meta, base, noscript')
+    .forEach(el => el.remove());
+
+  // 2. Process all remaining elements
+  doc.querySelectorAll('*').forEach(el => {
+    const attrs = Array.from(el.attributes);
+    for (const attr of attrs) {
+      // Strip on* event handlers
+      if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+      // Neutralize javascript: URIs
+      if (['href', 'src', 'action'].includes(attr.name) &&
+          attr.value.trim().toLowerCase().startsWith('javascript:'))
+        el.setAttribute(attr.name, 'about:blank');
+    }
+
+    const tag = el.tagName.toLowerCase();
+
+    // Strip external src/srcset/poster on media elements
+    if (['img', 'source', 'video', 'audio'].includes(tag)) {
+      for (const a of ['src', 'poster']) {
+        const v = el.getAttribute(a);
+        if (v && /^https?:\/\//i.test(v)) { el.removeAttribute(a); }
+      }
+      const srcset = el.getAttribute('srcset');
+      if (srcset && /https?:\/\//i.test(srcset)) el.removeAttribute('srcset');
+    }
+
+    // Strip SVG external references
+    if (tag === 'use' || tag === 'image') {
+      for (const a of ['href', 'xlink:href']) {
+        const v = el.getAttribute(a);
+        if (v && /^https?:\/\//i.test(v)) el.removeAttribute(a);
+      }
+    }
+
+    // Strip data-src lazy-load
+    const ds = el.getAttribute('data-src');
+    if (ds && /^https?:\/\//i.test(ds)) el.removeAttribute('data-src');
+
+    // Neutralize url() in inline styles — use data:, NOT about:blank
+    const style = el.getAttribute('style');
+    if (style && /url\s*\(\s*['"]?https?:\/\//i.test(style))
+      el.setAttribute('style',
+        style.replace(/url\(\s*['"]?https?:\/\/[^'")\s]+['"]?\s*\)/gi, 'url(data:,)'));
+  });
+
+  // 3. Sanitize url() inside <style> tags
+  doc.querySelectorAll('style').forEach(s => {
+    if (s.textContent && /url\s*\(\s*['"]?https?:\/\//i.test(s.textContent))
+      s.textContent = s.textContent.replace(
+        /url\(\s*['"]?https?:\/\/[^'")\s]+['"]?\s*\)/gi, 'url(data:,)');
+  });
+
+  return doc.body.innerHTML;
 }
 
 interface StyleGuideElementCardProps {
