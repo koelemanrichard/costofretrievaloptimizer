@@ -741,7 +741,7 @@ async function callGeminiRefine(config: AiRefineConfig, prompt: string, img1?: s
   if (img2) parts.push({ inlineData: { mimeType: 'image/jpeg', data: img2 } });
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${config.apiKey}`,
+    `${API_ENDPOINTS.GEMINI}${model}:generateContent?key=${config.apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

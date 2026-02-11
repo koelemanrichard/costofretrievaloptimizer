@@ -13,6 +13,7 @@ import {
 import * as prompts from '../config/prompts';
 import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
 import { AIResponseSanitizer } from './aiResponseSanitizer';
+import { SERVICE_REGISTRY } from '../config/serviceRegistry';
 import { AppAction } from '../state/appState';
 import React from 'react';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
@@ -175,7 +176,7 @@ export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPill
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // For large counts, use batched generation to avoid token limits
-    const BATCH_SIZE = 30;
+    const BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.default;
 
     if (count <= BATCH_SIZE) {
         return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));

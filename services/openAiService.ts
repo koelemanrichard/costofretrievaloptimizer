@@ -18,6 +18,7 @@ import { calculateTopicSimilarityPairs } from '../utils/helpers';
 import { logAiUsage, estimateTokens } from './telemetryService';
 import { getSupabaseClient } from './supabaseClient';
 import { openAiLogger } from './apiCallLogger';
+import { isValidModel as isValidRegistryModel, getDefaultModel, SERVICE_REGISTRY } from '../config/serviceRegistry';
 
 // Retry configuration for network failures
 const NETWORK_RETRY_ATTEMPTS = 3;
@@ -88,20 +89,8 @@ const callApi = async <T>(
         throw new Error("Supabase URL is not configured. Required for OpenAI proxy.");
     }
 
-    // Valid OpenAI model IDs: https://platform.openai.com/docs/models
-    const validOpenAIModels = [
-        // GPT-5 series (Latest - 2025)
-        'gpt-5.1', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
-        // GPT-4.1 series (April 2025)
-        'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
-        // O-series reasoning models
-        'o3', 'o4-mini', 'o4-mini-high',
-        // Legacy GPT-4o (still supported)
-        'gpt-4o', 'gpt-4o-mini',
-    ];
-    const defaultModel = 'gpt-5.1'; // Latest flagship model
-    const isValidModel = businessInfo.aiModel && validOpenAIModels.includes(businessInfo.aiModel);
-    const modelToUse = isValidModel ? businessInfo.aiModel : defaultModel;
+    const modelToUse = (businessInfo.aiModel && isValidRegistryModel('openai', businessInfo.aiModel))
+        ? businessInfo.aiModel : getDefaultModel('openai');
 
     // Get supabase client for database logging (if available)
     let supabase: any;
@@ -273,7 +262,7 @@ export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPill
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // For large counts, use batched generation to avoid token limits
-    const BATCH_SIZE = 30;
+    const BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.default;
 
     if (count <= BATCH_SIZE) {
         return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []), true, 'expandSemanticTriples');

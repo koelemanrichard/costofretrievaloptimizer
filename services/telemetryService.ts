@@ -1,36 +1,10 @@
 import { TelemetryLog } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { buildFlatPricingTable } from '../config/serviceRegistry';
 
-// Cost estimation per 1k tokens (USD)
-const COST_TABLE: Record<string, { in: number; out: number }> = {
-    // OpenAI
-    'gpt-4o': { in: 0.005, out: 0.015 },
-    'gpt-4o-mini': { in: 0.00015, out: 0.0006 },
-    'gpt-4-turbo': { in: 0.01, out: 0.03 },
-    // Gemini
-    'gemini-1.5-flash': { in: 0.000075, out: 0.0003 },
-    'gemini-1.5-pro': { in: 0.0035, out: 0.0105 },
-    'gemini-2.0-flash': { in: 0.0001, out: 0.0004 },
-    'gemini-2.0-flash-exp': { in: 0.0001, out: 0.0004 },
-    'gemini-2.5-flash': { in: 0.00015, out: 0.0006 },
-    'gemini-exp-1206': { in: 0.0001, out: 0.0004 },
-    // Anthropic
-    'claude-3-5-sonnet': { in: 0.003, out: 0.015 },
-    'claude-3-5-sonnet-20241022': { in: 0.003, out: 0.015 },
-    'claude-3-haiku': { in: 0.00025, out: 0.00125 },
-    'claude-3-opus': { in: 0.015, out: 0.075 },
-    // Perplexity
-    'llama-3.1-sonar-small-128k-online': { in: 0.0002, out: 0.0002 },
-    'llama-3.1-sonar-large-128k-online': { in: 0.001, out: 0.001 },
-    // Apify actors (cost per run, stored as out rate; tokensOut=1 means 1 run)
-    'apify/playwright-scraper': { in: 0, out: 0.40 },
-    'apify/google-search-scraper': { in: 0, out: 0.05 },
-    'apify/web-scraper': { in: 0, out: 0.10 },
-    'apify/website-content-crawler': { in: 0, out: 0.20 },
-    // Default fallback
-    'default': { in: 0.001, out: 0.002 }
-};
+// Cost estimation per 1k tokens (USD) — sourced from unified service registry
+const COST_TABLE = buildFlatPricingTable();
 
 const STORAGE_KEY = 'app_telemetry_logs';
 const PENDING_LOGS_KEY = 'app_telemetry_pending';

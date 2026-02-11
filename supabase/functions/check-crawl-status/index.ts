@@ -64,8 +64,9 @@ export function json(
 
 // --- Original function logic ---
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { ENDPOINTS } from '../_shared/serviceConfig.ts'
 
-const APIFY_API_BASE = 'https://api.apify.com/v2'
+const APIFY_API_BASE = ENDPOINTS.APIFY
 
 ;(globalThis as any).Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");

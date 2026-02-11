@@ -4,6 +4,7 @@
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
 import { SerpResult } from '../types';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { logAiUsage } from './telemetryService';
 
 const API_BASE_URL = API_ENDPOINTS.SPACESERP;
 
@@ -35,6 +36,7 @@ export const fetchSerpResultsFromSpaceSERP = async (
     });
 
     const url = `${API_BASE_URL}/google/search?${params.toString()}`;
+    const startTime = Date.now();
 
     try {
         const response = await fetch(url);
@@ -45,16 +47,25 @@ export const fetchSerpResultsFromSpaceSERP = async (
         }
 
         const data = await response.json();
-        
+
         if (data.error) {
              throw new Error(`SpaceSERP API Error: ${data.error.message}`);
         }
 
         if (!data.organic_results || data.organic_results.length === 0) {
+            logAiUsage({
+                provider: 'spaceserp',
+                model: 'google-search',
+                operation: 'serp-fetch',
+                tokensIn: 0,
+                tokensOut: 1,
+                durationMs: Date.now() - startTime,
+                success: true,
+            }).catch(() => {});
             return [];
         }
 
-        return data.organic_results
+        const results = data.organic_results
             .filter((item: any) => item.title && item.link)
             .map((item: any): SerpResult => ({
                 position: item.position,
@@ -63,7 +74,29 @@ export const fetchSerpResultsFromSpaceSERP = async (
                 snippet: item.snippet || ''
             }));
 
+        logAiUsage({
+            provider: 'spaceserp',
+            model: 'google-search',
+            operation: 'serp-fetch',
+            tokensIn: 0,
+            tokensOut: 1,
+            durationMs: Date.now() - startTime,
+            success: true,
+        }).catch(() => {});
+
+        return results;
+
     } catch (error) {
+        logAiUsage({
+            provider: 'spaceserp',
+            model: 'google-search',
+            operation: 'serp-fetch',
+            tokensIn: 0,
+            tokensOut: 1,
+            durationMs: Date.now() - startTime,
+            success: false,
+            errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+        }).catch(() => {});
         console.error("Failed to fetch SERP data from SpaceSERP:", error);
         throw new Error(`Could not fetch SERP data from SpaceSERP. [${error instanceof Error ? error.message : 'Unknown Error'}]`);
     }

@@ -13,6 +13,7 @@ import * as prompts from '../config/prompts';
 import { GENERATE_CONTEXT_AWARE_TASK_SUGGESTION_PROMPT } from '../config/prompts';
 import { AIResponseSanitizer } from './aiResponseSanitizer';
 import { AppAction } from '../state/appState';
+import { isValidModel, getDefaultModel } from '../config/serviceRegistry';
 import React from 'react';
 
 // ============================================
@@ -66,9 +67,8 @@ const callSuggestionApi = async (
   const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
 
   // Use Claude model
-  const validClaudeModels = ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4', 'claude-3-7-sonnet', 'claude-3-5-haiku'];
-  const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.some(m => businessInfo.aiModel.includes(m));
-  const modelToUse = isValidClaudeModel ? businessInfo.aiModel : 'claude-sonnet-4-5-20250929';
+  const modelToUse = (businessInfo.aiModel && isValidModel('anthropic', businessInfo.aiModel))
+      ? businessInfo.aiModel : getDefaultModel('anthropic');
 
   try {
     const response = await fetch(proxyUrl, {

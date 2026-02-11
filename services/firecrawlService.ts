@@ -4,6 +4,8 @@
 
 import { ApifyPageData } from '../types';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { logAiUsage } from './telemetryService';
+import { getSupabaseClient } from './supabaseClient';
 
 const FIRECRAWL_API_URL = API_ENDPOINTS.FIRECRAWL_SCRAPE;
 
@@ -303,7 +305,16 @@ const doFirecrawlExtraction = async (
   proxyConfig?: FirecrawlProxyConfig
 ): Promise<ApifyPageData> => {
   console.log('[Firecrawl] Extracting:', url);
+  const startTime = Date.now();
 
+  let supabase;
+  try {
+    if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+      supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+    }
+  } catch (e) { /* ignore */ }
+
+  try {
   const response = await firecrawlFetch(FIRECRAWL_API_URL, {
     method: 'POST',
     headers: {
@@ -378,7 +389,31 @@ const doFirecrawlExtraction = async (
   };
 
   console.log('[Firecrawl] Extracted:', url, '- Status:', pageData.statusCode);
+
+  logAiUsage({
+    provider: 'firecrawl',
+    model: 'scraper',
+    operation: 'page-extraction',
+    tokensIn: 0,
+    tokensOut: 1,
+    durationMs: Date.now() - startTime,
+    success: true,
+  }, supabase).catch(() => {});
+
   return pageData;
+  } catch (error) {
+    logAiUsage({
+      provider: 'firecrawl',
+      model: 'scraper',
+      operation: 'page-extraction',
+      tokensIn: 0,
+      tokensOut: 1,
+      durationMs: Date.now() - startTime,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+    }, supabase).catch(() => {});
+    throw error;
+  }
 };
 
 /**
@@ -468,36 +503,68 @@ export const scrapeUrl = async (
   proxyConfig?: FirecrawlProxyConfig
 ): Promise<{ markdown: string; title: string; statusCode: number }> => {
   console.log('[Firecrawl] Scraping URL:', url);
+  const startTime = Date.now();
 
-  const response = await firecrawlFetch(FIRECRAWL_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      url,
-      formats: ['markdown'],
-      waitFor: 2000,
-    }),
-  }, proxyConfig);
+  let supabase;
+  try {
+    if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+      supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+    }
+  } catch (e) { /* ignore */ }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Firecrawl API error (${response.status}): ${errorText}`);
+  try {
+    const response = await firecrawlFetch(FIRECRAWL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['markdown'],
+        waitFor: 2000,
+      }),
+    }, proxyConfig);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Firecrawl API error (${response.status}): ${errorText}`);
+    }
+
+    const result: FirecrawlScrapeResponse = await response.json();
+
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Firecrawl scrape failed');
+    }
+
+    logAiUsage({
+      provider: 'firecrawl',
+      model: 'scraper',
+      operation: 'url-scrape',
+      tokensIn: 0,
+      tokensOut: 1,
+      durationMs: Date.now() - startTime,
+      success: true,
+    }, supabase).catch(() => {});
+
+    return {
+      markdown: result.data.markdown || '',
+      title: result.data.metadata?.title || '',
+      statusCode: result.data.metadata?.statusCode || 200,
+    };
+  } catch (error) {
+    logAiUsage({
+      provider: 'firecrawl',
+      model: 'scraper',
+      operation: 'url-scrape',
+      tokensIn: 0,
+      tokensOut: 1,
+      durationMs: Date.now() - startTime,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+    }, supabase).catch(() => {});
+    throw error;
   }
-
-  const result: FirecrawlScrapeResponse = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.error || 'Firecrawl scrape failed');
-  }
-
-  return {
-    markdown: result.data.markdown || '',
-    title: result.data.metadata?.title || '',
-    statusCode: result.data.metadata?.statusCode || 200,
-  };
 };
 
 /**
@@ -519,59 +586,91 @@ export const scrapeForAudit = async (
   statusCode: number;
 }> => {
   console.log('[Firecrawl] Scraping for audit:', url);
+  const startTime = Date.now();
 
-  const response = await firecrawlFetch(FIRECRAWL_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
+  let supabase;
+  try {
+    if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+      supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+    }
+  } catch (e) { /* ignore */ }
+
+  try {
+    const response = await firecrawlFetch(FIRECRAWL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['html', 'markdown'],
+        includeTags: ['h1', 'h2', 'h3', 'h4', 'a'],
+        waitFor: 2000,
+      }),
+    }, proxyConfig);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Firecrawl API error (${response.status}): ${errorText}`);
+    }
+
+    const result: FirecrawlScrapeResponse = await response.json();
+
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Firecrawl audit scrape failed');
+    }
+
+    const { data } = result;
+    const html = data.html || '';
+    const markdown = data.markdown || '';
+
+    // Extract headings
+    const headings: string[] = [];
+    const headingRegex = /<h[1-4][^>]*>(.*?)<\/h[1-4]>/gi;
+    let match;
+    while ((match = headingRegex.exec(html)) !== null) {
+      headings.push(match[1].replace(/<[^>]+>/g, '').trim());
+    }
+
+    // Count links
+    const { internalLinks, externalLinks } = extractLinks(html, url);
+
+    // Count words
+    const plainText = markdown.replace(/[#*_\[\]()]/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = plainText.split(' ').filter(w => w.length > 0).length;
+
+    logAiUsage({
+      provider: 'firecrawl',
+      model: 'scraper',
+      operation: 'audit-scrape',
+      tokensIn: 0,
+      tokensOut: 1,
+      durationMs: Date.now() - startTime,
+      success: true,
+    }, supabase).catch(() => {});
+
+    return {
       url,
-      formats: ['html', 'markdown'],
-      includeTags: ['h1', 'h2', 'h3', 'h4', 'a'],
-      waitFor: 2000,
-    }),
-  }, proxyConfig);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Firecrawl API error (${response.status}): ${errorText}`);
+      title: data.metadata?.title || '',
+      markdown,
+      wordCount,
+      headings,
+      internalLinkCount: internalLinks.length,
+      externalLinkCount: externalLinks.length,
+      statusCode: data.metadata?.statusCode || 200,
+    };
+  } catch (error) {
+    logAiUsage({
+      provider: 'firecrawl',
+      model: 'scraper',
+      operation: 'audit-scrape',
+      tokensIn: 0,
+      tokensOut: 1,
+      durationMs: Date.now() - startTime,
+      success: false,
+      errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+    }, supabase).catch(() => {});
+    throw error;
   }
-
-  const result: FirecrawlScrapeResponse = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.error || 'Firecrawl audit scrape failed');
-  }
-
-  const { data } = result;
-  const html = data.html || '';
-  const markdown = data.markdown || '';
-
-  // Extract headings
-  const headings: string[] = [];
-  const headingRegex = /<h[1-4][^>]*>(.*?)<\/h[1-4]>/gi;
-  let match;
-  while ((match = headingRegex.exec(html)) !== null) {
-    headings.push(match[1].replace(/<[^>]+>/g, '').trim());
-  }
-
-  // Count links
-  const { internalLinks, externalLinks } = extractLinks(html, url);
-
-  // Count words
-  const plainText = markdown.replace(/[#*_\[\]()]/g, ' ').replace(/\s+/g, ' ');
-  const wordCount = plainText.split(' ').filter(w => w.length > 0).length;
-
-  return {
-    url,
-    title: data.metadata?.title || '',
-    markdown,
-    wordCount,
-    headings,
-    internalLinkCount: internalLinks.length,
-    externalLinkCount: externalLinks.length,
-    statusCode: data.metadata?.statusCode || 200,
-  };
 };

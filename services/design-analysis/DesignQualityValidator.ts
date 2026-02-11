@@ -1,5 +1,6 @@
 import type { DesignQualityValidation, DesignTokens, BrandDiscoveryReport } from '../../types/publishing';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 
 interface ValidatorConfig {
   provider: 'gemini' | 'anthropic';
@@ -178,7 +179,7 @@ Return JSON:
     prompt: string
   ): Promise<VisionAIResult> {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${this.config.apiKey}`,
+      `${API_ENDPOINTS.GEMINI}${getFastModel('gemini')}:generateContent?key=${this.config.apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -218,7 +219,7 @@ Return JSON:
         'anthropic-version': '2024-01-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: getDefaultModel('anthropic'),
         max_tokens: 1024,
         messages: [{
           role: 'user',
@@ -359,7 +360,7 @@ If the extracted primary is wrong (e.g., shows #181818 but you see orange button
     prompt: string
   ): Promise<any> {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${this.config.apiKey}`,
+      `${API_ENDPOINTS.GEMINI}${getFastModel('gemini')}:generateContent?key=${this.config.apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -395,7 +396,7 @@ If the extracted primary is wrong (e.g., shows #181818 but you see orange button
         'anthropic-version': '2024-01-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: getDefaultModel('anthropic'),
         max_tokens: 1024,
         messages: [{
           role: 'user',

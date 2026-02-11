@@ -23,6 +23,7 @@ import { extractPageContent } from '../jinaService';
 import { validateEntityAuthority } from '../googleKnowledgeGraphService';
 import { sanitizeTextInput, validateUrl } from '../../utils/inputValidation';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getDefaultModel } from '../../config/serviceRegistry';
 
 // Progress callback type
 type ProgressCallback = (progress: QueryNetworkAuditProgress) => void;
@@ -86,7 +87,7 @@ async function executePrompt(prompt: string, businessInfo: BusinessInfo): Promis
       if (!businessInfo.openAiApiKey) {
         throw new Error('OpenAI API key not configured');
       }
-      const model = businessInfo.aiModel || 'gpt-4o';
+      const model = businessInfo.aiModel || getDefaultModel('openai');
       const response = await fetch(API_ENDPOINTS.OPENAI, {
         method: 'POST',
         headers: {

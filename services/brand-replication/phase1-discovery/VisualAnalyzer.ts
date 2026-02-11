@@ -2,6 +2,7 @@
 
 import type { DiscoveredComponent, Screenshot } from '../interfaces';
 import { DISCOVERY_PROMPT } from '../config/defaultPrompts';
+import { getFastModel, getDefaultModel } from '../../../config/serviceRegistry';
 
 export interface VisualAnalyzerConfig {
   aiProvider: 'anthropic' | 'gemini';
@@ -102,7 +103,7 @@ export class VisualAnalyzer {
     content.push({ type: 'text', text: prompt });
 
     const response = await client.messages.create({
-      model: this.config.model ?? 'claude-sonnet-4-20250514',
+      model: this.config.model ?? getDefaultModel('anthropic'),
       max_tokens: 4096,
       messages: [{ role: 'user', content }],
     });
@@ -125,7 +126,7 @@ export class VisualAnalyzer {
     parts.push({ text: prompt });
 
     const response = await genAI.models.generateContent({
-      model: this.config.model ?? 'gemini-2.0-flash',
+      model: this.config.model ?? getFastModel('gemini'),
       contents: [{ parts }],
     });
     return response.text ?? '';

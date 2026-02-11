@@ -3,6 +3,7 @@
 import type { BrandComponent, SectionDesignDecision } from '../interfaces';
 import type { SectionAnalysis } from './SectionAnalyzer';
 import { COMPONENT_MATCHING_PROMPT } from '../config/defaultPrompts';
+import { getFastModel, getDefaultModel } from '../../../config/serviceRegistry';
 
 /**
  * Configuration for ComponentMatcher.
@@ -156,7 +157,7 @@ export class ComponentMatcher {
       const client = new Anthropic({ apiKey: this.config.apiKey });
 
       const response = await client.messages.create({
-        model: this.config.model ?? 'claude-sonnet-4-20250514',
+        model: this.config.model ?? getDefaultModel('anthropic'),
         max_tokens: 2048,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -167,7 +168,7 @@ export class ComponentMatcher {
       const { GoogleGenAI } = await import('@google/genai');
       const genAI = new GoogleGenAI({ apiKey: this.config.apiKey });
       const response = await genAI.models.generateContent({
-        model: this.config.model ?? 'gemini-2.0-flash',
+        model: this.config.model ?? getFastModel('gemini'),
         contents: prompt,
       });
       return response.text ?? '';

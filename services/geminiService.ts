@@ -56,25 +56,9 @@ export const setUsageContext = ctx.setUsageContext;
 // Use shared extraction utility (previously duplicated across all providers)
 import { extractMarkdownFromResponse } from './ai/shared/extractJson';
 
-// Valid Gemini models (January 2026)
-// Reference: https://ai.google.dev/gemini-api/docs/models
-// NOTE: Keep in sync with services/ai/providerConfig.ts
-const validGeminiModels = [
-    // Gemini 3 series (Latest - November 2025)
-    'gemini-3-pro-preview',        // Latest reasoning model
-    'gemini-3-pro-image-preview',  // With image generation
-    // Gemini 2.5 series (Production - September 2025)
-    'gemini-2.5-flash',            // RECOMMENDED - Fast, stable production
-    'gemini-2.5-flash-lite',       // Ultra-efficient for high-throughput
-    'gemini-2.5-pro',              // Advanced reasoning
-    'gemini-2.5-flash-preview-09-2025',
-    'gemini-2.5-flash-lite-preview-09-2025',
-    // Gemini 2.0 series (Still supported)
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-exp',
-    'gemini-2.0-flash-lite',
-    // NOTE: Gemini 1.5 models removed - API returns 404 for these
-];
+// Valid Gemini models — sourced from unified service registry
+import { getValidModels, getDefaultModel, SERVICE_REGISTRY } from '../config/serviceRegistry';
+const validGeminiModels = getValidModels('gemini');
 
 // Model defaults configurable via config/defaults.ts → env vars
 import { AI_MODEL_DEFAULTS } from '../config/defaults';
@@ -262,13 +246,18 @@ const callApi = async <T>(
                 }
             }
 
+            // Extract actual token counts from API response metadata
+            const usageMeta = response.usageMetadata;
+            const actualInputTokens = usageMeta?.promptTokenCount;
+            const actualOutputTokens = usageMeta?.candidatesTokenCount;
+
             if (!responseText) {
                 // Log failed usage
                 logAiUsage({
                     provider: 'gemini',
                     model: modelToUse,
                     operation,
-                    tokensIn: estimateTokens(prompt.length),
+                    tokensIn: actualInputTokens || estimateTokens(prompt.length),
                     tokensOut: 0,
                     durationMs,
                     success: false,
@@ -285,9 +274,9 @@ const callApi = async <T>(
                 return { result: null, responseText: null, error: new Error(`Empty response from Gemini (model: ${modelToUse}, finishReason: ${finishReason})`) };
             }
 
-            // Log successful usage
-            const tokensIn = estimateTokens(prompt.length);
-            const tokensOut = estimateTokens(responseText.length);
+            // Use actual tokens from API response, fall back to estimates
+            const tokensIn = actualInputTokens || estimateTokens(prompt.length);
+            const tokensOut = actualOutputTokens || estimateTokens(responseText.length);
 
             logAiUsage({
                 provider: 'gemini',
@@ -470,7 +459,7 @@ export const expandSemanticTriples = async (businessInfo: BusinessInfo, pillars:
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // For large counts, use batched generation to avoid token limits
-    const BATCH_SIZE = 30; // Optimal batch size for reliable generation
+    const BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.default;
 
     if (count <= BATCH_SIZE) {
         // Single call for smaller counts
@@ -1430,7 +1419,7 @@ export const classifyTopicSections = async (
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // Batch size for classification to avoid AI output truncation
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.topicClassification;
 
     dispatch({ type: 'LOG_EVENT', payload: {
         service: 'Gemini',

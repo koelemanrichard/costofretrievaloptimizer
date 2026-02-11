@@ -17,12 +17,14 @@
  * Returns DiscoveryOutput with discovered components.
  */
 
+import { ENDPOINTS } from '../_shared/serviceConfig.ts';
+
 const Deno = (globalThis as any).Deno;
 
 // --- Constants ---
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const ANTHROPIC_API_URL = ENDPOINTS.ANTHROPIC;
+const GEMINI_API_URL = ENDPOINTS.GEMINI_BETA;
 
 // Timeout for AI calls (2 minutes)
 const AI_TIMEOUT_MS = 120000;

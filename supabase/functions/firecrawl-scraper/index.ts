@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { ENDPOINTS } from '../_shared/serviceConfig.ts'
 
 // --- Inlined Utils for stability ---
 const ALLOWED_ORIGINS = [
@@ -147,7 +148,7 @@ Deno.serve(async (req: Request) => {
 
     // 2. Call Firecrawl API
     // Note: Firecrawl recently updated their API schema, ensuring compatibility with v0/scrape
-    const firecrawlResponse = await fetch('https://api.firecrawl.dev/v0/scrape', {
+    const firecrawlResponse = await fetch(ENDPOINTS.FIRECRAWL_SCRAPE_V0, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${firecrawlKey}`,

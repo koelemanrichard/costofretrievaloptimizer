@@ -151,7 +151,7 @@ const createIntelligenceInput = (): IntelligenceInput => ({
 const createConfig = (overrides: Partial<IntelligenceConfig> = {}): IntelligenceConfig => ({
   aiProvider: 'anthropic',
   apiKey: 'test-api-key',
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4-5-20250929',
   debug: false,
   contextConfig: {
     includePillars: true,

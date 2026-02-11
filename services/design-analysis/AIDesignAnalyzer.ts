@@ -1,6 +1,7 @@
 import type { DesignDNA, DesignDNAExtractionResult } from '../../types/designDna';
 import { DESIGN_DNA_EXTRACTION_PROMPT } from './prompts/designDnaPrompt';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 
 // ============================================================================
 // DEFAULT VALUES FOR SANITIZATION
@@ -448,8 +449,8 @@ interface ProviderInfo {
 export class AIDesignAnalyzer {
   private config: AIDesignAnalyzerConfig;
   private defaultModels = {
-    gemini: 'gemini-2.0-flash',
-    anthropic: 'claude-sonnet-4-20250514'
+    gemini: getFastModel('gemini'),
+    anthropic: getDefaultModel('anthropic'),
   };
 
   constructor(config: AIDesignAnalyzerConfig) {
@@ -550,7 +551,7 @@ IMPORTANT: Only suggest corrections if the extracted value is CLEARLY wrong. Ret
     prompt: string
   ): Promise<DesignDNA> {
     const model = this.config.model || this.defaultModels.gemini;
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.config.apiKey}`;
+    const apiUrl = `${API_ENDPOINTS.GEMINI}${model}:generateContent?key=${this.config.apiKey}`;
     
     const response = await fetch(apiUrl, {
       method: 'POST',

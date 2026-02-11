@@ -2,6 +2,7 @@
 
 import type { DiscoveredComponent } from '../interfaces';
 import { HTML_GENERATION_PROMPT } from '../config/defaultPrompts';
+import { getFastModel, getDefaultModel } from '../../../config/serviceRegistry';
 
 export interface HtmlGeneratorConfig {
   aiProvider: 'anthropic' | 'gemini';
@@ -39,7 +40,7 @@ export class HtmlGenerator {
       const Anthropic = (await import('@anthropic-ai/sdk')).default;
       const client = new Anthropic({ apiKey: this.config.apiKey });
       const response = await client.messages.create({
-        model: this.config.model ?? 'claude-sonnet-4-20250514',
+        model: this.config.model ?? getDefaultModel('anthropic'),
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -49,7 +50,7 @@ export class HtmlGenerator {
       const { GoogleGenAI } = await import('@google/genai');
       const genAI = new GoogleGenAI({ apiKey: this.config.apiKey });
       const response = await genAI.models.generateContent({
-        model: this.config.model ?? 'gemini-2.0-flash',
+        model: this.config.model ?? getFastModel('gemini'),
         contents: prompt,
       });
       return response.text ?? '';

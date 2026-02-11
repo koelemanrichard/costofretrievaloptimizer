@@ -1,130 +1,91 @@
 // services/ai/providerConfig.ts
-// SINGLE SOURCE OF TRUTH for AI provider configuration
+// Re-exports from the unified service registry for backward compatibility.
+//
+// @deprecated — New code should import directly from 'config/serviceRegistry'.
 
 import { BusinessInfo } from '../../types';
+import {
+  SERVICE_REGISTRY,
+  getValidModels,
+  getDefaultModel,
+  getFastModel,
+  getModelForPrompt as _getModelForPrompt,
+  isValidModel as _isValidModel,
+  type AIProvider,
+} from '../../config/serviceRegistry';
 
 /**
  * Valid model IDs per provider
- * Updated: January 2026
- * IMPORTANT: Keep in sync with geminiService.ts validGeminiModels
+ * @deprecated Import { getValidModels } from 'config/serviceRegistry'
  */
 export const VALID_MODELS = {
-  anthropic: [
-    // Claude 4.5 models (Latest - November 2025)
-    'claude-opus-4-5-20251101',
-    'claude-sonnet-4-5-20250929',
-    'claude-haiku-4-5-20251001',
-    // Claude 4.x models (Legacy)
-    'claude-opus-4-1-20250805',
-    'claude-sonnet-4-20250514',
-    'claude-opus-4-20250514',
-    'claude-3-7-sonnet-20250219',
-    // Claude 3.5 models (Legacy)
-    'claude-3-5-haiku-20241022',
-    'claude-3-haiku-20240307',
-  ],
-  openai: [
-    'gpt-4o',
-    'gpt-4o-mini',
-    'gpt-4-turbo',
-    'gpt-4',
-    'gpt-3.5-turbo',
-  ],
-  gemini: [
-    // Gemini 3 series (Latest - November 2025)
-    'gemini-3-pro-preview',
-    'gemini-3-pro-image-preview',
-    // Gemini 2.5 series (Production)
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-pro',
-    // Gemini 2.0 series (Legacy)
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-exp',
-    'gemini-2.0-flash-lite',
-  ],
-  perplexity: [
-    'llama-3.1-sonar-large-128k-online',
-    'llama-3.1-sonar-small-128k-online',
-  ],
-  openrouter: [
-    'anthropic/claude-3.5-sonnet',
-    'openai/gpt-4o',
-    'google/gemini-pro-1.5',
-  ],
+  anthropic: SERVICE_REGISTRY.providers.anthropic.models.valid,
+  openai: SERVICE_REGISTRY.providers.openai.models.valid,
+  gemini: SERVICE_REGISTRY.providers.gemini.models.valid,
+  perplexity: SERVICE_REGISTRY.providers.perplexity.models.valid,
+  openrouter: SERVICE_REGISTRY.providers.openrouter.models.valid,
 } as const;
 
 /**
- * Default model per provider (used when no specific model is configured)
+ * Default model per provider
+ * @deprecated Import { getDefaultModel } from 'config/serviceRegistry'
  */
 export const DEFAULT_MODELS = {
-  anthropic: 'claude-sonnet-4-5-20250929',
-  openai: 'gpt-4o',
-  gemini: 'gemini-3-pro-preview',  // Latest model (January 2026)
-  perplexity: 'llama-3.1-sonar-large-128k-online',
-  openrouter: 'anthropic/claude-3.5-sonnet',
+  anthropic: getDefaultModel('anthropic'),
+  openai: getDefaultModel('openai'),
+  gemini: getDefaultModel('gemini'),
+  perplexity: getDefaultModel('perplexity'),
+  openrouter: getDefaultModel('openrouter'),
 } as const;
 
 /**
- * Fast/cheap models per provider (for large prompts or fallback)
+ * Fast/cheap models per provider
+ * @deprecated Import { getFastModel } from 'config/serviceRegistry'
  */
 export const FAST_MODELS = {
-  anthropic: 'claude-haiku-4-5-20251001',
-  openai: 'gpt-4o-mini',
-  gemini: 'gemini-2.5-flash',  // Fast production model for high-throughput
-  perplexity: 'llama-3.1-sonar-small-128k-online',
-  openrouter: 'openai/gpt-4o-mini',
+  anthropic: getFastModel('anthropic'),
+  openai: getFastModel('openai'),
+  gemini: getFastModel('gemini'),
+  perplexity: getFastModel('perplexity'),
+  openrouter: getFastModel('openrouter'),
 } as const;
 
 /**
  * Fallback order when primary provider fails
  */
-export const FALLBACK_ORDER = ['anthropic', 'openai', 'gemini', 'openrouter', 'perplexity'] as const;
+export const FALLBACK_ORDER = SERVICE_REGISTRY.fallbackOrder;
 
 /**
  * Retry configuration
  */
-export const RETRY_CONFIG = {
-  maxRetries: 2,
-  baseDelayMs: 2000,
-  maxDelayMs: 8000,
-  // Prompt length threshold for switching to fast model
-  largePromptThreshold: 40000,
-} as const;
+export const RETRY_CONFIG = SERVICE_REGISTRY.retry;
 
 /**
  * Timeout configuration (in milliseconds)
  */
 export const TIMEOUT_CONFIG = {
-  default: 120000,      // 2 minutes
-  largePrompt: 180000,  // 3 minutes
-  edgeFunction: 55000,  // Supabase edge function limit
+  default: SERVICE_REGISTRY.limits.timeout.default,
+  largePrompt: SERVICE_REGISTRY.limits.timeout.largePrompt,
+  edgeFunction: SERVICE_REGISTRY.limits.timeout.edgeFunction,
 } as const;
 
 /**
  * Provider type
  */
-export type Provider = keyof typeof VALID_MODELS;
+export type Provider = AIProvider;
 
 /**
  * Check if a model is valid for a provider
  */
 export function isValidModel(provider: Provider, model: string): boolean {
-  return (VALID_MODELS[provider] as readonly string[]).includes(model);
+  return _isValidModel(provider, model);
 }
 
 /**
  * Get the best model for a provider based on prompt size
  */
 export function getModelForPrompt(provider: Provider, promptLength: number, configuredModel?: string): string {
-  if (promptLength > RETRY_CONFIG.largePromptThreshold) {
-    console.log(`[ProviderConfig] Large prompt (${promptLength} chars) - using fast model`);
-    return FAST_MODELS[provider];
-  }
-  if (configuredModel && isValidModel(provider, configuredModel)) {
-    return configuredModel;
-  }
-  return DEFAULT_MODELS[provider];
+  return _getModelForPrompt(provider, promptLength, configuredModel);
 }
 
 /**
@@ -158,3 +119,6 @@ export function getPrimaryProvider(info: BusinessInfo): Provider {
   }
   return 'gemini'; // Default
 }
+
+// Re-export registry functions for convenience
+export { getValidModels, getDefaultModel, getFastModel };

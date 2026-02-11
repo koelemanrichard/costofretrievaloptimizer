@@ -112,57 +112,9 @@ export async function logUsage(
 }
 
 /**
- * Pricing rates for common models (fallback if database lookup fails)
- * Rates are per 1K tokens in USD
+ * Pricing rates — sourced from shared service config (mirror of config/serviceRegistry.ts)
  */
-export const PRICING_RATES: Record<string, { inputPer1k: number; outputPer1k: number }> = {
-  // Anthropic
-  'anthropic:claude-3-opus-20240229': { inputPer1k: 0.015, outputPer1k: 0.075 },
-  'anthropic:claude-3-sonnet-20240229': { inputPer1k: 0.003, outputPer1k: 0.015 },
-  'anthropic:claude-3-haiku-20240307': { inputPer1k: 0.00025, outputPer1k: 0.00125 },
-  'anthropic:claude-3-5-sonnet-20241022': { inputPer1k: 0.003, outputPer1k: 0.015 },
-  'anthropic:claude-3-5-haiku-20241022': { inputPer1k: 0.001, outputPer1k: 0.005 },
-
-  // OpenAI
-  'openai:gpt-4-turbo': { inputPer1k: 0.01, outputPer1k: 0.03 },
-  'openai:gpt-4o': { inputPer1k: 0.005, outputPer1k: 0.015 },
-  'openai:gpt-4o-mini': { inputPer1k: 0.00015, outputPer1k: 0.0006 },
-
-  // Google
-  'google:gemini-1.5-pro': { inputPer1k: 0.00125, outputPer1k: 0.005 },
-  'google:gemini-1.5-flash': { inputPer1k: 0.000075, outputPer1k: 0.0003 },
-  'google:gemini-2.0-flash': { inputPer1k: 0.0001, outputPer1k: 0.0004 },
-
-  // Perplexity
-  'perplexity:llama-3.1-sonar-small-128k-online': { inputPer1k: 0.0002, outputPer1k: 0.0002 },
-  'perplexity:llama-3.1-sonar-large-128k-online': { inputPer1k: 0.001, outputPer1k: 0.001 },
-};
-
-/**
- * Calculate estimated cost for AI usage (client-side fallback)
- *
- * @param provider - The AI provider (anthropic, openai, google, etc.)
- * @param model - The model name
- * @param inputTokens - Number of input tokens
- * @param outputTokens - Number of output tokens
- * @returns Estimated cost in USD
- */
-export function calculateCost(
-  provider: string,
-  model: string,
-  inputTokens: number,
-  outputTokens: number
-): number {
-  const key = `${provider}:${model}`;
-  const rates = PRICING_RATES[key];
-
-  if (!rates) {
-    // Default fallback rate (middle-of-the-road pricing)
-    return (inputTokens / 1000) * 0.002 + (outputTokens / 1000) * 0.006;
-  }
-
-  return (inputTokens / 1000) * rates.inputPer1k + (outputTokens / 1000) * rates.outputPer1k;
-}
+export { PRICING_RATES, calculateCost } from './serviceConfig.ts';
 
 /**
  * Calculate estimated cost from database rates

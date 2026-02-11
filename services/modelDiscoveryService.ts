@@ -2,44 +2,13 @@
 // services/modelDiscoveryService.ts
 import { BusinessInfo } from '../types';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { getValidModels } from '../config/serviceRegistry';
 
-// Updated static lists with latest models (November 2025)
-const GEMINI_MODELS = [
-    'gemini-3-pro-preview', // Latest flagship - RECOMMENDED
-    'gemini-2.5-flash',     // Fast, cost-effective
-    'gemini-2.5-pro',       // Advanced reasoning
-    'gemini-2.5-flash-lite', // Lightweight
-    'gemini-2.0-flash',     // Previous generation
-    'gemini-1.5-flash',     // Legacy
-    'gemini-1.5-pro'        // Legacy
-];
-
-const OPENAI_MODELS = [
-    'gpt-5',
-    'gpt-5-mini',
-    'o3',
-    'o4-mini',
-    'gpt-4.1',
-    'gpt-4.1-mini',
-    'gpt-4o'
-];
-
-const ANTHROPIC_MODELS = [
-    'claude-opus-4-5-20251101',
-    'claude-sonnet-4-5-20250929',
-    'claude-haiku-4-5-20251001',
-    'claude-opus-4-1-20250805',
-    'claude-sonnet-4-20250514',
-    'claude-opus-4-20250514',
-    'claude-3-7-sonnet-20250219',
-    'claude-3-5-haiku-20241022'
-];
-
-const PERPLEXITY_MODELS = [
-    'sonar-reasoning-pro',
-    'sonar-pro',
-    'sonar'
-];
+// Model lists sourced from unified service registry
+const GEMINI_MODELS = [...getValidModels('gemini')];
+const OPENAI_MODELS = [...getValidModels('openai')];
+const ANTHROPIC_MODELS = [...getValidModels('anthropic')];
+const PERPLEXITY_MODELS = [...getValidModels('perplexity')];
 
 
 export const fetchOpenRouterModels = async (apiKey: string): Promise<string[]> => {

@@ -11,9 +11,10 @@ import { regenerateLinkingAndBridge } from './passes/linkingBridge';
 import { generateSectionsFromScratch } from './passes/sectionsGeneration';
 import { assembleFinalBrief } from './passes/assembly';
 import React from 'react';
+import { SERVICE_REGISTRY } from '../../../config/serviceRegistry';
 
 // Configuration for batch processing
-const SECTION_BATCH_SIZE = 8; // Process sections in batches of 8
+const SECTION_BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.orchestrator;
 
 /**
  * Multi-pass brief regeneration orchestrator

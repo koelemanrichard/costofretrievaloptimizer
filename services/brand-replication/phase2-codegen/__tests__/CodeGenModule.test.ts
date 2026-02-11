@@ -218,7 +218,7 @@ const createDesignDna = (): DesignDNA => ({
 const createCodeGenConfig = (): CodeGenConfig => ({
   aiProvider: 'anthropic',
   apiKey: 'test-api-key',
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4-5-20250929',
   minMatchScore: 85,
   maxIterations: 3,
   cssStandards: {

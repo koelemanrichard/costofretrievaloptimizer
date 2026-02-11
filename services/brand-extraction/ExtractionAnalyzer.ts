@@ -5,6 +5,7 @@ import type {
   ContentSlot
 } from '../../types/brandExtraction';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 
 interface AnalyzerConfig {
   provider: 'gemini' | 'anthropic';
@@ -181,7 +182,7 @@ For each component, provide:
   ): Promise<AIExtractionResponse> {
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${this.config.apiKey}`,
+        `${API_ENDPOINTS.GEMINI}${getFastModel('gemini')}:generateContent?key=${this.config.apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -233,7 +234,7 @@ For each component, provide:
           'anthropic-version': '2024-01-01'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: getDefaultModel('anthropic'),
           max_tokens: 4096,
           messages: [{
             role: 'user',

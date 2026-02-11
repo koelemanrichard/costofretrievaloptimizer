@@ -8,6 +8,8 @@ describe('API Endpoints', () => {
     expect(API_ENDPOINTS.OPENROUTER).toBeDefined();
     expect(API_ENDPOINTS.OPENROUTER_MODELS).toBeDefined();
     expect(API_ENDPOINTS.PERPLEXITY).toBeDefined();
+    expect(API_ENDPOINTS.GEMINI).toBeDefined();
+    expect(API_ENDPOINTS.GEMINI_BETA).toBeDefined();
   });
 
   it('should export all scraping/content endpoints', () => {
@@ -37,7 +39,7 @@ describe('API Endpoints', () => {
 
   it('should have the correct number of endpoints', () => {
     const keys = Object.keys(API_ENDPOINTS);
-    expect(keys.length).toBe(14);
+    expect(keys.length).toBe(16);
   });
 
   it('should match expected base domains', () => {
@@ -45,6 +47,7 @@ describe('API Endpoints', () => {
     expect(new URL(API_ENDPOINTS.OPENAI).hostname).toBe('api.openai.com');
     expect(new URL(API_ENDPOINTS.OPENROUTER).hostname).toBe('openrouter.ai');
     expect(new URL(API_ENDPOINTS.PERPLEXITY).hostname).toBe('api.perplexity.ai');
+    expect(new URL(API_ENDPOINTS.GEMINI).hostname).toBe('generativelanguage.googleapis.com');
     expect(new URL(API_ENDPOINTS.APIFY).hostname).toBe('api.apify.com');
     expect(new URL(API_ENDPOINTS.FIRECRAWL_SCRAPE).hostname).toBe('api.firecrawl.dev');
     expect(new URL(API_ENDPOINTS.JINA_READER).hostname).toBe('r.jina.ai');

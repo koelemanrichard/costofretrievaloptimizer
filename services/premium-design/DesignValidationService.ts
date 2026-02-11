@@ -7,6 +7,7 @@
 import type { DesignDNA } from '../../types/designDna';
 import type { CrawledCssTokens, ValidationResult, PremiumDesignConfig } from './types';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 
 /**
  * Validates design output against target website screenshot.
@@ -153,9 +154,9 @@ Return ONLY valid JSON. No markdown fences, no extra text.`;
   }
 
   private async callGemini(img1: string, img2: string, prompt: string): Promise<string> {
-    const model = this.config.model || 'gemini-2.0-flash';
+    const model = this.config.model || getFastModel('gemini');
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.config.apiKey}`,
+      `${API_ENDPOINTS.GEMINI}${model}:generateContent?key=${this.config.apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,7 +178,7 @@ Return ONLY valid JSON. No markdown fences, no extra text.`;
   }
 
   private async callClaude(img1: string, img2: string, prompt: string): Promise<string> {
-    const model = this.config.model || 'claude-sonnet-4-20250514';
+    const model = this.config.model || getDefaultModel('anthropic');
     const response = await fetch(API_ENDPOINTS.ANTHROPIC, {
       method: 'POST',
       headers: {
@@ -204,7 +205,7 @@ Return ONLY valid JSON. No markdown fences, no extra text.`;
   }
 
   private async callOpenAI(img1: string, img2: string, prompt: string): Promise<string> {
-    const model = this.config.model || 'gpt-4o';
+    const model = this.config.model || getDefaultModel('openai');
     const response = await fetch(API_ENDPOINTS.OPENAI, {
       method: 'POST',
       headers: {

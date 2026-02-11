@@ -20,6 +20,7 @@ import { logAiUsage, estimateTokens } from './telemetryService';
 import { getSupabaseClient } from './supabaseClient';
 import { anthropicLogger } from './apiCallLogger';
 import { retryWithBackoff } from './ai/shared/retryWithBackoff';
+import { getValidModels, getDefaultModel, isValidModel, SERVICE_REGISTRY } from '../config/serviceRegistry';
 
 // Shared provider context (replaces duplicated context pattern)
 import { createProviderContext } from './ai/shared/providerContext';
@@ -64,14 +65,8 @@ const callApiWithStreaming = async <T>(
         : prompt;
     const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
 
-    const validClaudeModels = [
-        'claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', 'claude-haiku-4-5-20251001',
-        'claude-opus-4-1-20250805', 'claude-sonnet-4-20250514', 'claude-opus-4-20250514',
-        'claude-3-7-sonnet-20250219', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307',
-    ];
-    const defaultModel = 'claude-sonnet-4-5-20250929';
-    const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.includes(businessInfo.aiModel);
-    const modelToUse = isValidClaudeModel ? businessInfo.aiModel : defaultModel;
+    const modelToUse = (businessInfo.aiModel && isValidModel('anthropic', businessInfo.aiModel))
+        ? businessInfo.aiModel : getDefaultModel('anthropic');
 
     const requestBody = {
         model: modelToUse,
@@ -165,6 +160,8 @@ const callApiWithStreaming = async <T>(
         let eventCount = 0;
         let chunkCount = 0;
         let buffer = ''; // Buffer for incomplete lines across chunks
+        let actualInputTokens = 0;
+        let actualOutputTokens = 0;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -224,9 +221,18 @@ const callApiWithStreaming = async <T>(
                                 }
                             }
                         } else if (event.type === 'message_start') {
-                            console.log('[Anthropic STREAMING] Message started');
+                            // Capture actual input tokens from the message_start event
+                            if (event.message?.usage?.input_tokens) {
+                                actualInputTokens = event.message.usage.input_tokens;
+                            }
+                            console.log('[Anthropic STREAMING] Message started', { inputTokens: actualInputTokens });
+                        } else if (event.type === 'message_delta') {
+                            // Capture actual output tokens from the message_delta event
+                            if (event.usage?.output_tokens) {
+                                actualOutputTokens = event.usage.output_tokens;
+                            }
                         } else if (event.type === 'message_stop') {
-                            console.log('[Anthropic STREAMING] Message stopped');
+                            console.log('[Anthropic STREAMING] Message stopped', { inputTokens: actualInputTokens, outputTokens: actualOutputTokens });
                         } else if (event.type === 'error') {
                             console.error('[Anthropic STREAMING] Error event:', event.error);
                             throw new Error(event.error?.message || 'Stream error');
@@ -291,8 +297,9 @@ const callApiWithStreaming = async <T>(
             provider: 'anthropic',
             model: modelToUse,
             operation,
-            tokensIn: estimateTokens(effectivePrompt.length),
-            tokensOut: estimateTokens(fullText.length),
+            // Use actual tokens from API response, fall back to estimates
+            tokensIn: actualInputTokens || estimateTokens(effectivePrompt.length),
+            tokensOut: actualOutputTokens || estimateTokens(fullText.length),
             durationMs,
             success: true,
             requestSizeBytes: JSON.stringify(requestBody).length,
@@ -366,24 +373,8 @@ const callApi = async <T>(
     const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
 
     // Ensure we use a valid Claude model - if aiModel is not a Claude model, use default
-    // Valid Anthropic model IDs: https://docs.claude.com/en/docs/about-claude/models/overview
-    const validClaudeModels = [
-        // Claude 4.5 models (Latest - November 2025)
-        'claude-opus-4-5-20251101',
-        'claude-sonnet-4-5-20250929',
-        'claude-haiku-4-5-20251001',
-        // Claude 4.x models (Legacy but still available)
-        'claude-opus-4-1-20250805',
-        'claude-sonnet-4-20250514',
-        'claude-opus-4-20250514',
-        'claude-3-7-sonnet-20250219',
-        // Claude 3.5 models (Legacy)
-        'claude-3-5-haiku-20241022',
-        'claude-3-haiku-20240307',
-    ];
-    const defaultModel = 'claude-sonnet-4-5-20250929'; // Claude Sonnet 4.5 - best price/performance
-    const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.includes(businessInfo.aiModel);
-    const modelToUse = isValidClaudeModel ? businessInfo.aiModel : defaultModel;
+    const modelToUse = (businessInfo.aiModel && isValidModel('anthropic', businessInfo.aiModel))
+        ? businessInfo.aiModel : getDefaultModel('anthropic');
 
     // Validate configuration before making request
     if (!businessInfo.supabaseAnonKey) {
@@ -512,10 +503,10 @@ const callApi = async <T>(
             }});
         }
 
-        // Log successful usage
+        // Log successful usage — use actual tokens from API response, fall back to estimates
         const durationMs = Date.now() - startTime;
-        const tokensIn = estimateTokens(effectivePrompt.length);
-        const tokensOut = estimateTokens(responseText?.length || 0);
+        const tokensIn = data.usage?.input_tokens || estimateTokens(effectivePrompt.length);
+        const tokensOut = data.usage?.output_tokens || estimateTokens(responseText?.length || 0);
 
         // Get supabase client for database logging (if available)
         let supabase;
@@ -639,7 +630,7 @@ export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPill
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // For large counts, use batched generation to avoid token limits
-    const BATCH_SIZE = 30;
+    const BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.default;
 
     if (count <= BATCH_SIZE) {
         return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []), 'expandSemanticTriples');
@@ -1260,14 +1251,8 @@ export const generateText = async (
 
     const proxyUrl = `${businessInfo.supabaseUrl}/functions/v1/anthropic-proxy`;
 
-    const validClaudeModels = [
-        'claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', 'claude-haiku-4-5-20251001',
-        'claude-opus-4-1-20250805', 'claude-sonnet-4-20250514', 'claude-opus-4-20250514',
-        'claude-3-7-sonnet-20250219', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307',
-    ];
-    const defaultModel = 'claude-sonnet-4-5-20250929';
-    const isValidClaudeModel = businessInfo.aiModel && validClaudeModels.includes(businessInfo.aiModel);
-    const modelToUse = isValidClaudeModel ? businessInfo.aiModel : defaultModel;
+    const modelToUse = (businessInfo.aiModel && isValidModel('anthropic', businessInfo.aiModel))
+        ? businessInfo.aiModel : getDefaultModel('anthropic');
 
     // Start API call logging
     const apiCallLog = anthropicLogger.start('generateText', 'POST');
@@ -1360,6 +1345,8 @@ export const generateText = async (
         let fullText = '';
         let eventCount = 0;
         let buffer = '';
+        let genInputTokens = 0;
+        let genOutputTokens = 0;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -1386,6 +1373,14 @@ export const generateText = async (
                                 fullText += deltaText;
                                 eventCount++;
                             }
+                        } else if (event.type === 'message_start') {
+                            if (event.message?.usage?.input_tokens) {
+                                genInputTokens = event.message.usage.input_tokens;
+                            }
+                        } else if (event.type === 'message_delta') {
+                            if (event.usage?.output_tokens) {
+                                genOutputTokens = event.usage.output_tokens;
+                            }
                         } else if (event.type === 'error') {
                             throw new Error(event.error?.message || 'Stream error');
                         }
@@ -1408,12 +1403,15 @@ export const generateText = async (
             timestamp: Date.now()
         }});
 
+        // Use actual tokens from API response, fall back to estimates
+        const actualTokenCount = (genInputTokens || estimateTokens(prompt.length)) + (genOutputTokens || estimateTokens(fullText.length));
+
         // Log successful API call
         anthropicLogger.success(apiCallLog.id, {
             model: modelToUse,
             requestSize: JSON.stringify(requestBody).length,
             responseSize: fullText.length,
-            tokenCount: estimateTokens(prompt.length) + estimateTokens(fullText.length),
+            tokenCount: actualTokenCount,
         });
 
         return fullText;

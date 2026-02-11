@@ -5,10 +5,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
+import { ENDPOINTS } from '../_shared/serviceConfig.ts';
 
 const Deno = (globalThis as any).Deno;
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_API_URL = ENDPOINTS.ANTHROPIC;
 // Supabase Edge Functions Pro plan limits:
 // - Request timeout: 150 seconds
 // - Wall clock timeout: 400 seconds

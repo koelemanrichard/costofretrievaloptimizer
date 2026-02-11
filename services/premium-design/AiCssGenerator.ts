@@ -9,6 +9,7 @@
 import type { DesignDNA, BrandDesignSystem } from '../../types/designDna';
 import type { CrawledCssTokens, ValidationResult, PremiumDesignConfig, BusinessContext } from './types';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 
 export class AiCssGenerator {
   private config: PremiumDesignConfig;
@@ -290,13 +291,13 @@ Return ONLY CSS. No markdown fences. No explanations.`;
   }
 
   private async callGemini(img1: string, img2: string | null, prompt: string): Promise<string> {
-    const model = this.config.model || 'gemini-2.0-flash';
+    const model = this.config.model || getFastModel('gemini');
     const parts: any[] = [{ text: prompt }];
     parts.push({ inlineData: { mimeType: 'image/jpeg', data: img1 } });
     if (img2) parts.push({ inlineData: { mimeType: 'image/jpeg', data: img2 } });
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.config.apiKey}`,
+      `${API_ENDPOINTS.GEMINI}${model}:generateContent?key=${this.config.apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -311,7 +312,7 @@ Return ONLY CSS. No markdown fences. No explanations.`;
   }
 
   private async callClaude(img1: string, img2: string | null, prompt: string): Promise<string> {
-    const model = this.config.model || 'claude-sonnet-4-20250514';
+    const model = this.config.model || getDefaultModel('anthropic');
     const content: any[] = [
       { type: 'text', text: prompt },
       { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: img1 } },
@@ -334,7 +335,7 @@ Return ONLY CSS. No markdown fences. No explanations.`;
   }
 
   private async callOpenAI(img1: string, img2: string | null, prompt: string): Promise<string> {
-    const model = this.config.model || 'gpt-4o';
+    const model = this.config.model || getDefaultModel('openai');
     const content: any[] = [
       { type: 'text', text: prompt },
       { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${img1}` } },

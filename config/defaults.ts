@@ -1,17 +1,15 @@
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
-// FIX: Changed import to be a relative path.
-// FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
 import { BusinessInfo } from '../types';
+import { getDefaultModel, getFastModel } from './serviceRegistry';
 
 // Helper to get env variable with fallback
 const env = (key: string, fallback: string = ''): string =>
   import.meta.env[key] || fallback;
 
-// AI model defaults — override via VITE_ env vars without code changes
+// AI model defaults — sourced from service registry, override via VITE_ env vars
 export const AI_MODEL_DEFAULTS = {
-  geminiModel: env('VITE_GEMINI_MODEL', 'gemini-3-pro-preview'),
-  geminiFallbackModel: env('VITE_GEMINI_FALLBACK_MODEL', 'gemini-2.5-flash'),
-  anthropicModel: env('VITE_ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929'),
+  geminiModel: env('VITE_GEMINI_MODEL', getDefaultModel('gemini')),
+  geminiFallbackModel: env('VITE_GEMINI_FALLBACK_MODEL', getFastModel('gemini')),
+  anthropicModel: env('VITE_ANTHROPIC_MODEL', getDefaultModel('anthropic')),
 };
 
 export const defaultBusinessInfo: BusinessInfo = {
@@ -42,7 +40,7 @@ export const defaultBusinessInfo: BusinessInfo = {
 
   // AI Provider Credentials (from environment variables)
   aiProvider: 'gemini',
-  aiModel: 'gemini-3-pro-preview',
+  aiModel: getDefaultModel('gemini'),
   geminiApiKey: env('VITE_GEMINI_API_KEY'),
   openAiApiKey: env('VITE_OPENAI_API_KEY'),
   anthropicApiKey: env('VITE_ANTHROPIC_API_KEY'),

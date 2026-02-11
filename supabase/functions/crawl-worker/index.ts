@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { ENDPOINTS } from '../_shared/serviceConfig.ts'
 
 // --- START Inlined Utility Functions ---
 const ALLOWED_ORIGINS = [
@@ -50,7 +51,7 @@ function json(
 }
 // --- END Inlined Utility Functions ---
 
-const APIFY_API_BASE = 'https://api.apify.com/v2';
+const APIFY_API_BASE = ENDPOINTS.APIFY;
 const WEBSITE_CRAWLER_ACTOR_ID = 'apify/website-content-crawler';
 
 const Deno = (globalThis as any).Deno;

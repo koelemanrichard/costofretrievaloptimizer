@@ -10,6 +10,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { ENDPOINTS } from '../_shared/serviceConfig.ts';
 
 // --- Utility Functions ---
 
@@ -83,7 +84,7 @@ interface PageExtraction {
 
 // --- Apify Helper Functions ---
 
-const API_BASE_URL = 'https://api.apify.com/v2';
+const API_BASE_URL = ENDPOINTS.APIFY;
 const PLAYWRIGHT_SCRAPER_ACTOR_ID = 'apify/playwright-scraper';
 
 interface ApifyRun {

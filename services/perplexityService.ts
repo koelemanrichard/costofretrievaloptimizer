@@ -13,6 +13,7 @@ import {
 import * as prompts from '../config/prompts';
 import { CONTENT_BRIEF_FALLBACK } from '../config/schemas';
 import { AIResponseSanitizer } from './aiResponseSanitizer';
+import { getDefaultModel, SERVICE_REGISTRY } from '../config/serviceRegistry';
 import { AppAction } from '../state/appState';
 import React from 'react';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
@@ -42,7 +43,7 @@ const callApi = async <T>(
 ): Promise<T> => {
     const startTime = Date.now();
     const operation = operationName || ctx.getOperation();
-    const modelToUse = businessInfo.aiModel || 'sonar-pro';
+    const modelToUse = businessInfo.aiModel || getDefaultModel('perplexity');
 
     dispatch({ type: 'LOG_EVENT', payload: { service: 'Perplexity', message: `Sending request to ${modelToUse}...`, status: 'info', timestamp: Date.now() } });
 
@@ -174,7 +175,7 @@ export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPill
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // For large counts, use batched generation to avoid token limits
-    const BATCH_SIZE = 30;
+    const BATCH_SIZE = SERVICE_REGISTRY.limits.batchSize.default;
 
     if (count <= BATCH_SIZE) {
         return callApi(prompts.EXPAND_SEMANTIC_TRIPLES_PROMPT(info, pillars, existing, count), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
@@ -746,7 +747,7 @@ IMPORTANT: Return ONLY the JSON array, no markdown, no explanation.`;
     // regardless of the user's global AI provider setting
     const perplexityBusinessInfo = {
       ...businessInfo,
-      aiModel: 'sonar-pro' // Always use Perplexity's sonar-pro model for competitor discovery
+      aiModel: getDefaultModel('perplexity') // Always use Perplexity's default model for competitor discovery
     };
 
     const result = await callApi(

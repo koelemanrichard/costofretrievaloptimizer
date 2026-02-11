@@ -7,6 +7,8 @@ import { cacheService } from './cacheService';
 import { sanitizeTextInput, validateUrl } from '../utils/inputValidation';
 import React from 'react';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { logAiUsage } from './telemetryService';
+import { getSupabaseClient } from './supabaseClient';
 
 export interface ProxyConfig {
     supabaseUrl: string;
@@ -288,9 +290,46 @@ export const fetchSerpResults = async (query: string, login: string, password: s
             console.log('[DataForSEO] No organic results found, not caching');
         }
 
+        // Log successful SERP fetch
+        const durationMs = Date.now() - startTime;
+        let supabase;
+        try {
+            if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+                supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+            }
+        } catch (e) { /* ignore */ }
+        logAiUsage({
+            provider: 'dataforseo',
+            model: 'serp',
+            operation: 'serp-fetch',
+            tokensIn: 0,
+            tokensOut: 1,
+            durationMs,
+            success: true,
+        }, supabase).catch(() => {});
+
         return results;
 
     } catch (error) {
+        // Log failed SERP fetch
+        const durationMs = Date.now() - startTime;
+        let supabase;
+        try {
+            if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+                supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+            }
+        } catch (e) { /* ignore */ }
+        logAiUsage({
+            provider: 'dataforseo',
+            model: 'serp',
+            operation: 'serp-fetch',
+            tokensIn: 0,
+            tokensOut: 1,
+            durationMs,
+            success: false,
+            errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+        }, supabase).catch(() => {});
+
         console.error("Failed to fetch SERP data from DataForSEO:", error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown Error';
         if (errorMessage.includes('timed out')) {
@@ -384,7 +423,16 @@ export const fetchFullSerpData = async (
 
     const url = API_ENDPOINTS.DATAFORSEO_SERP;
     const credentials = btoa(`${login}:${password}`);
+    const startTime = Date.now();
 
+    let supabase;
+    try {
+      if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+        supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+      }
+    } catch (e) { /* ignore */ }
+
+    try {
     const response = await fetchWithProxy(url, {
       method: 'POST',
       headers: {
@@ -407,6 +455,15 @@ export const fetchFullSerpData = async (
 
     const taskResult = data.tasks?.[0]?.result?.[0];
     if (!taskResult) {
+      logAiUsage({
+        provider: 'dataforseo',
+        model: 'serp',
+        operation: 'full-serp-fetch',
+        tokensIn: 0,
+        tokensOut: 1,
+        durationMs: Date.now() - startTime,
+        success: true,
+      }, supabase).catch(() => {});
       return createEmptyFullSerpResult(query, locationName, languageCode);
     }
 
@@ -494,6 +551,16 @@ export const fetchFullSerpData = async (
     const hasRelatedSearches = !!relatedSearchItem;
     const relatedSearches = (relatedSearchItem?.items || []).map((r: any) => r.title || r.query || '').filter(Boolean);
 
+    logAiUsage({
+      provider: 'dataforseo',
+      model: 'serp',
+      operation: 'full-serp-fetch',
+      tokensIn: 0,
+      tokensOut: 1,
+      durationMs: Date.now() - startTime,
+      success: true,
+    }, supabase).catch(() => {});
+
     return {
       organicResults,
       features: {
@@ -522,6 +589,19 @@ export const fetchFullSerpData = async (
       locationName,
       languageCode
     };
+    } catch (error) {
+      logAiUsage({
+        provider: 'dataforseo',
+        model: 'serp',
+        operation: 'full-serp-fetch',
+        tokensIn: 0,
+        tokensOut: 1,
+        durationMs: Date.now() - startTime,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+      }, supabase).catch(() => {});
+      throw error;
+    }
   };
 
   // Cache full SERP results for 7 days
@@ -790,6 +870,14 @@ export const fetchKeywordSearchVolume = async (
 
     const url = API_ENDPOINTS.DATAFORSEO_SEARCH_VOLUME;
     const credentials = btoa(`${login}:${password}`);
+    const startTime = Date.now();
+
+    let supabase;
+    try {
+      if (proxyConfig?.supabaseUrl && proxyConfig?.supabaseAnonKey) {
+        supabase = getSupabaseClient(proxyConfig.supabaseUrl, proxyConfig.supabaseAnonKey);
+      }
+    } catch (e) { /* ignore */ }
 
     try {
       const response = await fetchWithProxy(url, {
@@ -820,8 +908,28 @@ export const fetchKeywordSearchVolume = async (
         }
       }
 
+      logAiUsage({
+        provider: 'dataforseo',
+        model: 'search-volume',
+        operation: 'search-volume-batch',
+        tokensIn: 0,
+        tokensOut: 1,
+        durationMs: Date.now() - startTime,
+        success: true,
+      }, supabase).catch(() => {});
+
       return result;
     } catch (error) {
+      logAiUsage({
+        provider: 'dataforseo',
+        model: 'search-volume',
+        operation: 'search-volume-batch',
+        tokensIn: 0,
+        tokensOut: 1,
+        durationMs: Date.now() - startTime,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Unknown Error',
+      }, supabase).catch(() => {});
       console.error("Failed to fetch keyword search volume:", error);
       return new Map();
     }

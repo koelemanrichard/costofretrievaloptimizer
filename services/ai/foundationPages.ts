@@ -19,6 +19,7 @@ import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
 import * as anthropicService from '../anthropicService';
 import { AIResponseSanitizer } from '../aiResponseSanitizer';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 import { useSupabase } from '../supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { Json } from '../../database.types';
@@ -956,13 +957,13 @@ function getModelForProvider(businessInfo: BusinessInfo, provider: 'gemini' | 'a
   // Otherwise return sensible defaults
   switch (provider) {
     case 'gemini':
-      return 'gemini-2.0-flash';
+      return getFastModel('gemini');
     case 'anthropic':
-      return 'claude-sonnet-4-5-20250929';
+      return getDefaultModel('anthropic');
     case 'openai':
-      return 'gpt-4o';
+      return getDefaultModel('openai');
     default:
-      return 'gemini-2.0-flash';
+      return getFastModel('gemini');
   }
 }
 

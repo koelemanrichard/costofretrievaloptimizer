@@ -28,6 +28,7 @@ import { SectionAnalyzer } from './SectionAnalyzer';
 import { LayoutPlanner } from './LayoutPlanner';
 import { VisualEmphasizer } from './VisualEmphasizer';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
+import { getFastModel, getDefaultModel } from '../../config/serviceRegistry';
 
 // AI Provider type
 export type AIProvider = 'gemini' | 'anthropic';
@@ -269,8 +270,8 @@ async function callAIProvider(
  * Call Gemini API
  */
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
-  const model = 'gemini-2.0-flash';
-  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+  const model = getFastModel('gemini');
+  const apiUrl = `${API_ENDPOINTS.GEMINI}${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -297,7 +298,7 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
  * Call Anthropic API
  */
 async function callAnthropic(apiKey: string, prompt: string): Promise<string> {
-  const model = 'claude-sonnet-4-20250514';
+  const model = getDefaultModel('anthropic');
   const apiUrl = API_ENDPOINTS.ANTHROPIC;
 
   const response = await fetch(apiUrl, {

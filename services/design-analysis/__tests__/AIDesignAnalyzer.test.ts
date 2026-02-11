@@ -50,7 +50,7 @@ describe('AIDesignAnalyzer', () => {
 
       const info = analyzer.getProviderInfo();
       expect(info.provider).toBe('gemini');
-      expect(info.model).toBe('gemini-2.0-flash');
+      expect(info.model).toBe('gemini-2.5-flash');
     });
 
     it('should return correct model for anthropic provider', () => {
@@ -61,7 +61,7 @@ describe('AIDesignAnalyzer', () => {
 
       const info = analyzer.getProviderInfo();
       expect(info.provider).toBe('anthropic');
-      expect(info.model).toBe('claude-sonnet-4-20250514');
+      expect(info.model).toBe('claude-sonnet-4-5-20250929');
     });
 
     it('should allow custom model override', () => {
