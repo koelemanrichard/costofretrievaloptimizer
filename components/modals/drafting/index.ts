@@ -49,3 +49,11 @@ export {
   default as PublishingExport,
 } from './PublishingExport';
 export type { PublishingExportHook } from './PublishingExport';
+
+// UI Panels
+export { DraftingImagePanel } from './DraftingImagePanel';
+export { DraftingPreviewPanel } from './DraftingPreviewPanel';
+export { AuditIssuesPanelSection, QualityTabContent } from './DraftingAuditPanel';
+export { DraftingPublishingPanel } from './DraftingPublishingPanel';
+export { DraftingSocialPanel } from './DraftingSocialPanel';
+export { RerunPassesModal, VersionHistoryModal } from './DraftingModals';

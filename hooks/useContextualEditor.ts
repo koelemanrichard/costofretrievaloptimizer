@@ -38,7 +38,7 @@ interface UseContextualEditorOptions {
   dispatch: Dispatch<any>;
 }
 
-interface UseContextualEditorReturn {
+export interface UseContextualEditorReturn {
   state: ContextualEditorState;
   selection: TextSelection | null;
   openMenu: () => void;
