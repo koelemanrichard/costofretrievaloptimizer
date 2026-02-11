@@ -19,46 +19,7 @@ import { calculateTopicSimilarityPairs } from '../utils/helpers';
 import { logAiUsage, estimateTokens, AIUsageContext } from './telemetryService';
 import { getSupabaseClient } from './supabaseClient';
 import { anthropicLogger } from './apiCallLogger';
-
-// Retry configuration for network failures
-const NETWORK_RETRY_ATTEMPTS = 3;
-const NETWORK_RETRY_BASE_DELAY_MS = 2000; // 2 seconds initial delay
-
-/**
- * Helper to retry fetch on network errors with exponential backoff
- * Only retries on network-level failures (Failed to fetch), not API errors
- */
-const fetchWithRetry = async (
-    url: string,
-    options: RequestInit,
-    maxRetries: number = NETWORK_RETRY_ATTEMPTS
-): Promise<Response> => {
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const response = await fetch(url, options);
-            return response; // Success - return even if status is error (handled by caller)
-        } catch (error) {
-            lastError = error instanceof Error ? error : new Error(String(error));
-            const isNetworkError = lastError.message === 'Failed to fetch' ||
-                                   lastError.message.includes('NetworkError') ||
-                                   lastError.message.includes('network') ||
-                                   lastError.name === 'TypeError'; // fetch throws TypeError on network failure
-
-            if (!isNetworkError || attempt >= maxRetries) {
-                throw lastError;
-            }
-
-            // Exponential backoff: 2s, 4s, 8s
-            const delayMs = NETWORK_RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-            console.warn(`[Anthropic] Network error on attempt ${attempt}/${maxRetries}, retrying in ${delayMs}ms...`, lastError.message);
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-    }
-
-    throw lastError || new Error('Max retries exceeded');
-};
+import { retryWithBackoff } from './ai/shared/retryWithBackoff';
 
 // Current operation context for logging (set by callers)
 let currentUsageContext: AIUsageContext = {};
@@ -145,8 +106,8 @@ const callApiWithStreaming = async <T>(
 
         let response: Response;
         try {
-            // Use fetchWithRetry to handle intermittent network failures
-            response = await fetchWithRetry(proxyUrl, {
+            // Use shared retryWithBackoff to handle intermittent network failures
+            response = await retryWithBackoff(() => fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -156,7 +117,7 @@ const callApiWithStreaming = async <T>(
                 },
                 body: JSON.stringify(requestBody),
                 signal: controller.signal,
-            });
+            }));
         } finally {
             clearTimeout(timeoutId);
         }
@@ -475,8 +436,8 @@ const callApi = async <T>(
     const apiCallLog = anthropicLogger.start(operation, 'POST');
 
     try {
-        // Use fetchWithRetry to handle intermittent network failures
-        const response = await fetchWithRetry(proxyUrl, {
+        // Use shared retryWithBackoff to handle intermittent network failures
+        const response = await retryWithBackoff(() => fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -485,7 +446,7 @@ const callApi = async <T>(
                 'Authorization': `Bearer ${businessInfo.supabaseAnonKey}`,
             },
             body: bodyString,
-        });
+        }));
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: response.statusText }));
@@ -1327,8 +1288,8 @@ export const generateText = async (
 
         let response: Response;
         try {
-            // Use fetchWithRetry to handle intermittent network failures
-            response = await fetchWithRetry(proxyUrl, {
+            // Use shared retryWithBackoff to handle intermittent network failures
+            response = await retryWithBackoff(() => fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1338,7 +1299,7 @@ export const generateText = async (
                 },
                 body: JSON.stringify(requestBody),
                 signal: controller.signal,
-            });
+            }));
         } finally {
             clearTimeout(timeoutId);
         }
