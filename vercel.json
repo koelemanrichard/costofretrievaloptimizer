@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_deploy": "trigger-redeploy-2026-02-11",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
