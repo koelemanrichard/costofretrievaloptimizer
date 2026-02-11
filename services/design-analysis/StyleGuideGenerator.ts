@@ -255,6 +255,7 @@ export const StyleGuideGenerator = {
           if (el && scores[i] !== undefined) {
             el.qualityScore = scores[i].score;
             el.aiValidated = true;
+            el.validationReason = scores[i].reason || undefined;
             if (scores[i].score < 40) {
               el.approvalStatus = 'rejected';
             }
@@ -460,18 +461,29 @@ Return ONLY the updated HTML element (no explanation, no markdown fences).`;
       return guide;
     }
 
+    // Extract brand context for validation
+    const brandColors = guide.colors
+      .filter(c => c.approvalStatus === 'approved')
+      .slice(0, 8)
+      .map(c => `${c.hex} (${c.usage})`);
+    const brandFonts = guide.googleFontFamilies.length > 0
+      ? guide.googleFontFamilies
+      : ['system-ui'];
+    const brandContext = { colors: brandColors, fonts: brandFonts };
+
     // ── Phase 1: Visual Validation ──
     let validated = 0;
     const repairQueue: StyleGuideElement[] = [];
 
     for (const el of elementsWithScreenshots) {
       try {
-        const result = await visualValidateElement(el, pageScreenshot, aiConfig);
+        const result = await visualValidateElement(el, pageScreenshot, aiConfig, brandContext);
         const guideEl = guide.elements.find(e => e.id === el.id);
         if (guideEl) {
           guideEl.qualityScore = result.score;
           guideEl.aiValidated = true;
           guideEl.visualIssues = result.issues;
+          guideEl.validationReason = result.reason || undefined;
           if (result.suggestedBackground) {
             guideEl.suggestedBackground = result.suggestedBackground;
           }
@@ -490,6 +502,20 @@ Return ONLY the updated HTML element (no explanation, no markdown fences).`;
 
       validated++;
       onProgress?.('validating', validated, elementsWithScreenshots.length);
+    }
+
+    // ── Phase 1.5: Structural Validation Sweep ──
+    for (const el of guide.elements) {
+      const structuralIssues = runStructuralValidation(el);
+      if (structuralIssues.length > 0) {
+        el.visualIssues = [...(el.visualIssues || []), ...structuralIssues];
+        // Auto-reject elements that fail structural checks with very low content
+        const textContent = el.selfContainedHtml.replace(/<[^>]*>/g, '').trim();
+        if (textContent.length < 5 || /^<div[^>]*>\s*<\/div>$/i.test(el.selfContainedHtml.trim())) {
+          el.approvalStatus = 'rejected';
+          el.qualityScore = Math.min(el.qualityScore ?? 100, 10);
+        }
+      }
     }
 
     // ── Phase 2: Visual Repair (max 5 elements) ──
@@ -669,17 +695,36 @@ interface VisualValidationResult {
   score: number;
   issues: string[];
   suggestedBackground: string | null;
+  reason: string | null;
+}
+
+interface BrandContext {
+  colors: string[];
+  fonts: string[];
 }
 
 /**
  * Validate a single element by sending both page screenshot (IMAGE 1) and
  * element screenshot (IMAGE 2) to the AI for visual comparison.
+ * Includes brand context (colors & fonts) for richer validation.
  */
 async function visualValidateElement(
   element: StyleGuideElement,
   pageScreenshot: string,
   aiConfig: AiRefineConfig,
+  brandContext?: BrandContext,
 ): Promise<VisualValidationResult> {
+  const brandSection = brandContext
+    ? `\nBrand context for this site:
+- Detected colors: ${brandContext.colors.join(', ') || 'unknown'}
+- Detected fonts: ${brandContext.fonts.join(', ') || 'system-ui'}
+
+Also check:
+5. BRAND COLORS: Does the element use the site's brand colors?
+6. BRAND FONTS: Does the element use the site's detected fonts?
+7. REUSABILITY: Is this a reusable design pattern (not a one-off)?`
+    : '';
+
   const prompt = `You are a web design QA inspector. I'm showing you:
 - IMAGE 1: Full-page screenshot of a website
 - IMAGE 2: Screenshot of a specific "${element.category}" element (${element.subcategory}) extracted from that page
@@ -689,9 +734,10 @@ Evaluate visual accuracy of how well this element could be reproduced as a stand
 2. COLORS: Do the text and accent colors match what's visible on the page?
 3. COMPLETENESS: Is the element truncated or missing visible parts?
 4. LEGITIMACY: Is this a real design element (not cookie banner/popup/overlay)?
+${brandSection}
 
 Return ONLY valid JSON (no markdown):
-{ "score": 0-100, "issues": ["issue1", "issue2"], "suggestedBackground": "rgb(R, G, B)" or null }
+{ "score": 0-100, "issues": ["issue1", "issue2"], "suggestedBackground": "rgb(R, G, B)" or null, "reason": "one-sentence explanation of score"${brandContext ? ', "brandColorMatch": true/false, "brandFontMatch": true/false' : ''} }
 
 Score guide:
 - 80-100: Element looks correct and complete
@@ -710,33 +756,56 @@ Score guide:
         score: typeof parsed.score === 'number' ? parsed.score : 50,
         issues: Array.isArray(parsed.issues) ? parsed.issues : [],
         suggestedBackground: parsed.suggestedBackground || null,
+        reason: parsed.reason || null,
       };
     }
   } catch {
     // parse failed
   }
 
-  return { score: 50, issues: ['Validation parse failed'], suggestedBackground: null };
+  return { score: 50, issues: ['Validation parse failed'], suggestedBackground: null, reason: null };
 }
 
 /**
- * Repair a broken element by asking AI to regenerate self-contained HTML
- * from the element screenshot + page context.
+ * Repair a broken element by asking AI to fix the existing HTML based on
+ * detected issues, the element screenshot, and page context.
  */
 async function repairElementVisually(
   element: StyleGuideElement,
   pageScreenshot: string,
   aiConfig: AiRefineConfig,
 ): Promise<string> {
+  // Include current HTML (truncated) and issues for targeted repair
+  const currentHtml = element.selfContainedHtml.length > 1500
+    ? element.selfContainedHtml.substring(0, 1500) + '...'
+    : element.selfContainedHtml;
+
+  const cssContext = Object.entries(element.computedCss)
+    .slice(0, 15)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('; ');
+
+  const issuesContext = element.visualIssues?.length
+    ? `\nDetected issues to fix:\n${element.visualIssues.map(i => `- ${i}`).join('\n')}`
+    : '';
+
   const prompt = `You are an HTML/CSS expert. IMAGE 1 shows a full website page for context.
 IMAGE 2 shows how a specific "${element.category}" element (${element.subcategory}) looks on that website.
 
-Generate corrected self-contained HTML with ONLY inline styles that visually matches IMAGE 2.
+Current HTML that needs repair:
+\`\`\`html
+${currentHtml}
+\`\`\`
+
+Current computed CSS: ${cssContext}
+${issuesContext}
+
+Fix the HTML to visually match IMAGE 2. Focus on fixing the specific issues listed above.
 Include the correct background color, fonts, colors, spacing, and border styles.
 The HTML must be self-contained — no external CSS, no class names, only inline styles.
 Max 2000 characters.
 
-Return ONLY the HTML — no explanation, no markdown fences.`;
+Return ONLY the corrected HTML — no explanation, no markdown fences.`;
 
   const result = await callRefineAI(aiConfig, prompt, pageScreenshot, element.elementScreenshotBase64);
 
@@ -747,4 +816,58 @@ Return ONLY the HTML — no explanation, no markdown fences.`;
   }
 
   return html;
+}
+
+/**
+ * Structural validation sweep — programmatic checks that catch edge cases AI vision may miss.
+ */
+function runStructuralValidation(element: StyleGuideElement): string[] {
+  const issues: string[] = [];
+  const html = element.selfContainedHtml || '';
+  const textContent = html.replace(/<[^>]*>/g, '').trim();
+
+  // Auto-reject empty content
+  if (textContent.length < 5 && !html.includes('<img') && !html.includes('<svg')) {
+    issues.push('Empty or near-empty content');
+  }
+
+  // Auto-reject empty wrapper divs
+  if (/^<div[^>]*>\s*<\/div>$/i.test(html.trim())) {
+    issues.push('Empty wrapper div');
+  }
+
+  // Flag low contrast: text color too similar to background
+  const textColor = element.computedCss.color;
+  const bgColorCss = element.computedCss.backgroundColor ||
+    element.ancestorBackground?.backgroundColor;
+  if (textColor && bgColorCss) {
+    const textRgb = parseRgb(textColor);
+    const bgRgb = parseRgb(bgColorCss);
+    if (textRgb && bgRgb) {
+      const distance = Math.sqrt(
+        (textRgb[0] - bgRgb[0]) ** 2 +
+        (textRgb[1] - bgRgb[1]) ** 2 +
+        (textRgb[2] - bgRgb[2]) ** 2
+      );
+      if (distance < 30) {
+        issues.push('Low contrast: text and background colors too similar');
+      }
+    }
+  }
+
+  return issues;
+}
+
+/** Parse RGB values from a CSS color string */
+function parseRgb(color: string): [number, number, number] | null {
+  const match = color.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (match) return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
+  if (color.startsWith('#') && color.length >= 7) {
+    return [
+      parseInt(color.slice(1, 3), 16),
+      parseInt(color.slice(3, 5), 16),
+      parseInt(color.slice(5, 7), 16),
+    ];
+  }
+  return null;
 }

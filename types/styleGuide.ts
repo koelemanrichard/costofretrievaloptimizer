@@ -39,6 +39,7 @@ export interface StyleGuideElement {
   visualIssues?: string[];            // Issues detected during visual validation
   aiRepaired?: boolean;               // Whether AI regenerated the HTML
   suggestedBackground?: string;       // AI-suggested background color
+  validationReason?: string;          // AI explanation for quality score
 }
 
 export interface StyleGuideColor {

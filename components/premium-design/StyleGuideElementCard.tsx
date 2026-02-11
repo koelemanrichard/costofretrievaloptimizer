@@ -13,6 +13,8 @@ interface StyleGuideElementCardProps {
   onRefine?: (id: string) => void;
   onReferenceImage?: (id: string, base64: string) => void;
   onReferenceUrl?: (id: string, url: string) => void;
+  onAiRedo?: (id: string) => void;
+  googleFontsUrls?: string[];
 }
 
 export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
@@ -23,11 +25,14 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
   onRefine,
   onReferenceImage,
   onReferenceUrl,
+  onAiRedo,
+  googleFontsUrls,
 }) => {
   const [showComment, setShowComment] = useState(false);
   const [showReference, setShowReference] = useState(false);
   const [commentText, setCommentText] = useState(element.userComment || '');
   const [refUrl, setRefUrl] = useState(element.referenceUrl || '');
+  const [previewHeight, setPreviewHeight] = useState(180);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const isApproved = element.approvalStatus === 'approved';
@@ -53,17 +58,28 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
     return false;
   })();
 
-  // Use ancestorBackground for correct preview bg, fall back to light-text heuristic
+  // Use ancestorBackground for correct preview bg — include white and gradients
   const bgColor = (() => {
     if (element.suggestedBackground) return element.suggestedBackground;
     if (element.ancestorBackground?.backgroundColor) {
       const bg = element.ancestorBackground.backgroundColor;
-      if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== 'rgb(255, 255, 255)') {
+      if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
         return bg;
       }
     }
     return isLightText ? '#1a1a2e' : '#ffffff';
   })();
+
+  // Detect gradient from ancestor backgroundImage
+  const bgGradient = (() => {
+    const bgImg = element.ancestorBackground?.backgroundImage;
+    if (bgImg && bgImg !== 'none' && bgImg.includes('gradient')) {
+      return bgImg;
+    }
+    return null;
+  })();
+
+  const bgStyle = bgGradient ? `background-image: ${bgGradient};` : `background: ${bgColor};`;
 
   // Strip <script> tags and inline event handlers to prevent "Blocked script execution" errors
   const sanitizedHtml = element.selfContainedHtml
@@ -71,14 +87,21 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
     .replace(/<script\b[^>]*\/>/gi, '')
     .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
 
+  // Build Google Fonts link tags for iframe
+  const fontsLinkTags = (googleFontsUrls || [])
+    .map(url => `<link href="${url}" rel="stylesheet">`)
+    .join('\n    ');
+
   const iframeContent = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><style>
-  body { margin: 16px; background: ${bgColor}; font-family: system-ui, sans-serif; }
+<html><head><meta charset="UTF-8">
+    ${fontsLinkTags}
+<style>
+  body { margin: 16px; ${bgStyle} font-family: system-ui, sans-serif; }
   * { max-width: 100%; box-sizing: border-box; }
   img { max-height: 120px; }
 </style></head><body>${sanitizedHtml}</body></html>`;
 
-  // Auto-resize iframe
+  // Synchronized height: measure iframe body, apply to both panels
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -86,8 +109,8 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
       try {
         const doc = iframe.contentDocument;
         if (doc?.body) {
-          const height = Math.min(200, Math.max(40, doc.body.scrollHeight + 20));
-          iframe.style.height = `${height}px`;
+          const bodyH = doc.body.scrollHeight + 20;
+          setPreviewHeight(Math.min(280, Math.max(100, bodyH)));
         }
       } catch { /* cross-origin fallback */ }
     };
@@ -111,6 +134,9 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const hasIssues = element.visualIssues && element.visualIssues.length > 0;
+  const needsRedo = (element.qualityScore !== undefined && element.qualityScore < 60) || hasIssues;
+
   const borderColor = isApproved
     ? 'border-green-500/40'
     : isRejected
@@ -129,11 +155,14 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
             {element.label}
           </span>
           {element.qualityScore !== undefined && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
-              element.qualityScore >= 70 ? 'bg-green-500/20 text-green-400' :
-              element.qualityScore >= 40 ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-red-500/20 text-red-400'
-            }`}>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 cursor-default ${
+                element.qualityScore >= 70 ? 'bg-green-500/20 text-green-400' :
+                element.qualityScore >= 40 ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-red-500/20 text-red-400'
+              }`}
+              title={element.validationReason || undefined}
+            >
               {element.qualityScore}%
             </span>
           )}
@@ -151,32 +180,53 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
         <span className="text-[10px] text-zinc-600 shrink-0">{element.pageRegion}</span>
       </div>
 
+      {/* Visual issues banner — above preview for visibility */}
+      {hasIssues && (
+        <div className="px-3 py-2 bg-amber-500/10 border-b border-amber-500/20">
+          <div className="flex items-start gap-2">
+            <svg className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+            <div className="flex flex-wrap gap-1">
+              {element.visualIssues!.map((issue, i) => (
+                <span key={i} className="text-[11px] text-amber-300">
+                  {issue}{i < element.visualIssues!.length - 1 ? ' · ' : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Preview: Original vs Rendered comparison */}
       <div className="border-t border-zinc-700/50" style={{ minHeight: 100 }}>
         <div className="flex" style={{ minHeight: 100 }}>
           {element.elementScreenshotBase64 ? (
             <>
               {/* Left: Original screenshot */}
-              <div className="w-1/2 overflow-hidden border-r border-zinc-700/50 flex flex-col" style={{ maxHeight: 220 }}>
+              <div className="w-1/2 overflow-hidden border-r border-zinc-700/50 flex flex-col">
                 <span className="text-[9px] text-zinc-500 uppercase tracking-wider px-2 pt-1">Original</span>
-                <div className="flex-1 flex items-center justify-center bg-white p-1">
+                <div
+                  className="flex-1 flex items-center justify-center bg-white p-1"
+                  style={{ height: previewHeight }}
+                >
                   <img
                     src={`data:image/jpeg;base64,${element.elementScreenshotBase64}`}
                     alt={element.label}
-                    className="max-w-full max-h-[200px] object-contain"
+                    className="max-w-full max-h-full object-contain"
                   />
                 </div>
               </div>
               {/* Right: Rendered iframe */}
-              <div className="w-1/2 overflow-hidden flex flex-col" style={{ maxHeight: 220 }}>
+              <div className="w-1/2 overflow-hidden flex flex-col">
                 <span className="text-[9px] text-zinc-500 uppercase tracking-wider px-2 pt-1">Rendered</span>
-                <div className="flex-1">
+                <div className="flex-1 flex items-center justify-center" style={{ height: previewHeight }}>
                   <iframe
                     ref={iframeRef}
                     srcDoc={iframeContent}
                     title={element.label}
                     className="w-full border-0"
-                    style={{ height: 200 }}
+                    style={{ height: previewHeight }}
                     sandbox="allow-same-origin"
                   />
                 </div>
@@ -223,19 +273,6 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
             )}
           </div>
         </details>
-
-        {/* Visual issues from AI validation */}
-        {element.visualIssues && element.visualIssues.length > 0 && (
-          <div className="px-2 py-1.5 border-t border-zinc-700/30">
-            <div className="flex flex-wrap gap-1">
-              {element.visualIssues.map((issue, i) => (
-                <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                  {issue}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Actions */}
@@ -276,6 +313,14 @@ export const StyleGuideElementCard: React.FC<StyleGuideElementCardProps> = ({
         >
           Ref
         </button>
+        {onAiRedo && needsRedo && (
+          <button
+            onClick={() => onAiRedo(element.id)}
+            className="px-2 py-1 text-[11px] rounded bg-amber-600/20 text-amber-400 border border-amber-500/30 hover:bg-amber-600/30 transition-colors"
+          >
+            AI Redo
+          </button>
+        )}
         {onRefine && (element.userComment || element.referenceImageBase64 || element.referenceUrl) && (
           <button
             onClick={() => onRefine(element.id)}
