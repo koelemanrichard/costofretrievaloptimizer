@@ -164,8 +164,7 @@ Deno.serve(async (req: Request) => {
           {
             error: errorMessage,
             suggestion,
-            details: errorText,
-            model_requested: body.model
+            details: 'AI provider returned an error. Check server logs for details.'
           },
           openaiResponse.status,
           origin
@@ -198,8 +197,7 @@ Deno.serve(async (req: Request) => {
         console.error(`[openai-proxy] Request aborted due to timeout after ${elapsed}ms`);
         return json({
           error: `Request timed out after ${Math.round(elapsed / 1000)} seconds. This can happen with complex content generation requests.`,
-          suggestion: 'Try breaking your request into smaller parts, use streaming mode, or switch to another provider.',
-          timeout_ms: elapsed
+          suggestion: 'Try breaking your request into smaller parts, use streaming mode, or switch to another provider.'
         }, 504, origin);
       }
 
@@ -210,8 +208,8 @@ Deno.serve(async (req: Request) => {
     const elapsed = Date.now() - startTime;
     console.error(`[openai-proxy] Function error after ${elapsed}ms:`, error);
     return json({
-      error: error.message || 'Internal server error',
-      elapsed_ms: elapsed
+      error: 'Internal server error',
+      details: 'An unexpected error occurred. Check server logs for details.'
     }, 500, origin);
   }
 });

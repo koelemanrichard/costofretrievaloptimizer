@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
       console.error('[anthropic-proxy] JSON parse error:', parseError.message);
       return json({
         error: 'Invalid JSON in request body',
-        details: parseError.message
+        details: 'The request body could not be parsed as JSON.'
       }, 400, origin);
     }
 
@@ -160,8 +160,7 @@ Deno.serve(async (req: Request) => {
           {
             error: errorMessage,
             suggestion,
-            details: errorText,
-            model_requested: body.model
+            details: 'AI provider returned an error. Check server logs for details.'
           },
           anthropicResponse.status,
           origin
@@ -194,8 +193,7 @@ Deno.serve(async (req: Request) => {
         console.error(`[anthropic-proxy] Request aborted due to timeout after ${elapsed}ms`);
         return json({
           error: `Request timed out after ${Math.round(elapsed / 1000)} seconds. This can happen with complex content generation requests.`,
-          suggestion: 'Try breaking your request into smaller parts, use streaming mode, or switch to Gemini which is typically faster.',
-          timeout_ms: elapsed
+          suggestion: 'Try breaking your request into smaller parts, use streaming mode, or switch to Gemini which is typically faster.'
         }, 504, origin);
       }
 
@@ -211,10 +209,8 @@ Deno.serve(async (req: Request) => {
     };
     console.error(`[anthropic-proxy] Function error after ${elapsed}ms:`, errorDetails);
     return json({
-      error: error.message || 'Internal server error',
-      error_type: error.name || 'UnknownError',
-      elapsed_ms: elapsed,
-      details: errorDetails.stack
+      error: 'Internal server error',
+      details: 'An unexpected error occurred. Check server logs for details.'
     }, 500, origin);
   }
 });
