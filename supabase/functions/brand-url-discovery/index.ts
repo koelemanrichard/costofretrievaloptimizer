@@ -7,11 +7,23 @@
  */
 
 // --- CORS Headers ---
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  'https://holistic-seo-topical-map-generator.vercel.app',
+  'https://cost-of-retreival-reducer.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function getCorsHeaders(requestOrigin?: string | null) {
+  const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 // --- Types ---
 interface UrlSuggestion {
@@ -23,10 +35,11 @@ interface UrlSuggestion {
 }
 
 // --- Helper Functions ---
+let _currentCorsHeaders: Record<string, string> = getCorsHeaders();
 function jsonResponse(body: any, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: { "Content-Type": "application/json", ..._currentCorsHeaders },
   });
 }
 
@@ -174,9 +187,12 @@ function dedupeAndRank(suggestions: UrlSuggestion[]): UrlSuggestion[] {
 
 // --- Main Handler ---
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  _currentCorsHeaders = getCorsHeaders(origin);
+
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: _currentCorsHeaders });
   }
 
   try {

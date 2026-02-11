@@ -3,7 +3,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { decrypt } from '../_shared/crypto.ts';
 
 // --- START Inlined Utility Functions ---
-function corsHeaders(origin = "*") {
+const ALLOWED_ORIGINS = [
+  'https://holistic-seo-topical-map-generator.vercel.app',
+  'https://cost-of-retreival-reducer.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function corsHeaders(requestOrigin?: string | null) {
+  const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -29,7 +39,7 @@ function getFunctionsBase(supabaseUrl: string): string {
 function json(
   body: any,
   status = 200,
-  origin = "*",
+  origin?: string | null,
 ) {
   return new Response(JSON.stringify(body), {
     status,
@@ -44,7 +54,7 @@ function json(
 const Deno = (globalThis as any).Deno;
 
 Deno.serve(async (req: Request) => {
-  const origin = req.headers.get("origin") ?? "*";
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders(origin) })
   }

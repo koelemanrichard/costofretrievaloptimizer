@@ -2,7 +2,17 @@
 
 // deno-lint-ignore-file no-explicit-any
 // --- START Inlined utility functions ---
-function corsHeaders(origin = "*") {
+const ALLOWED_ORIGINS = [
+  'https://holistic-seo-topical-map-generator.vercel.app',
+  'https://cost-of-retreival-reducer.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function corsHeaders(requestOrigin?: string | null) {
+  const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS, GET, PUT, DELETE, PATCH",
@@ -13,7 +23,7 @@ function corsHeaders(origin = "*") {
 function json(
   body: any,
   status = 200,
-  origin = "*",
+  origin?: string | null,
   headers: Record<string, string> = {},
 ) {
   return new Response(JSON.stringify(body), {
@@ -45,7 +55,7 @@ function extractJsonLd(document: any) {
 
 // FIX: Changed Deno.serve to (globalThis as any).Deno.serve to avoid potential linting errors where the Deno global is not recognized.
 ;(globalThis as any).Deno.serve(async (req: Request) => {
-  const origin = req.headers.get("origin") ?? "*";
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders(origin) })
   }

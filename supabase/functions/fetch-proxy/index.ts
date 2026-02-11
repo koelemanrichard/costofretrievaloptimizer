@@ -4,7 +4,17 @@
 
 const Deno = (globalThis as any).Deno;
 
-function corsHeaders(origin = "*") {
+const ALLOWED_ORIGINS = [
+  'https://holistic-seo-topical-map-generator.vercel.app',
+  'https://cost-of-retreival-reducer.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function corsHeaders(requestOrigin?: string | null) {
+  const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -12,7 +22,7 @@ function corsHeaders(origin = "*") {
   };
 }
 
-function json(body: any, status = 200, origin = "*") {
+function json(body: any, status = 200, origin?: string | null) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -23,7 +33,7 @@ function json(body: any, status = 200, origin = "*") {
 }
 
 Deno.serve(async (req: Request) => {
-  const origin = req.headers.get("origin") ?? "*";
+  const origin = req.headers.get("origin");
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {

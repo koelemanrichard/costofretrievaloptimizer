@@ -5,7 +5,17 @@
 // This file contains shared utility functions for Deno Edge Functions.
 // It's intended to be copied or imported into other functions.
 
-export function corsHeaders(origin = "*") {
+const ALLOWED_ORIGINS = [
+  'https://holistic-seo-topical-map-generator.vercel.app',
+  'https://cost-of-retreival-reducer.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+export function corsHeaders(requestOrigin?: string | null) {
+  const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0]; // Default to production origin
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
@@ -51,7 +61,7 @@ export function getFunctionsBase(supabaseUrl: string): string {
 export function json(
   body: any,
   status = 200,
-  origin = "*",
+  origin?: string | null,
   headers: Record<string, string> = {},
 ) {
   return new Response(JSON.stringify(body), {
