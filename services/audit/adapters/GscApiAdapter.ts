@@ -39,13 +39,22 @@ export class GscApiAdapter {
 
   /**
    * Generate Google OAuth authorization URL for Search Console access.
+   * Optionally include additional scopes (e.g. GA4 analytics.readonly).
    */
-  getAuthorizationUrl(projectId: string, redirectUri: string): string {
+  getAuthorizationUrl(
+    projectId: string,
+    redirectUri: string,
+    additionalScopes?: string[]
+  ): string {
+    const scopes = [
+      'https://www.googleapis.com/auth/webmasters.readonly',
+      ...(additionalScopes || []),
+    ];
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+      scope: scopes.join(' '),
       access_type: 'offline',
       prompt: 'consent',
       state: projectId,

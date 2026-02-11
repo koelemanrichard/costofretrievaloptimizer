@@ -18,6 +18,16 @@ describe('GscApiAdapter', () => {
       expect(url).toContain('redirect_uri=');
       expect(url).toContain('access_type=offline');
     });
+
+    it('includes additional scopes in authorization URL', () => {
+      const url = adapter.getAuthorizationUrl(
+        'project-123',
+        'https://app.example.com/callback',
+        ['https://www.googleapis.com/auth/analytics.readonly']
+      );
+      expect(url).toContain('analytics.readonly');
+      expect(url).toContain('webmasters.readonly');
+    });
   });
 
   describe('getSearchAnalytics', () => {
