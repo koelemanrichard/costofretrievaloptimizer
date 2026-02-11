@@ -3,7 +3,7 @@
  *
  * Left panel: Category tree (30% width)
  * Right panel: Product table or category details (70% width)
- * Top: Action bar with import, auto-link, export
+ * Top: Action bar with import, export, auto-link
  */
 
 import React, { useState, useCallback } from 'react';
@@ -13,6 +13,8 @@ import CategoryEditForm from './CategoryEditForm';
 import ProductTable from './ProductTable';
 import ProductDetailPanel from './ProductDetailPanel';
 import AutoLinkDialog from './AutoLinkDialog';
+import TopicLinkPopover from './TopicLinkPopover';
+import RelinkConsentDialog from './RelinkConsentDialog';
 import CatalogImportWizard from './import/CatalogImportWizard';
 import { useCatalog } from '../../hooks/useCatalog';
 import { useAppState } from '../../state/appState';
@@ -46,6 +48,7 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
     updateProduct,
     deleteProduct,
     bulkAddProducts,
+    exportCatalog,
     runAutoLink,
     clearAutoLinkResults,
   } = useCatalog(mapId);
@@ -55,6 +58,8 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
   const [categoryFormParentId, setCategoryFormParentId] = useState<string | undefined>();
   const [editingProduct, setEditingProduct] = useState<CatalogProduct | null>(null);
   const [showNewProduct, setShowNewProduct] = useState(false);
+  const [linkPopover, setLinkPopover] = useState<{ categoryId: string; anchorPosition: { top: number; left: number } } | null>(null);
+  const [showRelinkConsent, setShowRelinkConsent] = useState(false);
 
   const activeMap = state.topicalMaps.find(m => m.id === mapId);
   const topics = activeMap?.topics || [];
@@ -107,11 +112,41 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
     setShowNewProduct(false);
   }, [addProduct, selectedCategoryId]);
 
+  // Topic link popover
+  const handleLinkClick = useCallback((categoryId: string, event: React.MouseEvent) => {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setLinkPopover({
+      categoryId,
+      anchorPosition: { top: rect.bottom + 4, left: rect.left },
+    });
+  }, []);
+
+  const handleLinkChange = useCallback(async (categoryId: string, topicId: string | null) => {
+    await linkCategoryToTopic(categoryId, topicId);
+    setLinkPopover(null);
+  }, [linkCategoryToTopic]);
+
   // Import
-  const handleImportComplete = useCallback(async () => {
+  const handleImportComplete = useCallback(async (options?: { triggerRelink: boolean }) => {
     setShowImportWizard(false);
     await loadCatalog();
-  }, [loadCatalog]);
+
+    if (options?.triggerRelink) {
+      // Check if any linked categories have topics with briefs
+      const linkedCategories = categories.filter(c => c.linked_topic_id);
+      const linkedTopicIds = new Set(linkedCategories.map(c => c.linked_topic_id!));
+      const topicsWithBriefs = topics.filter(t => linkedTopicIds.has(t.id));
+      if (topicsWithBriefs.length > 0) {
+        setShowRelinkConsent(true);
+      }
+    }
+  }, [loadCatalog, categories, topics]);
+
+  // Relink consent
+  const handleRelinkConfirm = useCallback(() => {
+    setShowRelinkConsent(false);
+    runAutoLink();
+  }, [runAutoLink]);
 
   // Auto-link
   const handleAutoLinkApply = useCallback(async (
@@ -124,6 +159,11 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
     // TODO: Create new topics for _newTopics entries
     clearAutoLinkResults();
   }, [linkCategoryToTopic, clearAutoLinkResults]);
+
+  // Resolve linked topic name for selected category header
+  const selectedCategoryLinkedTopic = selectedCategory?.linked_topic_id
+    ? topics.find(t => t.id === selectedCategory.linked_topic_id)
+    : null;
 
   if (isLoading) {
     return (
@@ -150,6 +190,14 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
             onClick={() => setShowImportWizard(true)}
           >
             Import Products
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCatalog}
+            disabled={products.length === 0}
+          >
+            Export Catalog
           </Button>
           <Button
             variant="outline"
@@ -186,9 +234,11 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
           <CategoryTree
             categories={categories}
             selectedCategoryId={selectedCategoryId}
+            topics={topics}
             onSelectCategory={selectCategory}
             onAddCategory={handleAddCategory}
             onDeleteCategory={handleDeleteCategory}
+            onLinkClick={handleLinkClick}
           />
         </div>
 
@@ -210,14 +260,23 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
                       {selectedCategory.store_url}
                     </a>
                   )}
-                  {selectedCategory.linked_topic_id ? (
-                    <span className="text-xs text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded">
-                      Linked to topic
-                    </span>
+                  {selectedCategoryLinkedTopic ? (
+                    <button
+                      onClick={(e) => handleLinkClick(selectedCategory.id, e)}
+                      className="flex items-center gap-1 text-xs text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded hover:bg-green-900/30 transition-colors"
+                    >
+                      <span>Linked to: {selectedCategoryLinkedTopic.title}</span>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
                   ) : (
-                    <span className="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
-                      Not linked
-                    </span>
+                    <button
+                      onClick={(e) => handleLinkClick(selectedCategory.id, e)}
+                      className="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded hover:bg-gray-700 hover:text-gray-400 transition-colors"
+                    >
+                      Not linked — click to link
+                    </button>
                   )}
                 </div>
               </div>
@@ -263,6 +322,7 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
       {showImportWizard && catalog && (
         <CatalogImportWizard
           catalogId={catalog.id}
+          existingProducts={products}
           onComplete={handleImportComplete}
           onClose={() => setShowImportWizard(false)}
         />
@@ -276,6 +336,27 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
           topics={topics}
           onApply={handleAutoLinkApply}
           onClose={clearAutoLinkResults}
+        />
+      )}
+
+      {/* Topic Link Popover */}
+      {linkPopover && (
+        <TopicLinkPopover
+          categoryId={linkPopover.categoryId}
+          currentTopicId={categories.find(c => c.id === linkPopover.categoryId)?.linked_topic_id || null}
+          topics={topics}
+          anchorPosition={linkPopover.anchorPosition}
+          onLink={handleLinkChange}
+          onClose={() => setLinkPopover(null)}
+        />
+      )}
+
+      {/* Relink Consent Dialog */}
+      {showRelinkConsent && (
+        <RelinkConsentDialog
+          affectedTopicCount={categories.filter(c => c.linked_topic_id).length}
+          onRelink={handleRelinkConfirm}
+          onKeep={() => setShowRelinkConsent(false)}
         />
       )}
     </div>

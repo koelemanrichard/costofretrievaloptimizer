@@ -6,18 +6,19 @@
  * Step 3: Review & Import
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import FileUploadStep from './FileUploadStep';
 import FieldMappingStep from './FieldMappingStep';
 import ImportReviewStep from './ImportReviewStep';
 import { rowsToProducts } from '../../../services/catalog/catalogImporter';
 import { useCatalog } from '../../../hooks/useCatalog';
 import { useAppState } from '../../../state/appState';
-import type { CsvFieldMapping } from '../../../types/catalog';
+import type { CsvFieldMapping, CatalogProduct } from '../../../types/catalog';
 
 interface CatalogImportWizardProps {
   catalogId: string;
-  onComplete: () => void;
+  existingProducts?: CatalogProduct[];
+  onComplete: (options?: { triggerRelink: boolean }) => void;
   onClose: () => void;
 }
 
@@ -31,6 +32,7 @@ const STEPS: { key: WizardStep; label: string }[] = [
 
 const CatalogImportWizard: React.FC<CatalogImportWizardProps> = ({
   catalogId,
+  existingProducts,
   onComplete,
   onClose,
 }) => {
@@ -42,6 +44,12 @@ const CatalogImportWizard: React.FC<CatalogImportWizardProps> = ({
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mappings, setMappings] = useState<CsvFieldMapping[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+
+  const existingSkus = useMemo(() => {
+    if (!existingProducts || existingProducts.length === 0) return undefined;
+    const skus = existingProducts.filter(p => p.sku).map(p => p.sku!);
+    return skus.length > 0 ? new Set(skus) : undefined;
+  }, [existingProducts]);
 
   const handleParsed = useCallback((h: string[], r: Record<string, string>[], _fileName: string) => {
     setHeaders(h);
@@ -76,7 +84,9 @@ const CatalogImportWizard: React.FC<CatalogImportWizardProps> = ({
       await bulkAddProducts(products);
 
       dispatch({ type: 'SET_NOTIFICATION', payload: `Imported ${products.length} products successfully.` });
-      onComplete();
+      const isReimport = existingSkus && existingSkus.size > 0;
+      const hasCategories = categoryNames.length > 0;
+      onComplete(isReimport && hasCategories ? { triggerRelink: true } : undefined);
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
@@ -154,6 +164,7 @@ const CatalogImportWizard: React.FC<CatalogImportWizardProps> = ({
             <ImportReviewStep
               rows={rows}
               mappings={mappings}
+              existingSkus={existingSkus}
               isImporting={isImporting}
               onImport={handleImport}
               onBack={() => setStep('mapping')}

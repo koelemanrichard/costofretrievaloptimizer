@@ -10,6 +10,7 @@ import { useAppState } from '../state/appState';
 import { getSupabaseClient } from '../services/supabaseClient';
 import * as catalogService from '../services/catalog/catalogService';
 import { autoLinkCategoriesToTopics } from '../services/catalog/catalogAutoLinker';
+import { downloadCatalogExport } from '../services/catalog/catalogExporter';
 import type {
   ProductCatalog,
   CatalogCategory,
@@ -199,6 +200,26 @@ export function useCatalog(mapId: string | null) {
   }, [supabase, dispatch, catalog]);
 
   // ========================================================================
+  // EXPORT
+  // ========================================================================
+
+  const exportCatalog = useCallback(async () => {
+    if (!catalog) return;
+    const activeMap = state.topicalMaps.find(m => m.id === mapId);
+    const topics = activeMap?.topics || [];
+
+    try {
+      const assignments = await catalogService.getProductCategoryAssignments(supabase, catalog.id);
+      downloadCatalogExport(products, categories, topics, assignments);
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        payload: `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    }
+  }, [catalog, products, categories, state.topicalMaps, mapId, supabase, dispatch]);
+
+  // ========================================================================
   // AUTO-LINK
   // ========================================================================
 
@@ -287,6 +308,7 @@ export function useCatalog(mapId: string | null) {
     updateProduct,
     deleteProduct,
     bulkAddProducts,
+    exportCatalog,
     runAutoLink,
     clearAutoLinkResults,
   };

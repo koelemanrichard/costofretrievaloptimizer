@@ -7,6 +7,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '../../ui/Button';
 import { parseCsv, parseJson } from '../../../services/catalog/catalogImporter';
+import { downloadImportTemplate } from '../../../services/catalog/catalogTemplateGenerator';
 
 interface FileUploadStepProps {
   onParsed: (headers: string[], rows: Record<string, string>[], fileName: string) => void;
@@ -101,6 +102,18 @@ const FileUploadStep: React.FC<FileUploadStepProps> = ({ onParsed }) => {
           onChange={handleInputChange}
         />
       </div>
+
+      {/* Template download link */}
+      <p className="text-xs text-gray-500">
+        Not sure about the format?{' '}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); downloadImportTemplate(); }}
+          className="text-blue-400 hover:text-blue-300 underline"
+        >
+          Download example CSV template
+        </button>
+      </p>
 
       {/* Error */}
       {error && (

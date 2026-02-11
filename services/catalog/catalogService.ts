@@ -321,6 +321,45 @@ export async function removeProductFromCategory(
 }
 
 // ============================================================================
+// PRODUCT CATEGORY ASSIGNMENTS (bulk query)
+// ============================================================================
+
+export async function getProductCategoryAssignments(
+  supabase: SupabaseClient,
+  catalogId: string
+): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from('product_category_assignments')
+    .select('product_id, category_id, catalog_categories!inner(catalog_id)')
+    .eq('catalog_categories.catalog_id', catalogId);
+
+  if (error) {
+    // Fallback: query without join if the schema doesn't support it
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('product_category_assignments')
+      .select('product_id, category_id');
+
+    if (fallbackError) return new Map();
+
+    const map = new Map<string, string[]>();
+    for (const row of (fallbackData || []) as { product_id: string; category_id: string }[]) {
+      const existing = map.get(row.product_id) || [];
+      existing.push(row.category_id);
+      map.set(row.product_id, existing);
+    }
+    return map;
+  }
+
+  const map = new Map<string, string[]>();
+  for (const row of (data || []) as { product_id: string; category_id: string }[]) {
+    const existing = map.get(row.product_id) || [];
+    existing.push(row.category_id);
+    map.set(row.product_id, existing);
+  }
+  return map;
+}
+
+// ============================================================================
 // CATALOG COUNTS (Denormalization helpers)
 // ============================================================================
 

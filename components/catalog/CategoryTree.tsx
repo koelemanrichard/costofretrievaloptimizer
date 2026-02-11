@@ -7,13 +7,16 @@
 
 import React, { useState, useCallback } from 'react';
 import type { CatalogCategory } from '../../types/catalog';
+import type { EnrichedTopic } from '../../types';
 
 interface CategoryTreeProps {
   categories: CatalogCategory[];
   selectedCategoryId: string | null;
+  topics?: EnrichedTopic[];
   onSelectCategory: (categoryId: string | null) => void;
   onAddCategory: (parentId?: string) => void;
   onDeleteCategory: (categoryId: string) => void;
+  onLinkClick?: (categoryId: string, event: React.MouseEvent) => void;
 }
 
 interface TreeNodeProps {
@@ -22,9 +25,11 @@ interface TreeNodeProps {
   allCategories: CatalogCategory[];
   selectedId: string | null;
   depth: number;
+  topics?: EnrichedTopic[];
   onSelect: (id: string) => void;
   onAdd: (parentId: string) => void;
   onDelete: (id: string) => void;
+  onLinkClick?: (categoryId: string, event: React.MouseEvent) => void;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = ({
@@ -33,9 +38,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   allCategories,
   selectedId,
   depth,
+  topics,
   onSelect,
   onAdd,
   onDelete,
+  onLinkClick,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = children.length > 0;
@@ -75,15 +82,23 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         </span>
 
         {/* Link status icon */}
-        {category.linked_topic_id ? (
-          <span className="w-3 h-3 text-green-500" title="Linked to topic">
-            <svg fill="currentColor" viewBox="0 0 20 20"><path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"/></svg>
-          </span>
-        ) : (
-          <span className="w-3 h-3 text-gray-600" title="Not linked">
-            <svg fill="currentColor" viewBox="0 0 20 20"><path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"/></svg>
-          </span>
-        )}
+        {(() => {
+          const linkedTopic = category.linked_topic_id && topics
+            ? topics.find(t => t.id === category.linked_topic_id)
+            : null;
+          const linkTitle = linkedTopic
+            ? `Linked to: ${linkedTopic.title} — click to change`
+            : 'Not linked — click to link';
+          return (
+            <button
+              onClick={(e) => { e.stopPropagation(); onLinkClick?.(category.id, e); }}
+              className={`w-3 h-3 flex-shrink-0 ${category.linked_topic_id ? 'text-green-500 hover:text-green-400' : 'text-gray-600 hover:text-gray-400'}`}
+              title={linkTitle}
+            >
+              <svg fill="currentColor" viewBox="0 0 20 20"><path d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"/></svg>
+            </button>
+          );
+        })()}
 
         {/* Add subcategory button */}
         <button
@@ -108,9 +123,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
               allCategories={allCategories}
               selectedId={selectedId}
               depth={depth + 1}
+              topics={topics}
               onSelect={onSelect}
               onAdd={onAdd}
               onDelete={onDelete}
+              onLinkClick={onLinkClick}
             />
           ))}
         </div>
@@ -122,9 +139,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
 const CategoryTree: React.FC<CategoryTreeProps> = ({
   categories,
   selectedCategoryId,
+  topics,
   onSelectCategory,
   onAddCategory,
   onDeleteCategory,
+  onLinkClick,
 }) => {
   const rootCategories = categories.filter(c => !c.parent_category_id && c.status === 'active');
 
@@ -173,9 +192,11 @@ const CategoryTree: React.FC<CategoryTreeProps> = ({
               allCategories={categories}
               selectedId={selectedCategoryId}
               depth={0}
+              topics={topics}
               onSelect={onSelectCategory}
               onAdd={onAddCategory}
               onDelete={onDeleteCategory}
+              onLinkClick={onLinkClick}
             />
           ))
         )}
