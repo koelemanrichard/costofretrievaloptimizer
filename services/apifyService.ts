@@ -125,7 +125,7 @@ export const runApifyActor = async (actorId: string, apiToken: string, runInput:
   if (!startResponse.ok) {
     const errorText = await startResponse.text();
     console.error('[Apify] Start run failed:', startResponse.status, errorText);
-    logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: `Start failed: ${startResponse.status}` }).catch(() => {});
+    logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: `Start failed: ${startResponse.status}` }).catch((err) => console.warn('[ApifyService] Usage logging failed:', err?.message));
     throw new Error(`Apify start run failed (${startResponse.status}): ${errorText}`);
   }
 
@@ -141,7 +141,7 @@ export const runApifyActor = async (actorId: string, apiToken: string, runInput:
     const statusResponse = await apifyFetch(statusUrl, undefined, proxyConfig);
     if (!statusResponse.ok) {
       console.error('[Apify] Status check failed:', statusResponse.status);
-      logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: `Status check failed: ${statusResponse.status}` }).catch(() => {});
+      logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: `Status check failed: ${statusResponse.status}` }).catch((err) => console.warn('[ApifyService] Usage logging failed:', err?.message));
       throw new Error(`Apify status check failed (${statusResponse.status}): ${statusResponse.statusText}`);
     }
     const { data: currentRun }: { data: ApifyRun } = await statusResponse.json();
@@ -149,13 +149,13 @@ export const runApifyActor = async (actorId: string, apiToken: string, runInput:
     console.log('[Apify] Run status:', run.status, `(attempt ${i + 1}/${maxRetries})`);
     if (run.status === 'SUCCEEDED') break;
     if (['FAILED', 'TIMED-OUT', 'ABORTED'].includes(run.status)) {
-      logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: `Run ${run.status}` }).catch(() => {});
+      logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: `Run ${run.status}` }).catch((err) => console.warn('[ApifyService] Usage logging failed:', err?.message));
       throw new Error(`Apify actor run failed with status: ${run.status}`);
     }
   }
 
   if (run.status !== 'SUCCEEDED') {
-    logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: 'Run timed out' }).catch(() => {});
+    logApifyUsage({ actorId, operation: 'apify-actor-run', durationMs: Date.now() - startTime, success: false, errorMessage: 'Run timed out' }).catch((err) => console.warn('[ApifyService] Usage logging failed:', err?.message));
     throw new Error('Apify actor run timed out. Try selecting fewer pages or using homepage only.');
   }
 
@@ -174,7 +174,7 @@ export const runApifyActor = async (actorId: string, apiToken: string, runInput:
     durationMs: Date.now() - startTime,
     success: true,
     datasetItemCount: results.length,
-  }).catch(() => {}); // Fire-and-forget
+  }).catch((err) => console.warn('[ApifyService] Usage logging failed:', err?.message)); // Fire-and-forget
 
   return results;
 };
