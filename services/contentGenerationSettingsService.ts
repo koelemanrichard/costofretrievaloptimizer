@@ -110,6 +110,54 @@ export class ContentGenerationSettingsService {
   }
 
   /**
+   * Save settings for a specific map (upsert).
+   * If map-specific settings already exist, update them.
+   * If not, create a new row tied to this map.
+   */
+  async saveSettingsForMap(
+    userId: string,
+    mapId: string,
+    settings: ContentGenerationSettings
+  ): Promise<ContentGenerationSettings> {
+    // Check if map-specific settings already exist
+    const { data: existing } = await this.supabase
+      .from('content_generation_settings')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('map_id', mapId)
+      .single();
+
+    const dbData = settingsToDbInsert({ ...settings, userId, mapId });
+
+    if (existing) {
+      // Update existing map-specific settings
+      const { data, error } = await this.supabase
+        .from('content_generation_settings')
+        .update(dbData)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error || !data) {
+        throw new Error(`Failed to update map settings: ${error?.message}`);
+      }
+      return settingsRowToInterface(data as ContentGenerationSettingsRow);
+    } else {
+      // Create new map-specific settings (not a default row)
+      const { data, error } = await this.supabase
+        .from('content_generation_settings')
+        .insert({ ...dbData, is_default: false })
+        .select()
+        .single();
+
+      if (error || !data) {
+        throw new Error(`Failed to create map settings: ${error?.message}`);
+      }
+      return settingsRowToInterface(data as ContentGenerationSettingsRow);
+    }
+  }
+
+  /**
    * Apply a preset to settings
    */
   applyPreset(

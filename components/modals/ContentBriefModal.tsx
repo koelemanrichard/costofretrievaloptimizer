@@ -30,6 +30,7 @@ import { MoneyPagePillarsIndicator } from '../brief/MoneyPagePillarsIndicator';
 import { VisualSemanticsPanel } from '../brief/VisualSemanticsPanel';
 import { TopicBridgingContext } from '../brief/TopicBridgingContext';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { ContentGenerationSettingsService } from '../../services/contentGenerationSettingsService';
 import CompetitiveIntelligenceWrapper from '../analysis/CompetitiveIntelligenceWrapper';
 import { useFeatureGate } from '../../hooks/usePermissions';
 import {
@@ -110,30 +111,17 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
 
-    // Load settings from localStorage or use defaults
-    const [contentSettings, setContentSettings] = useState<ContentGenerationSettings>(() => {
-        try {
-            const saved = localStorage.getItem('contentGenerationSettings');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                return {
-                    ...DEFAULT_CONTENT_GENERATION_SETTINGS,
-                    ...parsed,
-                    id: 'temp',
-                    userId: user?.id || '',
-                };
-            }
-        } catch (e) {
-            console.warn('Failed to load content settings from localStorage:', e);
-        }
-        return {
-            ...DEFAULT_CONTENT_GENERATION_SETTINGS,
-            id: 'temp',
-            userId: user?.id || '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+    // Content generation settings — loaded per-map from DB
+    const [contentSettings, setContentSettings] = useState<ContentGenerationSettings>({
+        ...DEFAULT_CONTENT_GENERATION_SETTINGS,
+        id: 'temp',
+        userId: user?.id || '',
+        mapId: activeMapId || undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     });
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
+    const settingsDirty = React.useRef(false);
 
     const [qualityModeSettings, setQualityModeSettings] = useState<QualityModeSettings>(() => {
         try {
@@ -149,14 +137,62 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
 
     const [showQualityView, setShowQualityView] = useState(false);
 
-    // Persist settings to localStorage when they change
+    // Load settings from DB when map changes
     useEffect(() => {
-        try {
-            localStorage.setItem('contentGenerationSettings', JSON.stringify(contentSettings));
-        } catch (e) {
-            console.warn('Failed to save content settings to localStorage:', e);
-        }
-    }, [contentSettings]);
+        if (!user?.id || !activeMapId || !effectiveBusinessInfo?.supabaseUrl || !effectiveBusinessInfo?.supabaseAnonKey) return;
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+                const service = new ContentGenerationSettingsService(supabase);
+                const loaded = await service.getSettingsForMap(user.id, activeMapId);
+                if (!cancelled) {
+                    settingsDirty.current = false;
+                    setContentSettings(loaded);
+                    setSettingsLoaded(true);
+                }
+            } catch (e) {
+                console.warn('Failed to load content settings from DB, using defaults:', e);
+                if (!cancelled) {
+                    settingsDirty.current = false;
+                    setContentSettings({
+                        ...DEFAULT_CONTENT_GENERATION_SETTINGS,
+                        id: 'temp',
+                        userId: user.id,
+                        mapId: activeMapId,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                    setSettingsLoaded(true);
+                }
+            }
+        };
+        setSettingsLoaded(false);
+        load();
+        return () => { cancelled = true; };
+    }, [user?.id, activeMapId, effectiveBusinessInfo?.supabaseUrl, effectiveBusinessInfo?.supabaseAnonKey]);
+
+    // Wrap setContentSettings to track user-initiated changes
+    const updateContentSettings = useCallback((newSettings: ContentGenerationSettings | ((prev: ContentGenerationSettings) => ContentGenerationSettings)) => {
+        settingsDirty.current = true;
+        setContentSettings(newSettings);
+    }, []);
+
+    // Persist settings to DB (debounced) when user changes them
+    useEffect(() => {
+        if (!settingsDirty.current || !settingsLoaded || !user?.id || !activeMapId || !effectiveBusinessInfo?.supabaseUrl || !effectiveBusinessInfo?.supabaseAnonKey) return;
+        const timer = setTimeout(async () => {
+            try {
+                const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+                const service = new ContentGenerationSettingsService(supabase);
+                await service.saveSettingsForMap(user.id, activeMapId, contentSettings);
+                settingsDirty.current = false;
+            } catch (e) {
+                console.warn('Failed to persist content settings to DB:', e);
+            }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [contentSettings, settingsLoaded, user?.id, activeMapId, effectiveBusinessInfo?.supabaseUrl, effectiveBusinessInfo?.supabaseAnonKey]);
 
     useEffect(() => {
         try {
@@ -888,7 +924,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         </span>
                         <button
                             onClick={() => {
-                                setContentSettings(prev => ({
+                                updateContentSettings(prev => ({
                                     ...prev,
                                     contentLength: {
                                         ...(prev.contentLength ?? DEFAULT_CONTENT_LENGTH_SETTINGS),
@@ -1004,7 +1040,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Content Priorities & Tone</h4>
                                 <ContentGenerationSettingsPanel
                                     settings={contentSettings}
-                                    onChange={setContentSettings}
+                                    onChange={updateContentSettings}
                                     presets={PRIORITY_PRESETS}
                                 />
                             </div>
@@ -1014,7 +1050,7 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                                 <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Refinement Passes</h4>
                                 <PassControlPanel
                                     passes={contentSettings.passes}
-                                    onChange={(passes) => setContentSettings(prev => ({ ...prev, passes }))}
+                                    onChange={(passes) => updateContentSettings(prev => ({ ...prev, passes }))}
                                     disabled={isGenerating}
                                 />
                             </div>
