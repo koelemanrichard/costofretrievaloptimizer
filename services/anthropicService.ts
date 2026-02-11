@@ -16,25 +16,18 @@ import { AIResponseSanitizer } from './aiResponseSanitizer';
 import { AppAction } from '../state/appState';
 import React from 'react';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
-import { logAiUsage, estimateTokens, AIUsageContext } from './telemetryService';
+import { logAiUsage, estimateTokens } from './telemetryService';
 import { getSupabaseClient } from './supabaseClient';
 import { anthropicLogger } from './apiCallLogger';
 import { retryWithBackoff } from './ai/shared/retryWithBackoff';
 
-// Current operation context for logging (set by callers)
-let currentUsageContext: AIUsageContext = {};
-let currentOperation: string = 'unknown';
+// Shared provider context (replaces duplicated context pattern)
+import { createProviderContext } from './ai/shared/providerContext';
+const ctx = createProviderContext('anthropic');
+export const setUsageContext = ctx.setUsageContext;
 
 // Use shared extraction utility (previously duplicated across all providers)
 import { extractMarkdownFromResponse } from './ai/shared/extractJson';
-
-/**
- * Set the context for AI usage logging (should be called before AI operations)
- */
-export function setUsageContext(context: AIUsageContext, operation?: string): void {
-    currentUsageContext = context;
-    if (operation) currentOperation = operation;
-}
 
 /**
  * Call Anthropic API via streaming to avoid timeouts on long-running requests
@@ -52,7 +45,7 @@ const callApiWithStreaming = async <T>(
     expectJson: boolean = true
 ): Promise<T> => {
     const startTime = Date.now();
-    const operation = operationName || currentOperation;
+    const operation = operationName || ctx.getOperation();
 
     console.log('[Anthropic STREAMING] Starting streaming request:', { operation, model: businessInfo.aiModel, promptLength: prompt.length, expectJson });
     dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Sending streaming request to ${businessInfo.aiModel}...`, status: 'info', timestamp: Date.now() } });
@@ -304,7 +297,7 @@ const callApiWithStreaming = async <T>(
             success: true,
             requestSizeBytes: JSON.stringify(requestBody).length,
             responseSizeBytes: fullText.length,
-            context: currentUsageContext
+            context: ctx.getUsageContext()
         }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
         return sanitizerFn(fullText);
@@ -329,7 +322,7 @@ const callApiWithStreaming = async <T>(
             durationMs,
             success: false,
             errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            context: currentUsageContext
+            context: ctx.getUsageContext()
         }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
         const message = error instanceof Error ? error.message : "Unknown Anthropic error";
@@ -354,7 +347,7 @@ const callApi = async <T>(
     operationName?: string
 ): Promise<T> => {
     const startTime = Date.now();
-    const operation = operationName || currentOperation;
+    const operation = operationName || ctx.getOperation();
 
     dispatch({ type: 'LOG_EVENT', payload: { service: 'Anthropic', message: `Sending request to ${businessInfo.aiModel}...`, status: 'info', timestamp: Date.now() } });
 
@@ -544,7 +537,7 @@ const callApi = async <T>(
             success: true,
             requestSizeBytes: bodyString.length,
             responseSizeBytes: responseText?.length || 0,
-            context: currentUsageContext
+            context: ctx.getUsageContext()
         }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
         // Log successful API call
@@ -580,7 +573,7 @@ const callApi = async <T>(
             durationMs,
             success: false,
             errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            context: currentUsageContext
+            context: ctx.getUsageContext()
         }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
         // Log failed API call

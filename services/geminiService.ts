@@ -43,27 +43,15 @@ import { AppAction } from "../state/appState";
 import React from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { calculateTopicSimilarityPairs } from '../utils/helpers';
-import { logAiUsage, estimateTokens, AIUsageContext } from './telemetryService';
+import { logAiUsage, estimateTokens } from './telemetryService';
 import { getSupabaseClient } from './supabaseClient';
 import { geminiLogger } from './apiCallLogger';
 
-// Current operation context for logging (set by callers)
-let currentUsageContext: AIUsageContext = {};
-let currentOperation: string = 'unknown';
+// Shared provider context (replaces duplicated context pattern)
+import { createProviderContext } from './ai/shared/providerContext';
+const ctx = createProviderContext('gemini');
+export const setUsageContext = ctx.setUsageContext;
 
-/**
- * Set the context for AI usage logging (should be called before AI operations)
- */
-export function setUsageContext(context: AIUsageContext, operation?: string): void {
-    currentUsageContext = context;
-    if (operation) currentOperation = operation;
-}
-
-/**
- * Extract markdown content from potentially JSON-wrapped AI responses.
- * Sometimes AI returns JSON like {"polished_article": "..."} even when asked for raw markdown.
- * This function gracefully handles such cases.
- */
 // Use shared extraction utility (previously duplicated across all providers)
 import { extractMarkdownFromResponse } from './ai/shared/extractJson';
 
@@ -202,7 +190,7 @@ const callApi = async <T>(
     modelOverride?: string
 ): Promise<T> => {
     const startTime = Date.now();
-    const operation = operationName || currentOperation;
+    const operation = operationName || ctx.getOperation();
 
     const apiKey = businessInfo.geminiApiKey;
     if (!apiKey) {
@@ -284,7 +272,7 @@ const callApi = async <T>(
                     durationMs,
                     success: false,
                     errorMessage: `Empty response (finishReason: ${finishReason})`,
-                    context: currentUsageContext
+                    context: ctx.getUsageContext()
                 }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
                 // Log to API call logger
@@ -310,7 +298,7 @@ const callApi = async <T>(
                 success: true,
                 requestSizeBytes: prompt.length,
                 responseSizeBytes: responseText.length,
-                context: currentUsageContext
+                context: ctx.getUsageContext()
             }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
             // Log to API call logger
@@ -338,7 +326,7 @@ const callApi = async <T>(
                 success: false,
                 errorMessage: error?.message || 'Unknown error',
                 errorCode: error?.status?.toString() || error?.code,
-                context: currentUsageContext
+                context: ctx.getUsageContext()
             }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
 
             // Log to API call logger
@@ -443,7 +431,7 @@ const callApi = async <T>(
                 durationMs,
                 success: false,
                 errorMessage: message,
-                context: currentUsageContext
+                context: ctx.getUsageContext()
             }, supabase).catch(e => console.warn('Failed to log AI usage:', e));
         }
 
