@@ -1,14 +1,155 @@
 // config/prompts/_common.ts
 // Shared utilities and helpers for prompt generation
 
-import { BusinessInfo, AuthorProfile, WebsiteType } from '../../types';
+import { BusinessInfo, AuthorProfile, WebsiteType, SemanticTriple, ContentBrief } from '../../types';
 import { MarketPatterns } from '../../types/competitiveIntelligence';
 import { getWebsiteTypeConfig } from '../websiteTypeTemplates';
 import { getLanguageName, getLanguageAndRegionInstruction, getRegionalLanguageVariant } from '../../utils/languageUtils';
 import { getMonetizationPromptEnhancement, shouldApplyMonetizationEnhancement } from '../../utils/monetizationPromptUtils';
+import type { InferredSerpData } from '../../services/ai/serpInference';
 
 // Re-export for use in content generation passes
 export { getLanguageAndRegionInstruction };
+
+/**
+ * Condensed SERP intelligence for topic map generation.
+ * Built from batchInferSerpData() results on pillar queries.
+ */
+export interface SerpIntelligenceForMap {
+    /** Per-pillar SERP analysis */
+    pillarInsights: Array<{
+        pillar: string;
+        intent: string;
+        contentType: string;
+        difficulty: string;
+        difficultyScore: number;
+        serpFeatures: string[];
+        paaQuestions: string[];
+        headlinePatterns: string[];
+        opportunities: string[];
+        estimatedWordCount: { min: number; max: number };
+    }>;
+}
+
+/**
+ * Build a SerpIntelligenceForMap from batch inferred data
+ */
+export function buildSerpIntelligenceForMap(
+    pillarQueries: string[],
+    serpResults: Map<string, InferredSerpData>
+): SerpIntelligenceForMap {
+    const pillarInsights = pillarQueries.map(query => {
+        const data = serpResults.get(query);
+        if (!data) {
+            return {
+                pillar: query,
+                intent: 'unknown',
+                contentType: 'unknown',
+                difficulty: 'unknown',
+                difficultyScore: 50,
+                serpFeatures: [],
+                paaQuestions: [],
+                headlinePatterns: [],
+                opportunities: [],
+                estimatedWordCount: { min: 800, max: 2000 },
+            };
+        }
+        const features: string[] = [];
+        if (data.likelyFeatures.featuredSnippet.likely) features.push(`Featured Snippet (${data.likelyFeatures.featuredSnippet.type || 'paragraph'})`);
+        if (data.likelyFeatures.peopleAlsoAsk.likely) features.push('People Also Ask');
+        if (data.likelyFeatures.imagesPack) features.push('Image Pack');
+        if (data.likelyFeatures.videoCarousel) features.push('Video Carousel');
+        if (data.likelyFeatures.localPack) features.push('Local Pack');
+        if (data.likelyFeatures.knowledgePanel) features.push('Knowledge Panel');
+        if (data.likelyFeatures.faq) features.push('FAQ Rich Result');
+
+        return {
+            pillar: query,
+            intent: data.dominantIntent,
+            contentType: data.dominantContentType,
+            difficulty: data.competitiveLandscape.difficulty,
+            difficultyScore: data.competitiveLandscape.difficultyScore,
+            serpFeatures: features,
+            paaQuestions: data.likelyFeatures.peopleAlsoAsk.estimatedQuestions || [],
+            headlinePatterns: data.estimatedHeadlinePatterns || [],
+            opportunities: data.competitiveLandscape.opportunities || [],
+            estimatedWordCount: { min: data.estimatedWordCount.min, max: data.estimatedWordCount.max },
+        };
+    });
+
+    return { pillarInsights };
+}
+
+/**
+ * Build a SERP intelligence block for map generation prompts.
+ * Returns empty string if no SERP data available.
+ */
+export const buildSerpIntelligenceBlock = (serpIntel?: SerpIntelligenceForMap): string => {
+    if (!serpIntel || serpIntel.pillarInsights.length === 0) return '';
+
+    const insights = serpIntel.pillarInsights.map(p => {
+        const features = p.serpFeatures.length > 0 ? p.serpFeatures.join(', ') : 'none detected';
+        const paa = p.paaQuestions.length > 0 ? `\n    PAA Questions: ${p.paaQuestions.slice(0, 3).join(' | ')}` : '';
+        const opps = p.opportunities.length > 0 ? `\n    Opportunities: ${p.opportunities.slice(0, 2).join(' | ')}` : '';
+        return `  - "${p.pillar}": intent=${p.intent}, type=${p.contentType}, difficulty=${p.difficulty} (${p.difficultyScore}/100)
+    SERP Features: ${features}
+    Word Count Range: ${p.estimatedWordCount.min}-${p.estimatedWordCount.max}${paa}${opps}`;
+    }).join('\n');
+
+    return `
+**SEARCH LANDSCAPE INTELLIGENCE (use this to inform topic structure):**
+${insights}
+
+**How to use this data:**
+- Prioritize topics where difficulty is "easy" or "medium" for faster ranking
+- Create Featured Snippet-optimized content for pillars with FS likelihood
+- Use PAA questions as spoke topic ideas
+- Target identified opportunities as content gaps to fill
+- Adjust content depth (word count) to match or exceed SERP expectations
+`;
+};
+
+/**
+ * Helper function to calculate category distribution for expansion prompt
+ */
+export const getCategoryDistribution = (triples: SemanticTriple[]): string => {
+    const counts: Record<string, number> = { ROOT: 0, UNIQUE: 0, RARE: 0, COMMON: 0 };
+    triples.forEach(t => {
+        const cat = t.predicate?.category || 'COMMON';
+        if (cat in counts) counts[cat]++;
+    });
+    return Object.entries(counts).map(([k, v]) => `- ${k}: ${v}`).join('\n');
+};
+
+/**
+ * Condense a content brief for prompt inclusion with full structure (used by brief editing prompts)
+ */
+export const condenseBriefForPromptFull = (brief: ContentBrief): string => {
+    const condensed = {
+        title: brief.title,
+        slug: brief.slug,
+        metaDescription: brief.metaDescription,
+        keyTakeaways: brief.keyTakeaways,
+        structured_outline: brief.structured_outline?.map(s => ({
+            heading: s.heading,
+            level: s.level,
+            format_code: s.format_code,
+            attribute_category: s.attribute_category,
+            content_zone: s.content_zone,
+            subordinate_text_hint: s.subordinate_text_hint?.substring(0, 200),
+            methodology_note: s.methodology_note?.substring(0, 200),
+        })) || [],
+        contextualVectors_count: brief.contextualVectors?.length || 0,
+        visual_semantics_count: brief.visual_semantics?.length || 0,
+        perspectives: brief.perspectives,
+        discourse_anchors: brief.discourse_anchors,
+        contextualBridge: brief.contextualBridge,
+        predicted_user_journey: brief.predicted_user_journey,
+        query_type_format: brief.query_type_format,
+        featured_snippet_target: brief.featured_snippet_target,
+    };
+    return JSON.stringify(condensed, null, 2);
+};
 
 export const jsonResponseInstruction = `
 Respond with a valid JSON object. Do not include any explanatory text or markdown formatting before or after the JSON.
