@@ -44,6 +44,8 @@ const ProjectWorkspace: React.FC = () => {
             region: formData.region,
             targetMarket: formData.targetMarket,
             websiteType: formData.websiteType,
+            conversionGoal: formData.conversionGoal,
+            uniqueDataAssets: formData.uniqueDataAssets,
             // AI provider settings
             aiProvider: formData.aiProvider,
             aiModel: formData.aiModel,
@@ -51,6 +53,9 @@ const ProjectWorkspace: React.FC = () => {
             brandKit: formData.brandKit,
             // Author profile for E-E-A-T signals
             authorProfile: formData.authorProfile,
+            authorName: formData.authorName,
+            authorBio: formData.authorBio,
+            authorCredentials: formData.authorCredentials,
             // Domain info
             domain: formData.domain,
             projectName: formData.projectName,

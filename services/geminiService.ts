@@ -922,14 +922,14 @@ export const refineDraftSection = async (
 
 export const generateSchema = async (brief: ContentBrief, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<SchemaGenerationResult> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const prompt = prompts.GENERATE_SCHEMA_PROMPT(brief);
+    const prompt = prompts.GENERATE_SCHEMA_PROMPT(brief, businessInfo);
     const fallback: SchemaGenerationResult = { schema: '', reasoning: '' };
     return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitize(text, { schema: String, reasoning: String }, fallback));
 };
 
 export const analyzeGscDataForOpportunities = async (gscRows: GscRow[], knowledgeGraph: KnowledgeGraph, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<GscOpportunity[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const prompt = prompts.ANALYZE_GSC_DATA_PROMPT(gscRows, knowledgeGraph);
+    const prompt = prompts.ANALYZE_GSC_DATA_PROMPT(gscRows, knowledgeGraph, businessInfo);
     return callApi(prompt, businessInfo, dispatch, (text) => sanitizer.sanitizeArray<GscOpportunity>(text, []));
 };
 

@@ -403,7 +403,7 @@ export const refineDraftSection = async (text: string, violation: string, instr:
 
 export const generateSchema = async (brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<SchemaGenerationResult> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.GENERATE_SCHEMA_PROMPT(brief), info, dispatch, (text) => sanitizer.sanitize(text, { schema: String, reasoning: String }, { schema: '', reasoning: '' }));
+    return callApi(prompts.GENERATE_SCHEMA_PROMPT(brief, info), info, dispatch, (text) => sanitizer.sanitize(text, { schema: String, reasoning: String }, { schema: '', reasoning: '' }));
 };
 
 export const validateTopicalMap = async (topics: EnrichedTopic[], pillars: SEOPillars, info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<ValidationResult> => {
@@ -415,7 +415,7 @@ export const validateTopicalMap = async (topics: EnrichedTopic[], pillars: SEOPi
 // Passthroughs for analysis functions
 export const analyzeGscDataForOpportunities = async (rows: GscRow[], kg: KnowledgeGraph, info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<GscOpportunity[]> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    return callApi(prompts.ANALYZE_GSC_DATA_PROMPT(rows, kg), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
+    return callApi(prompts.ANALYZE_GSC_DATA_PROMPT(rows, kg, info), info, dispatch, (text) => sanitizer.sanitizeArray(text, []));
 };
 
 export const improveTopicalMap = async (topics: EnrichedTopic[], issues: ValidationIssue[], info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<MapImprovementSuggestion> => {

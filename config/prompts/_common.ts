@@ -174,6 +174,8 @@ Business Context:
 ${info.authorName ? `- Author: ${info.authorName} (${info.authorBio || ''})` : ''}
 ${info.authorCredentials ? `- Author Credentials: ${info.authorCredentials}` : ''}
 ${info.uniqueDataAssets ? `- Unique Data Assets: ${info.uniqueDataAssets}` : ''}
+
+**Language Directive**: All generated text content (titles, descriptions, suggestions, summaries) MUST be written in ${regionalVariant}. JSON structure keys must remain in English.
 `;
 };
 

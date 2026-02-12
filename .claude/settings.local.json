@@ -356,7 +356,12 @@
       "Bash(del \"D:\\\\www\\\\cost-of-retreival-reducer\\\\services\\\\ai\\\\contentGeneration\\\\passes\\\\pass4Visuals.ts\")",
       "Bash(del \"D:\\\\www\\\\cost-of-retreival-reducer\\\\services\\\\ai\\\\contentGeneration\\\\passes\\\\pass6Discourse.ts\")",
       "Bash(git -C D:wwwcost-of-retreival-reducer status -u)",
-      "Bash(if not exist \"D:\\\\www\\\\cost-of-retreival-reducer\\\\services\\\\ai\\\\shared\" mkdir \"D:\\\\www\\\\cost-of-retreival-reducer\\\\services\\\\ai\\\\shared\")"
+      "Bash(if not exist \"D:\\\\www\\\\cost-of-retreival-reducer\\\\services\\\\ai\\\\shared\" mkdir \"D:\\\\www\\\\cost-of-retreival-reducer\\\\services\\\\ai\\\\shared\")",
+      "Bash(for fn in get-api-key get-settings update-settings brand-discovery brand-extract-pages brand-url-discovery check-crawl-status content-analyzer crawl-results-worker crawl-worker fetch-proxy firecrawl-scraper gap-analysis-worker get-users health-check manage-org-api-keys migrate-schema semantic-mapping-worker send-invitation send-quote sitemap-discovery start-website-analysis wordpress-proxy apify-webhook-handler)",
+      "Bash(do echo \"Deploying $fn...\")",
+      "Bash(git cherry-pick:*)",
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" add components/audit/AuditExportDropdown.tsx components/audit/__tests__/AuditExportDropdown.test.tsx components/audit/UnifiedAuditDashboard.tsx)",
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" commit -m \"$\\(cat <<''EOF''\nfeat\\(audit\\): add export dropdown to dashboard with CSV/HTML/JSON download\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []

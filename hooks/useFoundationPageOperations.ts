@@ -187,6 +187,8 @@ export function useFoundationPageOperations({
     }, [activeMapId, user?.id, dispatch]);
 
     // Business Info save handler
+    // SECURITY: Strip API keys and sensitive credentials before saving to business_info column.
+    // API keys are stored in user_settings (encrypted), never in topical_maps.business_info.
     const handleSaveBusinessInfo = useCallback(async (updates: Partial<BusinessInfo>) => {
         if (!activeMapId) {
             dispatch({ type: 'SET_ERROR', payload: 'Cannot save business info: no active map.' });
@@ -196,12 +198,21 @@ export function useFoundationPageOperations({
         try {
             const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
 
-            // Merge updates with existing business info
-            const updatedBusinessInfo = { ...effectiveBusinessInfo, ...updates };
+            // Merge updates with existing map business info (NOT effectiveBusinessInfo which includes API keys)
+            const currentMapInfo = (activeMap?.business_info || {}) as Partial<BusinessInfo>;
+            const merged = { ...currentMapInfo, ...updates };
+
+            // Strip sensitive fields — only strategic context should be saved with the map
+            const {
+                supabaseUrl: _su, supabaseAnonKey: _sa,
+                geminiApiKey: _g, openAiApiKey: _o, anthropicApiKey: _a,
+                perplexityApiKey: _p, openRouterApiKey: _or,
+                ...strategicInfo
+            } = merged;
 
             const { error } = await supabase
                 .from('topical_maps')
-                .update({ business_info: updatedBusinessInfo as any })
+                .update({ business_info: strategicInfo as any })
                 .eq('id', activeMapId);
 
             if (error) throw error;
@@ -209,13 +220,13 @@ export function useFoundationPageOperations({
             // Update local state
             dispatch({
                 type: 'UPDATE_MAP_DATA',
-                payload: { mapId: activeMapId, data: { business_info: updatedBusinessInfo } }
+                payload: { mapId: activeMapId, data: { business_info: strategicInfo } }
             });
             dispatch({ type: 'SET_NOTIFICATION', payload: 'Business info saved successfully.' });
         } catch (error) {
             dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to save business info.' });
         }
-    }, [activeMapId, effectiveBusinessInfo, dispatch]);
+    }, [activeMapId, effectiveBusinessInfo, activeMap?.business_info, dispatch]);
 
     // Brand Kit save handler (saves via business info)
     const handleSaveBrandKit = useCallback(async (brandKit: any) => {

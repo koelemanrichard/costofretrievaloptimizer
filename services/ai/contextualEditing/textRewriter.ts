@@ -13,6 +13,7 @@ import {
   QuickAction,
   EditScope,
 } from '../../../types/contextualEditor';
+import { getLanguageAndRegionInstruction } from '../../../utils/languageUtils';
 
 // Algorithmic authorship rules to include in prompts
 const ALGORITHMIC_AUTHORSHIP_RULES = `
@@ -111,6 +112,12 @@ ${businessInfo.offerings.join(', ')}
 ## Relevant Facts (EAVs) to incorporate if appropriate
 
 ${eavs.slice(0, 5).map(e => `- ${e.entity} → ${e.attribute} → ${e.value}`).join('\n')}
+`;
+  }
+
+  if (businessInfo?.language) {
+    prompt += `
+${getLanguageAndRegionInstruction(businessInfo.language, businessInfo.region)}
 `;
   }
 

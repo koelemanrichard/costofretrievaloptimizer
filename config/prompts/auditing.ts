@@ -33,7 +33,7 @@ ${jsonResponseInstruction}
 Provide a JSON object with: "overallSummary", "eavCheck", "linkCheck", "linguisticModality", "frameworkRules".
 `;
 
-export const GENERATE_SCHEMA_PROMPT = (brief: ContentBrief): string => `
+export const GENERATE_SCHEMA_PROMPT = (brief: ContentBrief, info?: BusinessInfo): string => `
 You are an expert in Schema.org and JSON-LD. Generate the schema for this article.
 
 - Primary type: Article/BlogPosting.
@@ -43,12 +43,14 @@ You are an expert in Schema.org and JSON-LD. Generate the schema for this articl
 Content Brief:
 ${JSON.stringify(brief, null, 2)}
 
+${info ? businessContext(info) : ''}
+
 ${jsonResponseInstruction}
 Respond with "schema" (stringified JSON) and "reasoning".
 `;
 
 
-export const ANALYZE_GSC_DATA_PROMPT = (gscRows: GscRow[], knowledgeGraph: KnowledgeGraph): string => {
+export const ANALYZE_GSC_DATA_PROMPT = (gscRows: GscRow[], knowledgeGraph: KnowledgeGraph, info?: BusinessInfo): string => {
     const kgTerms = knowledgeGraph
         ? Array.from(knowledgeGraph.getNodes().values()).map(n => n.term).join(', ')
         : "No knowledge graph available.";
@@ -61,6 +63,8 @@ ${JSON.stringify(gscRows.slice(0, 100), null, 2)}
 
 Knowledge Graph Terms:
 ${kgTerms}
+
+${info ? businessContext(info) : ''}
 
 For the top 5-7 opportunities (High Impressions, Low CTR), provide:
 - "query", "impressions", "ctr".
