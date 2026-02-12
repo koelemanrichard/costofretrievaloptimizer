@@ -1,6 +1,6 @@
 // components/styleguide/StyleguidePanel.tsx
 // Dashboard panel for brand styleguide generation.
-// Shows status, generate/regenerate button, progress tracker, preview/download actions.
+// Shows editable URL, generate/regenerate button, progress tracker, preview/download actions.
 
 import React, { useState, useCallback } from 'react';
 import { Card } from '../ui/Card';
@@ -10,8 +10,10 @@ import type { StyleguideProgress, BrandStyleguideData } from '../../services/sty
 import type { StyleguideResult } from '../../services/styleguide-generator/StyleguideOrchestrator';
 
 export interface StyleguidePanelProps {
-  /** Current map domain (e.g., "benmdaktotaal.nl") */
+  /** Current domain URL to extract from */
   domain: string;
+  /** Called when user edits the URL */
+  onDomainChange: (url: string) => void;
   /** Existing styleguide data from the map record (null if not generated) */
   existingData: BrandStyleguideData | null;
   /** Called when user clicks Generate/Regenerate */
@@ -30,6 +32,7 @@ export interface StyleguidePanelProps {
 
 export const StyleguidePanel: React.FC<StyleguidePanelProps> = ({
   domain,
+  onDomainChange,
   existingData,
   onGenerate,
   onPreview,
@@ -41,13 +44,17 @@ export const StyleguidePanel: React.FC<StyleguidePanelProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleGenerate = useCallback(async () => {
+    if (!domain.trim()) {
+      setLocalError('Enter a URL to extract brand data from');
+      return;
+    }
     setLocalError(null);
     try {
       await onGenerate();
     } catch (e) {
       setLocalError(e instanceof Error ? e.message : 'Generation failed');
     }
-  }, [onGenerate]);
+  }, [onGenerate, domain]);
 
   const hasStyleguide = !!existingData?.htmlStorageKey;
   const displayError = error || localError;
@@ -65,10 +72,18 @@ export const StyleguidePanel: React.FC<StyleguidePanelProps> = ({
         <StyleguideStatusBadge hasStyleguide={hasStyleguide} generatedAt={existingData?.generatedAt} />
       </div>
 
-      {/* Source domain */}
-      <p className="text-xs text-gray-400 mb-3">
-        Source: <span className="text-gray-300">{domain}</span>
-      </p>
+      {/* Editable URL input */}
+      <div className="mb-3">
+        <label className="block text-xs text-gray-400 mb-1">Source URL</label>
+        <input
+          type="text"
+          value={domain}
+          onChange={(e) => onDomainChange(e.target.value)}
+          placeholder="example.com"
+          disabled={isGenerating}
+          className="w-full px-3 py-1.5 text-sm bg-gray-900/60 border border-gray-600/50 rounded text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
+        />
+      </div>
 
       {/* Progress tracker (shown during generation) */}
       {isGenerating && progress && (
@@ -84,7 +99,7 @@ export const StyleguidePanel: React.FC<StyleguidePanelProps> = ({
         </div>
       )}
 
-      {/* Quality score (if generated) */}
+      {/* Quality info (if generated) */}
       {hasStyleguide && existingData && (
         <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
           <span>Version {existingData.version}</span>
@@ -102,7 +117,7 @@ export const StyleguidePanel: React.FC<StyleguidePanelProps> = ({
             variant="primary"
             size="sm"
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !domain.trim()}
             className="flex-1"
           >
             {isGenerating ? 'Generating...' : 'Generate Styleguide'}

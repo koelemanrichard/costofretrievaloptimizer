@@ -1759,6 +1759,8 @@ export interface TopicalMap {
     foundationPages?: FoundationPage[];
     // Navigation structure for this map
     navigation?: NavigationStructure;
+    // Brand styleguide data (design tokens, analysis, storage key)
+    styleguide_data?: import('./services/styleguide-generator/types').BrandStyleguideData | null;
 }
 
 export interface KnowledgeNode {

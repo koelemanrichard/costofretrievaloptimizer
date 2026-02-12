@@ -271,19 +271,21 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const briefs = useMemo(() => topicalMap.briefs || {}, [topicalMap.briefs]);
 
     // Brand Styleguide Generator
-    const styleguideData = (topicalMap as any).styleguide_data || null;
-    const mapDomain = (topicalMap.business_info as any)?.domain || effectiveBusinessInfo.domain || '';
+    const styleguideData = topicalMap.styleguide_data || null;
+    const [styleguideUrl, setStyleguideUrl] = useState(
+        (topicalMap.business_info as Record<string, unknown>)?.domain as string || effectiveBusinessInfo.domain || ''
+    );
     const styleguide = useStyleguideGenerator({
         projectId: projectId || '',
         mapId: mapId || topicalMap.id,
-        domain: mapDomain,
+        domain: styleguideUrl,
         businessInfo: effectiveBusinessInfo,
         dispatch: dispatch as React.Dispatch<unknown>,
         supabaseUrl: effectiveBusinessInfo.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '',
         supabaseKey: effectiveBusinessInfo.supabaseAnonKey || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
         existingData: styleguideData,
         onComplete: (data) => {
-            dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: mapId || topicalMap.id, data: { styleguide_data: data } } } as any);
+            dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: mapId || topicalMap.id, data: { styleguide_data: data } } });
         },
     });
 
@@ -646,18 +648,17 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             </div>
 
             {/* Brand Styleguide */}
-            {mapDomain && (
-                <StyleguidePanel
-                    domain={mapDomain}
-                    existingData={styleguideData}
-                    onGenerate={styleguide.generate}
-                    onPreview={styleguide.preview}
-                    onDownload={styleguide.download}
-                    isGenerating={styleguide.isGenerating}
-                    progress={styleguide.progress}
-                    error={styleguide.error}
-                />
-            )}
+            <StyleguidePanel
+                domain={styleguideUrl}
+                onDomainChange={setStyleguideUrl}
+                existingData={styleguideData}
+                onGenerate={styleguide.generate}
+                onPreview={styleguide.preview}
+                onDownload={styleguide.download}
+                isGenerating={styleguide.isGenerating}
+                progress={styleguide.progress}
+                error={styleguide.error}
+            />
 
             {/* Analysis & Insights Section */}
             <div>
@@ -1026,6 +1027,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     onClose={() => setIsBusinessInfoModalOpen(false)}
                     businessInfo={effectiveBusinessInfo}
                     onSave={onSaveBusinessInfo}
+                    styleguideData={styleguideData}
                 />
             )}
             {/* Planning Dashboard Modal */}

@@ -1,9 +1,8 @@
 // services/styleguide-generator/extraction/HttpExtractor.ts
-// Extracts brand data from a website using HTTP fetch (Jina Reader API).
+// Extracts brand data from a website using HTTP fetch.
+// Routes ALL external requests through the fetch-proxy edge function to avoid CORS.
 // Parses HTML + CSS for colors, fonts, spacing, shapes.
-// Falls back to direct fetch if Jina is unavailable.
 
-import { extractPageContentWithHtml } from '../../jinaService';
 import type { BusinessInfo } from '../../../types';
 
 export interface RawHttpExtraction {
@@ -225,51 +224,82 @@ function extractGoogleFontsUrls(html: string): string[] {
 // ============================================================================
 
 /**
+ * Fetch a URL through the Supabase fetch-proxy edge function to avoid CORS.
+ * This is the ONLY way to fetch external websites from browser-side code.
+ */
+async function fetchViaProxy(
+  targetUrl: string,
+  businessInfo: BusinessInfo,
+): Promise<string> {
+  const bi = businessInfo as unknown as Record<string, unknown>;
+  const supabaseUrl = (bi.supabaseUrl as string) || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_URL : '') || '';
+  const supabaseKey = (bi.supabaseAnonKey as string) || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_ANON_KEY : '') || '';
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('[HttpExtractor] Missing Supabase credentials for fetch-proxy');
+  }
+
+  const proxyUrl = `${supabaseUrl}/functions/v1/fetch-proxy`;
+
+  const response = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
+    },
+    body: JSON.stringify({
+      url: targetUrl,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; StyleguideBot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml,*/*',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Proxy request failed: ${response.status} - ${errorText}`);
+  }
+
+  const proxyResult = await response.json();
+
+  if (!proxyResult.ok) {
+    throw new Error(`Proxy fetch error: ${proxyResult.status} - ${proxyResult.statusText}`);
+  }
+
+  return typeof proxyResult.body === 'string' ? proxyResult.body : JSON.stringify(proxyResult.body);
+}
+
+/**
  * Extract brand data from a website using HTTP fetch.
- * Uses Jina Reader API for HTML extraction, then parses CSS values.
+ * Routes through fetch-proxy edge function to avoid CORS issues.
  */
 export async function extractViaHttp(
   domain: string,
   businessInfo: BusinessInfo,
 ): Promise<RawHttpExtraction> {
   const url = domain.startsWith('http') ? domain : `https://${domain}`;
-  const jinaApiKey = (businessInfo as unknown as Record<string, unknown>).jinaApiKey as string | undefined;
 
   let html = '';
   let title = '';
   let description = '';
-  let headings: { level: number; text: string }[] = [];
-  let links: { href: string; text: string; isInternal: boolean }[] = [];
-  let images: { src: string; alt: string }[] = [];
+  const headings: { level: number; text: string }[] = [];
+  const links: { href: string; text: string; isInternal: boolean }[] = [];
+  const images: { src: string; alt: string }[] = [];
 
-  if (jinaApiKey) {
-    try {
-      const result = await extractPageContentWithHtml(url, jinaApiKey);
-      html = result.html || '';
-      title = result.title || '';
-      description = result.description || '';
-      headings = result.headings || [];
-      links = result.links || [];
-      images = result.images || [];
-    } catch (e) {
-      console.warn('[HttpExtractor] Jina extraction failed, falling back to direct fetch:', e);
-    }
-  }
-
-  // Fallback: direct fetch
-  if (!html) {
-    try {
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; StyleguideBot/1.0)' },
-        signal: AbortSignal.timeout(15000),
-      });
-      html = await response.text();
-      // Extract title from HTML
-      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      title = titleMatch?.[1] || '';
-    } catch (e) {
-      console.warn('[HttpExtractor] Direct fetch failed:', e);
-    }
+  // Fetch via proxy (avoids CORS — NEVER fetch external sites directly from browser)
+  try {
+    html = await fetchViaProxy(url, businessInfo);
+    // Extract title from HTML
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    title = titleMatch?.[1]?.trim() || '';
+    // Extract meta description
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+    description = descMatch?.[1]?.trim() || '';
+  } catch (e) {
+    console.warn('[HttpExtractor] Proxy fetch failed:', e);
   }
 
   // Parse CSS values from HTML content

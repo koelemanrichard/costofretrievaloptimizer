@@ -7,6 +7,7 @@ import BrandKitEditor from '../BrandKitEditor';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Select } from '../ui/Select';
+import type { BrandStyleguideData } from '../../services/styleguide-generator/types';
 
 // Primary attribute options for desired KP subtitle
 const PRIMARY_ATTRIBUTE_OPTIONS = [
@@ -54,13 +55,16 @@ interface BusinessInfoModalProps {
   onClose: () => void;
   businessInfo: BusinessInfo;
   onSave: (updatedInfo: Partial<BusinessInfo>) => Promise<void>;
+  /** Styleguide data from the active topical map (if generated) */
+  styleguideData?: BrandStyleguideData | null;
 }
 
 export const BusinessInfoModal: React.FC<BusinessInfoModalProps> = ({
   isOpen,
   onClose,
   businessInfo,
-  onSave
+  onSave,
+  styleguideData,
 }) => {
   const [localInfo, setLocalInfo] = useState<BusinessInfo>(businessInfo);
   const [isSaving, setIsSaving] = useState(false);
@@ -472,6 +476,52 @@ export const BusinessInfoModal: React.FC<BusinessInfoModalProps> = ({
               <p className="text-sm text-gray-400">
                 Configure your brand colors, logo, and visual identity for image generation.
               </p>
+
+              {/* Styleguide Integration */}
+              {styleguideData && (
+                <div className="p-3 border border-blue-800/40 rounded-lg bg-blue-900/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-blue-300 flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                      </svg>
+                      Styleguide Detected
+                    </h4>
+                    <button
+                      type="button"
+                      className="text-xs px-2 py-1 bg-blue-600/30 text-blue-300 rounded hover:bg-blue-600/50 transition-colors"
+                      onClick={() => {
+                        const tokens = styleguideData.designTokens;
+                        const primary = tokens.colors.primary[400];
+                        const secondary = tokens.colors.secondary?.[400] || tokens.colors.accent?.[400] || localInfo.brandKit?.colors.secondary || '#1E40AF';
+                        const headingFont = tokens.typography.headingFont.split(',')[0].replace(/['"]/g, '').trim();
+                        const bodyFont = tokens.typography.bodyFont.split(',')[0].replace(/['"]/g, '').trim();
+                        setLocalInfo(prev => ({
+                          ...prev,
+                          brandKit: {
+                            ...prev.brandKit!,
+                            colors: { ...prev.brandKit?.colors, primary, secondary, textOnImage: '#FFFFFF' },
+                            fonts: { heading: headingFont, body: bodyFont },
+                          },
+                        }));
+                      }}
+                    >
+                      Import Colors & Fonts
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded" style={{ background: styleguideData.designTokens.colors.primary[400] }} />
+                      <span>{styleguideData.designTokens.colors.primary[400]}</span>
+                    </div>
+                    <span className="text-gray-600">|</span>
+                    <span>{styleguideData.designTokens.typography.headingFont.split(',')[0].replace(/['"]/g, '').trim()}</span>
+                    <span className="text-gray-600">|</span>
+                    <span>v{styleguideData.version}</span>
+                  </div>
+                </div>
+              )}
+
               <BrandKitEditor
                 brandKit={localInfo.brandKit}
                 onChange={(brandKit) => setLocalInfo(prev => ({ ...prev, brandKit }))}

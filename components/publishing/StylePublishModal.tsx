@@ -1934,6 +1934,26 @@ export const StylePublishModal: React.FC<StylePublishModalProps> = ({
               }}
             />
 
+            {/* Styleguide Integration Notice */}
+            {topicalMap?.styleguide_data && (
+              <div className="p-3 border border-blue-800/40 rounded-lg bg-blue-900/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-blue-300">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    <span>Brand styleguide available</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <div className="w-3 h-3 rounded" style={{ background: topicalMap.styleguide_data.designTokens.colors.primary[400] }} />
+                    <span>{topicalMap.styleguide_data.designTokens.colors.primary[400]}</span>
+                    <span className="text-gray-600">|</span>
+                    <span>{topicalMap.styleguide_data.designTokens.typography.headingFont.split(',')[0].replace(/['"]/g, '').trim()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Brand Replication Feature Toggle */}
             {detectedDesignDna && (
               <div className="p-4 bg-zinc-900/40 rounded-xl border border-zinc-700/50 space-y-3">
