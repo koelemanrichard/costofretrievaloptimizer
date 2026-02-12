@@ -295,6 +295,10 @@ export interface BusinessInfo {
   cloudinaryUploadPreset?: string;
   markupGoApiKey?: string;
 
+  // Content Fetching (Audit System)
+  auditScrapingProvider?: 'jina' | 'firecrawl' | 'direct';
+  auditScrapingFallback?: boolean;
+
   // Entity Authority & Knowledge Graph
   googleKnowledgeGraphApiKey?: string;
 

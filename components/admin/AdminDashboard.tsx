@@ -426,7 +426,7 @@ const ConfigurationPanel: React.FC = () => {
             </Card>
             
             <Card className="p-6">
-                <ServiceSettings settings={localSettings} handleChange={handleChange} />
+                <ServiceSettings settings={localSettings} handleChange={handleChange} setSettings={setLocalSettings} />
             </Card>
 
             {/* Developer Settings */}

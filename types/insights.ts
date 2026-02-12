@@ -13,8 +13,11 @@ export type InsightsTabId =
   | 'competitive-intel'
   | 'authority-trust'
   | 'content-health'
+  | 'semantic-map'
+  | 'gap-analysis'
   | 'publication-progress'
   | 'cost-usage'
+  | 'audit-history'
   | 'action-center';
 
 export interface TrendDirection {
@@ -471,6 +474,26 @@ export interface ExportResult {
 }
 
 // =====================
+// Audit History Types
+// =====================
+
+export interface AuditHistoryEntry {
+  id: string;
+  type: 'query_network' | 'eat_scanner' | 'corpus' | 'metrics';
+  label: string;
+  score?: number;
+  details: string;
+  created_at: string;
+}
+
+export interface AuditHistoryData {
+  queryNetworkHistory: AuditHistoryEntry[];
+  eatScannerHistory: AuditHistoryEntry[];
+  corpusHistory: AuditHistoryEntry[];
+  metricsHistory: AuditHistoryEntry[];
+}
+
+// =====================
 // Aggregated Insights
 // =====================
 
@@ -483,6 +506,7 @@ export interface AggregatedInsights {
   publicationProgress: PublicationProgressData;
   costUsage: CostUsageData;
   actionCenter: ActionCenterData;
+  auditHistory: AuditHistoryData;
   lastUpdated: string;
   dataFreshness: {
     queryNetwork?: string;

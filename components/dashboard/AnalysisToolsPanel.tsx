@@ -97,39 +97,59 @@ const AnalysisToolsPanel: React.FC<AnalysisToolsPanelProps> = ({
     return (
         <Card className="p-6">
             <h2 className="text-2xl font-bold text-white mb-4">Advanced Analysis & Tools</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-                <Button onClick={onValidateMap} disabled={isLoading.validation} variant="secondary">{isLoading.validation ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Validate Map'}</Button>
-                <Button onClick={onFindMergeOpportunities} disabled={isLoading.merge} variant="secondary">{isLoading.merge ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Find Merges'}</Button>
-                <Button onClick={onAnalyzeSemanticRelationships} disabled={isLoading.semantic} variant="secondary">{isLoading.semantic ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Semantics'}</Button>
-                <Button onClick={onAnalyzeContextualCoverage} disabled={isLoading.coverage} variant="secondary">{isLoading.coverage ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Coverage'}</Button>
-                <Button onClick={onAuditInternalLinking} disabled={isLoading.linkingAudit} variant="secondary">{isLoading.linkingAudit ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Link Audit'}</Button>
-                <Button onClick={onCalculateTopicalAuthority} disabled={isLoading.authority} variant="secondary">{isLoading.authority ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Authority'}</Button>
-                <Button onClick={onGeneratePublicationPlan} disabled={isLoading.plan} variant="secondary">{isLoading.plan ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Plan'}</Button>
-                <Button onClick={onRunUnifiedAudit} disabled={isLoading.unifiedAudit} className="bg-purple-700 hover:bg-purple-600">{renderAuditButton()}</Button>
-                <Button
-                    onClick={onQueryNetworkAudit || undefined}
-                    disabled={!onQueryNetworkAudit}
-                    title={!onQueryNetworkAudit ? 'Complete topic enrichment first' : 'Run competitive gap analysis'}
-                    className={onQueryNetworkAudit ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-700/40 cursor-not-allowed'}
-                >Query Network</Button>
-                <Button
-                    onClick={onMentionScanner || undefined}
-                    disabled={!onMentionScanner}
-                    title={!onMentionScanner ? 'Configure API keys first' : 'Scan for brand mentions and E-A-T signals'}
-                    className={onMentionScanner ? 'bg-green-700 hover:bg-green-600' : 'bg-green-700/40 cursor-not-allowed'}
-                >E-A-T Scanner</Button>
-                <Button
-                    onClick={onCorpusAudit || undefined}
-                    disabled={!onCorpusAudit}
-                    title={!onCorpusAudit ? 'Add your website domain first' : 'Audit existing content corpus'}
-                    className={onCorpusAudit ? 'bg-indigo-700 hover:bg-indigo-600' : 'bg-indigo-700/40 cursor-not-allowed'}
-                >Corpus Audit</Button>
-                <Button
-                    onClick={onComprehensiveAudit || undefined}
-                    disabled={!onComprehensiveAudit}
-                    title={!onComprehensiveAudit ? 'Generate a topical map first' : 'Run full research audit'}
-                    className={onComprehensiveAudit ? 'bg-amber-700 hover:bg-amber-600' : 'bg-amber-700/40 cursor-not-allowed'}
-                >Full Research</Button>
+            <div className="flex flex-col gap-4">
+                {/* Map Analysis */}
+                <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Map Analysis</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <Button onClick={onValidateMap} disabled={isLoading.validation} variant="secondary">{isLoading.validation ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Validate Map'}</Button>
+                        <Button onClick={onFindMergeOpportunities} disabled={isLoading.merge} variant="secondary">{isLoading.merge ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Find Merges'}</Button>
+                        <Button onClick={onAnalyzeSemanticRelationships} disabled={isLoading.semantic} variant="secondary">{isLoading.semantic ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Semantics'}</Button>
+                        <Button onClick={onAnalyzeContextualCoverage} disabled={isLoading.coverage} variant="secondary">{isLoading.coverage ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Coverage'}</Button>
+                    </div>
+                </div>
+
+                {/* Audit & Quality */}
+                <div className="border-t border-gray-700/50 pt-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Audit & Quality</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <Button onClick={onRunUnifiedAudit} disabled={isLoading.unifiedAudit} className="bg-purple-700 hover:bg-purple-600">{renderAuditButton()}</Button>
+                        <Button onClick={onAuditInternalLinking} disabled={isLoading.linkingAudit} variant="secondary">{isLoading.linkingAudit ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Link Audit'}</Button>
+                        <Button onClick={onCalculateTopicalAuthority} disabled={isLoading.authority} variant="secondary">{isLoading.authority ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Authority'}</Button>
+                        <Button
+                            onClick={onMentionScanner || undefined}
+                            disabled={!onMentionScanner}
+                            title={!onMentionScanner ? 'Configure API keys first' : 'Scan for brand mentions and E-A-T signals'}
+                            className={onMentionScanner ? 'bg-green-700 hover:bg-green-600' : 'bg-green-700/40 cursor-not-allowed'}
+                        >E-A-T Scanner</Button>
+                        <Button
+                            onClick={onCorpusAudit || undefined}
+                            disabled={!onCorpusAudit}
+                            title={!onCorpusAudit ? 'Add your website domain first' : 'Audit existing content corpus'}
+                            className={onCorpusAudit ? 'bg-indigo-700 hover:bg-indigo-600' : 'bg-indigo-700/40 cursor-not-allowed'}
+                        >Corpus Audit</Button>
+                    </div>
+                </div>
+
+                {/* Research & Planning */}
+                <div className="border-t border-gray-700/50 pt-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Research & Planning</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <Button
+                            onClick={onQueryNetworkAudit || undefined}
+                            disabled={!onQueryNetworkAudit}
+                            title={!onQueryNetworkAudit ? 'Complete topic enrichment first' : 'Run competitive gap analysis'}
+                            className={onQueryNetworkAudit ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-700/40 cursor-not-allowed'}
+                        >Query Network</Button>
+                        <Button onClick={onGeneratePublicationPlan} disabled={isLoading.plan} variant="secondary">{isLoading.plan ? <SmartLoader context="analyzing" size="sm" showText={false} /> : 'Plan'}</Button>
+                        <Button
+                            onClick={onComprehensiveAudit || undefined}
+                            disabled={!onComprehensiveAudit}
+                            title={!onComprehensiveAudit ? 'Generate a topical map first' : 'Open Insights Hub'}
+                            className={onComprehensiveAudit ? 'bg-amber-700 hover:bg-amber-600' : 'bg-amber-700/40 cursor-not-allowed'}
+                        >Insights</Button>
+                    </div>
+                </div>
             </div>
 
             {/* Progress bar when audit is running */}

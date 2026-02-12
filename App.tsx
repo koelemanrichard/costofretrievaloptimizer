@@ -424,6 +424,7 @@ const App: React.FC = () => {
                         'jinaApiKey', 'firecrawlApiKey', 'apitemplateApiKey',
                         'neo4jUri', 'neo4jUser', 'neo4jPassword',
                         'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
+                        'auditScrapingProvider', 'auditScrapingFallback',
                         'language', 'targetMarket', 'expertise'
                     ];
                     const filteredSettings: Record<string, any> = {};
@@ -470,6 +471,7 @@ const App: React.FC = () => {
         'jinaApiKey', 'firecrawlApiKey', 'apitemplateApiKey',
         'neo4jUri', 'neo4jUser', 'neo4jPassword',
         'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
+        'auditScrapingProvider', 'auditScrapingFallback',
         'supabaseUrl', 'supabaseAnonKey',
         'language', 'targetMarket', 'expertise'
     ];

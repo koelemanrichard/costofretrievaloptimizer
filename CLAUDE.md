@@ -104,6 +104,83 @@ Database tables (see migrations):
 - `content_generation_sections` - Per-section content with version history
 - `entity_resolution_cache` - Cached Wikidata entity resolutions
 
+### Unified Content Audit System
+
+The `services/audit/` module implements a 437-rule content audit system with 15 phases, multilingual support, and export capabilities.
+
+**Architecture:**
+- `services/audit/UnifiedAuditOrchestrator.ts` - Facade that coordinates all 15 audit phases
+- `services/audit/phases/` - Phase adapters extending `AuditPhase` abstract base class
+- `services/audit/rules/` - Standalone rule validators (33+ files) implementing specific audit checks
+- `services/audit/types.ts` - Core types: `AuditRequest`, `AuditPhaseResult`, `AuditFinding`, `UnifiedAuditReport`
+- `services/audit/AuditReportExporter.ts` - Export to CSV, HTML, JSON
+
+**15 Audit Phases** (in `services/audit/phases/`):
+1. Strategic Foundation (10%) - CE positioning, author entity, context qualifiers
+2. EAV System (15%) - Triple coverage, pronoun density, quantitative values
+3. Micro-Semantics (13%) - Modality, predicate specificity, SPO patterns
+4. Information Density (8%) - Redundancy, filler, vagueness, preamble
+5. Contextual Flow (15%) - CE distribution, transitions, headings, bridges
+6. Internal Linking (10%) - Anchor text, placement, annotations, volume
+7. Semantic Distance (3%) - Cannibalization detection via Jaccard similarity
+8. Content Format (5%) - Lists, tables, visual hierarchy, featured snippets
+9. HTML Technical (7%) - Nesting, alt text, image metadata, structure
+10. Meta & Structured Data (5%) - Canonical, meta tags, schema validation
+11. Cost of Retrieval (4%) - DOM size, CWV, headers, compression
+12. URL Architecture (3%) - Structure, redirects, sitemap, indexation
+13. Cross-Page Consistency (2%) - Signal conflicts, robots, orphan pages
+14. Website Type Specific (bonus) - E-commerce, SaaS, B2B, Blog rules
+15. Fact Validation (bonus) - External source verification
+
+**Rule Validators** (in `services/audit/rules/`):
+Each validator is a standalone class with a `validate()` method returning typed issues. Key validators:
+- `SourceContextAligner` - CE/business/keyword alignment
+- `CentralEntityPositionChecker` - CE placement rules
+- `CanonicalValidator` - Canonical URL validation
+- `CoreWebVitalsChecker` - LCP, INP, CLS thresholds
+- `AiAssistedRuleEngine` - Rules requiring LLM analysis
+- `WebsiteTypeRuleEngine` - Industry-specific rules
+- `ExternalDataRuleEngine` - GSC/navigation/citation rules
+
+**Adding New Rules:**
+1. Create validator in `services/audit/rules/NewValidator.ts`
+2. Create test in `services/audit/rules/__tests__/NewValidator.test.ts`
+3. Wire into appropriate phase adapter in `services/audit/phases/`
+4. Add `totalChecks++` and `createFinding()` in the phase's `execute()` method
+
+**Weight Configuration:**
+- Default weights in `services/audit/types.ts` → `DEFAULT_AUDIT_WEIGHTS`
+- Per-project overrides stored in `project_audit_config` table
+- Phases sum to 100% (websiteTypeSpecific and factValidation are bonus)
+
+**Scoring:**
+- `AuditPhase.buildResult()` computes: `score = max(0, 100 - totalPenalty)`
+- Penalties: critical=15, high=8, medium=4, low=1
+- Overall score = weighted average of phase scores
+
+**UI Components** (in `components/audit/`):
+- `UnifiedAuditDashboard` - Main dashboard with phase grid and severity tabs
+- `AuditFindingCard` - Expandable finding with severity colors
+- `PhaseScoreCard` - Phase score with progress bar
+- `AuditScoreRing` - SVG circular score indicator
+- `AuditWeightSliders` - Weight configuration (sum=100 constraint)
+- `AuditButton` - Click-to-audit for any URL
+- `AuditSidePanel` - Inline audit results panel
+- `ExternalUrlInput` - External URL audit input
+- `AuditPrerequisiteGate` - Setup requirement checker
+- `WebsiteTypeSelector` - Industry type dropdown
+- `AuditTimelineView` - Score history SVG chart
+- `AuditComparisonView` - Snapshot diff view
+
+**Multilingual Support:**
+- `config/audit-i18n/` - Translation files for EN, NL, DE, FR, ES
+- `services/audit/rules/LanguageSpecificRules.ts` - Language-specific stop words and compound word detection
+
+**Database Tables:**
+- `project_audit_config` - Per-project weight/type config
+- `unified_audit_snapshots` - Audit history with performance correlation
+- `audit_schedules` - Future automated audit scheduling
+
 ### Intelligent Layout Engine
 The `services/layout-engine/` module transforms content into design-agency quality layouts using AI-detected brand intelligence:
 

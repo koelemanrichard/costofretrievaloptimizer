@@ -25,6 +25,7 @@ import type {
   PublicationProgressData,
   CostUsageData,
   ActionCenterData,
+  AuditHistoryData,
   HealthScore,
   MetricCard,
   TrendDirection,
@@ -150,6 +151,8 @@ export function aggregateInsights(data: RawInsightsData): AggregatedInsights {
     contentHealth,
   });
 
+  const auditHistory = buildAuditHistory(data);
+
   return {
     executiveSummary,
     topicalAuthority,
@@ -159,6 +162,7 @@ export function aggregateInsights(data: RawInsightsData): AggregatedInsights {
     publicationProgress,
     costUsage,
     actionCenter,
+    auditHistory,
     lastUpdated: new Date().toISOString(),
     dataFreshness: {
       queryNetwork: data.queryNetworkHistory[0]?.created_at,
@@ -965,6 +969,46 @@ function buildActionCenter(
     mediumPriorityActions: actions.filter(a => a.priority === 'medium'),
     backlogActions: actions.filter(a => a.priority === 'backlog'),
     completedActions: [],
+  };
+}
+
+// =====================
+// Audit History Builder
+// =====================
+
+function buildAuditHistory(data: RawInsightsData): AuditHistoryData {
+  return {
+    queryNetworkHistory: data.queryNetworkHistory.map(audit => ({
+      id: audit.id,
+      type: 'query_network' as const,
+      label: audit.seed_keyword || 'Query Network Audit',
+      details: `${audit.total_queries} queries | ${audit.total_competitor_eavs} EAVs | ${audit.total_recommendations} recs`,
+      created_at: audit.created_at,
+    })),
+    eatScannerHistory: data.eatScannerHistory.map(audit => ({
+      id: audit.id,
+      type: 'eat_scanner' as const,
+      label: audit.entity_name || 'E-A-T Scan',
+      score: audit.overall_eat_score || undefined,
+      details: new Date(audit.created_at).toLocaleDateString(),
+      created_at: audit.created_at,
+    })),
+    corpusHistory: data.corpusHistory.map(audit => ({
+      id: audit.id,
+      type: 'corpus' as const,
+      label: audit.domain || 'Corpus Audit',
+      score: audit.semantic_coverage_percentage ? Math.round(audit.semantic_coverage_percentage) : undefined,
+      details: `${audit.total_pages} pages | ${audit.semantic_coverage_percentage?.toFixed(1) || 0}% coverage`,
+      created_at: audit.created_at,
+    })),
+    metricsHistory: data.metricsHistory.map(snapshot => ({
+      id: snapshot.id,
+      type: 'metrics' as const,
+      label: snapshot.snapshot_name || 'Auto Snapshot',
+      score: snapshot.semantic_compliance_score || undefined,
+      details: `${snapshot.eav_count} EAVs`,
+      created_at: snapshot.created_at,
+    })),
   };
 }
 

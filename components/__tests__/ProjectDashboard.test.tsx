@@ -94,10 +94,6 @@ vi.mock('../dashboard/EnhancedMetricsDashboard', () => ({
   EnhancedMetricsDashboard: () => null,
 }));
 
-vi.mock('../dashboard/ComprehensiveAuditDashboard', () => ({
-  ComprehensiveAuditDashboard: () => null,
-}));
-
 vi.mock('../wordpress', () => ({
   ContentCalendar: () => null,
 }));

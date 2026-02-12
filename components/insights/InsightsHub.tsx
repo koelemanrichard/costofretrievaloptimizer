@@ -19,8 +19,11 @@ import { TopicalAuthorityTab } from './tabs/TopicalAuthorityTab';
 import { CompetitiveIntelTab } from './tabs/CompetitiveIntelTab';
 import { AuthorityTrustTab } from './tabs/AuthorityTrustTab';
 import { ContentHealthTab } from './tabs/ContentHealthTab';
+import { SemanticMapTab } from './tabs/SemanticMapTab';
+import { GapAnalysisTab } from './tabs/GapAnalysisTab';
 import { PublicationProgressTab } from './tabs/PublicationProgressTab';
 import { CostUsageTab } from './tabs/CostUsageTab';
+import { AuditHistoryTab } from './tabs/AuditHistoryTab';
 import { ActionCenterTab } from './tabs/ActionCenterTab';
 
 // Export Components
@@ -98,6 +101,26 @@ const TABS: TabConfig[] = [
     ),
   },
   {
+    id: 'semantic-map',
+    label: 'Semantic Map',
+    shortLabel: 'Semantic',
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'gap-analysis',
+    label: 'Gap Analysis',
+    shortLabel: 'Gaps',
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
     id: 'publication-progress',
     label: 'Publication Progress',
     shortLabel: 'Progress',
@@ -115,6 +138,16 @@ const TABS: TabConfig[] = [
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'audit-history',
+    label: 'Audit History',
+    shortLabel: 'History',
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
@@ -671,10 +704,16 @@ export const InsightsHub: React.FC<InsightsHubProps> = ({
         return <AuthorityTrustTab {...tabProps} />;
       case 'content-health':
         return <ContentHealthTab {...tabProps} />;
+      case 'semantic-map':
+        return <SemanticMapTab {...tabProps} />;
+      case 'gap-analysis':
+        return <GapAnalysisTab {...tabProps} />;
       case 'publication-progress':
         return <PublicationProgressTab {...tabProps} />;
       case 'cost-usage':
         return <CostUsageTab {...tabProps} />;
+      case 'audit-history':
+        return <AuditHistoryTab {...tabProps} />;
       case 'action-center':
         return <ActionCenterTab {...tabProps} />;
       default:

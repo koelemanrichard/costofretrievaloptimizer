@@ -2,6 +2,48 @@
 import { GscRow } from '../types';
 
 /**
+ * Unified GSC data source — supports both API and CSV import.
+ */
+export type GscDataSource =
+  | { type: 'api'; accountId: string; propertyId: string; accessToken: string }
+  | { type: 'csv'; csvText: string };
+
+/**
+ * Get GSC rows from either API or CSV source.
+ * Preserves parseGscCsv() as a fallback when API is not configured.
+ */
+export async function getGscData(source: GscDataSource): Promise<GscRow[]> {
+  if (source.type === 'csv') {
+    return parseGscCsv(source.csvText);
+  }
+
+  // API path: uses GscApiAdapter (imported dynamically to avoid circular deps)
+  const { GscApiAdapter } = await import('./audit/adapters/GscApiAdapter');
+  const adapter = new GscApiAdapter();
+
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - 28);
+
+  const rows = await adapter.getSearchAnalytics({
+    siteUrl: source.propertyId,
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0],
+    dimensions: ['query', 'page'],
+    accessToken: source.accessToken,
+  });
+
+  // Transform GscApiAdapter rows to the existing GscRow format
+  return rows.map(row => ({
+    query: row.keys[0] || '',
+    clicks: row.clicks,
+    impressions: row.impressions,
+    ctr: row.ctr,
+    position: row.position,
+  }));
+}
+
+/**
  * Parses a CSV string from a Google Search Console export.
  * @param csvText The raw CSV content as a string.
  * @returns A promise that resolves to an array of GscRow objects.

@@ -52,7 +52,6 @@ import { QueryNetworkAudit } from './QueryNetworkAudit';
 import { MentionScannerDashboard } from './MentionScannerDashboard';
 import { CorpusAuditReport } from './CorpusAuditReport';
 import { EnhancedMetricsDashboard } from './dashboard/EnhancedMetricsDashboard';
-import { ComprehensiveAuditDashboard } from './dashboard/ComprehensiveAuditDashboard';
 import { ContentCalendar } from './wordpress';
 import { InsightsHub } from './insights';
 
@@ -506,7 +505,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         onCorpusAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'corpusAudit', visible: true } }),
         onEnhancedMetrics: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'enhancedMetrics', visible: true } }),
         onComprehensiveAudit: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'comprehensiveAudit', visible: true } }),
-        onMapAuditDashboard: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'mapAuditDashboard', visible: true } }),
+        onMapAuditDashboard: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'comprehensiveAudit', visible: true } }),
         onRegenerateMap: onRegenerateMap,
         onRepairBriefs: onRepairBriefs,
         onExport: () => onExportData('xlsx'),
@@ -1098,27 +1097,6 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                     onOpenQueryNetworkAudit={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'queryNetworkAudit', visible: true } })}
                                     onOpenEATScanner={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'eatScanner', visible: true } })}
                                     onOpenCorpusAudit={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'corpusAudit', visible: true } })}
-                                />
-                            </FeatureErrorBoundary>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Map Audit Dashboard Modal - Gap Analysis & Semantic Distance */}
-            {modals.mapAuditDashboard && (
-                <div className="fixed inset-0 z-50 bg-gray-900/95 overflow-auto">
-                    <div className="min-h-full p-6">
-                        <div className="max-w-7xl mx-auto">
-                            <FeatureErrorBoundary featureName="Map Audit Dashboard">
-                                <ComprehensiveAuditDashboard
-                                    mapId={topicalMap.id}
-                                    projectName={projectName}
-                                    mapName={topicalMap.name}
-                                    topicCount={allTopics.length}
-                                    eavs={topicalMap.eavs as SemanticTriple[] || []}
-                                    issues={unifiedAudit?.result?.categories?.flatMap(c => c.issues) || []}
-                                    onClose={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'mapAuditDashboard', visible: false } })}
                                 />
                             </FeatureErrorBoundary>
                         </div>
