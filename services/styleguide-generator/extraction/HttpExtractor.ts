@@ -43,38 +43,73 @@ export interface ExtractedCssSize {
 // CSS PARSING UTILITIES
 // ============================================================================
 
-/** Extract hex colors from CSS/HTML content */
+/**
+ * Extract hex colors from CSS/HTML content with context-aware weighting.
+ *
+ * Colors in background-color/background properties get 3x weight because
+ * they define visual brand identity (buttons, hero sections, banners).
+ * Colors in button/CTA selectors get an extra 5x boost.
+ * Raw text-color occurrences count at 1x (link color, heading color, etc.).
+ */
 function extractColors(content: string): ExtractedCssColor[] {
   const colorMap = new Map<string, { property: string; count: number }>();
 
-  // Match hex colors (3 and 6 digit)
-  const hexRegex = /#([0-9a-fA-F]{3}){1,2}\b/g;
-  let match;
-  while ((match = hexRegex.exec(content)) !== null) {
-    const hex = normalizeHex(match[0]);
-    if (hex && !isBlackWhiteGray(hex)) {
-      const existing = colorMap.get(hex);
-      if (existing) {
-        existing.count++;
-      } else {
-        colorMap.set(hex, { property: 'mixed', count: 1 });
-      }
+  function addColor(hex: string | null, weight: number, property: string) {
+    if (!hex || isBlackWhiteGray(hex)) return;
+    const existing = colorMap.get(hex);
+    if (existing) {
+      existing.count += weight;
+    } else {
+      colorMap.set(hex, { property, count: weight });
     }
   }
 
-  // Match rgb/rgba colors
+  // ─── Pass 1: Global hex occurrences (base weight: 1) ──────────────
+  const hexRegex = /#([0-9a-fA-F]{3}){1,2}\b/g;
+  let match;
+  while ((match = hexRegex.exec(content)) !== null) {
+    addColor(normalizeHex(match[0]), 1, 'mixed');
+  }
+
+  // ─── Pass 2: rgb/rgba colors (base weight: 1) ─────────────────────
   const rgbRegex = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g;
   while ((match = rgbRegex.exec(content)) !== null) {
     const r = parseInt(match[1]);
     const g = parseInt(match[2]);
     const b = parseInt(match[3]);
     const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-    if (!isBlackWhiteGray(hex)) {
-      const existing = colorMap.get(hex);
-      if (existing) {
-        existing.count++;
-      } else {
-        colorMap.set(hex, { property: 'mixed', count: 1 });
+    addColor(hex, 1, 'mixed');
+  }
+
+  // ─── Pass 3: Background-color declarations (boost: +3) ────────────
+  // Colors in background-color are brand-defining (buttons, headers, CTAs)
+  const bgHexRegex = /background(?:-color)?\s*:\s*(?:[^;]*?)?(#[0-9a-fA-F]{3,8})\b/gi;
+  while ((match = bgHexRegex.exec(content)) !== null) {
+    addColor(normalizeHex(match[1]), 3, 'background');
+  }
+  // Also match rgb in background declarations
+  const bgRgbRegex = /background(?:-color)?\s*:\s*(?:[^;]*?)?rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/gi;
+  while ((match = bgRgbRegex.exec(content)) !== null) {
+    const r = parseInt(match[1]);
+    const g = parseInt(match[2]);
+    const b = parseInt(match[3]);
+    const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    addColor(hex, 3, 'background');
+  }
+
+  // ─── Pass 4: Button/CTA selector context (boost: +5) ──────────────
+  // Colors inside selectors that match button/CTA patterns are strong brand signals
+  const selectorBlockRegex = /([^{}]+)\{([^}]+)\}/g;
+  const btnSelectorPattern = /(?:\.btn|\.button|\.cta|button|\.offerte|\.submit|\.action|input\[type=.submit)/i;
+  while ((match = selectorBlockRegex.exec(content)) !== null) {
+    const selector = match[1];
+    const block = match[2];
+    if (btnSelectorPattern.test(selector)) {
+      // Extract colors from this block with boost
+      const blockHexRegex = /#([0-9a-fA-F]{3}){1,2}\b/g;
+      let blockMatch;
+      while ((blockMatch = blockHexRegex.exec(block)) !== null) {
+        addColor(normalizeHex(blockMatch[0]), 5, 'button');
       }
     }
   }
@@ -109,9 +144,25 @@ function isBlackWhiteGray(hex: string): boolean {
 function extractFonts(content: string): ExtractedCssFont[] {
   const fontMap = new Map<string, Set<number>>();
 
+  // Match @font-face declarations (self-hosted fonts like Outfit, Poppins, etc.)
+  // These are strong signals — they're deliberately loaded fonts, not fallbacks.
+  const fontFaceRegex = /@font-face\s*\{([^}]+)\}/gi;
+  let match;
+  while ((match = fontFaceRegex.exec(content)) !== null) {
+    const block = match[1];
+    const familyMatch = block.match(/font-family\s*:\s*['"]?([^;'"}\n]+)/i);
+    const weightMatch = block.match(/font-weight\s*:\s*(\d+)/i);
+    if (familyMatch) {
+      const family = familyMatch[1].trim().replace(/['"]/g, '');
+      if (family && !isGenericFont(family)) {
+        if (!fontMap.has(family)) fontMap.set(family, new Set());
+        if (weightMatch) fontMap.get(family)!.add(parseInt(weightMatch[1]));
+      }
+    }
+  }
+
   // Match font-family declarations
   const fontRegex = /font-family\s*:\s*['"]?([^;'"}\n]+)/gi;
-  let match;
   while ((match = fontRegex.exec(content)) !== null) {
     const families = match[1].split(',').map(f => f.trim().replace(/['"]/g, ''));
     for (const family of families) {
@@ -405,3 +456,14 @@ export async function extractViaHttp(
     pagesAnalyzed: [url],
   };
 }
+
+// ============================================================================
+// TEST EXPORTS — exposed for unit testing of CSS parsing logic
+// ============================================================================
+export const _testUtils = {
+  extractColors,
+  extractFonts,
+  extractCssVariableColors,
+  normalizeHex,
+  isBlackWhiteGray,
+};
