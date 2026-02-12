@@ -20,7 +20,7 @@ import type {
 
 function makeFinding(overrides: Partial<AuditFinding> & { ruleId: string; id: string }): AuditFinding {
   return {
-    phase: 'technical',
+    phase: 'htmlTechnical',
     severity: 'medium',
     title: `Finding ${overrides.ruleId}`,
     description: 'desc',
@@ -34,7 +34,7 @@ function makeFinding(overrides: Partial<AuditFinding> & { ruleId: string; id: st
 
 function makePhase(overrides: Partial<AuditPhaseResult>): AuditPhaseResult {
   return {
-    phase: 'technical',
+    phase: 'htmlTechnical',
     score: 70,
     weight: 20,
     passedChecks: 7,
@@ -76,9 +76,9 @@ const beforeReport = makeReport({
   overallScore: 65,
   createdAt: '2026-01-15T10:00:00Z',
   phaseResults: [
-    makePhase({ phase: 'technical', score: 60, findings: [findingA, findingB] }),
-    makePhase({ phase: 'contentQuality', score: 70, findings: [] }),
-    makePhase({ phase: 'semanticRichness', score: 80, findings: [findingC] }),
+    makePhase({ phase: 'htmlTechnical', score: 60, findings: [findingA, findingB] }),
+    makePhase({ phase: 'microSemantics', score: 70, findings: [] }),
+    makePhase({ phase: 'eavSystem', score: 80, findings: [findingC] }),
   ],
 });
 
@@ -87,9 +87,9 @@ const afterReport = makeReport({
   overallScore: 78,
   createdAt: '2026-02-10T14:30:00Z',
   phaseResults: [
-    makePhase({ phase: 'technical', score: 75, findings: [findingA] }), // RULE_B resolved
-    makePhase({ phase: 'contentQuality', score: 65, findings: [] }),    // regression
-    makePhase({ phase: 'semanticRichness', score: 90, findings: [findingD] }), // RULE_C resolved, RULE_D new
+    makePhase({ phase: 'htmlTechnical', score: 75, findings: [findingA] }), // RULE_B resolved
+    makePhase({ phase: 'microSemantics', score: 65, findings: [] }),    // regression
+    makePhase({ phase: 'eavSystem', score: 90, findings: [findingD] }), // RULE_C resolved, RULE_D new
   ],
 });
 
@@ -127,7 +127,7 @@ describe('AuditComparisonView', () => {
     render(<AuditComparisonView before={beforeReport} after={afterReport} />);
 
     const rows = screen.getAllByTestId('phase-row');
-    // 3 phases: technical, contentQuality, semanticRichness
+    // 3 phases: htmlTechnical, microSemantics, eavSystem
     expect(rows).toHaveLength(3);
 
     // Table headers
@@ -143,11 +143,11 @@ describe('AuditComparisonView', () => {
     const rows = screen.getAllByTestId('phase-row');
     const phaseNames = rows.map((row) => within(row).getAllByRole('cell')[0].textContent);
 
-    // semanticRichness: 80→90 (+10), technical: 60→75 (+15), contentQuality: 70→65 (-5)
-    // sorted by delta desc: technical (+15), semanticRichness (+10), contentQuality (-5)
-    expect(phaseNames[0]).toBe('technical');
-    expect(phaseNames[1]).toBe('semanticRichness');
-    expect(phaseNames[2]).toBe('contentQuality');
+    // eavSystem: 80→90 (+10), htmlTechnical: 60→75 (+15), microSemantics: 70→65 (-5)
+    // sorted by delta desc: htmlTechnical (+15), eavSystem (+10), microSemantics (-5)
+    expect(phaseNames[0]).toBe('htmlTechnical');
+    expect(phaseNames[1]).toBe('eavSystem');
+    expect(phaseNames[2]).toBe('microSemantics');
   });
 
   it('shows green for improvements and red for regressions', () => {
@@ -155,11 +155,11 @@ describe('AuditComparisonView', () => {
 
     const rows = screen.getAllByTestId('phase-row');
 
-    // First row (technical, +15) should have a positive delta
+    // First row (htmlTechnical, +15) should have a positive delta
     const techDelta = within(rows[0]).getByTestId('delta-positive');
     expect(techDelta).toHaveTextContent('+15');
 
-    // Last row (contentQuality, -5) should have a negative delta
+    // Last row (microSemantics, -5) should have a negative delta
     const contentDelta = within(rows[2]).getByTestId('delta-negative');
     expect(contentDelta).toHaveTextContent('-5');
   });
