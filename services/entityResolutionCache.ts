@@ -178,16 +178,22 @@ export async function cacheEntity(
 
   console.log('[EntityCache] Caching entity:', entity.name);
 
+  // Validate values against DB CHECK constraints
+  const VALID_SOURCES = ['wikidata', 'ai_inferred', 'user_provided'];
+  const score = typeof entity.confidenceScore === 'number' && isFinite(entity.confidenceScore)
+    ? Math.max(0, Math.min(1, entity.confidenceScore))
+    : null;
+
   const row = {
     user_id: userId,
     entity_name: entity.name,
     entity_type: entity.type,
-    wikidata_id: entity.wikidataId,
-    wikipedia_url: entity.wikipediaUrl,
-    resolved_data: entity.properties,
-    same_as_urls: entity.sameAs,
-    confidence_score: entity.confidenceScore,
-    resolution_source: entity.source,
+    wikidata_id: entity.wikidataId || null,
+    wikipedia_url: entity.wikipediaUrl || null,
+    resolved_data: entity.properties || {},
+    same_as_urls: entity.sameAs || [],
+    confidence_score: score,
+    resolution_source: entity.source && VALID_SOURCES.includes(entity.source) ? entity.source : 'ai_inferred',
     last_verified_at: entity.lastVerifiedAt || new Date().toISOString()
   };
 
@@ -239,19 +245,29 @@ export async function cacheEntities(
     console.log(`[EntityCache] De-duplicated ${entities.length} -> ${uniqueEntities.length} entities`);
   }
 
-  const rows = uniqueEntities.map(entity => ({
-    user_id: userId,
-    entity_name: entity.name,
-    entity_type: entity.type,
-    wikidata_id: entity.wikidataId || null,
-    wikipedia_url: entity.wikipediaUrl || null,
-    resolved_data: (entity.properties || {}) as any,
-    same_as_urls: (entity.sameAs || []) as any,
-    confidence_score: entity.confidenceScore,
-    resolution_source: entity.source || 'ai_inferred',
-    last_verified_at: entity.lastVerifiedAt || new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }));
+  // DB CHECK constraints: confidence_score >= 0 AND <= 1, resolution_source IN ('wikidata','ai_inferred','user_provided')
+  const VALID_SOURCES = ['wikidata', 'ai_inferred', 'user_provided'];
+  const rows = uniqueEntities.map(entity => {
+    const score = typeof entity.confidenceScore === 'number' && isFinite(entity.confidenceScore)
+      ? Math.max(0, Math.min(1, entity.confidenceScore))
+      : null;
+    const source = entity.source && VALID_SOURCES.includes(entity.source)
+      ? entity.source
+      : 'ai_inferred';
+    return {
+      user_id: userId,
+      entity_name: entity.name,
+      entity_type: entity.type,
+      wikidata_id: entity.wikidataId || null,
+      wikipedia_url: entity.wikipediaUrl || null,
+      resolved_data: (entity.properties || {}) as any,
+      same_as_urls: (entity.sameAs || []) as any,
+      confidence_score: score,
+      resolution_source: source,
+      last_verified_at: entity.lastVerifiedAt || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  });
 
   // Bulk upsert with timeout protection
   const TIMEOUT_MS = 30000;
