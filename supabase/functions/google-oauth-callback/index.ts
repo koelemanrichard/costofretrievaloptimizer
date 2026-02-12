@@ -106,7 +106,7 @@ Deno.serve(async (req: Request) => {
     // 3. Exchange authorization code for tokens
     // ----------------------------------------------------------------
     const effectiveRedirectUri = redirectUri
-      || `${Deno.env.get('APP_URL') || 'http://localhost:5173'}/settings/oauth/callback`;
+      || `${Deno.env.get('APP_URL') || 'http://localhost:5173'}/oauth-callback.html`;
 
     const tokens = await exchangeGoogleCode(code, effectiveRedirectUri);
 

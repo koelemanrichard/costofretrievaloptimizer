@@ -53,7 +53,6 @@ const StylePage = lazy(() => import('../pages/topic/StylePage'));
 const AdminPage = lazy(() => import('../pages/AdminPage'));
 const QuotationPage = lazy(() => import('../pages/QuotationPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
-const OAuthCallbackPage = lazy(() => import('../pages/OAuthCallbackPage'));
 
 const PageLoader: React.FC = () => (
     <div className="flex items-center justify-center min-h-[50vh]">
@@ -70,9 +69,6 @@ const AppRouter: React.FC = () => {
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>
-                {/* Standalone pages (no AppShell — no sidebar/nav) */}
-                <Route path="/settings/oauth/callback" element={<OAuthCallbackPage />} />
-
                 {/* Public routes */}
                 <Route element={<AppShell />}>
                     <Route path="/login" element={<AuthScreen />} />

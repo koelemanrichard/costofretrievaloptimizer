@@ -25,7 +25,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets|help\\.html).*)",
+      "source": "/((?!assets|help\\.html|oauth-callback\\.html).*)",
       "destination": "/index.html"
     }
   ]

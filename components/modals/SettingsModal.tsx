@@ -183,7 +183,7 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
                     const adapter = new GscApiAdapter();
                     const authUrl = adapter.getAuthorizationUrl(
                         'settings',
-                        `${window.location.origin}/settings/oauth/callback`
+                        `${window.location.origin}/oauth-callback.html`
                     );
                     window.open(authUrl, 'gsc-oauth', 'width=600,height=700,left=200,top=100');
                 }}
