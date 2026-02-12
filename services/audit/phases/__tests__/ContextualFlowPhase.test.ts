@@ -72,6 +72,7 @@ describe('ContextualFlowPhase', () => {
 
   it('handles plain string content', async () => {
     const result = await phase.execute(baseRequest, 'Some plain text content');
-    expect(result.totalChecks).toBe(1); // No CE to check, but obstruction check runs
+    // No CE to check, but obstruction, flow, and discourse validators all run on text content
+    expect(result.totalChecks).toBe(3);
   });
 });

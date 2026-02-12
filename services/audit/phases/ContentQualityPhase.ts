@@ -13,6 +13,7 @@ import { AuditPhase } from './AuditPhase';
 import type { AuditPhaseName, AuditRequest, AuditPhaseResult, AuditFinding } from '../types';
 import { runAlgorithmicAudit } from '../../ai/contentGeneration/passes/auditChecks';
 import type { AuditRuleResult } from '../../../types';
+import { MicroSemanticsValidator } from '../rules/MicroSemanticsValidator';
 
 /**
  * Map an AuditRuleResult pass/fail + score to an AuditFinding severity.
@@ -29,26 +30,40 @@ function mapRuleSeverity(rule: AuditRuleResult): AuditFinding['severity'] {
 export class ContentQualityPhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'microSemantics';
 
-  async execute(request: AuditRequest): Promise<AuditPhaseResult> {
+  async execute(request: AuditRequest, content?: unknown): Promise<AuditPhaseResult> {
     const findings: AuditFinding[] = [];
     let totalChecks = 0;
 
-    // The orchestrator will eventually pass content context containing:
-    //   - draft: string (the article content)
-    //   - brief: ContentBrief
-    //   - info: BusinessInfo
-    //   - language: string
-    //   - eavs: SemanticTriple[] (optional)
-    //   - template: TemplateConfig (optional)
-    //
-    // When available, we will:
-    //   1. Call runAlgorithmicAudit(draft, brief, info, language, eavs, template)
-    //   2. Transform each failing AuditRuleResult into an AuditFinding
-
-    // For now, return empty result until orchestrator provides content context.
-    // The 35 algorithmic checks will be fully wired when content is fetched.
+    // Rules 57-58, 61, 73: Micro-semantics validation (modality, predicate specificity, SPO)
+    const text = this.extractText(content);
+    if (text) {
+      totalChecks++;
+      const microValidator = new MicroSemanticsValidator();
+      const microIssues = microValidator.validate(text);
+      for (const issue of microIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Sentence-level semantic quality affects how search engines parse and understand content.',
+          category: 'Micro-Semantics',
+        }));
+      }
+    }
 
     return this.buildResult(findings, totalChecks);
+  }
+
+  private extractText(content: unknown): string | null {
+    if (!content) return null;
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && 'text' in (content as Record<string, unknown>)) {
+      return (content as Record<string, unknown>).text as string;
+    }
+    return null;
   }
 
   /**

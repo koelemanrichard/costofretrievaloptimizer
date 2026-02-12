@@ -18,6 +18,9 @@ import {
 import type { ConsistencyIssue } from '../../ai/centralEntityAnalyzer';
 import { SourceContextAligner } from '../rules/SourceContextAligner';
 import type { SourceContext, ContentSpecification } from '../rules/SourceContextAligner';
+import { CentralEntityPositionChecker } from '../rules/CentralEntityPositionChecker';
+import { AuthorEntityChecker } from '../rules/AuthorEntityChecker';
+import { ContextQualifierDetector } from '../rules/ContextQualifierDetector';
 
 /**
  * Map centralEntityAnalyzer severity to AuditFinding severity.
@@ -62,13 +65,79 @@ export class StrategicFoundationPhase extends AuditPhase {
       }
     }
 
+    // Rules 4-5, 7-9, 11-13: CE position and SC/CSI alignment
+    if (contentData?.text && contentData?.centralEntity) {
+      totalChecks++;
+      const ceChecker = new CentralEntityPositionChecker();
+      const ceIssues = ceChecker.validate({
+        text: contentData.text,
+        centralEntity: contentData.centralEntity,
+        sourceContextAttributes: contentData.sourceContextAttributes,
+        csiPredicates: contentData.csiPredicates,
+      });
+      for (const issue of ceIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Central Entity positioning and SC/CSI alignment establish topical authority for search engines.',
+          category: 'Strategic Foundation',
+        }));
+      }
+    }
+
+    // Rules 17, 19: Author entity / E-E-A-T signals
+    if (contentData?.html) {
+      totalChecks++;
+      const authorChecker = new AuthorEntityChecker();
+      const authorIssues = authorChecker.validate(contentData.html);
+      for (const issue of authorIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Author entity signals are a key E-E-A-T factor for establishing content credibility.',
+          category: 'Strategic Foundation',
+        }));
+      }
+    }
+
+    // Rules 85-93: Context qualifiers (temporal, spatial, conditional, etc.)
+    if (contentData?.text) {
+      totalChecks++;
+      const qualifierDetector = new ContextQualifierDetector();
+      const qualifierIssues = qualifierDetector.validate(contentData.text);
+      for (const issue of qualifierIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Context qualifiers make statements precise and credible, improving E-E-A-T signals.',
+          category: 'Strategic Foundation',
+        }));
+      }
+    }
+
     return this.buildResult(findings, totalChecks);
   }
 
   private extractContent(content: unknown): {
     text: string;
+    html?: string;
+    centralEntity?: string;
     sourceContext?: SourceContext;
     contentSpec?: ContentSpecification;
+    sourceContextAttributes?: string[];
+    csiPredicates?: string[];
   } | null {
     if (!content) return null;
     if (typeof content === 'string') return { text: content };
@@ -76,8 +145,12 @@ export class StrategicFoundationPhase extends AuditPhase {
       const c = content as Record<string, unknown>;
       return {
         text: c.text as string,
+        html: c.html as string | undefined,
+        centralEntity: c.centralEntity as string | undefined,
         sourceContext: c.sourceContext as SourceContext | undefined,
         contentSpec: c.contentSpec as ContentSpecification | undefined,
+        sourceContextAttributes: c.sourceContextAttributes as string[] | undefined,
+        csiPredicates: c.csiPredicates as string[] | undefined,
       };
     }
     return null;

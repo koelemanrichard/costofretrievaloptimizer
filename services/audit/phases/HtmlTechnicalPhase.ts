@@ -10,6 +10,9 @@
 import { AuditPhase } from './AuditPhase';
 import type { AuditPhaseName, AuditRequest, AuditPhaseResult, AuditFinding } from '../types';
 import { HtmlNestingValidator } from '../rules/HtmlNestingValidator';
+import { HtmlTechnicalValidator } from '../rules/HtmlTechnicalValidator';
+import { HtmlStructureExtendedValidator } from '../rules/HtmlStructureExtendedValidator';
+import { ImageMetadataValidator } from '../rules/ImageMetadataValidator';
 
 export class HtmlTechnicalPhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'htmlTechnical';
@@ -38,6 +41,57 @@ export class HtmlTechnicalPhase extends AuditPhase {
           affectedElement: issue.affectedElement,
           exampleFix: issue.exampleFix,
           whyItMatters: 'Proper HTML nesting ensures correct rendering and prevents parsing errors by search engines.',
+          category: 'HTML Technical',
+        }));
+      }
+
+      // Rules 233, 239, 244, 255, 258, 261: HTML technical checks
+      totalChecks++;
+      const techValidator = new HtmlTechnicalValidator();
+      const techIssues = techValidator.validate(html);
+      for (const issue of techIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'HTML structure affects how search engines parse and render content.',
+          category: 'HTML Technical',
+        }));
+      }
+
+      // Rules 245-250: Extended HTML structure checks
+      totalChecks++;
+      const structureValidator = new HtmlStructureExtendedValidator();
+      const structureIssues = structureValidator.validate(html);
+      for (const issue of structureIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Clean HTML structure ensures correct rendering and accessibility compliance.',
+          category: 'HTML Technical',
+        }));
+      }
+
+      // Rules 260-267: Image metadata checks
+      totalChecks++;
+      const imageValidator = new ImageMetadataValidator();
+      const imageIssues = imageValidator.validate(html);
+      for (const issue of imageIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Image metadata affects page performance, accessibility, and image search visibility.',
           category: 'HTML Technical',
         }));
       }

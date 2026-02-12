@@ -15,6 +15,7 @@
 import { AuditPhase } from './AuditPhase';
 import type { AuditPhaseName, AuditRequest, AuditPhaseResult, AuditFinding } from '../types';
 import { CanonicalValidator } from '../rules/CanonicalValidator';
+import { MetaValidator } from '../rules/MetaValidator';
 
 export class MetaStructuredDataPhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'metaStructuredData';
@@ -42,6 +43,26 @@ export class MetaStructuredDataPhase extends AuditPhase {
           affectedElement: issue.affectedElement,
           exampleFix: issue.exampleFix,
           whyItMatters: 'Correct canonical tags are essential for preventing duplicate content issues and consolidating page authority.',
+          category: 'Meta & Structured Data',
+        }));
+      }
+    }
+
+    // Rules 270, 276-279, 284: Meta tags and structured data validation
+    if (contentData?.html) {
+      totalChecks++;
+      const metaValidator = new MetaValidator();
+      const metaIssues = metaValidator.validate(contentData.html);
+      for (const issue of metaIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          currentValue: issue.currentValue,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Complete and valid meta tags ensure proper indexing and rich result eligibility.',
           category: 'Meta & Structured Data',
         }));
       }

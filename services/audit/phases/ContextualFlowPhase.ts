@@ -10,6 +10,10 @@
 import { AuditPhase } from './AuditPhase';
 import type { AuditPhaseName, AuditRequest, AuditPhaseResult, AuditFinding } from '../types';
 import { ContentObstructionChecker } from '../rules/ContentObstructionChecker';
+import { ContextualFlowValidator } from '../rules/ContextualFlowValidator';
+import { HeadingAndDiscourseValidator } from '../rules/HeadingAndDiscourseValidator';
+import { ContextualBridgeDetector } from '../rules/ContextualBridgeDetector';
+import type { BridgeContext } from '../rules/ContextualBridgeDetector';
 
 export class ContextualFlowPhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'contextualFlow';
@@ -46,6 +50,76 @@ export class ContextualFlowPhase extends AuditPhase {
       }
     }
 
+    // Rules 115-117, 121-129, 135-148: Contextual flow (CE distribution, subordinate text, heading rules)
+    if (contentData?.text) {
+      totalChecks++;
+      const flowValidator = new ContextualFlowValidator();
+      const flowIssues = flowValidator.validate({
+        text: contentData.text,
+        html: htmlContent || undefined,
+        centralEntity: contentData.centralEntity,
+        headings: contentData.headings,
+      });
+      for (const issue of flowIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Contextual flow ensures content is logically structured and easy to follow.',
+          category: 'Contextual Flow',
+        }));
+      }
+    }
+
+    // Rules 142-153: Heading discourse and section transitions
+    if (contentData?.text) {
+      const headings = contentData.headings || [];
+      totalChecks++;
+      const discourseValidator = new HeadingAndDiscourseValidator();
+      const discourseIssues = discourseValidator.validate({
+        text: contentData.text,
+        headings,
+      });
+      for (const issue of discourseIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Heading quality and discourse integration affect content comprehension and search engine understanding.',
+          category: 'Contextual Flow',
+        }));
+      }
+    }
+
+    // Rules 154-158: Contextual bridges between related pages
+    if (contentData?.text && contentData?.centralEntity && contentData?.relatedPages && contentData.relatedPages.length > 0) {
+      totalChecks++;
+      const bridgeDetector = new ContextualBridgeDetector();
+      const bridgeIssues = bridgeDetector.validate({
+        text: contentData.text,
+        currentTopic: contentData.centralEntity,
+        relatedPages: contentData.relatedPages,
+      });
+      for (const issue of bridgeIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Contextual bridges create natural linking opportunities and strengthen topical authority.',
+          category: 'Contextual Flow',
+        }));
+      }
+    }
+
     return this.buildResult(findings, totalChecks);
   }
 
@@ -58,7 +132,13 @@ export class ContextualFlowPhase extends AuditPhase {
     return null;
   }
 
-  private extractContent(content: unknown): { text: string; centralEntity?: string; keyAttributes?: string[] } | null {
+  private extractContent(content: unknown): {
+    text: string;
+    centralEntity?: string;
+    keyAttributes?: string[];
+    headings?: { level: number; text: string }[];
+    relatedPages?: Array<{ url: string; topic: string; anchorText?: string }>;
+  } | null {
     if (!content) return null;
     if (typeof content === 'string') return { text: content };
     if (typeof content === 'object' && 'text' in (content as Record<string, unknown>)) {
@@ -67,6 +147,8 @@ export class ContextualFlowPhase extends AuditPhase {
         text: c.text as string,
         centralEntity: c.centralEntity as string | undefined,
         keyAttributes: c.keyAttributes as string[] | undefined,
+        headings: c.headings as { level: number; text: string }[] | undefined,
+        relatedPages: c.relatedPages as Array<{ url: string; topic: string; anchorText?: string }> | undefined,
       };
     }
     return null;

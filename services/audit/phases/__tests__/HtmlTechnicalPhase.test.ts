@@ -35,13 +35,17 @@ describe('HtmlTechnicalPhase', () => {
   it('passes images with proper alt text', async () => {
     const html = '<img src="photo.jpg" alt="A sunset over the mountains"><img src="logo.png" alt="Company logo">';
     const result = await phase.execute(baseRequest, { html });
-    expect(result.findings).toHaveLength(0);
+    // Filter to rule-256 findings only; other validators may produce unrelated findings
+    const altFindings = result.findings.filter(f => f.ruleId.startsWith('rule-256'));
+    expect(altFindings).toHaveLength(0);
   });
 
   it('handles mixed alt scenarios', async () => {
     const html = '<img src="a.jpg" alt="Good"><img src="b.jpg"><img src="c.jpg" alt="">';
     const result = await phase.execute(baseRequest, { html });
-    expect(result.findings).toHaveLength(2); // one missing, one empty
+    // Filter to rule-256 findings only; other validators may produce unrelated findings
+    const altFindings = result.findings.filter(f => f.ruleId.startsWith('rule-256'));
+    expect(altFindings).toHaveLength(2); // one missing, one empty
   });
 
   it('accepts plain string HTML content', async () => {
