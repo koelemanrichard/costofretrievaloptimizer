@@ -180,10 +180,21 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
         body: { accountId },
       });
 
-      if (fnError || !data?.ok) {
+      if (fnError) {
+        // Try to extract the response body from the FunctionsHttpError context
+        let detail = '';
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json();
+            detail = body?.detail ? `${body.error || 'Error'}: ${body.detail}` : body?.error || '';
+          }
+        } catch { /* ignore parse errors */ }
+        setError(detail || fnError.message || 'Failed to load properties');
+        setPropertiesMap(prev => ({ ...prev, [accountId]: [] }));
+      } else if (!data?.ok) {
         const msg = data?.detail
           ? `${data?.error || 'Error'}: ${data.detail}`
-          : data?.error || fnError?.message || 'Failed to load properties';
+          : data?.error || 'Failed to load properties';
         setError(msg);
         setPropertiesMap(prev => ({ ...prev, [accountId]: [] }));
       } else {

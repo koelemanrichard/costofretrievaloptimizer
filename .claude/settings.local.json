@@ -361,7 +361,16 @@
       "Bash(do echo \"Deploying $fn...\")",
       "Bash(git cherry-pick:*)",
       "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" add components/audit/AuditExportDropdown.tsx components/audit/__tests__/AuditExportDropdown.test.tsx components/audit/UnifiedAuditDashboard.tsx)",
-      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" commit -m \"$\\(cat <<''EOF''\nfeat\\(audit\\): add export dropdown to dashboard with CSV/HTML/JSON download\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git -C \"D:\\\\www\\\\cost-of-retreival-reducer\" commit -m \"$\\(cat <<''EOF''\nfeat\\(audit\\): add export dropdown to dashboard with CSV/HTML/JSON download\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git pull:*)",
+      "Bash(Select-String -Pattern \"failed\")",
+      "Bash(Select-Object -First 5)",
+      "Bash(git rm:*)",
+      "Bash(supabase secrets list:*)",
+      "Bash(supabase secrets set:*)",
+      "Bash(supabase functions logs:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
