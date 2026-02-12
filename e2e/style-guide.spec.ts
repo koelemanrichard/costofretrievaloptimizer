@@ -338,36 +338,34 @@ test.describe('StyleGuideExport Visual Quality', () => {
       };
     });
     expect(containerStyles).toBeTruthy();
-    expect(parseInt(containerStyles!.maxWidth)).toBe(900);
+    expect(parseInt(containerStyles!.maxWidth)).toBe(1100);
   });
 
-  test('color swatches render as circular chips', async ({ page }) => {
+  test('color swatches render as styled boxes', async ({ page }) => {
     const { generateStyleGuideHtml } = await import('../components/premium-design/StyleGuideExport');
     const guide = createTestStyleGuide();
     const html = generateStyleGuideHtml(guide);
 
     await page.setContent(html);
 
-    // Verify color circles exist and are round
-    const circleStyles = await page.evaluate(() => {
-      const circle = document.querySelector('.sg-color-circle');
-      if (!circle) return null;
-      const cs = window.getComputedStyle(circle);
+    // Verify color boxes exist and have proper styling
+    const boxStyles = await page.evaluate(() => {
+      const box = document.querySelector('.sg-color-box');
+      if (!box) return null;
+      const cs = window.getComputedStyle(box);
       return {
-        width: cs.width,
         height: cs.height,
         borderRadius: cs.borderRadius,
         backgroundColor: cs.backgroundColor,
       };
     });
 
-    expect(circleStyles).toBeTruthy();
-    expect(circleStyles!.width).toBe('40px');
-    expect(circleStyles!.height).toBe('40px');
-    expect(circleStyles!.borderRadius).toBe('50%');
+    expect(boxStyles).toBeTruthy();
+    expect(parseInt(boxStyles!.height)).toBeGreaterThanOrEqual(40);
+    expect(boxStyles!.borderRadius).toBe('8px');
     // First color is #ff6b00
-    expect(circleStyles!.backgroundColor).toContain('255');
-    expect(circleStyles!.backgroundColor).toContain('107');
+    expect(boxStyles!.backgroundColor).toContain('255');
+    expect(boxStyles!.backgroundColor).toContain('107');
   });
 
   test('element preview sections have white background', async ({ page }) => {

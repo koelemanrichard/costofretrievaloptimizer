@@ -1,7 +1,10 @@
 // e2e/site-analysis-v2.spec.ts
 // End-to-end tests for Site Analysis V2 functionality
+// SKIPPED: Site Analysis V2 feature is temporarily disabled in UI (see CLAUDE.md)
 
 import { test, expect } from '@playwright/test';
+
+test.skip(true, 'Site Analysis V2 feature is temporarily disabled');
 import { waitForAppLoad, login, navigateToSiteAnalysis, TEST_CONFIG, takeScreenshot } from './test-utils';
 
 /**

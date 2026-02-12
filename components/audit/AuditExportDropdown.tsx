@@ -6,7 +6,7 @@ export interface AuditExportDropdownProps {
   report: UnifiedAuditReport;
 }
 
-type ExportFormat = 'csv' | 'html' | 'json';
+type ExportFormat = 'csv' | 'html' | 'json' | 'xlsx';
 
 interface ExportOption {
   format: ExportFormat;
@@ -18,6 +18,7 @@ const EXPORT_OPTIONS: ExportOption[] = [
   { format: 'csv', label: 'CSV', mimeType: 'text/csv' },
   { format: 'html', label: 'HTML', mimeType: 'text/html' },
   { format: 'json', label: 'JSON', mimeType: 'application/json' },
+  { format: 'xlsx', label: 'Excel (XLSX)', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
 ];
 
 function buildFileName(projectId: string, format: ExportFormat): string {
@@ -52,23 +53,29 @@ export const AuditExportDropdown: React.FC<AuditExportDropdownProps> = ({
   }, [isOpen]);
 
   const handleExport = useCallback(
-    (option: ExportOption) => {
+    async (option: ExportOption) => {
       const exporter = exporterRef.current;
 
-      let content: string;
-      switch (option.format) {
-        case 'csv':
-          content = exporter.exportCsv(report);
-          break;
-        case 'html':
-          content = exporter.exportHtml(report);
-          break;
-        case 'json':
-          content = exporter.exportJson(report);
-          break;
+      let blob: Blob;
+      if (option.format === 'xlsx') {
+        const buffer = await exporter.exportXlsx(report);
+        blob = new Blob([buffer], { type: option.mimeType });
+      } else {
+        let content: string;
+        switch (option.format) {
+          case 'csv':
+            content = exporter.exportCsv(report);
+            break;
+          case 'html':
+            content = exporter.exportHtml(report);
+            break;
+          case 'json':
+            content = exporter.exportJson(report);
+            break;
+        }
+        blob = new Blob([content], { type: option.mimeType });
       }
 
-      const blob = new Blob([content], { type: option.mimeType });
       const url = URL.createObjectURL(blob);
 
       const anchor = document.createElement('a');

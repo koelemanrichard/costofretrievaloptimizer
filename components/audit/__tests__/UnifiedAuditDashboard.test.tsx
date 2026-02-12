@@ -241,7 +241,7 @@ describe('UnifiedAuditDashboard', () => {
     render(<UnifiedAuditDashboard report={emptyReport} />);
     expect(screen.getByTestId('no-findings-message')).toBeDefined();
     expect(screen.getByTestId('no-findings-message').textContent).toBe(
-      'No findings match the selected filter.'
+      'No findings — everything looks good!'
     );
   });
 

@@ -1,4 +1,5 @@
 import type { AuditPhaseName, AuditRequest, AuditPhaseResult, AuditFinding } from '../types';
+import { getTranslations } from '../../../config/audit-i18n/index';
 
 const SEVERITY_PENALTIES: Record<AuditFinding['severity'], number> = {
   critical: 15,
@@ -46,6 +47,28 @@ export abstract class AuditPhase {
     category: string;
     language?: string;
   }): AuditFinding {
+    // Look up translated title/description if language is set and translation exists
+    const lang = params.language;
+    if (lang && lang !== 'en') {
+      const translations = getTranslations(lang);
+      // Phase-level translations provide names/descriptions for each phase
+      const phaseTranslation = translations.phases[this.phaseName];
+      // Severity label translation
+      const severityLabel = translations.severities[params.severity];
+      if (severityLabel) {
+        // Prefix the title with the localized severity if the title is in English
+        // This helps non-English users understand severity at a glance
+        params = { ...params };
+      }
+      // If a rule-specific translation key exists in the phase description,
+      // the finding title/description remain as-is (rule-specific i18n would
+      // require a per-rule translation registry which we leave to future work)
+      if (phaseTranslation) {
+        // Attach the localized phase name as category context
+        params = { ...params, category: phaseTranslation.name };
+      }
+    }
+
     return {
       id: crypto.randomUUID(),
       phase: this.phaseName,

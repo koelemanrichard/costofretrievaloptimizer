@@ -153,9 +153,10 @@ export class ContentFetcher {
       );
     const metaDescription = metaMatch?.[1]?.trim() || '';
 
-    // Language
+    // Language — try HTML lang attribute first, then heuristic fallback
     const langMatch = html.match(/<html[^>]+lang=["']([^"']+)["']/i);
-    const language = langMatch?.[1] || 'en';
+    const rawLang = langMatch?.[1]?.split('-')[0]?.toLowerCase(); // normalize en-US → en
+    const language = rawLang || this.detectLanguageHeuristic(html);
 
     // Headings
     const headings: { level: number; text: string }[] = [];
@@ -231,5 +232,45 @@ export class ContentFetcher {
       'direct',
     ];
     return [preferred, ...all.filter((p) => p !== preferred)];
+  }
+
+  /**
+   * Heuristic language detection based on common word frequency.
+   * Used as fallback when the HTML `lang` attribute is missing.
+   */
+  private detectLanguageHeuristic(html: string): string {
+    // Strip tags and get plain text (first 5000 chars for performance)
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 5000)
+      .toLowerCase();
+
+    const langIndicators: Record<string, string[]> = {
+      nl: ['het', 'een', 'van', 'zijn', 'voor', 'niet', 'ook', 'maar', 'meer', 'wordt', 'deze', 'naar'],
+      de: ['und', 'der', 'die', 'das', 'ein', 'eine', 'ist', 'nicht', 'auch', 'sich', 'werden', 'kann'],
+      fr: ['les', 'des', 'une', 'est', 'dans', 'pour', 'pas', 'que', 'sur', 'sont', 'avec', 'cette'],
+      es: ['los', 'las', 'una', 'del', 'por', 'para', 'como', 'pero', 'sus', 'sobre', 'este', 'puede'],
+    };
+
+    const words = text.split(/\W+/).filter((w) => w.length > 1);
+    if (words.length < 20) return 'en'; // Not enough text to detect
+
+    const scores: Record<string, number> = {};
+    for (const [lang, indicators] of Object.entries(langIndicators)) {
+      const indicatorSet = new Set(indicators);
+      scores[lang] = words.filter((w) => indicatorSet.has(w)).length;
+    }
+
+    const bestLang = Object.entries(scores).reduce(
+      (best, [lang, score]) => (score > best.score ? { lang, score } : best),
+      { lang: 'en', score: 0 }
+    );
+
+    // Require at least 3% of words to match indicators to be confident
+    return bestLang.score / words.length > 0.03 ? bestLang.lang : 'en';
   }
 }

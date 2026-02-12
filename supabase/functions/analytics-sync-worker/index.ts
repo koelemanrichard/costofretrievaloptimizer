@@ -207,7 +207,10 @@ async function completeSyncLog(
 // ---------------------------------------------------------------------------
 async function fetchGscData(
   accessToken: string,
-  siteUrl: string
+  siteUrl: string,
+  supabase: any,
+  propertyDbId: string,
+  syncLogId: string
 ): Promise<{ rows: any[]; rowCount: number }> {
   // Fetch last 7 days of search analytics
   const endDate = new Date();
@@ -241,11 +244,41 @@ async function fetchGscData(
   const data = await response.json();
   const rows = data.rows || [];
 
-  // Sprint 12 will persist these rows to the database.
-  // For now, log summary for verification.
   console.log(
     `[analytics-sync-worker] GSC: fetched ${rows.length} rows for ${siteUrl}`
   );
+
+  // Persist rows to gsc_search_analytics table
+  if (rows.length > 0) {
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE).map((row: any) => ({
+        property_id: propertyDbId,
+        sync_log_id: syncLogId,
+        date: row.keys[2],          // date dimension
+        query: row.keys[0],         // query dimension
+        page: row.keys[1],          // page dimension
+        clicks: row.clicks || 0,
+        impressions: row.impressions || 0,
+        ctr: row.ctr || 0,
+        position: row.position || 0,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('gsc_search_analytics')
+        .upsert(batch, { onConflict: 'property_id,date,query,page' });
+
+      if (insertError) {
+        console.error(
+          `[analytics-sync-worker] GSC insert batch ${i / BATCH_SIZE + 1} failed:`,
+          insertError
+        );
+      }
+    }
+    console.log(
+      `[analytics-sync-worker] GSC: persisted ${rows.length} rows for ${siteUrl}`
+    );
+  }
 
   return { rows, rowCount: rows.length };
 }
@@ -255,7 +288,10 @@ async function fetchGscData(
 // ---------------------------------------------------------------------------
 async function fetchGa4Data(
   accessToken: string,
-  propertyId: string
+  propertyId: string,
+  supabase: any,
+  propertyDbId: string,
+  syncLogId: string
 ): Promise<{ rows: any[]; rowCount: number }> {
   // Fetch last 7 days of traffic data
   const response = await fetch(
@@ -292,11 +328,51 @@ async function fetchGa4Data(
   const data = await response.json();
   const rows = data.rows || [];
 
-  // Sprint 12 will persist these rows to the database.
-  // For now, log summary for verification.
   console.log(
     `[analytics-sync-worker] GA4: fetched ${rows.length} rows for property ${propertyId}`
   );
+
+  // Persist rows to ga4_traffic_data table
+  if (rows.length > 0) {
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE).map((row: any) => {
+        // GA4 API returns dimensions in dimensionValues and metrics in metricValues
+        const pagePath = row.dimensionValues?.[0]?.value || '';
+        const date = row.dimensionValues?.[1]?.value || '';
+        // Format YYYYMMDD to YYYY-MM-DD
+        const formattedDate = date.length === 8
+          ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+          : date;
+
+        return {
+          property_id: propertyDbId,
+          sync_log_id: syncLogId,
+          date: formattedDate,
+          page_path: pagePath,
+          sessions: parseInt(row.metricValues?.[0]?.value || '0', 10),
+          total_users: parseInt(row.metricValues?.[1]?.value || '0', 10),
+          pageviews: parseInt(row.metricValues?.[2]?.value || '0', 10),
+          avg_session_duration: parseFloat(row.metricValues?.[3]?.value || '0'),
+          bounce_rate: parseFloat(row.metricValues?.[4]?.value || '0'),
+        };
+      });
+
+      const { error: insertError } = await supabase
+        .from('ga4_traffic_data')
+        .upsert(batch, { onConflict: 'property_id,date,page_path' });
+
+      if (insertError) {
+        console.error(
+          `[analytics-sync-worker] GA4 insert batch ${i / BATCH_SIZE + 1} failed:`,
+          insertError
+        );
+      }
+    }
+    console.log(
+      `[analytics-sync-worker] GA4: persisted ${rows.length} rows for property ${propertyId}`
+    );
+  }
 
   return { rows, rowCount: rows.length };
 }
@@ -315,14 +391,14 @@ async function syncProperty(
     // 1. Get a valid access token (refreshing if needed)
     const accessToken = await getValidAccessToken(account, supabase);
 
-    // 2. Fetch data from the appropriate API
+    // 2. Fetch data from the appropriate API and persist to DB
     let rowCount = 0;
 
     if (property.service === 'gsc') {
-      const result = await fetchGscData(accessToken, property.property_id);
+      const result = await fetchGscData(accessToken, property.property_id, supabase, property.id, logId);
       rowCount = result.rowCount;
     } else if (property.service === 'ga4') {
-      const result = await fetchGa4Data(accessToken, property.property_id);
+      const result = await fetchGa4Data(accessToken, property.property_id, supabase, property.id, logId);
       rowCount = result.rowCount;
     } else {
       throw new Error(`Unsupported service: ${property.service}`);

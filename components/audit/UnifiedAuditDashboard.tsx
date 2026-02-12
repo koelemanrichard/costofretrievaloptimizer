@@ -8,6 +8,7 @@ import { AuditScoreRing } from './AuditScoreRing';
 import { PhaseScoreCard } from './PhaseScoreCard';
 import { AuditFindingCard } from './AuditFindingCard';
 import { AuditExportDropdown } from './AuditExportDropdown';
+import { getTranslations } from '../../config/audit-i18n/index';
 
 export interface UnifiedAuditDashboardProps {
   report: UnifiedAuditReport;
@@ -17,14 +18,6 @@ export interface UnifiedAuditDashboardProps {
 }
 
 type SeverityTab = 'all' | 'critical' | 'high' | 'medium' | 'low';
-
-const SEVERITY_TABS: { key: SeverityTab; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'critical', label: 'Critical' },
-  { key: 'high', label: 'High' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'low', label: 'Low' },
-];
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -46,6 +39,17 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
   const [activeSeverityTab, setActiveSeverityTab] = useState<SeverityTab>('all');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<AuditPhaseName | null>(null);
+
+  // Load i18n translations based on the audit report's language
+  const t = useMemo(() => getTranslations(report.language), [report.language]);
+
+  const SEVERITY_TABS: { key: SeverityTab; label: string }[] = useMemo(() => [
+    { key: 'all', label: t.ui.viewAll },
+    { key: 'critical', label: t.severities.critical || 'Critical' },
+    { key: 'high', label: t.severities.high || 'High' },
+    { key: 'medium', label: t.severities.medium || 'Medium' },
+    { key: 'low', label: t.severities.low || 'Low' },
+  ], [t]);
 
   // Collect all findings from all phases
   const allFindings = useMemo<AuditFinding[]>(() => {
@@ -81,19 +85,19 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
         <div className="flex-1 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-gray-800 rounded-lg p-3">
-              <span className="block text-xs text-gray-500">Total Findings</span>
+              <span className="block text-xs text-gray-500">{t.ui.findings}</span>
               <span className="text-xl font-bold text-gray-200" data-testid="total-findings">
                 {allFindings.length}
               </span>
             </div>
             <div className="bg-gray-800 rounded-lg p-3">
-              <span className="block text-xs text-gray-500">Critical</span>
+              <span className="block text-xs text-gray-500">{t.severities.critical}</span>
               <span className="text-xl font-bold text-red-400" data-testid="critical-count">
                 {criticalCount}
               </span>
             </div>
             <div className="bg-gray-800 rounded-lg p-3">
-              <span className="block text-xs text-gray-500">High</span>
+              <span className="block text-xs text-gray-500">{t.severities.high}</span>
               <span className="text-xl font-bold text-orange-400" data-testid="high-count">
                 {highCount}
               </span>
@@ -123,7 +127,7 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
       {/* === Phase Grid === */}
       <section>
         <h2 className="text-lg font-semibold text-orange-400 mb-4" data-testid="phase-grid-heading">
-          Phase Scores
+          {t.ui.phaseScores}
         </h2>
         <div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -147,7 +151,7 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
       {/* === Findings Section === */}
       <section>
         <h2 className="text-lg font-semibold text-orange-400 mb-4" data-testid="findings-heading">
-          Findings
+          {t.ui.findings}
         </h2>
 
         {/* Severity Tabs */}
@@ -174,7 +178,7 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
         {/* Findings List */}
         {filteredFindings.length === 0 ? (
           <p className="text-gray-500 text-sm py-4" data-testid="no-findings-message">
-            No findings match the selected filter.
+            {t.ui.noFindings}
           </p>
         ) : (
           <div className="space-y-2" data-testid="findings-list">

@@ -651,10 +651,6 @@ body { background-color: ${pageBgOverride}; }
 .emphasis-standard .section-heading,
 .emphasis-hero .section-heading { font-weight: 700; }
 .section-content p, .prose p, .card-body p { font-weight: normal; }
-.timeline { padding-left: 3.5rem; }
-.timeline-marker { position: absolute; left: -3rem; top: 0; width: auto; height: auto; }
-.timeline-number { width: 2.5rem; height: 2.5rem; border-radius: 50%; font-size: 1rem; }
-.timeline-content { margin-left: 0.5rem; }
 `;
       return `${componentCss}\n\n/* === Brand-Specific Overrides (compiledCss) === */\n${this.compiledCss}\n\n${generateStructuralCSS()}${safetyOverrides}`;
     }

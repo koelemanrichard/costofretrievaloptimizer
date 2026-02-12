@@ -1,7 +1,9 @@
 // services/audit/AuditReportExporter.ts
-// Exports unified audit reports to CSV, HTML, and JSON formats.
+// Exports unified audit reports to CSV, HTML, JSON, XLSX, and batch ZIP formats.
 
 import type { UnifiedAuditReport, AuditFinding, AuditPhaseResult } from './types';
+import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 
 export class AuditReportExporter {
   // ---------------------------------------------------------------------------
@@ -141,6 +143,228 @@ ${this.renderRecommendations(topRecommendations)}
   /** Export as JSON (for re-import/API use) */
   exportJson(report: UnifiedAuditReport): string {
     return JSON.stringify(report, null, 2);
+  }
+
+  // ---------------------------------------------------------------------------
+  // XLSX Export (5-sheet Excel workbook)
+  // ---------------------------------------------------------------------------
+
+  /** Export as XLSX workbook with 5 sheets */
+  async exportXlsx(report: UnifiedAuditReport): Promise<ArrayBuffer> {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Holistic SEO Audit System';
+    wb.created = new Date();
+
+    // -- Sheet 1: Overview --
+    const overviewSheet = wb.addWorksheet('Overview');
+    overviewSheet.columns = [
+      { header: 'Property', key: 'property', width: 30 },
+      { header: 'Value', key: 'value', width: 50 },
+    ];
+    const allFindings = report.phaseResults.flatMap((pr) => pr.findings);
+    const criticalCount = allFindings.filter((f) => f.severity === 'critical').length;
+    const highCount = allFindings.filter((f) => f.severity === 'high').length;
+    const mediumCount = allFindings.filter((f) => f.severity === 'medium').length;
+    const lowCount = allFindings.filter((f) => f.severity === 'low').length;
+
+    overviewSheet.addRows([
+      { property: 'Overall Score', value: `${report.overallScore}/100` },
+      { property: 'URL', value: report.url ?? 'N/A' },
+      { property: 'Project ID', value: report.projectId },
+      { property: 'Audit Type', value: report.auditType },
+      { property: 'Language', value: report.language },
+      { property: 'Date', value: report.createdAt },
+      { property: 'Duration', value: this.formatDuration(report.auditDurationMs) },
+      { property: 'Total Findings', value: String(allFindings.length) },
+      { property: 'Critical', value: String(criticalCount) },
+      { property: 'High', value: String(highCount) },
+      { property: 'Medium', value: String(mediumCount) },
+      { property: 'Low', value: String(lowCount) },
+    ]);
+    this.styleHeaderRow(overviewSheet);
+
+    // -- Sheet 2: Findings --
+    const findingsSheet = wb.addWorksheet('Findings');
+    findingsSheet.columns = [
+      { header: 'Phase', key: 'phase', width: 22 },
+      { header: 'Severity', key: 'severity', width: 10 },
+      { header: 'Rule ID', key: 'ruleId', width: 14 },
+      { header: 'Title', key: 'title', width: 35 },
+      { header: 'Description', key: 'description', width: 50 },
+      { header: 'Why It Matters', key: 'whyItMatters', width: 40 },
+      { header: 'Current Value', key: 'currentValue', width: 25 },
+      { header: 'Expected Value', key: 'expectedValue', width: 25 },
+      { header: 'Example Fix', key: 'exampleFix', width: 30 },
+      { header: 'Impact', key: 'impact', width: 10 },
+      { header: 'Category', key: 'category', width: 20 },
+    ];
+
+    for (const finding of allFindings) {
+      const row = findingsSheet.addRow({
+        phase: finding.phase,
+        severity: finding.severity,
+        ruleId: finding.ruleId,
+        title: finding.title,
+        description: finding.description,
+        whyItMatters: finding.whyItMatters,
+        currentValue: finding.currentValue ?? '',
+        expectedValue: finding.expectedValue ?? '',
+        exampleFix: finding.exampleFix ?? '',
+        impact: finding.estimatedImpact,
+        category: finding.category,
+      });
+      // Color-code severity cells
+      const severityCell = row.getCell('severity');
+      const colorMap: Record<string, string> = {
+        critical: 'FFEF4444',
+        high: 'FFF97316',
+        medium: 'FFEAB308',
+        low: 'FF9CA3AF',
+      };
+      severityCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: colorMap[finding.severity] || 'FF9CA3AF' },
+      };
+    }
+    this.styleHeaderRow(findingsSheet);
+
+    // -- Sheet 3: Phase Scores --
+    const phasesSheet = wb.addWorksheet('Phase Scores');
+    phasesSheet.columns = [
+      { header: 'Phase', key: 'phase', width: 25 },
+      { header: 'Score', key: 'score', width: 10 },
+      { header: 'Weight (%)', key: 'weight', width: 12 },
+      { header: 'Passed', key: 'passed', width: 10 },
+      { header: 'Total Checks', key: 'total', width: 14 },
+      { header: 'Findings', key: 'findings', width: 10 },
+      { header: 'Summary', key: 'summary', width: 50 },
+    ];
+
+    for (const pr of report.phaseResults) {
+      phasesSheet.addRow({
+        phase: pr.phase,
+        score: pr.score,
+        weight: pr.weight,
+        passed: pr.passedChecks,
+        total: pr.totalChecks,
+        findings: pr.findings.length,
+        summary: pr.summary,
+      });
+    }
+    this.styleHeaderRow(phasesSheet);
+
+    // -- Sheet 4: Recommendations --
+    const recsSheet = wb.addWorksheet('Recommendations');
+    recsSheet.columns = [
+      { header: '#', key: 'rank', width: 5 },
+      { header: 'Priority', key: 'severity', width: 10 },
+      { header: 'Title', key: 'title', width: 35 },
+      { header: 'Description', key: 'description', width: 50 },
+      { header: 'Suggested Fix', key: 'fix', width: 40 },
+      { header: 'Impact', key: 'impact', width: 10 },
+    ];
+
+    const topFindings = this.getTopRecommendations(allFindings, 20);
+    topFindings.forEach((f, i) => {
+      recsSheet.addRow({
+        rank: i + 1,
+        severity: f.severity,
+        title: f.title,
+        description: f.description,
+        fix: f.exampleFix ?? '',
+        impact: f.estimatedImpact,
+      });
+    });
+    this.styleHeaderRow(recsSheet);
+
+    // -- Sheet 5: Metadata --
+    const metaSheet = wb.addWorksheet('Metadata');
+    metaSheet.columns = [
+      { header: 'Property', key: 'property', width: 30 },
+      { header: 'Value', key: 'value', width: 50 },
+    ];
+    metaSheet.addRows([
+      { property: 'Report ID', value: report.id },
+      { property: 'Version', value: String(report.version) },
+      { property: 'Prerequisites - Business Info', value: report.prerequisitesMet.businessInfo ? 'Met' : 'Missing' },
+      { property: 'Prerequisites - Pillars', value: report.prerequisitesMet.pillars ? 'Met' : 'Missing' },
+      { property: 'Prerequisites - EAVs', value: report.prerequisitesMet.eavs ? 'Met' : 'Missing' },
+      { property: 'Cannibalization Risks', value: String(report.cannibalizationRisks.length) },
+      { property: 'Merge Suggestions', value: String(report.contentMergeSuggestions.length) },
+      { property: 'Missing KG Topics', value: String(report.missingKnowledgeGraphTopics.length) },
+    ]);
+
+    if (report.missingKnowledgeGraphTopics.length > 0) {
+      metaSheet.addRow({ property: '', value: '' });
+      metaSheet.addRow({ property: 'Missing Knowledge Graph Topics', value: '' });
+      for (const topic of report.missingKnowledgeGraphTopics) {
+        metaSheet.addRow({ property: '', value: topic });
+      }
+    }
+    this.styleHeaderRow(metaSheet);
+
+    return wb.xlsx.writeBuffer() as Promise<ArrayBuffer>;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Batch ZIP Export (multiple reports)
+  // ---------------------------------------------------------------------------
+
+  /** Export multiple reports as a ZIP file containing individual HTML and JSON files */
+  async exportBatch(reports: UnifiedAuditReport[]): Promise<ArrayBuffer> {
+    const zip = new JSZip();
+
+    for (const report of reports) {
+      const slug = (report.url ?? report.projectId)
+        .replace(/https?:\/\//, '')
+        .replace(/[^a-zA-Z0-9.-]/g, '_')
+        .slice(0, 60);
+
+      const date = report.createdAt.slice(0, 10);
+      const prefix = `${slug}_${date}`;
+
+      zip.file(`${prefix}.html`, this.exportHtml(report));
+      zip.file(`${prefix}.json`, this.exportJson(report));
+      zip.file(`${prefix}.csv`, this.exportCsv(report));
+    }
+
+    // Add a summary index
+    const summaryRows = [
+      'URL,Score,Findings,Critical,High,Medium,Low,Date',
+      ...reports.map((r) => {
+        const findings = r.phaseResults.flatMap((pr) => pr.findings);
+        return [
+          this.escapeCsvField(r.url ?? r.projectId),
+          r.overallScore,
+          findings.length,
+          findings.filter((f) => f.severity === 'critical').length,
+          findings.filter((f) => f.severity === 'high').length,
+          findings.filter((f) => f.severity === 'medium').length,
+          findings.filter((f) => f.severity === 'low').length,
+          r.createdAt.slice(0, 10),
+        ].join(',');
+      }),
+    ];
+    zip.file('_summary.csv', summaryRows.join('\n'));
+
+    const buf = await zip.generateAsync({ type: 'arraybuffer' });
+    return buf;
+  }
+
+  // ---------------------------------------------------------------------------
+  // XLSX Helpers
+  // ---------------------------------------------------------------------------
+
+  private styleHeaderRow(sheet: ExcelJS.Worksheet): void {
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1F2937' },
+    };
+    headerRow.alignment = { vertical: 'middle' };
   }
 
   // ---------------------------------------------------------------------------

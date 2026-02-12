@@ -11,6 +11,20 @@ import type { StyleGuideElement } from '../../types/styleGuide';
  * to prevent "Blocked script execution" and ERR_NAME_NOT_RESOLVED console errors.
  */
 export function sanitizeHtmlForPreview(html: string): string {
+  // Fallback for Node.js environments (e.g. Playwright test workers)
+  if (typeof DOMParser === 'undefined') {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<link[^>]*>/gi, '')
+      .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+      .replace(/<embed[^>]*>/gi, '')
+      .replace(/<object[\s\S]*?<\/object>/gi, '')
+      .replace(/<meta[^>]*>/gi, '')
+      .replace(/<base[^>]*>/gi, '')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+      .replace(/\bon\w+="[^"]*"/gi, '')
+      .replace(/\bon\w+='[^']*'/gi, '');
+  }
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
   // 1. Remove dangerous elements

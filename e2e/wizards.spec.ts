@@ -8,19 +8,24 @@ import { waitForAppLoad, login, TEST_CONFIG, takeScreenshot } from './test-utils
  * Helper to navigate to a project workspace
  */
 async function navigateToProjectWorkspace(page) {
-  await page.goto('/');
-  await waitForAppLoad(page);
-
-  // Login if on auth screen
-  const emailInput = page.locator('input[type="email"]');
-  if (await emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await login(page);
+  try {
+    await page.goto('/');
     await waitForAppLoad(page);
-  }
 
-  // Skip if still on auth screen
-  const isStillOnAuthScreen = await emailInput.isVisible({ timeout: 2000 }).catch(() => false);
-  return !isStillOnAuthScreen;
+    // Login if on auth screen
+    const emailInput = page.locator('input[type="email"]');
+    if (await emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await login(page);
+      await waitForAppLoad(page);
+    }
+
+    // Skip if still on auth screen
+    const isStillOnAuthScreen = await emailInput.isVisible({ timeout: 2000 }).catch(() => false);
+    return !isStillOnAuthScreen;
+  } catch {
+    // Page may have been closed during parallel test execution
+    return false;
+  }
 }
 
 test.describe('Business Info Wizard', () => {
