@@ -47,6 +47,7 @@ import { AuditIssuesPanelSection, QualityTabContent } from './drafting/DraftingA
 import { DraftingPublishingPanel } from './drafting/DraftingPublishingPanel';
 import { DraftingSocialPanel } from './drafting/DraftingSocialPanel';
 import { RerunPassesModal, VersionHistoryModal } from './drafting/DraftingModals';
+import { AuditButton } from '../audit/AuditButton';
 
 interface DraftingModalProps {
   isOpen: boolean;
@@ -498,6 +499,14 @@ const DraftingModalInner: React.FC<DraftingModalProps & {
             <p className="text-sm text-gray-400 flex items-center gap-2">
               {safeString(brief.title) || 'Untitled Topic'}
               {isTransient && <span className="text-xs bg-yellow-900/50 text-yellow-400 px-2 py-0.5 rounded border border-yellow-700">Transient Mode</span>}
+              {(() => {
+                const d = (activeMap?.business_info as Record<string, unknown>)?.domain as string
+                  || activeMap?.domain
+                  || businessInfo?.domain
+                  || '';
+                const s = brief.slug || activeBriefTopic?.slug || '';
+                return d && s ? <AuditButton url={`https://${d}/${s}`} variant="icon-text" size="sm" /> : null;
+              })()}
             </p>
           </div>
           <div className="flex items-center gap-3">

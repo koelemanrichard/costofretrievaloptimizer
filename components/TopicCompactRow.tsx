@@ -179,8 +179,13 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
   // Has draft
   const hasDraft = !!(brief?.articleDraft && brief.articleDraft.length > 100);
 
-  // Audit URL: derive from domain + slug
-  const domain = appState.businessInfo?.domain;
+  // Audit URL: derive domain from active map's business_info, project, or global settings
+  const currentMap = appState.topicalMaps.find(m => m.id === appState.activeMapId);
+  const domain = (currentMap?.business_info as Record<string, unknown>)?.domain as string
+    || currentMap?.domain
+    || appState.projects.find(p => p.id === appState.activeProjectId)?.domain
+    || appState.businessInfo?.domain
+    || '';
   const auditUrl = domain && slug ? `https://${domain}/${slug}` : null;
 
   // Indentation based on depth

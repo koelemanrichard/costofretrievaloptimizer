@@ -323,9 +323,14 @@ const TopicItem: React.FC<TopicItemProps> = ({
                                 <h4 className="font-semibold text-white flex items-center gap-2">
                                     {title}
                                     {renderPublicationBadge()}
-                                    {!wpPostUrl && slug && businessInfo?.domain && (
-                                        <AuditButton url={`https://${businessInfo.domain}/${slug}`} variant="icon" size="sm" />
-                                    )}
+                                    {!wpPostUrl && slug && (() => {
+                                        const currentMap = appState.topicalMaps.find(m => m.id === appState.activeMapId);
+                                        const effectiveDomain = (currentMap?.business_info as Record<string, unknown>)?.domain as string
+                                            || currentMap?.domain
+                                            || businessInfo?.domain
+                                            || '';
+                                        return effectiveDomain ? <AuditButton url={`https://${effectiveDomain}/${slug}`} variant="icon" size="sm" /> : null;
+                                    })()}
                                     <BriefHealthIndicator
                                         quality={briefQuality}
                                         hasBrief={hasBrief}
