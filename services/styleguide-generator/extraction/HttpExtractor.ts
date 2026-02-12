@@ -271,6 +271,76 @@ function extractGoogleFontsUrls(html: string): string[] {
 }
 
 // ============================================================================
+// CONTENT CLEANING
+// ============================================================================
+
+/**
+ * Strip non-CSS content from HTML before color/font extraction.
+ * Removes <script>, <svg>, <noscript>, <canvas>, HTML comments,
+ * JSON-LD blocks, and data-* attributes which contain noise hex values
+ * that corrupt brand color detection.
+ *
+ * Keeps: <style> blocks, inline style="" attributes, <link> tags.
+ */
+function stripNonCssContent(html: string): string {
+  return html
+    // Remove script blocks (analytics, tracking, JS — full of hex noise)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    // Remove SVG content (icons, illustrations — full of color codes)
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, '')
+    // Remove noscript blocks
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, '')
+    // Remove HTML comments (build hashes, version strings)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Remove JSON-LD structured data (contains escaped content)
+    .replace(/<script\s+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '')
+    // Remove data-* attributes (often contain encoded colors, IDs)
+    .replace(/\s+data-[\w-]+="[^"]*"/gi, '');
+}
+
+/**
+ * Normalize a font family name from @font-face declarations.
+ * Strips weight/style suffixes and normalizes casing.
+ *
+ * Examples:
+ *   'outfit-bold' → 'Outfit'
+ *   'OpenSans-Regular' → 'Open Sans'
+ *   'Montserrat-SemiBold' → 'Montserrat'
+ *   'roboto_condensed_bold' → 'Roboto Condensed'
+ */
+function normalizeFontFaceName(name: string): string {
+  let cleaned = name.trim().replace(/['"]/g, '');
+
+  // Remove common weight/style suffixes (case-insensitive)
+  cleaned = cleaned
+    .replace(/[-_](Extra)?Bold(Italic)?$/i, '')
+    .replace(/[-_](Semi)?Bold$/i, '')
+    .replace(/[-_](Extra)?Light(Italic)?$/i, '')
+    .replace(/[-_]Regular$/i, '')
+    .replace(/[-_]Medium$/i, '')
+    .replace(/[-_]Italic$/i, '')
+    .replace(/[-_]Thin$/i, '')
+    .replace(/[-_]Black$/i, '')
+    .replace(/[-_](Ultra)?Condensed$/i, '')
+    .replace(/[-_]Expanded$/i, '');
+
+  // Split on camelCase, hyphens, or underscores and rejoin with spaces
+  cleaned = cleaned
+    .replace(/[-_]/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Title-case each word
+  cleaned = cleaned
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+
+  return cleaned;
+}
+
+// ============================================================================
 // HTTP EXTRACTOR
 // ============================================================================
 
@@ -416,15 +486,39 @@ export async function extractViaHttp(
     }
   }
 
-  // Combine HTML + external CSS for comprehensive parsing
-  const combinedContent = html + '\n' + externalCss;
+  // Extract Google Fonts URLs BEFORE stripping (they're in <link> tags)
+  const googleFontsUrls = extractGoogleFontsUrls(html);
+
+  // Strip non-CSS noise (scripts, SVGs, comments, data-attributes)
+  // CRITICAL: without this, hex values from JavaScript, SVG icons, analytics
+  // scripts, etc. corrupt the brand color detection.
+  const cleanedHtml = stripNonCssContent(html);
+
+  // Combine cleaned HTML + external CSS for comprehensive parsing
+  const combinedContent = cleanedHtml + '\n' + externalCss;
   const colors = extractColors(combinedContent);
-  const fonts = extractFonts(combinedContent);
+  let fonts = extractFonts(combinedContent);
   const sizes = extractSizes(combinedContent);
   const spacings = extractSpacings(combinedContent);
   const radii = extractRadii(combinedContent);
   const shadows = extractShadows(combinedContent);
-  const googleFontsUrls = extractGoogleFontsUrls(html);
+
+  // Normalize @font-face family names (strip weight suffixes: 'outfit-bold' → 'Outfit')
+  // and deduplicate variants of the same font family
+  const normalizedFontMap = new Map<string, Set<number>>();
+  for (const font of fonts) {
+    const normalName = normalizeFontFaceName(font.family);
+    if (!normalizedFontMap.has(normalName)) {
+      normalizedFontMap.set(normalName, new Set(font.weights));
+    } else {
+      for (const w of font.weights) normalizedFontMap.get(normalName)!.add(w);
+    }
+  }
+  fonts = Array.from(normalizedFontMap.entries()).map(([family, weights]) => ({
+    family,
+    weights: Array.from(weights).sort((a, b) => a - b),
+    source: 'css',
+  }));
 
   // Extract CSS variable colors (intentional brand choices, weighted higher)
   const cssVarColors = extractCssVariableColors(combinedContent);
@@ -466,4 +560,6 @@ export const _testUtils = {
   extractCssVariableColors,
   normalizeHex,
   isBlackWhiteGray,
+  stripNonCssContent,
+  normalizeFontFaceName,
 };

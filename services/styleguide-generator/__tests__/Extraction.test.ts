@@ -278,6 +278,109 @@ describe('extractCssVariableColors — brand CSS variables', () => {
 });
 
 // ============================================================================
+// Content Cleaning — strip non-CSS noise
+// ============================================================================
+
+describe('stripNonCssContent', () => {
+  it('removes script blocks (analytics, JS containing hex noise)', () => {
+    const html = `
+      <style>.btn { background: #52ae32; }</style>
+      <script>var config = { color: "#3858e9", theme: "blue" };</script>
+      <div style="color: #009fe3">Hello</div>
+    `;
+    const cleaned = _testUtils.stripNonCssContent(html);
+    expect(cleaned).not.toContain('#3858e9');
+    expect(cleaned).toContain('#52ae32');
+    expect(cleaned).toContain('#009fe3');
+  });
+
+  it('removes SVG content (icon hex values)', () => {
+    const html = `
+      <style>h1 { color: #52ae32; }</style>
+      <svg viewBox="0 0 24 24"><path fill="#aabbcc" d="M10 10"/><circle fill="#ddeeff"/></svg>
+    `;
+    const cleaned = _testUtils.stripNonCssContent(html);
+    expect(cleaned).not.toContain('#aabbcc');
+    expect(cleaned).not.toContain('#ddeeff');
+    expect(cleaned).toContain('#52ae32');
+  });
+
+  it('removes HTML comments (build hashes, version strings)', () => {
+    const html = `
+      <style>.x { color: #52ae32; }</style>
+      <!-- Build hash: #abc123 version #def456 -->
+    `;
+    const cleaned = _testUtils.stripNonCssContent(html);
+    expect(cleaned).not.toContain('#abc123');
+    expect(cleaned).toContain('#52ae32');
+  });
+
+  it('removes data attributes', () => {
+    const html = `
+      <style>.y { color: #52ae32; }</style>
+      <div data-color="#ff0099" data-hash="#abcdef">Test</div>
+    `;
+    const cleaned = _testUtils.stripNonCssContent(html);
+    expect(cleaned).not.toContain('#ff0099');
+    expect(cleaned).toContain('#52ae32');
+  });
+
+  it('end-to-end: realistic HTML with noise produces correct primary color', () => {
+    // Simulates real benmdaktotaal.nl: script noise hex values outnumber CSS colors
+    const html = `
+      <style>
+        h1, h2 { color: #009fe3; }
+        a { color: #009fe3; }
+        .button-offerte { background-color: #52ae32; color: #fff; }
+        input[type=submit] { background-color: #52ae32; }
+      </style>
+      <script>
+        var gtag_config = "#3858e9";
+        var theme_color = "#3858e9";
+        var widget = { bg: "#3858e9", fg: "#3858e9", hover: "#3858e9" };
+        var analytics = { id: "#3858e9" };
+      </script>
+      <svg viewBox="0 0 100 100"><rect fill="#aaa111"/><rect fill="#aaa111"/><rect fill="#aaa111"/></svg>
+    `;
+    // Without stripping, #3858e9 would dominate (6 occurrences in script)
+    // With stripping, only CSS colors remain
+    const cleaned = _testUtils.stripNonCssContent(html);
+    const colors = _testUtils.extractColors(cleaned);
+    // #52ae32 should be primary (button bg boost) not #3858e9 (stripped)
+    expect(colors[0].hex).toBe('#52ae32');
+    expect(colors.some(c => c.hex === '#3858e9')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Font Name Normalization
+// ============================================================================
+
+describe('normalizeFontFaceName', () => {
+  it('strips weight suffix: outfit-bold → Outfit', () => {
+    expect(_testUtils.normalizeFontFaceName('outfit-bold')).toBe('Outfit');
+  });
+
+  it('strips weight suffix: OpenSans-Regular → Open Sans', () => {
+    expect(_testUtils.normalizeFontFaceName('OpenSans-Regular')).toBe('Open Sans');
+  });
+
+  it('strips weight suffix: Montserrat-SemiBold → Montserrat', () => {
+    expect(_testUtils.normalizeFontFaceName('Montserrat-SemiBold')).toBe('Montserrat');
+  });
+
+  it('handles already-clean names', () => {
+    expect(_testUtils.normalizeFontFaceName('Outfit')).toBe('Outfit');
+    expect(_testUtils.normalizeFontFaceName('Open Sans')).toBe('Open Sans');
+  });
+
+  it('strips quotes', () => {
+    expect(_testUtils.normalizeFontFaceName("'outfit-bold'")).toBe('Outfit');
+    expect(_testUtils.normalizeFontFaceName('"Roboto-Light"')).toBe('Roboto');
+  });
+});
+
+// ============================================================================
 // SiteExtractor facade tests (structure only — no network calls)
 // ============================================================================
 
