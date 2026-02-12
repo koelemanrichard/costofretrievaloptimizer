@@ -478,14 +478,14 @@ export const BusinessInfoModal: React.FC<BusinessInfoModalProps> = ({
               </p>
 
               {/* Styleguide Integration */}
-              {styleguideData && (
+              {styleguideData ? (
                 <div className="p-3 border border-blue-800/40 rounded-lg bg-blue-900/20">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-medium text-blue-300 flex items-center gap-1.5">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                       </svg>
-                      Styleguide Detected
+                      Styleguide Available
                     </h4>
                     <button
                       type="button"
@@ -518,6 +518,15 @@ export const BusinessInfoModal: React.FC<BusinessInfoModalProps> = ({
                     <span>{styleguideData.designTokens.typography.headingFont.split(',')[0].replace(/['"]/g, '').trim()}</span>
                     <span className="text-gray-600">|</span>
                     <span>v{styleguideData.version}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 border border-gray-700/40 rounded-lg bg-gray-800/30">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    <span>No brand styleguide generated yet. Generate one from the dashboard to auto-populate colors and fonts.</span>
                   </div>
                 </div>
               )}
