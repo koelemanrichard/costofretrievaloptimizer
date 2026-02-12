@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { AuditIssue, ContentBrief, BusinessInfo } from '../../types';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
-import { generateAutoFix, applyAutoFix, AutoFixContext } from '../../services/ai/contentGeneration/passes/auditChecks';
+import { generateAutoFix, applyAutoFix, batchApplyAutoFixes, AutoFixContext } from '../../services/ai/contentGeneration/passes/auditChecks';
 
 interface AuditIssuesPanelProps {
   issues: AuditIssue[];
@@ -180,6 +180,22 @@ export const AuditIssuesPanel: React.FC<AuditIssuesPanelProps> = ({
 }) => {
   const [isApplyingAll, setIsApplyingAll] = useState(false);
 
+  const handleFixAll = useCallback(async () => {
+    const autoFixable = issues.filter(i => i.autoFixable && !i.fixApplied);
+    if (autoFixable.length === 0) return;
+    setIsApplyingAll(true);
+    try {
+      const result = await batchApplyAutoFixes(draft, autoFixable, brief, businessInfo);
+      if (result.appliedFixes.length > 0) {
+        onApplyFix(result.updatedDraft, 'batch');
+      }
+    } catch (error) {
+      console.error('[AuditPanel] Batch fix failed:', error);
+    } finally {
+      setIsApplyingAll(false);
+    }
+  }, [issues, draft, brief, businessInfo, onApplyFix]);
+
   // Group issues by severity
   const criticalIssues = issues.filter(i => i.severity === 'critical' && !i.fixApplied);
   const warnings = issues.filter(i => i.severity === 'warning' && !i.fixApplied);
@@ -225,7 +241,7 @@ export const AuditIssuesPanel: React.FC<AuditIssuesPanelProps> = ({
         </div>
         {pendingCount > 1 && (
           <Button
-            onClick={() => setIsApplyingAll(true)}
+            onClick={handleFixAll}
             disabled={isApplyingAll}
             className="text-xs py-1 px-3 bg-teal-700 hover:bg-teal-600"
             variant="secondary"
