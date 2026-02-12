@@ -53,6 +53,7 @@ const StylePage = lazy(() => import('../pages/topic/StylePage'));
 const AdminPage = lazy(() => import('../pages/AdminPage'));
 const QuotationPage = lazy(() => import('../pages/QuotationPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
+const OAuthCallbackPage = lazy(() => import('../pages/OAuthCallbackPage'));
 
 const PageLoader: React.FC = () => (
     <div className="flex items-center justify-center min-h-[50vh]">
@@ -72,6 +73,7 @@ const AppRouter: React.FC = () => {
                 {/* Public routes */}
                 <Route element={<AppShell />}>
                     <Route path="/login" element={<AuthScreen />} />
+                    <Route path="/settings/oauth/callback" element={<OAuthCallbackPage />} />
 
                     {/* Protected routes */}
                     <Route element={<AuthGuard />}>

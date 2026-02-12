@@ -178,17 +178,17 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
         <div className="pt-4 border-t border-gray-700">
             <SearchConsoleConnection
                 supabaseUrl={settings.supabaseUrl || ''}
+                supabaseAnonKey={settings.supabaseAnonKey || ''}
                 onConnect={() => {
                     const adapter = new GscApiAdapter();
                     const authUrl = adapter.getAuthorizationUrl(
                         'settings',
                         `${window.location.origin}/settings/oauth/callback`
                     );
-                    window.open(authUrl, '_blank', 'width=600,height=700');
+                    window.open(authUrl, 'gsc-oauth', 'width=600,height=700,left=200,top=100');
                 }}
                 onDisconnect={() => {
-                    // TODO: Implement disconnect
-                    console.log('Disconnect GSC');
+                    console.log('[Settings] GSC account disconnected');
                 }}
             />
         </div>
