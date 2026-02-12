@@ -70,10 +70,12 @@ const AppRouter: React.FC = () => {
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>
+                {/* Standalone pages (no AppShell — no sidebar/nav) */}
+                <Route path="/settings/oauth/callback" element={<OAuthCallbackPage />} />
+
                 {/* Public routes */}
                 <Route element={<AppShell />}>
                     <Route path="/login" element={<AuthScreen />} />
-                    <Route path="/settings/oauth/callback" element={<OAuthCallbackPage />} />
 
                     {/* Protected routes */}
                     <Route element={<AuthGuard />}>
