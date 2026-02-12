@@ -74,6 +74,8 @@ import CompactMetricsStrip from './dashboard/CompactMetricsStrip';
 import NextStepsAlert, { PipelineSummary } from './dashboard/NextStepsAlert';
 import CollapsiblePanel from './dashboard/CollapsiblePanel';
 import CannibalizationWarnings from './dashboard/CannibalizationWarnings';
+import { StyleguidePanel } from './styleguide/StyleguidePanel';
+import { useStyleguideGenerator } from '../hooks/useStyleguideGenerator';
 
 interface ProjectDashboardProps {
   projectName: string;
@@ -267,6 +269,23 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const outerTopics = useMemo(() => allTopics.filter(t => t.type === 'outer'), [allTopics]);
     const childTopics = useMemo(() => allTopics.filter(t => t.type === 'child'), [allTopics]);
     const briefs = useMemo(() => topicalMap.briefs || {}, [topicalMap.briefs]);
+
+    // Brand Styleguide Generator
+    const styleguideData = (topicalMap as any).styleguide_data || null;
+    const mapDomain = (topicalMap.business_info as any)?.domain || effectiveBusinessInfo.domain || '';
+    const styleguide = useStyleguideGenerator({
+        projectId: projectId || '',
+        mapId: mapId || topicalMap.id,
+        domain: mapDomain,
+        businessInfo: effectiveBusinessInfo,
+        dispatch: dispatch as React.Dispatch<unknown>,
+        supabaseUrl: effectiveBusinessInfo.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '',
+        supabaseKey: effectiveBusinessInfo.supabaseAnonKey || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+        existingData: styleguideData,
+        onComplete: (data) => {
+            dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: mapId || topicalMap.id, data: { styleguide_data: data } } } as any);
+        },
+    });
 
     const metrics = useMemo(() => calculateDashboardMetrics({
         briefs,
@@ -625,6 +644,20 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     onSaveBrandKit={onSaveBrandKit}
                 />
             </div>
+
+            {/* Brand Styleguide */}
+            {mapDomain && (
+                <StyleguidePanel
+                    domain={mapDomain}
+                    existingData={styleguideData}
+                    onGenerate={styleguide.generate}
+                    onPreview={styleguide.preview}
+                    onDownload={styleguide.download}
+                    isGenerating={styleguide.isGenerating}
+                    progress={styleguide.progress}
+                    error={styleguide.error}
+                />
+            )}
 
             {/* Analysis & Insights Section */}
             <div>
