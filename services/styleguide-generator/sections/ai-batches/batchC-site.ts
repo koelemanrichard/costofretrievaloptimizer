@@ -106,7 +106,7 @@ function buildBatchCPrompt(tokens: DesignTokenSet, analysis: BrandAnalysis): str
   const brandSummary = buildBrandSummary(analysis);
   const p = tokens.prefix;
 
-  return `You are a senior CSS architect creating a brand design system.
+  return `You are a senior CSS architect creating an Elementor CSS Design System & Brand Styleguide.
 
 ${tokenSummary}
 
@@ -117,17 +117,20 @@ Generate CSS and demo HTML for 12 site-wide component sections. ALL class names 
 For each section, output:
 === SECTION {id} ===
 \`\`\`html
-(demo HTML showing the component)
+(demo HTML with INLINE STYLES that visually render each component — users must SEE the styled component, not just code. Use style="" attributes with the exact brand colors, fonts, radii, shadows.)
 \`\`\`
 \`\`\`css
-(complete CSS)
+(complete CSS for all variants with .${p}-* prefix)
 \`\`\`
 
-REQUIREMENTS:
+CRITICAL REQUIREMENTS:
+- Demo HTML MUST use INLINE STYLES (style="...") so components render visually in the browser
+- Each demo should look like a finished component, not a code skeleton
 - Use the exact brand colors, radii, shadows, and fonts from the token summary
 - CSS must be self-contained (no @import, no external dependencies)
 - Responsive breakpoints at 640px, 768px, 1024px
 - Keep each section's CSS focused and modular
+- After each demo, add an Elementor tip: which widget to use, which tab (Content/Style/Advanced), and where to paste the CSS class (Advanced → CSS Classes)
 
 === SECTION 26 === (Header & Navigation)
 Classes: .${p}-header, .${p}-header-logo, .${p}-header-nav, .${p}-header-link, .${p}-header-toggle, .${p}-header-sticky

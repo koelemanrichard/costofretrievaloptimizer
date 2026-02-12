@@ -58,7 +58,7 @@ function buildBatchDPrompt(tokens: DesignTokenSet, analysis: BrandAnalysis): str
   const brandSummary = buildBrandSummary(analysis);
   const p = tokens.prefix;
 
-  return `You are a senior CSS architect and brand consultant creating a comprehensive design system.
+  return `You are a senior CSS architect and brand consultant creating an Elementor CSS Design System & Brand Styleguide.
 
 ${tokenSummary}
 
@@ -69,17 +69,19 @@ Generate CSS and demo HTML for 5 guideline/reference sections. Class names that 
 For each section, output:
 === SECTION {id} ===
 \`\`\`html
-(demo HTML or reference content)
+(demo HTML with visual examples using INLINE STYLES where applicable — users must SEE styled examples, not just text.)
 \`\`\`
 \`\`\`css
 (CSS if applicable, or empty if section is content-only)
 \`\`\`
 
-REQUIREMENTS:
+CRITICAL REQUIREMENTS:
+- Demo HTML should use INLINE STYLES for visual examples where applicable
 - Use the exact brand colors, fonts, and personality from the summaries
 - Tailor tone-of-voice and content guidelines to the brand personality (formality, energy, warmth)
 - Schema markup must use the brand name and domain
 - Page compositions should reference the existing .${p}-* class system
+- Include Elementor implementation tips where applicable (which widget, which tab, which setting)
 
 === SECTION 25 === (Page Compositions)
 Show 3 annotated wireframe-style layouts using HTML/CSS:

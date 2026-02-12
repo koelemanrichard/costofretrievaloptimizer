@@ -34,7 +34,7 @@ export function wrapSection(
 
   if (block.tip) {
     parts.push(`  <div class="sg-tip">`);
-    parts.push(`    <strong>Implementation:</strong> ${escapeHtml(block.tip)}`);
+    parts.push(`    <strong>&#128208; Elementor:</strong> ${escapeHtml(block.tip)}`);
     parts.push(`  </div>`);
   }
 

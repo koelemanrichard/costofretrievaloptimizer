@@ -98,38 +98,44 @@ Classes needed:
 - Size modifiers: .${p}-btn-sm, .${p}-btn-lg
 - Icon button: .${p}-btn-icon
 - Button group: .${p}-btn-group
-Demo: Show each variant with hover states visible.
+Demo: Show each variant as INLINE-STYLED buttons using style="background: ${tokens.colors.primary[400]}; color: white; padding: 14px 28px; border: none; border-radius: ${tokens.radius.md}; font-family: ${tokens.typography.headingFont.split(',')[0]}; font-weight: 700; cursor: pointer;". Each button should be visually styled, not just a code reference.
+Elementor: Button widget → Style tab → adjust Background/Text colors. Advanced → CSS Classes → ${p}-btn-primary.
 
 === SECTION 5 === (Cards)
 Classes needed:
 - .${p}-card (base) with variants: -media (image top), -horizontal, -overlay, -minimal
 - .${p}-card-header, .${p}-card-body, .${p}-card-footer, .${p}-card-img
-Demo: Show at least 3 card variants in a grid.
+Demo: Show at least 3 card variants in a grid using inline styles (border-radius, box-shadow, padding, background).
+Elementor: Container widget → Column layout. Advanced → CSS Classes → ${p}-card.
 
 === SECTION 7 === (Lists)
 Classes needed:
 - .${p}-list (base) with variants: -unstyled, -inline, -icon, -check, -numbered
 - .${p}-list-item, .${p}-list-icon
-Demo: Show each list variant.
+Demo: Show each list variant with inline-styled checkmarks/arrows using CSS pseudo-elements or Font Awesome icons.
+Elementor: Icon List widget → Advanced → CSS Classes → ${p}-list-check.
 
 === SECTION 9 === (Icon Boxes)
 Classes needed:
 - .${p}-icon-box (base) with variants: -centered, -horizontal, -bordered, -filled
 - .${p}-icon-box-icon, .${p}-icon-box-title, .${p}-icon-box-text
-Demo: Show 3 icon boxes in a row with Font Awesome placeholder icons (use <i class="fas fa-star">).
+Demo: Show 3 icon boxes in a row with Font Awesome icons (use <i class="fas fa-star">), each with inline styles for background, padding, border-radius.
+Elementor: Icon Box widget → Style tab. Advanced → CSS Classes → ${p}-icon-box-centered.
 
 === SECTION 10 === (Forms)
 Classes needed:
 - .${p}-form-group, .${p}-form-label, .${p}-form-input, .${p}-form-select, .${p}-form-textarea
 - .${p}-form-checkbox, .${p}-form-radio, .${p}-form-hint
-Demo: Show a sample form with text input, select, textarea, checkbox, and radio.
+Demo: Show a sample form with inline-styled inputs (border, border-radius, padding, font-family).
+Elementor: Form widget (Pro) → Style tab → Field Border/Radius. Advanced → CSS Classes → ${p}-form-group.
 
 === SECTION 11 === (Tables)
 Classes needed:
 - .${p}-table (base) with variants: -striped, -hover, -bordered, -compact
 - .${p}-table-responsive (wrapper for horizontal scroll)
 - .${p}-table-header, .${p}-table-cell
-Demo: Show a 4-column, 4-row striped table with hover.`;
+Demo: Show a 4-column, 4-row striped table with inline styles for borders, padding, alternating row colors.
+Elementor: Table of Contents or Text Editor widget → Advanced → CSS Classes → ${p}-table-striped.`;
 }
 
 /**
