@@ -10,6 +10,7 @@ import type {
   UnifiedAuditReport,
   CannibalizationRisk,
   ContentMergeSuggestion,
+  TopicalMapContext,
 } from './types';
 import { DEFAULT_AUDIT_WEIGHTS } from './types';
 import { AuditSnapshotService } from './AuditSnapshotService';
@@ -26,6 +27,8 @@ export interface OrchestratorOptions {
   supabase?: SupabaseClient;
   /** EAVs from the topical map — used for knowledge graph gap detection */
   mapEavs?: Array<{ entity: string; attribute: string; value: string; category?: string }>;
+  /** Topical map context injected into all phases for content-aware auditing */
+  topicalMapContext?: TopicalMapContext;
 }
 
 export class UnifiedAuditOrchestrator {
@@ -44,6 +47,23 @@ export class UnifiedAuditOrchestrator {
     this.contentFetcher = contentFetcher;
     this.urlDiscoverer = urlDiscoverer;
     this.options = options;
+  }
+
+  /**
+   * Enrich fetched content with field aliases (`html`, `text`) that phases expect,
+   * plus topical map context (centralEntity, eavs, etc.) from orchestrator options.
+   */
+  private enrichContent(fetchedContent?: FetchedContent): Record<string, unknown> | undefined {
+    if (!fetchedContent) {
+      const ctx = this.options.topicalMapContext;
+      return ctx ? { ...ctx } : undefined;
+    }
+    return {
+      ...fetchedContent,
+      html: fetchedContent.rawHtml,
+      text: fetchedContent.semanticText,
+      ...(this.options.topicalMapContext ?? {}),
+    };
   }
 
   async runAudit(
@@ -84,6 +104,8 @@ export class UnifiedAuditOrchestrator {
       }
     }
 
+    const enrichedContent = this.enrichContent(fetchedContent);
+
     const phaseResults: AuditPhaseResult[] = [];
     const totalPhases = this.phases.length;
 
@@ -100,7 +122,7 @@ export class UnifiedAuditOrchestrator {
       let result: AuditPhaseResult;
 
       try {
-        result = await phase.execute(request, fetchedContent);
+        result = await phase.execute(request, enrichedContent);
       } catch {
         // Phase failed: produce a zero-score result with an error finding
         result = {

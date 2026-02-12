@@ -179,3 +179,29 @@ export interface PerformanceCorrelation {
   correlationCoefficient: number;
   insight: string;
 }
+
+export interface TopicalMapContext {
+  centralEntity?: string;
+  sourceContext?: {
+    businessName: string;
+    industry: string;
+    targetAudience: string;
+    coreServices: string[];
+    uniqueSellingPoints: string[];
+  };
+  contentSpec?: {
+    centralEntity: string;
+    targetKeywords: string[];
+    requiredAttributes: string[];
+  };
+  sourceContextAttributes?: string[];
+  csiPredicates?: string[];
+  eavs?: Array<{ entity: string; attribute: string; value: string; category?: string }>;
+  rootAttributes?: string[];
+  pageTopic?: string;
+  otherPages?: Array<{ url: string; topic: string }>;
+  relatedPages?: Array<{ url: string; topic: string; anchorText?: string }>;
+  keyAttributes?: string[];
+  websiteType?: string;
+  eavTriples?: Array<{ entity: string; attribute: string; value: string }>;
+}

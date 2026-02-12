@@ -7,7 +7,8 @@ import { UnifiedAuditDashboard } from '../../audit/UnifiedAuditDashboard';
 import { UnifiedAuditOrchestrator } from '../../../services/audit/UnifiedAuditOrchestrator';
 import type { AuditProgressEvent } from '../../../services/audit/UnifiedAuditOrchestrator';
 import { ContentFetcher } from '../../../services/audit/ContentFetcher';
-import type { AuditRequest, AuditPhaseName, UnifiedAuditReport } from '../../../services/audit/types';
+import type { AuditRequest, AuditPhaseName, UnifiedAuditReport, TopicalMapContext } from '../../../services/audit/types';
+import type { SemanticTriple } from '../../../types';
 
 // Phase imports
 import { StrategicFoundationPhase } from '../../../services/audit/phases/StrategicFoundationPhase';
@@ -93,6 +94,56 @@ const AuditPage: React.FC = () => {
     return getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
   }, [businessInfo.supabaseUrl, businessInfo.supabaseAnonKey]);
 
+  const activeMap = useMemo(() => {
+    return state.topicalMaps.find(m => m.id === mapId) ?? null;
+  }, [mapId, state.topicalMaps]);
+
+  const topicalMapContext = useMemo((): TopicalMapContext | undefined => {
+    if (!activeMap) return undefined;
+
+    const pillars = activeMap.pillars;
+    const eavs = activeMap.eavs;
+    const bi = activeMap.business_info;
+
+    // Convert SemanticTriple[] to flat EAV arrays
+    const flatEavs = eavs?.map((t: SemanticTriple) => ({
+      entity: t.entity ?? t.subject?.label ?? '',
+      attribute: t.attribute ?? t.predicate?.relation ?? '',
+      value: String(t.value ?? t.object?.value ?? ''),
+      category: t.predicate?.category,
+    })) ?? [];
+
+    const rootAttributes = flatEavs
+      .filter(e => e.category === 'ROOT')
+      .map(e => e.attribute);
+
+    // Build topic list from map topics
+    const otherPages = (activeMap.topics ?? [])
+      .filter(t => t.target_url)
+      .map(t => ({ url: t.target_url!, topic: t.title ?? '' }));
+
+    return {
+      centralEntity: pillars?.centralEntity,
+      sourceContext: bi ? {
+        businessName: bi.projectName ?? '',
+        industry: bi.industry ?? '',
+        targetAudience: bi.audience ?? '',
+        coreServices: bi.valueProp ? [bi.valueProp] : [],
+        uniqueSellingPoints: bi.uniqueDataAssets ? [bi.uniqueDataAssets] : [],
+      } : undefined,
+      contentSpec: pillars ? {
+        centralEntity: pillars.centralEntity,
+        targetKeywords: [pillars.centralSearchIntent].filter(Boolean),
+        requiredAttributes: rootAttributes,
+      } : undefined,
+      eavs: flatEavs,
+      rootAttributes,
+      otherPages,
+      websiteType: bi?.websiteType,
+      eavTriples: flatEavs.map(({ entity, attribute, value }) => ({ entity, attribute, value })),
+    };
+  }, [activeMap]);
+
   const runAudit = useCallback(async (config: { url: string; provider: 'jina' | 'firecrawl' | 'apify' | 'direct'; discoverRelated: boolean }) => {
     if (!projectId) return;
 
@@ -110,6 +161,8 @@ const AuditPage: React.FC = () => {
       const phases = createAllPhases();
       const orchestrator = new UnifiedAuditOrchestrator(phases, fetcher, undefined, {
         supabase: supabase ?? undefined,
+        mapEavs: topicalMapContext?.eavs,
+        topicalMapContext,
       });
 
       const request: AuditRequest = {
@@ -140,7 +193,7 @@ const AuditPage: React.FC = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [projectId, mapId, businessInfo.jinaApiKey, businessInfo.firecrawlApiKey, supabase]);
+  }, [projectId, mapId, businessInfo.jinaApiKey, businessInfo.firecrawlApiKey, supabase, topicalMapContext]);
 
   // Auto-trigger audit when ?url= param is present
   useEffect(() => {

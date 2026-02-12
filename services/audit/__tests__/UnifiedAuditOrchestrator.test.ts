@@ -191,7 +191,12 @@ describe('UnifiedAuditOrchestrator', () => {
     }));
     expect(executeSpy).toHaveBeenCalledWith(
       expect.objectContaining({ url: 'https://example.com' }),
-      mockContent,
+      expect.objectContaining({
+        semanticText: 'Test content',
+        rawHtml: '<html><body>Test</body></html>',
+        html: '<html><body>Test</body></html>',
+        text: 'Test content',
+      }),
     );
   });
 
