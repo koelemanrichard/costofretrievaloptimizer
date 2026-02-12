@@ -11,6 +11,7 @@ import {
   WordPressConnection,
   WordPressConnectionStatus
 } from '../../types/wordpress';
+import { AuditButton } from '../audit/AuditButton';
 import {
   getConnectionsForUser,
   addConnection,
@@ -303,6 +304,7 @@ export const WordPressConnectionManager: React.FC<WordPressConnectionManagerProp
                       >
                         {connection.site_url}
                       </a>
+                      <AuditButton url={connection.site_url} variant="icon" size="sm" />
                     </div>
 
                     {connection.plugin_version && (

@@ -8,6 +8,7 @@ import { SiteAnalysisProject, SitePageRecord, AuditTask, AISuggestion } from '..
 import { SEOAuditReportModal } from './report';
 import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { AuditButton } from '../audit/AuditButton';
 
 interface AuditDashboardV2Props {
   project: SiteAnalysisProject;
@@ -468,15 +469,18 @@ export const AuditDashboardV2: React.FC<AuditDashboardV2Props> = ({
                     )}
                   </td>
                   <td className="py-3 px-4">
-                    <div>
-                      <p className="text-white text-sm truncate max-w-md" title={page.url}>
-                        {page.path || page.url}
-                      </p>
-                      {page.title && (
-                        <p className="text-gray-500 text-xs truncate max-w-md" title={page.title}>
-                          {page.title}
+                    <div className="flex items-center gap-1">
+                      <div className="min-w-0">
+                        <p className="text-white text-sm truncate max-w-md" title={page.url}>
+                          {page.path || page.url}
                         </p>
-                      )}
+                        {page.title && (
+                          <p className="text-gray-500 text-xs truncate max-w-md" title={page.title}>
+                            {page.title}
+                          </p>
+                        )}
+                      </div>
+                      <AuditButton url={page.url} variant="icon" size="sm" />
                     </div>
                   </td>
                   <td className="py-3 px-4">

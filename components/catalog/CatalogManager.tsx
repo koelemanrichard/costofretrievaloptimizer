@@ -8,6 +8,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Button } from '../ui/Button';
+import { AuditButton } from '../audit/AuditButton';
 import CategoryTree from './CategoryTree';
 import CategoryEditForm from './CategoryEditForm';
 import ProductTable from './ProductTable';
@@ -251,14 +252,17 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ mapId }) => {
                 <h3 className="text-sm font-medium text-gray-200">{selectedCategory.name}</h3>
                 <div className="flex items-center gap-2 mt-0.5">
                   {selectedCategory.store_url && (
-                    <a
-                      href={selectedCategory.store_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                    >
-                      {selectedCategory.store_url}
-                    </a>
+                    <>
+                      <a
+                        href={selectedCategory.store_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        {selectedCategory.store_url}
+                      </a>
+                      <AuditButton url={selectedCategory.store_url} variant="icon" size="sm" />
+                    </>
                   )}
                   {selectedCategoryLinkedTopic ? (
                     <button

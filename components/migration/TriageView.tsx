@@ -5,6 +5,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 import { useAppState } from '../../state/appState';
+import { AuditButton } from '../audit/AuditButton';
 
 interface TriageViewProps {
     inventory: SiteInventoryItem[];
@@ -119,9 +120,12 @@ export const TriageView: React.FC<TriageViewProps> = ({ inventory, targetTopics,
                                 <h2 className="text-2xl font-bold text-white mb-1 line-clamp-2" title={currentItem.title || 'Untitled'}>
                                     {currentItem.title || 'Untitled Page'}
                                 </h2>
-                                <a href={currentItem.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline text-sm font-mono break-all">
-                                    {currentItem.url}
-                                </a>
+                                <div className="flex items-center gap-2">
+                                    <a href={currentItem.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline text-sm font-mono break-all">
+                                        {currentItem.url}
+                                    </a>
+                                    <AuditButton url={currentItem.url} variant="icon" size="sm" />
+                                </div>
                             </div>
                             <div className="flex flex-col items-end gap-1">
                                 <span className={`text-xs px-2 py-1 rounded font-bold uppercase tracking-wider ${currentItem.cor_score && currentItem.cor_score > 70 ? 'bg-red-900/50 text-red-400' : 'bg-green-900/50 text-green-400'}`}>

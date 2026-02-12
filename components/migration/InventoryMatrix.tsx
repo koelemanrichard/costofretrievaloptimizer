@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { SiteInventoryItem, ActionType } from '../../types';
+import { AuditButton } from '../audit/AuditButton';
 
 interface InventoryMatrixProps {
     inventory: SiteInventoryItem[];
@@ -106,6 +107,7 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
                                     <div className="flex items-center gap-2">
                                         {item.mapped_topic_id && <span title="Mapped">🔗</span>}
                                         <span className="truncate text-gray-300">{item.url.replace(/^https?:\/\/[^/]+/, '')}</span>
+                                        <AuditButton url={item.url} variant="icon" size="sm" />
                                     </div>
                                 </td>
                                 <td className="p-3 text-right text-white font-mono">

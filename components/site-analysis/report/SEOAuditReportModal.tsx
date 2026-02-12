@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Loader } from '../../ui/Loader';
+import { AuditButton } from '../../audit/AuditButton';
 import {
   SEOAuditReport,
   ReportScope,
@@ -429,7 +430,10 @@ const SEOAuditReportModal: React.FC<SEOAuditReportModalProps> = ({
                             <tr key={i} className="border-b border-gray-800">
                               <td className="py-3">
                                 <div className="text-white text-sm truncate max-w-xs">{page.title}</div>
-                                <div className="text-xs text-gray-500 truncate max-w-xs">{page.url}</div>
+                                <div className="flex items-center gap-1">
+                                  <div className="text-xs text-gray-500 truncate max-w-xs">{page.url}</div>
+                                  <AuditButton url={page.url} variant="icon" size="sm" />
+                                </div>
                               </td>
                               <td className="py-3 text-center">
                                 <span className={`font-bold ${getScoreColor(page.overallScore)}`}>

@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { SmartLoader } from '../ui/FunLoaders';
+import { AuditButton } from '../audit/AuditButton';
 
 // =============================================================================
 // Types
@@ -173,9 +174,12 @@ export const CompetitorSelectionPanel: React.FC<CompetitorSelectionPanelProps> =
                     <p className="text-sm text-white mt-0.5 line-clamp-1">
                       {competitor.title}
                     </p>
-                    <p className="text-xs text-green-400 font-mono truncate mt-0.5">
-                      {competitor.url}
-                    </p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-green-400 font-mono truncate">
+                        {competitor.url}
+                      </p>
+                      <AuditButton url={competitor.url} variant="icon" size="sm" />
+                    </div>
                     {competitor.snippet && (
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         {competitor.snippet}

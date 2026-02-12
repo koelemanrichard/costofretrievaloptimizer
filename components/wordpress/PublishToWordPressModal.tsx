@@ -14,6 +14,7 @@ import {
   WordPressPublication
 } from '../../types/wordpress';
 import { EnrichedTopic, ContentBrief } from '../../types';
+import { AuditButton } from '../audit/AuditButton';
 import {
   getConnectionsForUser,
   getPublicationForTopic,
@@ -345,8 +346,8 @@ export const PublishToWordPressModal: React.FC<PublishToWordPressModalProps> = (
                         : 'Already published and up to date'
                       }
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {existingPublication.wp_post_type === 'page' ? 'Page' : 'Post'} at{' '}
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1 flex-wrap">
+                      <span>{existingPublication.wp_post_type === 'page' ? 'Page' : 'Post'} at{' '}</span>
                       <a
                         href={existingPublication.wp_post_url}
                         target="_blank"
@@ -355,6 +356,9 @@ export const PublishToWordPressModal: React.FC<PublishToWordPressModalProps> = (
                       >
                         {existingPublication.wp_post_url}
                       </a>
+                      {existingPublication.wp_post_url && (
+                        <AuditButton url={existingPublication.wp_post_url} variant="icon" size="sm" />
+                      )}
                     </p>
                     {existingPublication.last_pushed_at && (
                       <p className="text-xs text-gray-500 mt-1">

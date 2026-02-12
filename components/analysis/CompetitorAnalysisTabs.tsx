@@ -11,6 +11,7 @@
  */
 
 import React, { useState } from 'react';
+import { AuditButton } from '../audit/AuditButton';
 import {
   CompetitorAnalysis,
   ContentLayerAnalysis,
@@ -97,14 +98,17 @@ const OverviewTab: React.FC<{ competitors: CompetitorAnalysis[] }> = ({ competit
               <span className="text-gray-500 text-sm">#{comp.position}</span>
               <h4 className="font-medium text-gray-200">{comp.domain}</h4>
             </div>
-            <a
-              href={comp.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-blue-400 hover:underline truncate block max-w-md"
-            >
-              {comp.url}
-            </a>
+            <div className="flex items-center gap-1">
+              <a
+                href={comp.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:underline truncate block max-w-md"
+              >
+                {comp.url}
+              </a>
+              <AuditButton url={comp.url} variant="icon" size="sm" />
+            </div>
           </div>
           <ScoreBadge score={comp.overallScore} />
         </div>

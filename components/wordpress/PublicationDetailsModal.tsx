@@ -13,6 +13,7 @@ import {
   PublicationHistoryEntry
 } from '../../types/wordpress';
 import { EnrichedTopic } from '../../types';
+import { AuditButton } from '../audit/AuditButton';
 import {
   getPublicationForTopic,
   getPublicationHistory,
@@ -204,14 +205,17 @@ export const PublicationDetailsModal: React.FC<PublicationDetailsModalProps> = (
               {publication.wp_post_url && (
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">WordPress URL</label>
-                  <a
-                    href={publication.wp_post_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline text-sm break-all"
-                  >
-                    {publication.wp_post_url}
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={publication.wp_post_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline text-sm break-all"
+                    >
+                      {publication.wp_post_url}
+                    </a>
+                    <AuditButton url={publication.wp_post_url} variant="icon" size="sm" />
+                  </div>
                 </div>
               )}
 

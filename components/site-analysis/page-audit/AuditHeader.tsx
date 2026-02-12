@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../../ui/Card';
 import { SitePageRecord, PageAudit } from '../../../types';
+import { AuditButton } from '../../audit/AuditButton';
 
 interface AuditHeaderProps {
     page: SitePageRecord;
@@ -42,14 +43,17 @@ export const AuditHeader: React.FC<AuditHeaderProps> = ({
                         Back to Dashboard
                     </button>
                     <h2 className="text-xl font-bold text-white">{page.title || page.url}</h2>
-                    <a
-                        href={page.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-400 hover:text-purple-300 text-sm"
-                    >
-                        {page.url} ↗
-                    </a>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={page.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-400 hover:text-purple-300 text-sm"
+                        >
+                            {page.url} ↗
+                        </a>
+                        <AuditButton url={page.url} variant="icon-text" size="sm" />
+                    </div>
                 </div>
                 <div className="flex items-start gap-4">
                     {/* Action Buttons */}

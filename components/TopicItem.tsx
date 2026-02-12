@@ -11,6 +11,7 @@ import { calculateBriefQualityScore } from '../utils/briefQualityScore';
 import { PublicationStatus } from '../types/wordpress';
 import { TopicPipelineIndicator } from './ui/TopicPipelineIndicator';
 import { useAppState } from '../state/appState';
+import { AuditButton } from './audit/AuditButton';
 
 interface TopicItemProps {
   topic: EnrichedTopic;
@@ -260,20 +261,25 @@ const TopicItem: React.FC<TopicItemProps> = ({
         const config = statusConfig[publicationStatus] || statusConfig.draft;
 
         return (
-            <a
-                href={wpPostUrl || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => {
-                    e.stopPropagation();
-                    if (!wpPostUrl) e.preventDefault();
-                }}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${config.color} ${wpPostUrl ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
-                title={wpPostUrl ? `View on WordPress: ${wpPostUrl}` : `WordPress: ${config.label}`}
-            >
-                <span>{config.icon}</span>
-                <span className="hidden sm:inline">WP</span>
-            </a>
+            <>
+                <a
+                    href={wpPostUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => {
+                        e.stopPropagation();
+                        if (!wpPostUrl) e.preventDefault();
+                    }}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${config.color} ${wpPostUrl ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
+                    title={wpPostUrl ? `View on WordPress: ${wpPostUrl}` : `WordPress: ${config.label}`}
+                >
+                    <span>{config.icon}</span>
+                    <span className="hidden sm:inline">WP</span>
+                </a>
+                {wpPostUrl && (
+                    <AuditButton url={wpPostUrl} variant="icon" size="sm" />
+                )}
+            </>
         );
     };
 

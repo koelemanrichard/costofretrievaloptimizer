@@ -19,6 +19,7 @@ import { AuditScoreGrid } from './page-audit/AuditScoreGrid';
 import { AuditTaskSummary } from './page-audit/AuditTaskSummary';
 import { AuditTaskList } from './page-audit/AuditTaskList';
 import { AuditCheckItem } from './page-audit/AuditCheckItem';
+import { AuditButton } from '../audit/AuditButton';
 
 interface PageAuditDetailV2Props {
   projectId: string;
@@ -397,6 +398,7 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
                       <a href={link.href} target="_blank" rel="noopener noreferrer" className="text-purple-400 truncate max-w-xs">
                         {link.href}
                       </a>
+                      <AuditButton url={link.href} variant="icon" size="sm" />
                     </div>
                   ))}
                   {page.links.length > 20 && (
@@ -836,7 +838,10 @@ export const PageAuditDetailV2: React.FC<PageAuditDetailV2Props> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-500 uppercase">URL</label>
-                  <p className="text-sm text-white font-mono break-all">{page.url}</p>
+                  <div className="flex items-start gap-2">
+                    <p className="text-sm text-white font-mono break-all">{page.url}</p>
+                    <AuditButton url={page.url} variant="icon" size="sm" className="flex-shrink-0 mt-0.5" />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 uppercase">Path</label>

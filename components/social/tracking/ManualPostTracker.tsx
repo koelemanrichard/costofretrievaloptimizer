@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import type { SocialPost, SocialMediaPlatform } from '../../../types/social';
 import { SOCIAL_PLATFORM_CONFIG } from '../../../types/social';
+import { AuditButton } from '../../audit/AuditButton';
 
 interface ManualPostTrackerProps {
   post: SocialPost;
@@ -79,14 +80,17 @@ export const ManualPostTracker: React.FC<ManualPostTrackerProps> = ({
         {post.platform_post_url && (
           <div className="mt-3 pt-3 border-t border-green-500/20">
             <p className="text-xs text-gray-500 mb-1">Post URL:</p>
-            <a
-              href={post.platform_post_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-400 hover:text-blue-300 break-all"
-            >
-              {post.platform_post_url}
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={post.platform_post_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-400 hover:text-blue-300 break-all"
+              >
+                {post.platform_post_url}
+              </a>
+              <AuditButton url={post.platform_post_url} variant="icon" size="sm" />
+            </div>
           </div>
         )}
 

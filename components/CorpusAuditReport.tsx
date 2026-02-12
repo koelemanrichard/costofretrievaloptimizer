@@ -6,6 +6,7 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Loader } from './ui/Loader';
 import { useAppState } from '../state/appState';
+import { AuditButton } from './audit/AuditButton';
 import {
   runCorpusAudit,
   generateBusinessSummary,
@@ -566,15 +567,18 @@ export const CorpusAuditReport: React.FC<CorpusAuditReportProps> = ({
                   {result.pages.map((page, i) => (
                     <tr key={i} className="border-b border-gray-800">
                       <td className="py-2">
-                        <a
-                          href={page.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:underline truncate block max-w-[300px]"
-                          title={page.url}
-                        >
-                          {new URL(page.url).pathname || '/'}
-                        </a>
+                        <div className="flex items-center gap-1">
+                          <a
+                            href={page.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:underline truncate block max-w-[300px]"
+                            title={page.url}
+                          >
+                            {new URL(page.url).pathname || '/'}
+                          </a>
+                          <AuditButton url={page.url} variant="icon" size="sm" />
+                        </div>
                       </td>
                       <td className={`py-2 ${page.wordCount < 300 ? 'text-red-400' : 'text-gray-400'}`}>
                         {page.wordCount}
