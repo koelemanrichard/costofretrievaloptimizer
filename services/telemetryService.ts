@@ -150,9 +150,11 @@ export async function logAiUsage(
         brief_id: mergedContext.briefId,
         job_id: mergedContext.jobId,
         // Billing attribution fields (immutable snapshot - never changes after logging)
+        // Values must match DB CHECK constraints: key_source IN ('platform','org_byok','project_byok','user_byok','unknown')
+        // billable_to IN ('platform','organization','project','user')
         organization_id: mergedContext.organizationId,
-        key_source: mergedContext.keySource || 'unknown',
-        billable_to: mergedContext.billableTo,
+        key_source: mergedContext.keySource || null,
+        billable_to: mergedContext.billableTo || null,
         billable_id: mergedContext.billableId,
         // Provider and model
         provider,

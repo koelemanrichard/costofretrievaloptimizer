@@ -33,6 +33,7 @@ const AI_TIMEOUT_MS = 120000;
 
 const ALLOWED_ORIGINS = [
   'https://holistic-seo-topical-map-generator.vercel.app',
+  'https://app.cutthecrap.net',
   'https://cost-of-retreival-reducer.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
