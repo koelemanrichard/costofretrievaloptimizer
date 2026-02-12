@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface AuditButtonProps {
   url: string;
@@ -27,6 +28,9 @@ export const AuditButton: React.FC<AuditButtonProps> = ({
   onClick,
   className = '',
 }) => {
+  const navigate = useNavigate();
+  const { projectId, mapId } = useParams();
+
   const sizeClasses = size === 'sm' ? 'text-xs p-1' : 'text-sm p-1.5';
 
   const baseClasses = [
@@ -39,7 +43,11 @@ export const AuditButton: React.FC<AuditButtonProps> = ({
   ].join(' ');
 
   const handleClick = () => {
-    onClick?.(url);
+    if (onClick) {
+      onClick(url);
+    } else if (projectId && mapId) {
+      navigate(`/p/${projectId}/m/${mapId}/audit?url=${encodeURIComponent(url)}`);
+    }
   };
 
   return (

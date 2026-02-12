@@ -323,6 +323,9 @@ const TopicItem: React.FC<TopicItemProps> = ({
                                 <h4 className="font-semibold text-white flex items-center gap-2">
                                     {title}
                                     {renderPublicationBadge()}
+                                    {!wpPostUrl && slug && businessInfo?.domain && (
+                                        <AuditButton url={`https://${businessInfo.domain}/${slug}`} variant="icon" size="sm" />
+                                    )}
                                     <BriefHealthIndicator
                                         quality={briefQuality}
                                         hasBrief={hasBrief}

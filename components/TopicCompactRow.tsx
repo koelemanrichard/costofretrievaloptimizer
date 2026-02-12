@@ -13,6 +13,7 @@ import { safeString } from '../utils/parsers';
 import { calculateBriefQualityScore, BriefQualityResult } from '../utils/briefQualityScore';
 import { TopicPipelineIndicator } from './ui/TopicPipelineIndicator';
 import { useAppState } from '../state/appState';
+import { AuditButton } from './audit/AuditButton';
 
 interface TopicCompactRowProps {
   topic: EnrichedTopic;
@@ -177,6 +178,10 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
 
   // Has draft
   const hasDraft = !!(brief?.articleDraft && brief.articleDraft.length > 100);
+
+  // Audit URL: derive from domain + slug
+  const domain = appState.businessInfo?.domain;
+  const auditUrl = domain && slug ? `https://${domain}/${slug}` : null;
 
   // Indentation based on depth
   const indentPx = depth * 20;
@@ -365,6 +370,13 @@ export const TopicCompactRow: React.FC<TopicCompactRowProps> = ({
             >
               {isExpanding ? <Loader className="w-4 h-4" /> : '➕'}
             </button>
+          )}
+
+          {/* Audit */}
+          {auditUrl && (
+            <span onClick={(e) => e.stopPropagation()}>
+              <AuditButton url={auditUrl} variant="icon" size="sm" />
+            </span>
           )}
 
           {/* Delete */}
