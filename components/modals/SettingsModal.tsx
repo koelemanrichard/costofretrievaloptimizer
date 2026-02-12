@@ -144,7 +144,7 @@ const AIProviderSettings: React.FC<{ settings: Partial<BusinessInfo>, setSetting
     );
 };
 
-const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void, setSettings: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>> }> = ({ settings, handleChange, setSettings }) => (
+const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void, setSettings: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>>, projectId?: string, projectName?: string }> = ({ settings, handleChange, setSettings, projectId, projectName }) => (
     <div className="space-y-6">
         <h3 className="text-lg font-semibold text-cyan-400">Research & Smart Auto-Fill</h3>
         <p className="text-sm text-gray-400 -mt-3">Used by Smart Auto-Fill to research businesses via web search.</p>
@@ -179,6 +179,8 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
             <SearchConsoleConnection
                 supabaseUrl={settings.supabaseUrl || ''}
                 supabaseAnonKey={settings.supabaseAnonKey || ''}
+                projectId={projectId}
+                projectName={projectName}
                 onConnect={() => {
                     const adapter = new GscApiAdapter();
                     const authUrl = adapter.getAuthorizationUrl(
@@ -388,7 +390,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
                     className="w-2/3 md:w-3/4 p-6 overflow-y-auto"
                 >
                      {activeTab === 'ai' && <AIProviderSettings settings={settings} setSettings={setSettings} />}
-                     {activeTab === 'services' && <ServiceSettings settings={settings} handleChange={handleGeneralChange} setSettings={setSettings} />}
+                     {activeTab === 'services' && <ServiceSettings settings={settings} handleChange={handleGeneralChange} setSettings={setSettings} projectId={state.activeProjectId || undefined} projectName={activeProject?.project_name} />}
                      {activeTab === 'wordpress' && (
                        <div className="space-y-4">
                          <h3 className="text-lg font-semibold text-blue-400">WordPress Connections</h3>

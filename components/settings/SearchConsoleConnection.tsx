@@ -14,9 +14,20 @@ interface GscProperty {
   permissionLevel: string;
 }
 
+interface LinkedPropertyRow {
+  id: string;
+  account_id: string;
+  property_id: string;
+  property_name: string | null;
+  service: 'gsc' | 'ga4';
+  is_primary: boolean;
+}
+
 interface SearchConsoleConnectionProps {
   supabaseUrl: string;
   supabaseAnonKey: string;
+  projectId?: string;
+  projectName?: string;
   onConnect: () => void;
   onDisconnect: () => void;
 }
@@ -24,6 +35,8 @@ interface SearchConsoleConnectionProps {
 export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = ({
   supabaseUrl,
   supabaseAnonKey,
+  projectId,
+  projectName,
   onConnect,
   onDisconnect,
 }) => {
@@ -31,11 +44,16 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Properties per account
   const [propertiesMap, setPropertiesMap] = useState<Record<string, GscProperty[]>>({});
   const [loadingProperties, setLoadingProperties] = useState<Record<string, boolean>>({});
   const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
+
+  // Linked properties for the active project
+  const [linkedProperties, setLinkedProperties] = useState<LinkedPropertyRow[]>([]);
+  const [linkingInProgress, setLinkingInProgress] = useState<string | null>(null);
 
   const getClient = useCallback(() => {
     if (!supabaseUrl || !supabaseAnonKey) return null;
@@ -50,7 +68,6 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
       return;
     }
     try {
-      // analytics_accounts is not in generated types yet — use type assertion
       const { data, error: fetchError } = await (supabase as any)
         .from('analytics_accounts')
         .select('id, account_email, scopes, updated_at')
@@ -71,9 +88,31 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
     }
   }, [getClient]);
 
+  // Fetch linked properties for active project
+  const fetchLinkedProperties = useCallback(async () => {
+    if (!projectId) return;
+    const supabase = getClient();
+    if (!supabase) return;
+
+    try {
+      const { data, error: fetchError } = await (supabase as any)
+        .from('analytics_properties')
+        .select('id, account_id, property_id, property_name, service, is_primary')
+        .eq('project_id', projectId)
+        .eq('service', 'gsc');
+
+      if (!fetchError && data) {
+        setLinkedProperties(data as LinkedPropertyRow[]);
+      }
+    } catch (err) {
+      console.warn('[SearchConsoleConnection] Failed to fetch linked properties:', err);
+    }
+  }, [getClient, projectId]);
+
   useEffect(() => {
     fetchAccounts();
-  }, [fetchAccounts]);
+    fetchLinkedProperties();
+  }, [fetchAccounts, fetchLinkedProperties]);
 
   // Listen for OAuth completion from the popup window
   useEffect(() => {
@@ -81,7 +120,7 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'GSC_CONNECTED') {
         setIsConnecting(false);
-        fetchAccounts(); // Refresh the list
+        fetchAccounts();
       }
     };
 
@@ -92,8 +131,8 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
   const handleConnect = useCallback(() => {
     setIsConnecting(true);
     setError(null);
+    setSuccessMsg(null);
     onConnect();
-    // Reset connecting state after timeout (in case popup is blocked)
     setTimeout(() => setIsConnecting(false), 30000);
   }, [onConnect]);
 
@@ -101,6 +140,10 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
     const supabase = getClient();
     if (!supabase) return;
     try {
+      // Also remove linked properties for this account
+      if (projectId) {
+        await (supabase as any).from('analytics_properties').delete().eq('account_id', accountId).eq('project_id', projectId);
+      }
       await (supabase as any).from('analytics_accounts').delete().eq('id', accountId);
       setAccounts(prev => prev.filter(a => a.id !== accountId));
       setPropertiesMap(prev => {
@@ -108,14 +151,14 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
         delete next[accountId];
         return next;
       });
+      setLinkedProperties(prev => prev.filter(lp => lp.account_id !== accountId));
       onDisconnect();
     } catch (err: any) {
       setError(err.message || 'Failed to disconnect');
     }
-  }, [getClient, onDisconnect]);
+  }, [getClient, onDisconnect, projectId]);
 
   const handleLoadProperties = useCallback(async (accountId: string) => {
-    // Toggle expanded state
     if (expandedAccount === accountId) {
       setExpandedAccount(null);
       return;
@@ -123,7 +166,6 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
 
     setExpandedAccount(accountId);
 
-    // If already loaded, don't re-fetch
     if (propertiesMap[accountId]) return;
 
     const supabase = getClient();
@@ -131,6 +173,7 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
 
     setLoadingProperties(prev => ({ ...prev, [accountId]: true }));
     setError(null);
+    setSuccessMsg(null);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('gsc-list-properties', {
@@ -153,6 +196,94 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
       setLoadingProperties(prev => ({ ...prev, [accountId]: false }));
     }
   }, [getClient, expandedAccount, propertiesMap]);
+
+  // Link a GSC property to the active project
+  const handleLinkProperty = useCallback(async (accountId: string, siteUrl: string) => {
+    if (!projectId) return;
+    const supabase = getClient();
+    if (!supabase) return;
+
+    setLinkingInProgress(siteUrl);
+    setError(null);
+    setSuccessMsg(null);
+
+    try {
+      const isFirst = linkedProperties.length === 0;
+      const { error: insertError } = await (supabase as any)
+        .from('analytics_properties')
+        .upsert({
+          project_id: projectId,
+          account_id: accountId,
+          service: 'gsc',
+          property_id: siteUrl,
+          property_name: siteUrl,
+          is_primary: isFirst,
+          sync_enabled: false,
+          sync_frequency: 'daily',
+        }, { onConflict: 'project_id,service,property_id' });
+
+      if (insertError) {
+        setError(`Failed to link property: ${insertError.message}`);
+      } else {
+        setSuccessMsg(`Linked ${siteUrl} to project`);
+        await fetchLinkedProperties();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to link property');
+    } finally {
+      setLinkingInProgress(null);
+    }
+  }, [getClient, projectId, linkedProperties.length, fetchLinkedProperties]);
+
+  // Unlink a property from the project
+  const handleUnlinkProperty = useCallback(async (linkedPropertyId: string) => {
+    const supabase = getClient();
+    if (!supabase) return;
+
+    setError(null);
+    setSuccessMsg(null);
+
+    try {
+      await (supabase as any).from('analytics_properties').delete().eq('id', linkedPropertyId);
+      setLinkedProperties(prev => prev.filter(lp => lp.id !== linkedPropertyId));
+      setSuccessMsg('Property unlinked');
+    } catch (err: any) {
+      setError(err.message || 'Failed to unlink property');
+    }
+  }, [getClient]);
+
+  // Set a linked property as primary
+  const handleSetPrimary = useCallback(async (linkedPropertyId: string) => {
+    if (!projectId) return;
+    const supabase = getClient();
+    if (!supabase) return;
+
+    try {
+      // Unset all others first
+      await (supabase as any)
+        .from('analytics_properties')
+        .update({ is_primary: false })
+        .eq('project_id', projectId)
+        .eq('service', 'gsc');
+      // Set the selected one
+      await (supabase as any)
+        .from('analytics_properties')
+        .update({ is_primary: true })
+        .eq('id', linkedPropertyId);
+      await fetchLinkedProperties();
+    } catch (err: any) {
+      setError(err.message || 'Failed to set primary');
+    }
+  }, [getClient, projectId, fetchLinkedProperties]);
+
+  const isPropertyLinked = (siteUrl: string) =>
+    linkedProperties.some(lp => lp.property_id === siteUrl);
+
+  const getLinkedPropertyId = (siteUrl: string) =>
+    linkedProperties.find(lp => lp.property_id === siteUrl)?.id;
+
+  const isPropertyPrimary = (siteUrl: string) =>
+    linkedProperties.find(lp => lp.property_id === siteUrl)?.is_primary ?? false;
 
   const permissionColor = (level: string) => {
     switch (level) {
@@ -178,6 +309,41 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
       <p className="text-sm text-gray-400 -mt-3">
         Connect your Search Console to enable performance tracking and audit correlations.
       </p>
+
+      {/* Show linked properties summary when project is active */}
+      {projectId && linkedProperties.length > 0 && (
+        <div className="p-3 bg-blue-900/20 border border-blue-800 rounded-md space-y-2">
+          <div className="text-xs text-blue-300 font-medium uppercase tracking-wider">
+            Linked to {projectName || 'this project'}
+          </div>
+          {linkedProperties.map(lp => (
+            <div key={lp.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-200 font-mono">{lp.property_id}</span>
+                {lp.is_primary && (
+                  <span className="text-xs bg-blue-800 text-blue-200 px-1.5 py-0.5 rounded">Primary</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!lp.is_primary && (
+                  <button
+                    onClick={() => handleSetPrimary(lp.id)}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Set Primary
+                  </button>
+                )}
+                <button
+                  onClick={() => handleUnlinkProperty(lp.id)}
+                  className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                >
+                  Unlink
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center gap-2 p-3 bg-gray-800 border border-gray-700 rounded-md">
@@ -223,22 +389,62 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
                         <div className="text-xs text-gray-500 mb-2">
                           {properties.length} {properties.length === 1 ? 'property' : 'properties'} available
                         </div>
-                        {properties.map((prop) => (
-                          <div
-                            key={prop.siteUrl}
-                            className="flex items-center justify-between p-2 bg-gray-800/50 border border-gray-700/50 rounded text-sm"
-                          >
-                            <span className="text-gray-200 font-mono text-xs truncate">
-                              {prop.siteUrl}
-                            </span>
-                            <span className={`text-xs ${permissionColor(prop.permissionLevel)}`}>
-                              {permissionLabel(prop.permissionLevel)}
-                            </span>
-                          </div>
-                        ))}
-                        <p className="text-xs text-gray-600 mt-1">
-                          Property linking to projects is available in each map's audit settings.
-                        </p>
+                        {properties.map((prop) => {
+                          const linked = isPropertyLinked(prop.siteUrl);
+                          const linkedId = getLinkedPropertyId(prop.siteUrl);
+                          const isPrimary = isPropertyPrimary(prop.siteUrl);
+                          const isLinking = linkingInProgress === prop.siteUrl;
+
+                          return (
+                            <div
+                              key={prop.siteUrl}
+                              className={`flex items-center justify-between p-2 rounded text-sm ${
+                                linked
+                                  ? 'bg-blue-900/20 border border-blue-700/50'
+                                  : 'bg-gray-800/50 border border-gray-700/50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-gray-200 font-mono text-xs truncate">
+                                  {prop.siteUrl}
+                                </span>
+                                <span className={`text-xs flex-shrink-0 ${permissionColor(prop.permissionLevel)}`}>
+                                  {permissionLabel(prop.permissionLevel)}
+                                </span>
+                                {linked && isPrimary && (
+                                  <span className="text-xs bg-blue-800 text-blue-200 px-1 py-0.5 rounded flex-shrink-0">
+                                    Primary
+                                  </span>
+                                )}
+                              </div>
+                              {projectId && (
+                                <div className="flex-shrink-0 ml-2">
+                                  {linked ? (
+                                    <button
+                                      onClick={() => linkedId && handleUnlinkProperty(linkedId)}
+                                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                                    >
+                                      Unlink
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleLinkProperty(account.id, prop.siteUrl)}
+                                      disabled={isLinking}
+                                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50"
+                                    >
+                                      {isLinking ? 'Linking...' : 'Link to Project'}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {!projectId && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Open a project first to link properties.
+                          </p>
+                        )}
                       </>
                     ) : properties ? (
                       <div className="p-2 text-sm text-gray-500">
@@ -284,6 +490,9 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
 
       {error && (
         <p className="text-red-400 text-sm">{error}</p>
+      )}
+      {successMsg && (
+        <p className="text-green-400 text-sm">{successMsg}</p>
       )}
     </div>
   );
