@@ -65,7 +65,7 @@ function buildBatchAPrompt(tokens: DesignTokenSet, analysis: BrandAnalysis): str
   const brandSummary = buildBrandSummary(analysis);
   const p = tokens.prefix;
 
-  return `You are a senior CSS architect creating a brand design system.
+  return `You are a senior CSS architect creating an Elementor CSS Design System & Brand Styleguide.
 
 ${tokenSummary}
 
@@ -76,19 +76,21 @@ Generate CSS and demo HTML for 6 UI component sections. ALL class names MUST sta
 For each section, output:
 === SECTION {id} ===
 \`\`\`html
-(demo HTML showing all variants)
+(demo HTML with INLINE STYLES that visually render each variant — users must SEE the styled component, not just code. Use style="" attributes with the exact brand colors, fonts, radii, shadows.)
 \`\`\`
 \`\`\`css
-(complete CSS for all variants)
+(complete CSS for all variants with .${p}-* prefix)
 \`\`\`
 
-REQUIREMENTS:
+CRITICAL REQUIREMENTS:
+- Demo HTML MUST use INLINE STYLES (style="...") so components render visually in the browser
+- Each demo should look like a finished component, not a code skeleton
 - Use the exact brand colors, radii, shadows, and fonts from the token summary
 - CSS must be self-contained (no @import, no external dependencies)
-- Demo HTML must be self-contained with inline styles only where class isn't enough
 - Include :hover, :focus-visible, and :disabled states
 - Mobile-first responsive: use min-width breakpoints at 640px, 768px, 1024px
 - Use CSS custom properties where repeated values appear
+- After each demo, add an Elementor tip: which widget to use, which tab (Content/Style/Advanced), and where to paste the CSS class (Advanced → CSS Classes)
 
 === SECTION 4 === (Buttons)
 Classes needed:
