@@ -34,7 +34,7 @@ export class GscApiAdapter {
   private readonly clientId: string;
 
   constructor(clientId?: string) {
-    this.clientId = clientId || '';
+    this.clientId = clientId || (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID : '') || '';
   }
 
   /**
@@ -46,6 +46,9 @@ export class GscApiAdapter {
     redirectUri: string,
     additionalScopes?: string[]
   ): string {
+    if (!this.clientId) {
+      console.error('[GscApiAdapter] Missing VITE_GOOGLE_CLIENT_ID — set it in .env.local to enable Google OAuth');
+    }
     const scopes = [
       'https://www.googleapis.com/auth/webmasters.readonly',
       ...(additionalScopes || []),
