@@ -96,9 +96,9 @@ export const TopicalAuthorityTab: React.FC<TopicalAuthorityTabProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-400">Hub-Spoke Ratio</span>
                 <span className={`font-mono ${
-                  topicalAuthority.mapHealth.hubSpokeRatio >= 7 && topicalAuthority.mapHealth.hubSpokeRatio <= 10
+                  topicalAuthority.mapHealth.hubSpokeRatio >= 3 && topicalAuthority.mapHealth.hubSpokeRatio <= 8
                     ? 'text-green-400'
-                    : topicalAuthority.mapHealth.hubSpokeRatio >= 5
+                    : topicalAuthority.mapHealth.hubSpokeRatio >= 2
                       ? 'text-yellow-400'
                       : 'text-red-400'
                 }`}>
@@ -107,7 +107,7 @@ export const TopicalAuthorityTab: React.FC<TopicalAuthorityTabProps> = ({
               </div>
               <div className="text-xs text-gray-500">
                 Optimal ratio is {topicalAuthority.mapHealth.optimalRatio}.
-                {topicalAuthority.mapHealth.hubSpokeRatio < 7 && ' Consider adding more supporting content.'}
+                {topicalAuthority.mapHealth.hubSpokeRatio < 3 && ' Consider merging under-supported hubs or adding supporting content.'}
               </div>
             </div>
 

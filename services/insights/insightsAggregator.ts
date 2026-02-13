@@ -357,7 +357,7 @@ function buildTopicalAuthority(data: RawInsightsData): TopicalAuthorityData {
   return {
     mapHealth: {
       hubSpokeRatio,
-      optimalRatio: '1:7-10',
+      optimalRatio: '1:3-5',
       pillarCoverage: coreTopics.length,
       orphanTopicCount: orphanTopics.length,
       totalTopics: data.topics.length,

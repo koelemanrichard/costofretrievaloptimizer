@@ -21,32 +21,6 @@ export const VALIDATE_TOPICAL_MAP_PROMPT = (
     const coreTopics = topics.filter(t => t.type === 'core');
     const outerTopics = topics.filter(t => t.type === 'outer');
 
-    // Foundation pages context
-    const foundationContext = foundationPages ? `
-**FOUNDATION PAGES:**
-${JSON.stringify(foundationPages.map(p => ({
-    type: p.page_type,
-    title: p.title,
-    hasMetaDescription: !!p.meta_description,
-    hasH1Template: !!p.h1_template,
-    hasNAPData: !!p.nap_data,
-    sectionsCount: p.sections?.length || 0,
-    schemaType: p.schema_type,
-    isDeleted: !!p.deleted_at
-})), null, 2)}
-` : '';
-
-    // Navigation context
-    const navigationContext = navigation ? `
-**NAVIGATION STRUCTURE:**
-- Header Links: ${navigation.header?.primary_nav?.length || 0} (max: ${navigation.max_header_links || 10})
-- Footer Sections: ${navigation.footer?.sections?.length || 0}
-- Footer Legal Links: ${navigation.footer?.legal_links?.length || 0}
-- Total Footer Links: ${(navigation.footer?.sections?.reduce((acc: number, s: any) => acc + (s.links?.length || 0), 0) || 0) + (navigation.footer?.legal_links?.length || 0)} (max: ${navigation.max_footer_links || 30})
-- NAP Display Enabled: ${navigation.footer?.nap_display ?? true}
-- Dynamic by Section: ${navigation.dynamic_by_section ?? true}
-` : '';
-
     // Calculate hub-spoke distribution
     const hubSpokeAnalysis = coreTopics.map(core => {
         const spokes = outerTopics.filter(o => o.parent_topic_id === core.id);
@@ -79,17 +53,19 @@ ${summarizeTopicsForPrompt(topics, 150)}
 **SEO Pillars:**
 ${JSON.stringify(pillars, null, 2)}
 
-${foundationContext}
-${navigationContext}
-
 ${businessContext(info)}
+
+**GUIDING PRINCIPLE — LEAN COVERAGE:**
+A topical map should cover the maximum semantic ground with the MINIMUM number of topics. Every topic must justify its existence by targeting a distinct search intent. Prefer fewer, richer topics over many thin ones.
+
+**NOTE:** Foundation pages (homepage, about, contact, privacy, terms) and navigation structure are managed separately in this application. Do NOT flag missing foundation pages or navigation issues — they are not part of the topical map.
 
 **VALIDATION RULES (Check ALL):**
 
 1. **Hub-Spoke Ratio (Rule D - CRITICAL):**
-   - Every Core Topic MUST have ~7 spokes (optimal range: 4-15)
-   - Less than 4 spokes = UNDER_SUPPORTED (CRITICAL)
-   - More than 15 spokes = DILUTED (WARNING)
+   - Every Core Topic should have 3-10 spokes (optimal: ~5)
+   - Less than 3 spokes = UNDER_SUPPORTED — consider whether this hub should be **demoted to a spoke** of a related hub, rather than adding new spokes
+   - More than 12 spokes = DILUTED (WARNING) — consider splitting into two hubs or merging overlapping spokes
    - Flag each hub with its actual spoke count
 
 2. **Section Classification (Rule E - CRITICAL):**
@@ -129,22 +105,10 @@ ${businessContext(info)}
    - Author Section clusters must semantically bridge to Core Section
    - Flag orphaned clusters with no monetization connection
 
-8. **Foundation Page Completeness (Rule H - WARNING):**
-   - Check if foundation pages are provided
-   - Required pages: homepage, about, contact, privacy, terms
-   - Each page should have: title, meta_description, h1_template
-   - Homepage and About pages should have NAP data for local SEO
-   - Pages should have appropriate schema_type (Organization, AboutPage, ContactPage, WebPage)
-   - Flag missing pages or incomplete page data
-
-9. **Navigation Structure (Rule I - SUGGESTION):**
-   - Check if navigation structure is provided
-   - Header should have ≤10 primary navigation links
-   - Footer should have ≤30 total links
-   - Homepage must be in header navigation
-   - Legal pages (privacy, terms) should be in footer
-   - NAP display should be enabled for local businesses
-   - Flag if link limits are exceeded or essential links missing
+8. **Redundancy Check (Rule J - WARNING):**
+   - Flag topics that target the same or near-identical search intent (cannibalization risk)
+   - Suggest merging redundant topics into a single comprehensive topic
+   - Flag thin topics that could be absorbed into a related topic's content brief
 
 **Write summary, issue messages, and suggestedAction text in ${getLanguageName(info.language)}.**
 
@@ -153,9 +117,9 @@ ${businessContext(info)}
   "overallScore": 0-100,
   "summary": "Brief assessment of map health",
   "hubSpokeAnalysis": {
-    "underSupported": [{ "hub": "Title", "spokeCount": 2, "spokesNeeded": 5 }],
+    "underSupported": [{ "hub": "Title", "spokeCount": 2, "spokesNeeded": 3, "considerDemotion": true }],
     "diluted": [{ "hub": "Title", "spokeCount": 18 }],
-    "optimal": [{ "hub": "Title", "spokeCount": 7 }]
+    "optimal": [{ "hub": "Title", "spokeCount": 5 }]
   },
   "typeMisclassifications": [
     {
@@ -174,23 +138,7 @@ ${businessContext(info)}
       "offendingTopics": ["Topic 1", "Topic 2"],
       "suggestedAction": "What should be done to fix this"
     }
-  ],
-  "foundationPageIssues": {
-    "missingPages": ["about", "contact"],
-    "incompletePages": [
-      { "pageType": "homepage", "missingFields": ["meta_description", "nap_data"] }
-    ],
-    "suggestions": ["Add NAP data for better local SEO", "Complete meta descriptions"]
-  },
-  "navigationIssues": {
-    "headerLinkCount": 12,
-    "headerLinkLimit": 10,
-    "footerLinkCount": 25,
-    "footerLinkLimit": 30,
-    "missingInHeader": ["homepage"],
-    "missingInFooter": ["privacy", "terms"],
-    "suggestions": ["Reduce header links to 10 or fewer", "Add legal pages to footer"]
-  }
+  ]
 }
 
 ${jsonResponseInstruction}
@@ -210,19 +158,29 @@ export const IMPROVE_TOPICAL_MAP_PROMPT = (topics: EnrichedTopic[], issues: Vali
             title: core.title,
             topic_class: core.topic_class || 'informational',
             spokeCount,
-            needsSpokes: spokeCount < 7,
-            spokesNeeded: Math.max(0, 7 - spokeCount)
+            status: spokeCount < 3 ? 'UNDER_SUPPORTED' : spokeCount > 12 ? 'DILUTED' : 'OPTIMAL',
+            considerDemotion: spokeCount < 3
         };
     });
 
     return `
 You are a Holistic SEO Architect. Generate improvements for the topical map based on validation issues.
 
-**CRITICAL HIERARCHY RULES (MUST FOLLOW):**
-1. **Hub-Spoke Ratio (1:7)**: Every Core Topic (hub) MUST have approximately 7 Outer Topics (spokes).
+**GUIDING PRINCIPLE — LEAN COVERAGE:**
+The map should be as lean as possible while covering maximum semantic ground. Every topic must earn its place.
+Prefer REMOVING, MERGING, or DEMOTING topics over adding new ones. Only add a topic when there is a clear semantic gap that cannot be filled by merging or broadening an existing topic.
+
+**NET-ZERO OR NET-NEGATIVE BUDGET:**
+The total number of topics after your changes should be equal to or FEWER than the current count (${topics.length}).
+If you must add N topics, you must also remove or merge at least N topics. Exceptions only for maps with fewer than 30 topics.
+
+**HIERARCHY RULES:**
+1. **Hub-Spoke Ratio (1:5)**: Every Core Topic (hub) should have approximately 3–5 Outer Topics (spokes). Minimum 3, maximum 12.
 2. **Section Classification**: New topics MUST be assigned to either "monetization" (Core Section) or "informational" (Author Section).
 3. **Parent Assignment**: Every new Outer Topic MUST specify which Core Topic it belongs to.
 4. **Link Flow Direction**: Author Section topics support Core Section topics with PageRank flow.
+
+**NOTE:** Foundation pages (About, Contact, Privacy, etc.) are managed separately. Do NOT suggest adding foundation pages as topics.
 
 **Current Topical Map Structure:**
 CORE TOPICS (Hubs):
@@ -236,23 +194,20 @@ ${JSON.stringify(issues, null, 2)}
 
 ${businessContext(info)}
 
-**Instructions:**
-Generate concrete actions to resolve ALL issues while maintaining proper hierarchy.
+**Instructions (in priority order):**
+Resolve issues using the LEAST ADDITIVE approach possible. Follow this priority order:
 
-1. **For UNDER_SUPPORTED hubs** (spokeCount < 7): Add new outer topics as spokes. Each new spoke MUST specify:
-   - "parentTopicTitle": The exact title of the core topic it belongs to
-   - "topic_class": "monetization" or "informational"
+1. **MERGE redundant/overlapping topics first.** Look for topics with overlapping search intent or high semantic similarity. Merge the weaker into the stronger. This is your primary tool.
 
-2. **For new CORE topics**: They become new hubs and should have at least 3-5 initial spokes suggested.
+2. **DEMOTE or REMOVE under-supported hubs.** If a core topic has fewer than 3 spokes and its semantic territory can be absorbed by a neighboring hub, demote it to an outer topic under that hub — or remove it entirely. Only add spokes to an under-supported hub if it represents a genuinely distinct and important attribute facet.
 
-3. **For topics to DELETE**: Consider if their semantic content should be MERGED into another topic instead of pure deletion.
+3. **RECLASSIFY misplaced topics.** Move location variants, price modifiers, urgency variants from core to outer. Assign them to the appropriate parent.
 
-4. **For MISCLASSIFIED topics** (core topics that should be outer):
-   - Reclassify location variants, price modifiers, urgency variants as OUTER topics
-   - Assign them to the appropriate core topic parent
-   - Keep valid distinct attribute facets as CORE topics
+4. **DELETE low-value topics.** Topics that are too niche, duplicate search intent, or add no semantic breadth should be deleted outright.
 
-5. **All new topic titles and descriptions MUST be in ${getLanguageName(info.language)}**
+5. **ADD new topics only as a last resort.** Only add a topic if there is a clear, verifiable semantic gap that no existing topic covers and that is important for topical authority in this niche. Every addition must be offset by a removal or merge elsewhere.
+
+6. **All new topic titles and descriptions MUST be in ${getLanguageName(info.language)}**
 
 **Output Format:**
 {
@@ -263,7 +218,7 @@ Generate concrete actions to resolve ALL issues while maintaining proper hierarc
       "type": "core" | "outer",
       "topic_class": "monetization" | "informational",
       "parentTopicTitle": "Exact title of parent core topic (REQUIRED if type is 'outer', null if 'core')",
-      "reasoning": "Why this topic is needed and where it fits in the hierarchy"
+      "reasoning": "Why this topic is needed and what semantic gap it fills"
     }
   ],
   "topicTitlesToDelete": ["Topic Title 1"],
@@ -271,7 +226,14 @@ Generate concrete actions to resolve ALL issues while maintaining proper hierarc
     {
       "sourceTitle": "Topic to be merged away",
       "targetTitle": "Topic to merge into",
-      "reasoning": "Why these should be merged"
+      "reasoning": "Why these should be merged (overlapping intent, similar entities)"
+    }
+  ],
+  "hubDemotions": [
+    {
+      "hubTitle": "Under-supported core topic to demote",
+      "newParentTitle": "Core topic it should become a spoke of",
+      "reasoning": "Why this hub's semantic territory is covered by the parent"
     }
   ],
   "hubSpokeGapFills": [

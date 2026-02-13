@@ -1052,7 +1052,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                     const outerTopicsOfCore = topicsByParent.get(core.id) || [];
                     const spokeCount = outerTopicsOfCore.length;
                     const isMonetization = core.topic_class === 'monetization';
-                    const isLowRatio = isMonetization && spokeCount < 7;
+                    const isLowRatio = isMonetization && spokeCount < 3;
 
                     return (
                         <div key={core.id} className={`rounded-lg border-l-4 ${isMonetization ? 'border-yellow-500 bg-yellow-900/5' : 'border-blue-500 bg-blue-900/5'} p-2`}>

@@ -194,8 +194,8 @@ const ValidationResultModal: React.FC<ValidationResultModalProps> = ({
                         {/* Hub-Spoke Metric */}
                         <div>
                             <h3 className="text-lg font-semibold text-white flex items-center">
-                                Hub-Spoke Efficiency (1:7 Rule)
-                                <InfoTooltip text="Holistic SEO recommends ~7 supporting articles for every Core Topic to establish authority without dilution." />
+                                Hub-Spoke Efficiency (1:5 Rule)
+                                <InfoTooltip text="Holistic SEO recommends ~3–5 supporting articles for every Core Topic to establish authority without dilution. Minimum 3, maximum 12." />
                             </h3>
                             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {result.metrics.hubSpoke.map(hub => (
@@ -209,10 +209,10 @@ const ValidationResultModal: React.FC<ValidationResultModalProps> = ({
                                         <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden mt-2">
                                             <div
                                                 className={`h-full ${hub.status === 'OPTIMAL' ? 'bg-green-500' : hub.status === 'DILUTED' ? 'bg-yellow-500' : 'bg-red-500'}`}
-                                                style={{ width: `${Math.min(100, (hub.spokeCount / 7) * 100)}%` }}
+                                                style={{ width: `${Math.min(100, (hub.spokeCount / 5) * 100)}%` }}
                                             ></div>
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-1 text-right">{hub.spokeCount} / 7 Spokes</p>
+                                        <p className="text-xs text-gray-400 mt-1 text-right">{hub.spokeCount} / 5 Spokes</p>
                                     </div>
                                 ))}
                             </div>

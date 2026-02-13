@@ -1167,6 +1167,11 @@ export interface MapImprovementSuggestion {
     targetTitle: string;
     reasoning: string;
   }[];
+  hubDemotions?: {
+    hubTitle: string;
+    newParentTitle: string;
+    reasoning: string;
+  }[];
   hubSpokeGapFills?: {
     hubTitle: string;
     newSpokes: {

@@ -12,7 +12,7 @@ import React from 'react';
 
 /**
  * Calculates the Hub-Spoke ratio for Core Topics.
- * Holistic SEO Rule: 1 Core should have ~7 Spokes.
+ * Holistic SEO Rule: 1 Core should have ~5 Spokes (min 3, max 12).
  */
 const calculateHubSpokeMetrics = (topics: EnrichedTopic[]): HubSpokeMetric[] => {
     const coreTopics = topics.filter(t => t.type === 'core');
@@ -22,9 +22,9 @@ const calculateHubSpokeMetrics = (topics: EnrichedTopic[]): HubSpokeMetric[] => 
         const spokeCount = topics.filter(t => t.parent_topic_id === core.id).length;
         let status: HubSpokeMetric['status'] = 'OPTIMAL';
 
-        if (spokeCount < 4) {
+        if (spokeCount < 3) {
             status = 'UNDER_SUPPORTED';
-        } else if (spokeCount > 15) {
+        } else if (spokeCount > 12) {
             status = 'DILUTED';
         }
 
@@ -385,17 +385,17 @@ export const validateTopicalMap = async (
 
     hubSpoke.filter(m => m.status === 'UNDER_SUPPORTED').forEach(m => {
         algorithmicIssues.push({
-            rule: 'Hub-Spoke Ratio (1:7)',
-            message: `Core Topic "${m.hubTitle}" has only ${m.spokeCount} spokes. Target is 7. You need to expand this cluster.`,
-            severity: 'CRITICAL', // Marked critical to force improvement
+            rule: 'Hub-Spoke Ratio (1:5)',
+            message: `Core Topic "${m.hubTitle}" has only ${m.spokeCount} spoke${m.spokeCount === 1 ? '' : 's'}. Minimum is 3. Consider merging this hub into a related core topic, or add supporting spokes.`,
+            severity: 'WARNING',
             offendingTopics: [m.hubTitle]
         });
     });
 
     hubSpoke.filter(m => m.status === 'DILUTED').forEach(m => {
         algorithmicIssues.push({
-            rule: 'Hub-Spoke Ratio (1:7)',
-            message: `Core Topic "${m.hubTitle}" has ${m.spokeCount} spokes. This may dilute authority or cause cannibalization.`,
+            rule: 'Hub-Spoke Ratio (1:5)',
+            message: `Core Topic "${m.hubTitle}" has ${m.spokeCount} spokes (max 12). This may dilute authority or cause cannibalization. Consider merging some spokes.`,
             severity: 'WARNING',
             offendingTopics: [m.hubTitle]
         });

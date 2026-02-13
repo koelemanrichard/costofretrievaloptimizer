@@ -588,6 +588,81 @@ export function useAnalysisOperations({
                 }
             }
 
+            // Process hub demotions (core -> outer under another hub)
+            if (suggestion.hubDemotions && suggestion.hubDemotions.length > 0) {
+                let demotedCount = 0;
+                for (const demotion of suggestion.hubDemotions) {
+                    const topic = allTopics.find(t => t.title.toLowerCase() === demotion.hubTitle.toLowerCase() && t.type === 'core');
+                    if (!topic) continue;
+
+                    const newParent = allTopics.find(t =>
+                        t.title.toLowerCase() === demotion.newParentTitle.toLowerCase() && t.type === 'core'
+                    );
+                    if (!newParent) continue;
+
+                    const updateData: Record<string, any> = {
+                        type: 'outer',
+                        parent_topic_id: newParent.id
+                    };
+
+                    if (newParent.slug) {
+                        updateData.slug = `${newParent.slug}/${cleanSlug(newParent.slug, topic.title)}`.replace(/^\//, '');
+                    }
+
+                    // Also reassign orphaned spokes of this hub to the new parent
+                    const orphanedSpokes = allTopics.filter(t => t.parent_topic_id === topic.id);
+
+                    const demoteResult = await verifiedUpdate(
+                        supabase,
+                        { table: 'topics', operationDescription: `demote hub "${topic.title}" to outer` },
+                        topic.id,
+                        updateData,
+                        'id, type, parent_topic_id, slug'
+                    );
+
+                    if (demoteResult.success) {
+                        dispatch({ type: 'UPDATE_TOPIC', payload: {
+                            mapId: activeMapId,
+                            topicId: topic.id,
+                            updates: {
+                                type: 'outer',
+                                parent_topic_id: newParent.id,
+                                slug: demoteResult.data?.slug || updateData.slug || topic.slug
+                            }
+                        }});
+
+                        // Reassign orphaned spokes
+                        for (const spoke of orphanedSpokes) {
+                            const spokeResult = await verifiedUpdate(
+                                supabase,
+                                { table: 'topics', operationDescription: `reassign spoke "${spoke.title}" to "${newParent.title}"` },
+                                spoke.id,
+                                { parent_topic_id: newParent.id },
+                                'id, parent_topic_id'
+                            );
+                            if (spokeResult.success) {
+                                dispatch({ type: 'UPDATE_TOPIC', payload: {
+                                    mapId: activeMapId,
+                                    topicId: spoke.id,
+                                    updates: { parent_topic_id: newParent.id }
+                                }});
+                            }
+                        }
+
+                        demotedCount++;
+                    }
+                }
+
+                if (demotedCount > 0) {
+                    dispatch({ type: 'LOG_EVENT', payload: {
+                        service: 'MapImprovement',
+                        message: `✓ Demoted ${demotedCount} under-supported hubs to outer topics`,
+                        status: 'info',
+                        timestamp: Date.now()
+                    }});
+                }
+            }
+
             // Process type reclassifications (core -> outer or vice versa) - only if enabled
             if (includeTypeReclassifications && suggestion.typeReclassifications && suggestion.typeReclassifications.length > 0) {
                 let reclassifiedCount = 0;

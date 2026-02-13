@@ -34,12 +34,15 @@ const ImprovementConfirmationModal: React.FC<ImprovementConfirmationModalProps> 
 
   const hasAdditions = suggestion.newTopics.length > 0;
   const hasDeletions = suggestion.topicTitlesToDelete.length > 0;
+  const hasMerges = suggestion.topicMerges && suggestion.topicMerges.length > 0;
+  const hasHubDemotions = suggestion.hubDemotions && suggestion.hubDemotions.length > 0;
   const hasReclassifications = suggestion.typeReclassifications && suggestion.typeReclassifications.length > 0;
   const hasHubSpokeFills = suggestion.hubSpokeGapFills && suggestion.hubSpokeGapFills.length > 0;
 
   const totalAdditions = suggestion.newTopics.length +
     (suggestion.hubSpokeGapFills?.reduce((sum, h) => sum + h.newSpokes.length, 0) || 0);
   const totalDeletions = suggestion.topicTitlesToDelete.length;
+  const totalConsolidations = (suggestion.topicMerges?.length || 0) + (suggestion.hubDemotions?.length || 0);
 
   const footer = (
     <div className="flex justify-between items-center gap-4 w-full">
@@ -92,20 +95,73 @@ const ImprovementConfirmationModal: React.FC<ImprovementConfirmationModalProps> 
         )}
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-4" role="group" aria-label="Change summary">
-          <div className={`p-4 rounded-lg border ${totalAdditions > 0 ? 'bg-green-900/20 border-green-600' : 'bg-gray-800/50 border-gray-700'}`}>
-            <div className="text-2xl font-bold text-green-400">{totalAdditions}</div>
-            <div className="text-sm text-gray-400">Topics to Add</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" role="group" aria-label="Change summary">
+          <div className={`p-4 rounded-lg border ${totalConsolidations > 0 ? 'bg-purple-900/20 border-purple-600' : 'bg-gray-800/50 border-gray-700'}`}>
+            <div className="text-2xl font-bold text-purple-400">{totalConsolidations}</div>
+            <div className="text-sm text-gray-400">Merges / Demotions</div>
           </div>
           <div className={`p-4 rounded-lg border ${totalDeletions > 0 ? 'bg-red-900/20 border-red-600' : 'bg-gray-800/50 border-gray-700'}`}>
             <div className="text-2xl font-bold text-red-400">{totalDeletions}</div>
             <div className="text-sm text-gray-400">Topics to Remove</div>
+          </div>
+          <div className={`p-4 rounded-lg border ${totalAdditions > 0 ? 'bg-green-900/20 border-green-600' : 'bg-gray-800/50 border-gray-700'}`}>
+            <div className="text-2xl font-bold text-green-400">{totalAdditions}</div>
+            <div className="text-sm text-gray-400">Topics to Add</div>
           </div>
           <div className={`p-4 rounded-lg border ${hasReclassifications ? 'bg-yellow-900/20 border-yellow-600' : 'bg-gray-800/50 border-gray-700'}`}>
             <div className="text-2xl font-bold text-yellow-400">{suggestion.typeReclassifications?.length || 0}</div>
             <div className="text-sm text-gray-400">To Reclassify</div>
           </div>
         </div>
+
+        {/* Topic Merges */}
+        {hasMerges && (
+          <div>
+            <h3 id={`${formId}-merge-heading`} className="text-lg font-semibold text-purple-400 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" />
+              </svg>
+              Topic Merges ({suggestion.topicMerges!.length})
+            </h3>
+            <ul className="space-y-2 max-h-48 overflow-y-auto" role="list" aria-labelledby={`${formId}-merge-heading`}>
+              {suggestion.topicMerges!.map((merge, index) => (
+                <li key={index} className="p-2 bg-purple-900/20 border border-purple-800/50 rounded">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-300">{merge.sourceTitle}</span>
+                    <span className="text-purple-400" aria-hidden="true">→</span>
+                    <span className="text-white font-medium">{merge.targetTitle}</span>
+                  </div>
+                  {merge.reasoning && <p className="text-xs text-gray-500 mt-1">{merge.reasoning}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Hub Demotions */}
+        {hasHubDemotions && (
+          <div>
+            <h3 id={`${formId}-demote-heading`} className="text-lg font-semibold text-orange-400 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fillRule="evenodd" d="M16.707 10.293a1 1 0 010 1.414l-6 6a1 1 0 01-1.414 0l-6-6a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l4.293-4.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              Hub Demotions ({suggestion.hubDemotions!.length})
+            </h3>
+            <ul className="space-y-2 max-h-48 overflow-y-auto" role="list" aria-labelledby={`${formId}-demote-heading`}>
+              {suggestion.hubDemotions!.map((demotion, index) => (
+                <li key={index} className="p-2 bg-orange-900/20 border border-orange-800/50 rounded">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-300">{demotion.hubTitle}</span>
+                    <span className="text-orange-400 text-xs">core → outer</span>
+                    <span className="text-gray-500">under</span>
+                    <span className="text-white font-medium">{demotion.newParentTitle}</span>
+                  </div>
+                  {demotion.reasoning && <p className="text-xs text-gray-500 mt-1">{demotion.reasoning}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Topics to be REMOVED */}
         {hasDeletions && (
