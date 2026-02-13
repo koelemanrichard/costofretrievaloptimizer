@@ -8,6 +8,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
+import { batchedIn } from '../../utils/supabaseBatchQuery';
 import {
   WordPressAnalytics,
   AggregatedAnalytics,
@@ -332,12 +333,10 @@ export async function getProjectAnalyticsSummary(
   const publishedCount = publications.filter(p => p.status === 'published').length;
 
   // Get aggregated analytics
-  const { data: analytics } = await supabase
-    .from('wordpress_analytics')
-    .select('wp_views, gsc_clicks, gsc_position')
-    .in('publication_id', publicationIds)
-    .gte('date', dateRange.start)
-    .lte('date', dateRange.end);
+  const { data: analytics } = await batchedIn(
+    supabase, 'wordpress_analytics', 'wp_views, gsc_clicks, gsc_position', 'publication_id', publicationIds,
+    (q) => q.gte('date', dateRange.start).lte('date', dateRange.end)
+  );
 
   if (!analytics || analytics.length === 0) {
     return {

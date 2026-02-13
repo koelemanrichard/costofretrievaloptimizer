@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useParams, Navigate } from 'react-router-dom';
 import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { batchedIn } from '../../utils/supabaseBatchQuery';
 import { parseTopicalMap } from '../../utils/parsers';
 
 /**
@@ -40,10 +41,9 @@ const ProjectLoader: React.FC = () => {
                 // Fetch topic counts
                 const mapIds = sanitizedMaps.map(m => m.id);
                 if (mapIds.length > 0) {
-                    const { data: topicsData, error: topicsError } = await supabase
-                        .from('topics')
-                        .select('id, map_id, type')
-                        .in('map_id', mapIds);
+                    const { data: topicsData, error: topicsError } = await batchedIn(
+                        supabase, 'topics', 'id, map_id, type', 'map_id', mapIds
+                    );
 
                     if (!topicsError && topicsData) {
                         const countsByMap = topicsData.reduce((acc: any, topic: any) => {

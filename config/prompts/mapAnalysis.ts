@@ -8,6 +8,7 @@ import {
     jsonResponseInstruction,
     getLanguageName,
 } from './_common';
+import { summarizeTopicsForPrompt, samplePairsForPrompt, capTopicsForMerge } from '../../utils/topicSummarizer';
 
 export const VALIDATE_TOPICAL_MAP_PROMPT = (
     topics: EnrichedTopic[],
@@ -73,13 +74,7 @@ Orphaned Topics (No Parent):
 ${JSON.stringify(orphanedTopics.map(t => ({ title: t.title, topic_class: t.topic_class })), null, 2)}
 
 **FULL TOPIC LIST:**
-${JSON.stringify(topics.map(t => ({
-    title: t.title,
-    type: t.type,
-    topic_class: t.topic_class || 'unknown',
-    parent: coreTopics.find(c => c.id === t.parent_topic_id)?.title || null,
-    description: t.description
-})), null, 2)}
+${summarizeTopicsForPrompt(topics, 150)}
 
 **SEO Pillars:**
 ${JSON.stringify(pillars, null, 2)}
@@ -234,11 +229,7 @@ CORE TOPICS (Hubs):
 ${JSON.stringify(hubSpokeInfo, null, 2)}
 
 OUTER TOPICS (Spokes):
-${JSON.stringify(outerTopics.map(t => ({
-    title: t.title,
-    parent: coreTopics.find(c => c.id === t.parent_topic_id)?.title || 'ORPHANED',
-    topic_class: t.topic_class || 'informational'
-})), null, 2)}
+${summarizeTopicsForPrompt(outerTopics)}
 
 **Validation Issues to Resolve:**
 ${JSON.stringify(issues, null, 2)}
@@ -309,11 +300,14 @@ ${jsonResponseInstruction}
 `;
 };
 
-export const FIND_MERGE_OPPORTUNITIES_PROMPT = (topics: EnrichedTopic[], info: BusinessInfo): string => `
+export const FIND_MERGE_OPPORTUNITIES_PROMPT = (topics: EnrichedTopic[], info: BusinessInfo): string => {
+    const { topics: cappedTopics, wasTruncated, totalTopics } = capTopicsForMerge(topics, 300);
+    const truncationNote = wasTruncated ? `\n\nNote: Showing ${cappedTopics.length} of ${totalTopics} topics. Focus merge analysis on these.` : '';
+    return `
 You are an expert SEO strategist. Find semantically redundant topics to merge.
 
 Topics:
-${JSON.stringify(topics.map(t => ({ id: t.id, title: t.title })), null, 2)}
+${JSON.stringify(cappedTopics, null, 2)}${truncationNote}
 
 ${businessContext(info)}
 
@@ -331,6 +325,7 @@ For each opportunity:
 ${jsonResponseInstruction}
 Return a JSON array of merge suggestion objects.
 `;
+};
 
 export const FIND_LINKING_OPPORTUNITIES_PROMPT = (targetTopic: EnrichedTopic, allTopics: EnrichedTopic[], knowledgeGraph: KnowledgeGraph, businessInfo: BusinessInfo): string => `
 You are an expert SEO for internal linking. Find relevant linking opportunities *pointing to* the target topic.
@@ -434,27 +429,27 @@ export const ANALYZE_SEMANTIC_RELATIONSHIPS_PROMPT = (
     topics: EnrichedTopic[],
     businessInfo: BusinessInfo,
     preCalculatedPairs: { topicA: string; topicB: string; similarity: number }[]
-): string => `
+): string => {
+    const { pairs: sampledPairs, wasTruncated, totalPairs } = samplePairsForPrompt(preCalculatedPairs, 200);
+    const pairsTruncationNote = wasTruncated ? `\n\nNote: Showing top ${sampledPairs.length} of ${totalPairs} pairs (highest similarity first).` : '';
+
+    return `
 You are an expert SEO strategist analyzing semantic relationships between topics for internal linking strategy.
 
 ${businessContext(businessInfo)}
 
 TOPIC LIST:
-${JSON.stringify(topics.map(t => ({
-    title: t.title,
-    type: t.type,
-    parentTitle: topics.find(p => p.id === t.parent_topic_id)?.title || null
-})), null, 2)}
+${summarizeTopicsForPrompt(topics)}
 
 PRE-CALCULATED SIMILARITY SCORES (based on Knowledge Graph analysis):
-${JSON.stringify(preCalculatedPairs.map(p => ({
+${JSON.stringify(sampledPairs.map(p => ({
     topicA: p.topicA,
     topicB: p.topicB,
     similarityScore: p.similarity.toFixed(2),
     interpretation: p.similarity >= 0.9 ? 'DIRECTLY_CONNECTED' :
                     p.similarity >= 0.5 ? 'STRONGLY_RELATED' :
                     p.similarity >= 0.3 ? 'MODERATELY_RELATED' : 'WEAKLY_RELATED'
-})), null, 2)}
+})), null, 2)}${pairsTruncationNote}
 
 INSTRUCTIONS:
 Analyze the semantic relationships and provide:
@@ -494,3 +489,4 @@ OUTPUT FORMAT (JSON):
 
 ${jsonResponseInstruction}
 `;
+};

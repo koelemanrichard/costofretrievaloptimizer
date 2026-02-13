@@ -574,22 +574,34 @@ export async function verifiedBulkUpdate<T extends Record<string, unknown>>(
       updated_at: updates.updated_at || new Date().toISOString()
     };
 
-    // Step 1: Perform the bulk update
-    const { data: updatedData, error: updateError } = await supabase
-      .from(table)
-      .update(updatesWithTimestamp)
-      .in('id', ids)
-      .select(selectColumns);
+    // Step 1: Perform the bulk update (batched for large ID sets)
+    const IN_BATCH_SIZE = 200;
+    const allUpdatedData: unknown[] = [];
 
-    if (updateError) {
-      console.error(`[VerifiedDB] BULK UPDATE failed for ${opDesc}:`, updateError);
-      return {
-        success: false,
-        data: null,
-        error: `Failed to ${opDesc}: ${updateError.message}`,
-        verificationPassed: false
-      };
+    for (let i = 0; i < ids.length; i += IN_BATCH_SIZE) {
+      const batch = ids.slice(i, i + IN_BATCH_SIZE);
+      const { data: batchData, error: updateError } = await supabase
+        .from(table)
+        .update(updatesWithTimestamp)
+        .in('id', batch)
+        .select(selectColumns);
+
+      if (updateError) {
+        console.error(`[VerifiedDB] BULK UPDATE failed for ${opDesc} (batch ${Math.floor(i / IN_BATCH_SIZE) + 1}):`, updateError);
+        return {
+          success: false,
+          data: null,
+          error: `Failed to ${opDesc}: ${updateError.message}`,
+          verificationPassed: false
+        };
+      }
+
+      if (batchData) {
+        allUpdatedData.push(...batchData);
+      }
     }
+
+    const updatedData = allUpdatedData;
 
     // Step 2: Verify count matches
     const expectedCount = ids.length;

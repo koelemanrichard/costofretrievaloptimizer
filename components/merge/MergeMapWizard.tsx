@@ -12,6 +12,7 @@ import MergeReviewStep from './MergeReviewStep';
 import * as mapMergeService from '../../services/ai/mapMerge';
 import { executeMerge } from '../../services/mapMergeExecution';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { batchedIn } from '../../utils/supabaseBatchQuery';
 
 interface MergeMapWizardProps {
   isOpen: boolean;
@@ -78,10 +79,9 @@ const MergeMapWizard: React.FC<MergeMapWizardProps> = ({
           appState.businessInfo.supabaseAnonKey
         );
 
-        const { data: topicsData, error } = await supabase
-          .from('topics')
-          .select('*')
-          .in('map_id', mapIds);
+        const { data: topicsData, error } = await batchedIn(
+          supabase, 'topics', '*', 'map_id', mapIds
+        );
 
         if (error) throw error;
 

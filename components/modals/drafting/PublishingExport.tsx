@@ -7,6 +7,7 @@ import { useDraftingContext } from './DraftingContext';
 import { replaceImagePlaceholdersWithUrls } from './ImageManager';
 import { ImagePlaceholder, ContentBrief } from '../../../types';
 import { getSupabaseClient } from '../../../services/supabaseClient';
+import { batchedIn } from '../../../utils/supabaseBatchQuery';
 import { slugify } from '../../../utils/helpers';
 import {
   convertMarkdownToBasicHtml,
@@ -336,10 +337,9 @@ Total Images: ${imagePlaceholders.length}
 
       // Fetch content briefs for these topics
       const topicIds = filteredTopics.map(t => t.id);
-      const { data: topicBriefs } = await supabase
-        .from('content_briefs')
-        .select('topic_id, meta_description, key_takeaways')
-        .in('topic_id', topicIds);
+      const { data: topicBriefs } = await batchedIn(
+        supabase, 'content_briefs', 'topic_id, meta_description, key_takeaways', 'topic_id', topicIds
+      );
 
       const briefsByTopicId = new Map<string, { metaDescription?: string; keyTakeaways?: string[] }>();
       if (topicBriefs) {

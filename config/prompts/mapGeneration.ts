@@ -209,7 +209,7 @@ You are a Holistic SEO Architect. Your task is to generate a massive, high-autho
 ${languageInstruction}
 **IMPORTANT:** All topic titles, descriptions, and canonical queries MUST be in ${getRegionalLanguageVariant(info.language, info.region)}. This is critical for SEO targeting.
 
-**CRITICAL OBJECTIVE:** You must exhaustively explore every facet of the topic. You CANNOT be lazy. You MUST generate depth.
+**CRITICAL OBJECTIVE:** Target 80–150 total topics (8–15 Core Topics × ${hubSpokeRatio} Spokes each). Prioritize quality and semantic distinctness over volume. Cover every meaningful facet without creating redundant or thin topics.
 
 Strategic Inputs:
 - SEO Pillars: ${JSON.stringify(pillars, null, 2)}

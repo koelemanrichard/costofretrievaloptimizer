@@ -20,6 +20,7 @@ import { BriefHealthStatsBar } from './ui/BriefHealthBadge';
 import { calculateBriefHealthStats } from '../utils/briefQualityScore';
 import MapUsageReport from './admin/MapUsageReport';
 import { useTopicPublications } from '../hooks/useTopicPublications';
+import { MapSizeWarning } from './ui/MapSizeWarning';
 // Template panel moved to AddTopicModal
 // import { QueryTemplatePanel } from './templates/QueryTemplatePanel';
 // import { LocationManagerModal } from './templates/LocationManagerModal';
@@ -126,6 +127,7 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
   const [sortOption, setSortOption] = useState<'created_desc' | 'created_asc' | 'title_asc' | 'title_desc' | 'updated_desc' | 'updated_asc'>('created_desc');
   const [showUsageReport, setShowUsageReport] = useState(false);
   const [pipelineFilter, setPipelineFilter] = useState<'all' | 'needs-brief' | 'needs-draft' | 'needs-audit' | 'published'>('all');
+  const [listViewLimit, setListViewLimit] = useState(50);
 
   // Pipeline-filtered topic IDs (used to hide non-matching topics)
   const pipelineFilteredIds = useMemo(() => {
@@ -824,6 +826,8 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
             </div>
         )}
 
+        {activeMapId && <MapSizeWarning topicCount={allTopics.length} mapId={activeMapId} />}
+
         {coreTopics.length === 0 && outerTopics.length === 0 ? (
             <div className="p-12 border-2 border-dashed border-gray-700 rounded-xl bg-gray-800/30 flex flex-col items-center justify-center text-center">
                 <h3 className="text-xl font-semibold text-gray-300 mb-2">Topical Map is Empty</h3>
@@ -1036,7 +1040,14 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 ) : (
                 /* SEO View - Behavioral hierarchy by parent_topic_id (default) */
                 <div className="space-y-6">
-                {sortedCoreTopics.map(core => {
+                {allTopics.length > 100 && viewMode === 'list' && (
+                    <div className="px-3 py-2 bg-gray-800/50 rounded-lg border border-gray-700 flex items-center justify-between">
+                        <span className="text-xs text-gray-400">
+                            Showing {Math.min(listViewLimit, allTopics.length)} of {allTopics.length} topics. Switch to <button onClick={() => setViewMode('table')} className="text-blue-400 underline">Table view</button> for best performance with large maps.
+                        </span>
+                    </div>
+                )}
+                {sortedCoreTopics.slice(0, listViewLimit).map(core => {
                     const isCollapsed = collapsedCoreIds.has(core.id);
                     const outerTopicsOfCore = topicsByParent.get(core.id) || [];
                     const spokeCount = outerTopicsOfCore.length;
@@ -1320,6 +1331,14 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                     </div>
                 )}
             </div>
+            )}
+            {sortedCoreTopics.length > listViewLimit && (
+                <button
+                    onClick={() => setListViewLimit(prev => prev + 50)}
+                    className="w-full py-3 text-sm text-blue-400 hover:text-blue-300 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
+                >
+                    Show {Math.min(50, sortedCoreTopics.length - listViewLimit)} more core topics ({sortedCoreTopics.length - listViewLimit} remaining)
+                </button>
             )}
             </div>
         ) : viewMode === 'table' ? (

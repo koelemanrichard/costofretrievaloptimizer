@@ -2,6 +2,7 @@
 // AI-powered suggestions for audit tasks with human-in-the-loop workflow
 
 import { SupabaseClient } from '@supabase/supabase-js';
+import { batchedIn } from '../utils/supabaseBatchQuery';
 import {
   AuditTask,
   AISuggestion,
@@ -266,11 +267,10 @@ export const getAllSuggestionsForTasks = async (
 ): Promise<Map<string, AISuggestion>> => {
   if (taskIds.length === 0) return new Map();
 
-  const { data, error } = await supabase
-    .from('ai_suggestions')
-    .select('*')
-    .in('task_id', taskIds)
-    .order('created_at', { ascending: false });
+  const { data, error } = await batchedIn(
+    supabase, 'ai_suggestions', '*', 'task_id', taskIds,
+    (q) => q.order('created_at', { ascending: false })
+  );
 
   if (error || !data) {
     return new Map();

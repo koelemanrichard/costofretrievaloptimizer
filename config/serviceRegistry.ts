@@ -60,6 +60,16 @@ export interface ProviderLimits {
     creative: number;
     precise: number;
   };
+  topicMap: {
+    optimalMax: number;
+    warningThreshold: number;
+    performanceRisk: number;
+    splitAdvisory: number;
+    promptFullMax: number;
+    promptPairSampleMax: number;
+    graphViewMax: number;
+    listViewPageSize: number;
+  };
 }
 
 export interface PricingRate {
@@ -349,6 +359,16 @@ const limits: ProviderLimits = {
     designAnalysis: 0.3,
     creative: 0.8,
     precise: 0.1,
+  },
+  topicMap: {
+    optimalMax: 150,           // Ideal maximum for Holistic SEO
+    warningThreshold: 200,     // Soft warning
+    performanceRisk: 350,      // Performance degrades
+    splitAdvisory: 500,        // Strong recommendation to split
+    promptFullMax: 100,        // Full serialization in prompts
+    promptPairSampleMax: 200,  // Max semantic pairs to sample
+    graphViewMax: 200,         // Max topics for graph rendering
+    listViewPageSize: 50,      // Progressive loading chunk
   },
 };
 

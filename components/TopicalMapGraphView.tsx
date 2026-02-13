@@ -6,6 +6,7 @@ import React, { useState, useMemo } from 'react';
 import { EnrichedTopic, ContentBrief, ExpansionMode, BusinessInfo } from '../types';
 import { GraphVisualization, GraphNode, GraphEdge } from './ui/GraphVisualization';
 import TopicDetailPanel from './ui/TopicDetailPanel';
+import { SERVICE_REGISTRY } from '../config/serviceRegistry';
 
 interface TopicalMapGraphViewProps {
   coreTopics: EnrichedTopic[];
@@ -24,6 +25,8 @@ interface TopicalMapGraphViewProps {
   businessInfo?: BusinessInfo;
 }
 
+const GRAPH_VIEW_MAX = SERVICE_REGISTRY.limits.topicMap.graphViewMax;
+
 const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
   coreTopics,
   outerTopics,
@@ -40,12 +43,27 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
   businessInfo
 }) => {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [clusterFilter, setClusterFilter] = useState<string | null>(null);
+
+  const totalTopics = coreTopics.length + outerTopics.length;
+  const exceedsMax = totalTopics > GRAPH_VIEW_MAX;
+
+  // Filter topics by cluster when needed
+  const filteredCoreTopics = useMemo(() => {
+    if (!clusterFilter) return coreTopics;
+    return coreTopics.filter(t => t.id === clusterFilter);
+  }, [coreTopics, clusterFilter]);
+
+  const filteredOuterTopics = useMemo(() => {
+    if (!clusterFilter) return outerTopics;
+    return outerTopics.filter(t => t.parent_topic_id === clusterFilter);
+  }, [outerTopics, clusterFilter]);
 
   const { nodes, edges } = useMemo(() => {
-    const coreTopicMap = new Map(coreTopics.map(t => [t.id, t]));
+    const coreTopicMap = new Map(filteredCoreTopics.map(t => [t.id, t]));
 
     const processedNodes: GraphNode[] = [
-      ...coreTopics.map(topic => ({
+      ...filteredCoreTopics.map(topic => ({
         id: topic.id,
         label: topic.title,
         // FIX: Cast topic.type from string to the required literal type.
@@ -55,7 +73,7 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
         x: Math.random() * 1200,
         y: Math.random() * 800,
       })),
-      ...outerTopics.map(topic => {
+      ...filteredOuterTopics.map(topic => {
         return {
           id: topic.id,
           label: topic.title,
@@ -70,7 +88,7 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
       }),
     ];
 
-    const processedEdges: GraphEdge[] = outerTopics
+    const processedEdges: GraphEdge[] = filteredOuterTopics
       .map(topic => {
         if (!topic.parent_topic_id) return null;
         return {
@@ -83,7 +101,7 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
       .filter((edge): edge is any => edge !== null);
 
     return { nodes: processedNodes, edges: processedEdges };
-  }, [coreTopics, outerTopics, briefs]);
+  }, [filteredCoreTopics, filteredOuterTopics, briefs]);
 
   const selectedTopic = useMemo(() => {
     if (!selectedTopicId) return null;
@@ -94,8 +112,64 @@ const TopicalMapGraphView: React.FC<TopicalMapGraphViewProps> = ({
     setSelectedTopicId(prevId => (prevId === nodeId ? null : nodeId));
   };
 
+  // When exceeding max and no filter selected, show cap message
+  if (exceedsMax && !clusterFilter) {
+    return (
+      <div className="relative w-full h-[75vh] bg-gray-900/50 rounded-lg border border-gray-700 flex flex-col items-center justify-center p-8">
+        <div className="text-center max-w-lg">
+          <p className="text-lg text-gray-300 mb-2">
+            Graph view supports up to {GRAPH_VIEW_MAX} topics
+          </p>
+          <p className="text-sm text-gray-400 mb-6">
+            This map has {totalTopics} topics. Select a Core Topic cluster below to visualize, or switch to Table view.
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {coreTopics.map(core => {
+              const spokeCount = outerTopics.filter(t => t.parent_topic_id === core.id).length;
+              return (
+                <button
+                  key={core.id}
+                  onClick={() => setClusterFilter(core.id)}
+                  className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 transition-colors"
+                >
+                  {core.title} <span className="text-gray-500">({spokeCount + 1})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-[75vh] bg-gray-900/50 rounded-lg border border-gray-700">
+      {/* Cluster filter bar (when filtering) */}
+      {clusterFilter && (
+        <div className="absolute top-2 left-2 z-20 flex items-center gap-2 bg-gray-800/90 rounded-lg px-3 py-1.5 border border-gray-600">
+          <span className="text-xs text-gray-400">Cluster:</span>
+          <span className="text-xs text-white font-medium">
+            {coreTopics.find(c => c.id === clusterFilter)?.title || 'Unknown'}
+          </span>
+          <button
+            onClick={() => setClusterFilter(null)}
+            className="text-gray-400 hover:text-white ml-1 text-sm"
+          >
+            &times;
+          </button>
+          {exceedsMax && (
+            <select
+              value={clusterFilter}
+              onChange={(e) => setClusterFilter(e.target.value)}
+              className="ml-2 text-xs bg-gray-700 text-gray-300 border border-gray-600 rounded px-1 py-0.5"
+            >
+              {coreTopics.map(c => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       <GraphVisualization
         nodes={nodes}
         edges={edges}

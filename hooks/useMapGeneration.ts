@@ -16,6 +16,7 @@ import { buildSerpIntelligenceForMap } from '../config/prompts';
 import type { SerpIntelligenceForMap } from '../config/prompts';
 import { isProviderConfigured } from '../services/ai/providerDispatcher';
 import { handleOperationError } from '../utils/errorHandling';
+import { getMapSizeAdvisory } from '../utils/mapSizeAdvisory';
 
 export const useMapGeneration = (
     state: AppState,
@@ -443,6 +444,18 @@ export const useMapGeneration = (
             // NOTE: We use validTopics (filtered) to ensure state matches what was saved to DB.
             // Using sanitizeTopicFromDb might accidentally strip the 'metadata' properties.
             dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: activeMapId, topics: validTopics } });
+
+            // 5b. Map size advisory notification
+            const advisory = getMapSizeAdvisory(validTopics.length);
+            if (advisory) {
+                dispatch({
+                    type: 'SET_NOTIFICATION',
+                    payload: {
+                        message: `${advisory.message} ${advisory.suggestion}`,
+                        severity: advisory.level === 'critical' ? 'warning' : 'info'
+                    }
+                });
+            }
 
             // 6. Generate Foundation Pages (non-blocking)
             dispatch({ type: 'SET_LOADING', payload: { key: 'map', value: true, context: 'Step 6/6: Generating foundation pages...' } });

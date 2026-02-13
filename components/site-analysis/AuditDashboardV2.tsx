@@ -8,6 +8,7 @@ import { SiteAnalysisProject, SitePageRecord, AuditTask, AISuggestion } from '..
 import { SEOAuditReportModal } from './report';
 import { useAppState } from '../../state/appState';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { batchedIn } from '../../utils/supabaseBatchQuery';
 import { AuditButton } from '../audit/AuditButton';
 
 interface AuditDashboardV2Props {
@@ -86,23 +87,26 @@ export const AuditDashboardV2: React.FC<AuditDashboardV2Props> = ({
       // Load AI suggestions for tasks
       if (loadedTasks.length > 0) {
         const taskIds = loadedTasks.map(t => t.id);
-        const { data: suggestionsData } = await (supabase as any)
-          .from('ai_suggestions')
-          .select('*')
-          .in('task_id', taskIds);
+        const { data: suggestionsData } = await batchedIn(
+          supabase as any, 'ai_suggestions', '*', 'task_id', taskIds
+        );
 
         if (suggestionsData) {
           setSuggestions(suggestionsData.map((s: any) => ({
             id: s.id,
             taskId: s.task_id,
+            projectId: s.project_id,
             suggestionType: s.suggestion_type,
+            originalValue: s.original_value,
             suggestedValue: s.suggested_value,
             reasoning: s.reasoning,
             confidence: s.confidence,
+            modelUsed: s.model_used,
             status: s.status,
             reviewedBy: s.reviewed_by,
             reviewedAt: s.reviewed_at,
             createdAt: s.created_at,
+            updatedAt: s.updated_at,
           })));
         }
       }

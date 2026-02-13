@@ -13,6 +13,7 @@ import {
 } from './wikidataService';
 import { verifiedUpsert } from './verifiedDatabaseService';
 import { getSupabaseClient } from './supabaseClient';
+import { batchedIn } from '../utils/supabaseBatchQuery';
 
 // Cache expiration (30 days)
 const CACHE_EXPIRATION_DAYS = 30;
@@ -132,11 +133,10 @@ export async function getCachedEntities(
   const supabase = getSupabaseClient(supabaseUrl, supabaseKey);
   const result = new Map<string, ResolvedEntity>();
 
-  const { data, error } = await supabase
-    .from('entity_resolution_cache')
-    .select('*')
-    .eq('user_id', userId)
-    .in('entity_name', entityNames);
+  const { data, error } = await batchedIn(
+    supabase, 'entity_resolution_cache', '*', 'entity_name', entityNames,
+    (q) => q.eq('user_id', userId)
+  );
 
   if (error || !data) {
     return result;

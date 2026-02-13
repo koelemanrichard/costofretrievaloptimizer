@@ -3,9 +3,11 @@
  *
  * Table-based view for topics with compact rows and inline detail expansion.
  * Designed for efficient management of large topical maps (50+ topics).
+ * Uses @tanstack/react-virtual for virtualized rendering of 700+ rows.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { EnrichedTopic, ExpansionMode, ContentBrief } from '../types';
 import { TopicCompactRow } from './TopicCompactRow';
 import { TopicInlineDetail } from './TopicInlineDetail';
@@ -79,6 +81,9 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
   // Track which row has inline detail open
   const [openDetailTopicId, setOpenDetailTopicId] = useState<string | null>(null);
 
+  // Ref for the scrollable container
+  const parentRef = useRef<HTMLDivElement>(null);
+
   // Build flattened topic list with hierarchy info
   const flattenedTopics = useMemo(() => {
     const result: FlattenedTopic[] = [];
@@ -130,6 +135,18 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
 
     return result;
   }, [coreTopics, outerTopics, childTopics, collapsedRows]);
+
+  // Virtualizer
+  const rowVirtualizer = useVirtualizer({
+    count: flattenedTopics.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => {
+      const item = flattenedTopics[index];
+      // Detail rows are taller
+      return openDetailTopicId === item?.topic.id ? 280 : 40;
+    },
+    overscan: 5,
+  });
 
   // Toggle row collapse
   const toggleRowCollapse = useCallback((topicId: string) => {
@@ -219,7 +236,7 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
           {/* Warnings */}
           {topicsWithWarnings > 0 && (
             <div className="flex items-center gap-1 text-amber-400" title={`${topicsWithWarnings} topics have issues`}>
-              <span className="text-xs">⚠</span>
+              <span className="text-xs">{'\u26A0'}</span>
               <span className="text-xs">{topicsWithWarnings} with issues</span>
             </div>
           )}
@@ -233,15 +250,15 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">
-            <span className="text-green-400">●</span> Core
-            <span className="text-purple-400 ml-2">○</span> Outer
-            <span className="text-orange-400 ml-2">◐</span> Sub
+            <span className="text-green-400">{'\u25CF'}</span> Core
+            <span className="text-purple-400 ml-2">{'\u25CB'}</span> Outer
+            <span className="text-orange-400 ml-2">{'\u25D0'}</span> Sub
           </span>
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div ref={parentRef} className="overflow-auto" style={{ maxHeight: '70vh' }}>
         <table className="w-full">
           <thead className="bg-gray-800/30 sticky top-0 z-10">
             <tr className="border-b border-gray-700">
@@ -276,7 +293,14 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
             </tr>
           </thead>
           <tbody>
-            {flattenedTopics.map(({ topic, depth, hasChildren }) => {
+            {/* Spacer for virtual scroll offset */}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: rowVirtualizer.getVirtualItems()[0]?.start ?? 0 }}>
+                <td colSpan={11} />
+              </tr>
+            )}
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const { topic, depth, hasChildren } = flattenedTopics[virtualRow.index];
               const hasBrief = briefs.has(topic.id);
               const brief = briefs.get(topic.id);
               const isExpanding = expandingTopicIds.has(topic.id);
@@ -285,7 +309,7 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
               const isRowCollapsed = collapsedRows.has(topic.id);
 
               return (
-                <React.Fragment key={topic.id}>
+                <React.Fragment key={virtualRow.key}>
                   <TopicCompactRow
                     topic={topic}
                     depth={depth}
@@ -332,6 +356,15 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
                 </React.Fragment>
               );
             })}
+            {/* End spacer for virtual scroll */}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{
+                height: rowVirtualizer.getTotalSize() -
+                  (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]?.end ?? 0)
+              }}>
+                <td colSpan={11} />
+              </tr>
+            )}
           </tbody>
         </table>
 

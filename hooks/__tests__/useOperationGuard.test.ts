@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useOperationGuard } from '../useOperationGuard';
 import type { AppAction } from '../../state/appState';
 
 describe('useOperationGuard', () => {
-    let dispatch: ReturnType<typeof vi.fn>;
+    let dispatch: React.Dispatch<AppAction> & Mock;
 
     beforeEach(() => {
-        dispatch = vi.fn();
+        dispatch = vi.fn() as React.Dispatch<AppAction> & Mock;
         vi.spyOn(console, 'error').mockImplementation(() => {});
     });
 
