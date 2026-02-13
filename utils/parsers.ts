@@ -1,6 +1,7 @@
 
 import { TopicalMap, SEOPillars, BusinessInfo, ContentBrief, EnrichedTopic, FreshnessProfile, SemanticTriple, Project, ContextualBridgeLink, ContextualBridgeSection, BriefSection, TopicBlueprint, AttributeCategory, AttributeClass, VisualSemantics, FeaturedSnippetTarget, AuthorProfile, StylometryType, SiteInventoryItem, TransitionStatus, ActionType, SectionType } from '../types';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { batchedIn } from './supabaseBatchQuery';
 
 // Type aliases for improved readability in parsing functions
 // These accept unknown data from external sources (DB, AI, user input)
@@ -496,10 +497,9 @@ export const repairBriefsInMap = async (
     const topicIds = topics.map((t: any) => t.id);
 
     // 2. Get all briefs for these topics
-    const { data: briefs, error: briefError } = await supabase
-        .from('content_briefs')
-        .select('id, topic_id, contextual_vectors')
-        .in('topic_id', topicIds);
+    const { data: briefs, error: briefError } = await batchedIn(
+        supabase, 'content_briefs', 'id, topic_id, contextual_vectors', 'topic_id', topicIds
+    );
 
     if (briefError) {
         results.errors.push(`Failed to load briefs: ${briefError.message}`);

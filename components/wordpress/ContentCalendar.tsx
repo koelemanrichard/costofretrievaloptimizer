@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { batchedIn } from '../../utils/supabaseBatchQuery';
 import { useAppState } from '../../state/appState';
 import { Loader } from '../ui/Loader';
 import {
@@ -68,12 +69,9 @@ export const ContentCalendar: React.FC<ContentCalendarProps> = ({
           return;
         }
 
-        // Note: wordpress_publications table may not be in the generated types yet
-        // Using type assertion since the table exists in the database
-        const { data } = await (supabase as unknown as { from: (table: string) => { select: (cols: string) => { in: (col: string, values: string[]) => Promise<{ data: WordPressPublication[] | null }> } } })
-          .from('wordpress_publications')
-          .select('*')
-          .in('topic_id', topicIds);
+        const { data } = await batchedIn<WordPressPublication>(
+          supabase as any, 'wordpress_publications', '*', 'topic_id', topicIds
+        );
 
         setPublications(data || []);
       } catch (error) {

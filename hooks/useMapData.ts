@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { AppAction } from '../state/appState';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { sanitizeTopicFromDb, sanitizeBriefFromDb } from '../utils/parsers';
+import { batchedIn } from '../utils/supabaseBatchQuery';
 import { BusinessInfo, ContentBrief, TopicalMap } from '../types';
 
 export const useMapData = (
@@ -62,7 +63,9 @@ export const useMapData = (
 
                 const topicIds = topics.map(t => t.id);
                 if (topicIds.length > 0) {
-                    const { data: briefsData, error: briefsError } = await supabase.from('content_briefs').select('*').in('topic_id', topicIds);
+                    const { data: briefsData, error: briefsError } = await batchedIn(
+                        supabase, 'content_briefs', '*', 'topic_id', topicIds
+                    );
                     if (briefsError) throw briefsError;
                     
                     const briefsRecord = (briefsData || []).reduce((acc, dbBrief) => {

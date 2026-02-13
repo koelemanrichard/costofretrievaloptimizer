@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { batchedIn } from '../utils/supabaseBatchQuery';
 import { WordPressPublication, WordPressConnection } from '../types/wordpress';
 
 export interface TopicPublicationInfo {
@@ -66,11 +67,11 @@ export function useTopicPublications(
       }
 
       // Fetch publications for these topics
-      const { data: pubsData, error: pubsError } = await supabase
-        .from('wordpress_publications')
-        .select('*')
-        .in('topic_id', topicIds)
-        .in('connection_id', connectionsData.map(c => c.id));
+      const connectionIds = connectionsData.map(c => c.id);
+      const { data: pubsData, error: pubsError } = await batchedIn(
+        supabase, 'wordpress_publications', '*', 'topic_id', topicIds,
+        (q) => q.in('connection_id', connectionIds)
+      );
 
       if (pubsError) {
         console.error('[useTopicPublications] Failed to fetch publications:', pubsError);
