@@ -10,13 +10,45 @@ import {
 } from '../../../../config/imageTypeRouting';
 import { ImageStyle } from '../../../../types/contextualEditor';
 
-// Imagen models - try newer first, fall back to older
+// Imagen models — Imagen 3 (stable) first, Imagen 4 (experimental) as fallback
 const IMAGEN_MODELS = [
-  'imagen-4.0-generate-001',
   'imagen-3.0-generate-001',
+  'imagen-4.0-generate-001',
 ];
 
 const DEFAULT_TIMEOUT_MS = 60000; // 60 seconds for image generation
+
+// Retry configuration for transient errors
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+// Image types that may include people
+const PERSON_IMAGE_TYPES = new Set(['portrait', 'action', 'team', 'lifestyle']);
+
+/**
+ * Sleep helper for exponential backoff
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if an error is retryable (transient)
+ */
+function isRetryableError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  const errorAny = error as any;
+  const status = errorAny.status || errorAny.httpStatusCode;
+
+  // Retry on: 429 (rate limit), 500 (internal), 503 (unavailable)
+  if (status === 429 || status === 500 || status === 503) return true;
+  if (msg.includes('rate limit') || msg.includes('quota')) return true;
+  if (msg.includes('internal') || msg.includes('unavailable')) return true;
+  if (msg.includes('503') || msg.includes('500') || msg.includes('429')) return true;
+
+  return false;
+}
 
 /**
  * Gemini Imagen Provider
@@ -55,6 +87,10 @@ export const geminiImageProvider: ImageProvider = {
     // Determine aspect ratio from placeholder specs
     const aspectRatio = getAspectRatio(placeholder.specs.width, placeholder.specs.height);
 
+    // Determine person generation setting based on image type
+    const normalizedType = normalizeImageType(placeholder.type as ImageStyle);
+    const allowPeople = PERSON_IMAGE_TYPES.has(normalizedType);
+
     const ai = new GoogleGenAI({ apiKey: businessInfo.geminiApiKey });
 
     // Try models in order until one works
@@ -62,18 +98,20 @@ export const geminiImageProvider: ImageProvider = {
 
     for (const modelId of IMAGEN_MODELS) {
       try {
-        const result = await generateWithModel(
+        const result = await generateWithRetry(
           ai,
           modelId,
           prompt,
           aspectRatio,
-          timeoutMs
+          timeoutMs,
+          allowPeople
         );
 
         if (result.success) {
+          console.log(`[Gemini Imagen] Success with model: ${modelId}`);
           return {
             ...result,
-            provider: this.name,
+            provider: `gemini-imagen/${modelId}`,
             durationMs: Date.now() - startTime,
           };
         }
@@ -85,7 +123,7 @@ export const geminiImageProvider: ImageProvider = {
           continue;
         }
 
-        // For other errors (rate limit, content policy), don't retry with different model
+        // For other errors (content policy), don't retry with different model
         break;
 
       } catch (error) {
@@ -110,6 +148,44 @@ export const geminiImageProvider: ImageProvider = {
 };
 
 /**
+ * Generate image with retry and exponential backoff for transient errors
+ */
+async function generateWithRetry(
+  ai: GoogleGenAI,
+  modelId: string,
+  prompt: string,
+  aspectRatio: string,
+  timeoutMs: number,
+  allowPeople: boolean
+): Promise<{ success: boolean; blob?: Blob; error?: string }> {
+  let lastError: string = '';
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const result = await generateWithModel(ai, modelId, prompt, aspectRatio, timeoutMs, allowPeople);
+
+    if (result.success) {
+      return result;
+    }
+
+    lastError = result.error || 'Unknown error';
+
+    // Check if this error is retryable
+    // We create a synthetic error to check
+    const syntheticError = new Error(lastError);
+    if (!isRetryableError(syntheticError) || attempt === MAX_RETRIES - 1) {
+      return result;
+    }
+
+    // Exponential backoff: 1s → 2s → 4s
+    const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+    console.warn(`[Gemini Imagen] Retryable error on attempt ${attempt + 1}/${MAX_RETRIES}, waiting ${delay}ms: ${lastError}`);
+    await sleep(delay);
+  }
+
+  return { success: false, error: lastError };
+}
+
+/**
  * Generate image with a specific Imagen model
  */
 async function generateWithModel(
@@ -117,7 +193,8 @@ async function generateWithModel(
   modelId: string,
   prompt: string,
   aspectRatio: string,
-  timeoutMs: number
+  timeoutMs: number,
+  allowPeople: boolean
 ): Promise<{ success: boolean; blob?: Blob; error?: string }> {
   // Create AbortController for timeout
   const controller = new AbortController();
@@ -130,8 +207,9 @@ async function generateWithModel(
       config: {
         numberOfImages: 1,
         aspectRatio: aspectRatio as '1:1' | '3:4' | '4:3' | '9:16' | '16:9',
-        // Don't allow person generation by default (can be made configurable)
-        personGeneration: PersonGeneration.DONT_ALLOW,
+        personGeneration: allowPeople
+          ? PersonGeneration.ALLOW_ADULT
+          : PersonGeneration.DONT_ALLOW,
       },
     });
 
@@ -180,11 +258,10 @@ async function generateWithModel(
         };
       }
 
-      // Try to extract more detailed error info
+      // For retryable errors, include status info
       const errorAny = error as any;
       let detailedError = error.message;
 
-      // Google SDK sometimes puts details in nested properties
       if (errorAny.details) {
         detailedError += ` Details: ${JSON.stringify(errorAny.details)}`;
       }
@@ -214,7 +291,6 @@ async function generateWithModel(
 function filterDescriptionForAvoidTerms(description: string, avoidTerms: readonly string[]): string {
   let filtered = description;
   for (const term of avoidTerms) {
-    // Create a regex that matches the term as a whole word (case-insensitive)
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
     filtered = filtered.replace(regex, '').replace(/\s+/g, ' ').trim();
   }
@@ -260,27 +336,22 @@ function buildImagePrompt(
     parts.push(`The image should visually represent: "${options.textOverlay}"`);
   }
 
-  // Add additional prompt if provided
   if (options.additionalPrompt) {
     parts.push(options.additionalPrompt);
   }
 
-  // Add custom instructions from map settings
   if (options.customInstructions) {
     parts.push(options.customInstructions);
   }
 
-  // Add business context for brand consistency
   if (businessInfo.industry) {
     parts.push(`Industry context: ${businessInfo.industry}`);
   }
 
-  // Add brand color hints if available
   if (businessInfo.brandKit?.colors?.primary) {
     parts.push(`Incorporate the brand color ${businessInfo.brandKit.colors.primary} subtly where appropriate.`);
   }
 
-  // Add the critical no-text instruction
   parts.push(buildNoTextInstruction(normalizedType));
 
   return parts.join('. ');
@@ -292,7 +363,6 @@ function buildImagePrompt(
 function getAspectRatio(width: number, height: number): string {
   const ratio = width / height;
 
-  // Map to closest supported aspect ratio
   if (ratio >= 1.7) return '16:9';  // 1.78
   if (ratio >= 1.2) return '4:3';   // 1.33
   if (ratio >= 0.9) return '1:1';   // 1.0

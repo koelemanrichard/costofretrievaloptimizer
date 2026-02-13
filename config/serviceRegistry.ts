@@ -141,6 +141,8 @@ const openai: ProviderConfig = {
       'gpt-4.1',
       'gpt-4.1-mini',
       'gpt-4.1-nano',
+      // Image generation models
+      'gpt-image-1',
       // Reasoning models
       'o3',
       'o4-mini',
@@ -166,6 +168,7 @@ const openai: ProviderConfig = {
     'gpt-4.1':       { in: 0.002,   out: 0.008 },
     'gpt-4.1-mini':  { in: 0.0004,  out: 0.0016 },
     'gpt-4.1-nano':  { in: 0.0001,  out: 0.0004 },
+    'gpt-image-1':   { in: 0.01,    out: 0.04 },  // Per-image pricing (~$0.04/image at medium quality)
     'o3':            { in: 0.01,    out: 0.04 },
     'o4-mini':       { in: 0.001,   out: 0.004 },
     'o4-mini-high':  { in: 0.001,   out: 0.004 },

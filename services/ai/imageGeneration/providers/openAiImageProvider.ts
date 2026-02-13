@@ -1,7 +1,6 @@
 // services/ai/imageGeneration/providers/openAiImageProvider.ts
 import { ImagePlaceholder, BusinessInfo } from '../../../../types';
 import { ImageProvider, ImageGenerationOptions, GenerationResult, ProviderConfig } from './types';
-import { SupabaseClient } from '@supabase/supabase-js';
 import {
   IMAGE_TYPE_PROMPTS,
   buildNoTextInstruction,
@@ -13,24 +12,25 @@ import { ImageStyle } from '../../../../types/contextualEditor';
 
 const DEFAULT_TIMEOUT_MS = 60000; // 60 seconds for image generation
 
-// Supabase client reference - must be set before using the provider
-let supabaseClient: SupabaseClient | null = null;
+// Supabase function URL — set by orchestrator
+let supabaseFunctionsUrl: string | null = null;
 
 /**
- * Set the Supabase client for proxy requests
+ * Set the Supabase functions base URL for proxy requests.
+ * Expected format: "https://<project>.supabase.co/functions/v1"
  */
-export function setSupabaseClientForImageGen(client: SupabaseClient | null) {
-  supabaseClient = client;
+export function setSupabaseFunctionsUrl(url: string | null) {
+  supabaseFunctionsUrl = url;
 }
 
 /**
- * OpenAI DALL-E 3 Provider
+ * OpenAI Image Provider (GPT Image 1 + DALL-E 3 fallback)
  *
- * Uses OpenAI's DALL-E 3 model for high-quality image generation.
- * Routes through Supabase edge function proxy to avoid CORS issues.
+ * Uses OpenAI's image generation API via Supabase edge function proxy.
+ * Passes the API key directly via header — no JWT dependency.
  */
 export const openAiImageProvider: ImageProvider = {
-  name: 'dall-e-3',
+  name: 'openai-images',
 
   isAvailable(businessInfo: BusinessInfo): boolean {
     return !!businessInfo.openAiApiKey;
@@ -57,128 +57,123 @@ export const openAiImageProvider: ImageProvider = {
     // Build the image generation prompt
     const prompt = buildImagePrompt(placeholder, options, businessInfo);
 
-    // Determine size from placeholder specs
-    const size = getSize(placeholder.specs.width, placeholder.specs.height);
+    // Try gpt-image-1 first, fall back to dall-e-3
+    const models = ['gpt-image-1', 'dall-e-3'] as const;
+    let lastError = '';
 
-    try {
-      // Use proxy if Supabase client is available (avoids CORS in browser)
-      if (supabaseClient) {
-        return await generateViaProxy(supabaseClient, prompt, size, timeoutMs, startTime);
-      }
+    for (const model of models) {
+      try {
+        const size = getSize(placeholder.specs.width, placeholder.specs.height, model);
+        const result = await generateViaProxy(
+          businessInfo.openAiApiKey,
+          prompt,
+          model,
+          size,
+          timeoutMs,
+          startTime
+        );
 
-      // Fallback to direct API call (will fail in browser due to CORS)
-      return await generateDirectly(businessInfo.openAiApiKey, prompt, size, timeoutMs, startTime);
-
-    } catch (error) {
-      let errorMessage = 'Unknown DALL-E error';
-
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          errorMessage = `DALL-E request timed out after ${timeoutMs / 1000} seconds.`;
-        } else if (error.message.includes('content_policy')) {
-          errorMessage = 'Image generation blocked by content policy. Try rephrasing the description.';
-        } else if (error.message.includes('rate_limit') || error.message.includes('429')) {
-          errorMessage = 'OpenAI rate limit reached. Please wait a moment and try again.';
-        } else if (error.message.includes('invalid_api_key') || error.message.includes('401')) {
-          errorMessage = 'OpenAI API key is invalid or expired. Check your API key in Settings.';
-        } else if (error.message.includes('billing') || error.message.includes('quota')) {
-          errorMessage = 'OpenAI billing/quota issue. Check your OpenAI account billing status.';
-        } else if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-          errorMessage = 'CORS error: Image generation proxy not available. Please check your configuration.';
-        } else {
-          errorMessage = `DALL-E error: ${error.message}`;
+        if (result.success) {
+          return { ...result, provider: `openai/${model}` };
         }
-      }
 
-      return {
-        success: false,
-        error: errorMessage,
-        provider: 'dall-e-3',
-        durationMs: Date.now() - startTime,
-      };
+        lastError = result.error || 'Unknown error';
+
+        // If model-specific error (not found, not available), try next model
+        if (lastError.includes('not found') || lastError.includes('not available') ||
+            lastError.includes('invalid_model') || lastError.includes('does not exist')) {
+          console.warn(`[OpenAI Image] ${model} not available, trying next model...`);
+          continue;
+        }
+
+        // For other errors (content policy, rate limit, billing), don't retry with different model
+        break;
+
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'Unknown error';
+
+        if (error instanceof Error && error.name === 'AbortError') {
+          lastError = `Request timed out after ${timeoutMs / 1000} seconds.`;
+          break;
+        }
+
+        // Model not found → try next
+        if (lastError.includes('not found') || lastError.includes('404')) {
+          continue;
+        }
+
+        break;
+      }
     }
+
+    return {
+      success: false,
+      error: formatError(lastError),
+      provider: this.name,
+      durationMs: Date.now() - startTime,
+    };
   },
 };
 
 /**
- * Generate image via Supabase proxy to avoid CORS
+ * Generate image via Supabase proxy with API key in header (no JWT dependency)
  */
 async function generateViaProxy(
-  supabase: SupabaseClient,
+  apiKey: string,
   prompt: string,
+  model: 'gpt-image-1' | 'dall-e-3',
   size: string,
   timeoutMs: number,
   startTime: number
 ): Promise<GenerationResult> {
+  if (!supabaseFunctionsUrl) {
+    // Fall back to direct API call
+    return await generateDirectly(apiKey, prompt, model, size, timeoutMs, startTime);
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    // Force session refresh to ensure Authorization header is valid
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        clearTimeout(timeoutId);
-        return {
-          success: false,
-          error: 'Authentication expired. Please refresh the page and try again.',
-          provider: 'dall-e-3',
-          durationMs: Date.now() - startTime,
-        };
-      }
+    const isGptImage = model === 'gpt-image-1';
+    const url = `${supabaseFunctionsUrl}/openai-image-proxy`;
+
+    const body: Record<string, unknown> = {
+      prompt,
+      model,
+      size,
+      n: 1,
+    };
+
+    if (isGptImage) {
+      body.quality = 'medium';
+      // gpt-image-1 has no style parameter
+    } else {
+      body.quality = 'standard';
+      body.style = 'natural';
+      body.response_format = 'b64_json';
     }
 
-    const { data, error } = await supabase.functions.invoke('openai-image-proxy', {
-      body: {
-        prompt,
-        model: 'dall-e-3',
-        size,
-        quality: 'standard',
-        style: 'natural',
-        response_format: 'b64_json',
-        n: 1
-      }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-openai-api-key': apiKey,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
-    if (error) {
-      let errorMessage = 'Image generation proxy failed';
+    const data = await response.json();
 
-      if (data?.error) {
-        errorMessage = data.error;
-        if (data.code) errorMessage += ` (code: ${data.code})`;
-        if (data.type) errorMessage += ` [${data.type}]`;
-      } else if (error.message) {
-        if (error.message.includes('non-2xx')) {
-          const errorContext = (error as any)?.context;
-          // Handle already-parsed object (modern Supabase SDK)
-          if (errorContext && typeof errorContext === 'object' && errorContext.error) {
-            errorMessage = errorContext.error;
-            if (errorContext.code) errorMessage += ` (code: ${errorContext.code})`;
-            if (errorContext.type) errorMessage += ` [${errorContext.type}]`;
-          } else if (errorContext && typeof errorContext === 'string') {
-            try {
-              const parsed = JSON.parse(errorContext);
-              if (parsed.error) errorMessage = parsed.error;
-            } catch {
-              errorMessage = 'OpenAI image proxy returned an error. Check your API key configuration in Settings.';
-            }
-          } else {
-            errorMessage = 'OpenAI image proxy returned an error. Check your API key configuration in Settings.';
-          }
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      console.error('[DALL-E Provider] Proxy error:', { error, data, errorMessage });
-
+    if (!response.ok) {
+      const errorMessage = data?.error || `Proxy returned ${response.status}`;
       return {
         success: false,
         error: errorMessage,
-        provider: 'dall-e-3',
+        provider: `openai/${model}`,
         durationMs: Date.now() - startTime,
       };
     }
@@ -186,8 +181,8 @@ async function generateViaProxy(
     if (!data?.success || !data?.data || data.data.length === 0) {
       return {
         success: false,
-        error: data?.error || 'DALL-E returned no images',
-        provider: 'dall-e-3',
+        error: data?.error || 'OpenAI returned no images',
+        provider: `openai/${model}`,
         durationMs: Date.now() - startTime,
       };
     }
@@ -198,20 +193,20 @@ async function generateViaProxy(
     if (!b64Json) {
       // If we got a URL instead of base64, fetch and convert
       if (imageData.url) {
-        const response = await fetch(imageData.url);
-        const blob = await response.blob();
+        const imgResponse = await fetch(imageData.url);
+        const blob = await imgResponse.blob();
         return {
           success: true,
           blob,
-          provider: 'dall-e-3',
+          provider: `openai/${model}`,
           durationMs: Date.now() - startTime,
         };
       }
 
       return {
         success: false,
-        error: 'DALL-E returned empty image data',
-        provider: 'dall-e-3',
+        error: 'OpenAI returned empty image data',
+        provider: `openai/${model}`,
         durationMs: Date.now() - startTime,
       };
     }
@@ -227,7 +222,7 @@ async function generateViaProxy(
     return {
       success: true,
       blob,
-      provider: 'dall-e-3',
+      provider: `openai/${model}`,
       durationMs: Date.now() - startTime,
     };
 
@@ -238,56 +233,89 @@ async function generateViaProxy(
 }
 
 /**
- * Direct API call (for server-side or testing)
+ * Direct API call (fallback when no proxy URL configured)
  */
 async function generateDirectly(
   apiKey: string,
   prompt: string,
+  model: 'gpt-image-1' | 'dall-e-3',
   size: string,
   timeoutMs: number,
   startTime: number
 ): Promise<GenerationResult> {
-  // Dynamic import to avoid bundling issues
-  const OpenAI = (await import('openai')).default;
-
-  const openai = new OpenAI({
-    apiKey,
-    dangerouslyAllowBrowser: true,
-  });
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
+    const isGptImage = model === 'gpt-image-1';
+
+    const body: Record<string, unknown> = {
+      model,
       prompt,
       n: 1,
-      size: size as '1024x1024' | '1024x1792' | '1792x1024',
-      quality: 'standard',
-      response_format: 'b64_json',
-      style: 'natural',
+      size,
+    };
+
+    if (isGptImage) {
+      body.quality = 'medium';
+      body.output_format = 'png';
+    } else {
+      body.quality = 'standard';
+      body.response_format = 'b64_json';
+      body.style = 'natural';
+    }
+
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
-    if (!response.data || response.data.length === 0) {
+    const data = await response.json();
+
+    if (!response.ok) {
       return {
         success: false,
-        error: 'DALL-E returned no images',
-        provider: 'dall-e-3',
+        error: data?.error?.message || 'Image generation failed',
+        provider: `openai/${model}`,
         durationMs: Date.now() - startTime,
       };
     }
 
-    const imageData = response.data[0];
+    if (!data?.data || data.data.length === 0) {
+      return {
+        success: false,
+        error: 'OpenAI returned no images',
+        provider: `openai/${model}`,
+        durationMs: Date.now() - startTime,
+      };
+    }
+
+    const imageData = data.data[0];
     const b64Json = imageData.b64_json;
 
     if (!b64Json) {
+      if (imageData.url) {
+        const imgResponse = await fetch(imageData.url);
+        const blob = await imgResponse.blob();
+        return {
+          success: true,
+          blob,
+          provider: `openai/${model}`,
+          durationMs: Date.now() - startTime,
+        };
+      }
+
       return {
         success: false,
-        error: 'DALL-E returned empty image data',
-        provider: 'dall-e-3',
+        error: 'OpenAI returned empty image data',
+        provider: `openai/${model}`,
         durationMs: Date.now() - startTime,
       };
     }
@@ -302,7 +330,7 @@ async function generateDirectly(
     return {
       success: true,
       blob,
-      provider: 'dall-e-3',
+      provider: `openai/${model}`,
       durationMs: Date.now() - startTime,
     };
 
@@ -310,6 +338,34 @@ async function generateDirectly(
     clearTimeout(timeoutId);
     throw error;
   }
+}
+
+/**
+ * Format error message with actionable guidance
+ */
+function formatError(error: string): string {
+  const lower = error.toLowerCase();
+
+  if (lower.includes('content_policy') || lower.includes('content policy')) {
+    return 'Image generation blocked by content policy. Try rephrasing the description.';
+  }
+  if (lower.includes('rate_limit') || lower.includes('429')) {
+    return 'OpenAI rate limit reached. Please wait a moment and try again.';
+  }
+  if (lower.includes('invalid_api_key') || lower.includes('401')) {
+    return 'OpenAI API key is invalid or expired. Check your API key in Settings.';
+  }
+  if (lower.includes('billing') || lower.includes('quota')) {
+    return 'OpenAI billing/quota issue. Check your OpenAI account billing status.';
+  }
+  if (lower.includes('cors') || lower.includes('failed to fetch')) {
+    return 'CORS error: Image generation proxy not available. Please check your configuration.';
+  }
+  if (lower.includes('timeout')) {
+    return error; // Already formatted
+  }
+
+  return `OpenAI image error: ${error}`;
 }
 
 /**
@@ -335,7 +391,7 @@ function getStyleDescription(style?: string): string {
 }
 
 /**
- * Build a detailed prompt for DALL-E image generation
+ * Build a detailed prompt for image generation
  * Uses photographic-first routing configuration
  */
 function buildImagePrompt(
@@ -371,11 +427,9 @@ function buildImagePrompt(
   // Filter the placeholder description through avoid terms
   let filteredDescription = placeholder.description;
   for (const term of avoidTerms) {
-    // Case-insensitive replacement of avoid terms
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
     filteredDescription = filteredDescription.replace(regex, '');
   }
-  // Clean up extra spaces from removed terms
   filteredDescription = filteredDescription.replace(/\s+/g, ' ').trim();
 
   if (filteredDescription) {
@@ -387,66 +441,54 @@ function buildImagePrompt(
     parts.push(`The image should visually represent the concept: "${options.textOverlay}"`);
   }
 
-  // Add additional prompt if provided
   if (options.additionalPrompt) {
     parts.push(options.additionalPrompt);
   }
 
-  // Add custom instructions from map settings
   if (options.customInstructions) {
     parts.push(options.customInstructions);
   }
 
-  // Add business context for brand consistency
   if (businessInfo.industry) {
     parts.push(`Context: ${businessInfo.industry} industry`);
   }
 
-  // Add brand color hints if available
   if (businessInfo.brandKit?.colors?.primary) {
     parts.push(`Consider incorporating the color ${businessInfo.brandKit.colors.primary} where appropriate.`);
   }
 
-  // Quality and style modifiers for DALL-E (only if no specific style set)
   if (!options.style) {
     parts.push('Professional quality, clean composition, suitable for a website hero image or blog post.');
   }
 
-  // Use comprehensive no-text instruction from routing config
   parts.push(buildNoTextInstruction(normalizedType));
 
   return parts.join('. ');
 }
 
 /**
- * Get style guidance based on image type
- * Now uses photographic-first configuration
+ * Convert width/height to model-appropriate size
+ *
+ * DALL-E 3 sizes: 1024x1024, 1024x1792 (portrait), 1792x1024 (landscape)
+ * GPT Image 1 sizes: 1024x1024, 1024x1536 (portrait), 1536x1024 (landscape), auto
  */
-function getTypeStyleGuidance(type: string): string {
-  // Normalize the type (handles legacy mappings)
-  const normalizedType = normalizeImageType(type as ImageStyle);
-  const mapping = IMAGE_TYPE_PROMPTS[normalizedType];
-
-  if (!mapping) {
-    return 'Professional photography style, clean composition. No text, labels, or words visible in the image.';
-  }
-
-  return mapping.promptModifiers.join('. ') + '.';
-}
-
-/**
- * Convert width/height to DALL-E 3 supported size
- * DALL-E 3 supports: 1024x1024, 1024x1792 (portrait), 1792x1024 (landscape)
- */
-function getSize(width: number, height: number): '1024x1024' | '1024x1792' | '1792x1024' {
+function getSize(
+  width: number,
+  height: number,
+  model: 'gpt-image-1' | 'dall-e-3'
+): string {
   const ratio = width / height;
 
-  if (ratio > 1.3) {
-    return '1792x1024'; // Landscape
-  } else if (ratio < 0.7) {
-    return '1024x1792'; // Portrait
+  if (model === 'gpt-image-1') {
+    if (ratio > 1.3) return '1536x1024';  // Landscape
+    if (ratio < 0.7) return '1024x1536';  // Portrait
+    return '1024x1024';                    // Square
   }
-  return '1024x1024'; // Square
+
+  // dall-e-3
+  if (ratio > 1.3) return '1792x1024';  // Landscape
+  if (ratio < 0.7) return '1024x1792';  // Portrait
+  return '1024x1024';                    // Square
 }
 
 export default openAiImageProvider;

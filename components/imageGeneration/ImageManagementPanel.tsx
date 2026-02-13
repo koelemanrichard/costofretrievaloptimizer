@@ -108,14 +108,14 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
 
   useEffect(() => {
     if (supabase) {
-      initImageGeneration(supabase);
+      initImageGeneration(supabase, state.businessInfo.supabaseUrl);
       ensureClientReady().then(() => {
         setIsClientReady(true);
       });
     } else {
       setIsClientReady(true);
     }
-  }, [supabase]);
+  }, [supabase, state.businessInfo.supabaseUrl]);
 
   // Persist generated image to database so it's not lost on navigation
   const persistGeneratedImage = useCallback(async (placeholderId: string, result: ImagePlaceholder) => {
@@ -280,7 +280,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
   const availableProviders: string[] = [];
   if (businessInfo.markupGoApiKey) availableProviders.push('MarkupGo (HERO only)');
   if (businessInfo.geminiApiKey) availableProviders.push('Gemini Imagen');
-  if (businessInfo.openAiApiKey) availableProviders.push('DALL-E 3');
+  if (businessInfo.openAiApiKey) availableProviders.push('OpenAI Images');
 
   const hasProviders = availableProviders.length > 0;
 
@@ -320,6 +320,14 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
     setCurrentlyGenerating(nextId);
     setProgress({ phase: 'generating', progress: 0, message: 'Starting...' });
 
+    // Refresh session before each image to prevent expiry during long queues
+    if (supabase) {
+      supabase.auth.refreshSession().catch(() => {
+        // Non-fatal — continue even if refresh fails
+        console.warn('[ImageManagement] Session refresh failed before generation, continuing...');
+      });
+    }
+
     generateImage(
       placeholder,
       {
@@ -353,7 +361,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
         setQueue(q => q.slice(1));
         setProgress(null);
       });
-  }, [queue, currentlyGenerating, placeholders, businessInfo, generatedImages, selectedStyle, customInstructions, persistGeneratedImage, isClientReady]);
+  }, [queue, currentlyGenerating, placeholders, businessInfo, generatedImages, selectedStyle, customInstructions, persistGeneratedImage, isClientReady, supabase]);
 
   // Handlers
   const handleSelectAll = useCallback(() => {
