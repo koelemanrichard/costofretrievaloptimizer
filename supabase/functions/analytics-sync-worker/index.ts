@@ -17,6 +17,7 @@ import { decrypt, encrypt } from '../_shared/crypto.ts'
 // Inlined Utility Functions (matches codebase convention)
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
+  'https://app.cutthecrap.net',
   'https://holistic-seo-topical-map-generator.vercel.app',
   'https://cost-of-retreival-reducer.vercel.app',
   'http://localhost:3000',
