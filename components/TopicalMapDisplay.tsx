@@ -1365,6 +1365,12 @@ const TopicalMapDisplay: React.FC<TopicalMapDisplayProps> = ({
                 canGenerateBriefs={canGenerateBriefs}
                 hierarchyMode={hierarchyMode}
                 onUpdateTopic={onUpdateTopic}
+                onBulkGenerateBriefs={handleBulkGenerateBriefs}
+                onBulkMerge={handleFindMergeOpportunities}
+                onBulkPromote={handleBulkPromote}
+                onBulkDemote={handleBulkDemote}
+                onBulkDelete={handleBulkDeleteTopics}
+                isMerging={!!isLoading.merge}
             />
         ) : (
             <TopicalMapGraphView

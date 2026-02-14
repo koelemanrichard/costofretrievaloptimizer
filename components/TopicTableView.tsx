@@ -6,7 +6,7 @@
  * Uses @tanstack/react-virtual for virtualized rendering of 700+ rows.
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { EnrichedTopic, ExpansionMode, ContentBrief } from '../types';
 import { TopicCompactRow } from './TopicCompactRow';
@@ -45,6 +45,14 @@ interface TopicTableViewProps {
 
   // Optional: Update topic (for promote/demote functionality)
   onUpdateTopic?: (topicId: string, updates: Partial<EnrichedTopic>) => void;
+
+  // Bulk actions (provided by parent TopicalMapDisplay)
+  onBulkGenerateBriefs?: () => void;
+  onBulkMerge?: () => void;
+  onBulkPromote?: () => void;
+  onBulkDemote?: (parentCoreId: string) => void;
+  onBulkDelete?: () => void;
+  isMerging?: boolean;
 }
 
 interface FlattenedTopic {
@@ -74,6 +82,12 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
   hierarchyMode,
   onOpenFullDetail,
   onUpdateTopic,
+  onBulkGenerateBriefs,
+  onBulkMerge,
+  onBulkPromote,
+  onBulkDemote,
+  onBulkDelete,
+  isMerging,
 }) => {
   // Track which hierarchy rows are collapsed
   const [collapsedRows, setCollapsedRows] = useState<Set<string>>(new Set());
@@ -200,12 +214,42 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
   const briefCompletion = totalTopics > 0 ? Math.round((topicsWithBriefs / totalTopics) * 100) : 0;
   const draftCompletion = totalTopics > 0 ? Math.round((topicsWithDrafts / totalTopics) * 100) : 0;
 
+  // Bulk action computations
+  const selectedTopicsList = useMemo(() =>
+    flattenedTopics.filter(({ topic }) => selectedTopicIds.has(topic.id)).map(({ topic }) => topic),
+    [flattenedTopics, selectedTopicIds]
+  );
+  const needsBriefCount = selectedTopicsList.filter(t => !briefs.has(t.id)).length;
+  const hasOuterSelected = selectedTopicsList.some(t => t.type === 'outer');
+  const hasCoreSelected = selectedTopicsList.some(t => t.type === 'core');
+  const unselectedCoreCount = coreTopics.filter(t => !selectedTopicIds.has(t.id)).length;
+  const canDemote = hasCoreSelected && unselectedCoreCount >= 1;
+  const demoteTargets = useMemo(() =>
+    coreTopics.filter(t => !selectedTopicIds.has(t.id)),
+    [coreTopics, selectedTopicIds]
+  );
+
+  // Demote dropdown state
+  const [demoteOpen, setDemoteOpen] = useState(false);
+  const demoteRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!demoteOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (demoteRef.current && !demoteRef.current.contains(e.target as Node)) {
+        setDemoteOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [demoteOpen]);
+
   return (
     <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
-      {/* Summary Stats Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-700">
-        <div className="flex items-center gap-6">
-          {/* Total */}
+      {/* Summary Stats Bar / Bulk Actions Bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-700 gap-3 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Total + progress (always shown) */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">{totalTopics}</span>
             <span className="text-xs text-gray-500">topics</span>
@@ -241,14 +285,89 @@ export const TopicTableView: React.FC<TopicTableViewProps> = ({
             </div>
           )}
 
-          {/* Selection */}
+          {/* Selection count + inline bulk actions */}
           {someSelected && (
-            <span className="text-sm text-blue-400">
-              {selectedTopicIds.size} selected
-            </span>
+            <>
+              <span className="text-xs text-gray-600">|</span>
+              <span className="text-sm text-blue-400 font-medium shrink-0">
+                {selectedTopicIds.size} selected
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {/* Generate Briefs */}
+                {needsBriefCount > 0 && onBulkGenerateBriefs && (
+                  <button
+                    onClick={onBulkGenerateBriefs}
+                    disabled={!canGenerateBriefs}
+                    className="px-2 py-0.5 text-[11px] bg-blue-600 hover:bg-blue-700 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Briefs ({needsBriefCount})
+                  </button>
+                )}
+                {/* Merge */}
+                {selectedTopicIds.size >= 2 && onBulkMerge && (
+                  <button
+                    onClick={onBulkMerge}
+                    disabled={isMerging}
+                    className="px-2 py-0.5 text-[11px] bg-purple-600 hover:bg-purple-700 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isMerging ? 'Merging...' : `Merge (${selectedTopicIds.size})`}
+                  </button>
+                )}
+                {/* Promote */}
+                {hasOuterSelected && onBulkPromote && (
+                  <button
+                    onClick={onBulkPromote}
+                    className="px-2 py-0.5 text-[11px] bg-green-600 hover:bg-green-700 text-white rounded font-medium transition-colors"
+                  >
+                    Promote to Core
+                  </button>
+                )}
+                {/* Demote */}
+                {canDemote && onBulkDemote && (
+                  <div ref={demoteRef} className="relative">
+                    <button
+                      onClick={() => setDemoteOpen(prev => !prev)}
+                      className="px-2 py-0.5 text-[11px] bg-amber-600 hover:bg-amber-700 text-white rounded font-medium transition-colors"
+                    >
+                      Demote {demoteOpen ? '\u25B4' : '\u25BE'}
+                    </button>
+                    {demoteOpen && (
+                      <div className="absolute left-0 top-full mt-1 w-56 max-h-48 overflow-auto bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-30 py-1">
+                        <p className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">Select parent</p>
+                        {demoteTargets.map(core => (
+                          <button
+                            key={core.id}
+                            onClick={() => { onBulkDemote(core.id); setDemoteOpen(false); }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-700 truncate"
+                          >
+                            Under: {core.title}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Delete */}
+                {onBulkDelete && (
+                  <button
+                    onClick={onBulkDelete}
+                    className="px-2 py-0.5 text-[11px] bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
+                {/* Clear */}
+                <button
+                  onClick={onDeselectAll}
+                  className="px-2 py-0.5 text-[11px] bg-gray-700 hover:bg-gray-600 text-gray-400 rounded font-medium transition-colors"
+                >
+                  {'\u2715'} Clear
+                </button>
+              </div>
+            </>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-gray-500">
             <span className="text-green-400">{'\u25CF'}</span> Core
             <span className="text-purple-400 ml-2">{'\u25CB'}</span> Outer
