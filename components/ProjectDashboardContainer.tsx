@@ -327,14 +327,6 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
     if (viewMode === 'MIGRATION') {
         return (
             <>
-                <div className="flex justify-between items-center px-4 py-2 border-b border-gray-700">
-                    <Button onClick={handleSwitchToCreation} variant="secondary" className="text-xs">
-                        ← Back to Creation Mode
-                    </Button>
-                    <Button onClick={onBackToProjects} variant="secondary" className="text-xs">
-                        Back to Projects
-                    </Button>
-                </div>
                 <MigrationDashboardContainer />
                 <DebugStatePanel stateSnapshot={stateSnapshot} />
             </>
@@ -406,7 +398,6 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                 onAnalyzeFlow={handleAnalyzeFlow}
                 // Migration Mode Props
                 onQuickAudit={handleQuickAudit}
-                onSwitchToMigration={handleSwitchToMigration}
                 // Foundation Pages Props
                 foundationPages={foundationPages}
                 napData={napData}

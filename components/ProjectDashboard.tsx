@@ -150,9 +150,6 @@ interface ProjectDashboardProps {
   // Quick Audit
   onQuickAudit: (url: string) => void;
 
-  // Mode Switching
-  onSwitchToMigration: () => void;
-
   // Foundation Pages
   foundationPages: FoundationPage[];
   napData?: NAPData;
@@ -232,7 +229,6 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     onUpdateTopic,
     onAnalyzeFlow,
     onQuickAudit,
-    onSwitchToMigration,
     // Foundation Pages
     foundationPages,
     napData,
@@ -569,9 +565,6 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 <p className="text-sm text-gray-400">Topical Map: {topicalMap.name}</p>
               </div>
               <div className="flex gap-2">
-                  <Button onClick={onSwitchToMigration} variant="secondary" className="text-sm">
-                      Migration Workbench
-                  </Button>
                   <Button onClick={onBackToProjects} variant="ghost" className="text-sm">Back to Projects</Button>
               </div>
             </header>
