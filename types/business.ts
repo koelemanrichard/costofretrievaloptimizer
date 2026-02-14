@@ -155,6 +155,8 @@ export interface ImageGenerationSettings {
   preferredStyle: ImageStyle;
   preferredProvider: ImageProviderPreference;
   customInstructions?: string; // Additional prompt instructions for all images
+  excludeText?: boolean;    // Stronger no-text reinforcement (default: true when undefined)
+  excludePeople?: boolean;  // Force no-people across all providers (default: true when undefined)
   sizeOverrides?: {
     HERO?: { width: number; height: number };
     SECTION?: { width: number; height: number };

@@ -410,6 +410,13 @@ function buildImagePrompt(
 
   parts.push(buildNoTextInstruction(normalizedType));
 
+  if (options.excludeText) {
+    parts.push('ABSOLUTE REQUIREMENT: Zero text, words, letters, numbers, signs, or labels anywhere. Not even partial or blurry text.');
+  }
+  if (options.excludePeople) {
+    parts.push('Do not include any people, human figures, faces, hands, or body parts. The scene must be entirely without human presence.');
+  }
+
   return parts.join('. ');
 }
 

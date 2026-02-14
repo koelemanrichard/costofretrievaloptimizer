@@ -10,6 +10,8 @@ export interface ImageGenerationOptions {
   style?: 'photorealistic' | 'illustration' | 'cartoon' | 'minimal' | 'artistic' | 'technical';
   customInstructions?: string; // Additional instructions from map settings
   figcaption?: string; // Figcaption from placeholder — used as semantic context hint
+  excludeText?: boolean;    // Stronger no-text reinforcement (default: true when undefined)
+  excludePeople?: boolean;  // Force no-people across all providers (default: true when undefined)
 }
 
 export interface ProviderConfig {

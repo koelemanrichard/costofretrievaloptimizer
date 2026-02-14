@@ -87,9 +87,11 @@ export const geminiImageProvider: ImageProvider = {
     // Determine aspect ratio from placeholder specs
     const aspectRatio = getAspectRatio(placeholder.specs.width, placeholder.specs.height);
 
-    // Determine person generation setting based on image type
+    // Determine person generation setting based on image type and user preference
     const normalizedType = normalizeImageType(placeholder.type as ImageStyle);
-    const allowPeople = PERSON_IMAGE_TYPES.has(normalizedType);
+    const allowPeople = options.excludePeople
+      ? false
+      : PERSON_IMAGE_TYPES.has(normalizedType);
 
     const ai = new GoogleGenAI({ apiKey: businessInfo.geminiApiKey });
 
@@ -416,6 +418,13 @@ function buildImagePrompt(
   }
 
   parts.push(buildNoTextInstruction(normalizedType));
+
+  if (options.excludeText) {
+    parts.push('ABSOLUTE REQUIREMENT: Zero text, words, letters, numbers, signs, or labels anywhere. Not even partial or blurry text.');
+  }
+  if (options.excludePeople) {
+    parts.push('Do not include any people, human figures, faces, hands, or body parts. The scene must be entirely without human presence.');
+  }
 
   return parts.join('. ');
 }

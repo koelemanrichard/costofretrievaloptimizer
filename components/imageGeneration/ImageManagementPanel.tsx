@@ -96,7 +96,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
   onOpenVisualEditor,
   jobId,
 }) => {
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
 
   // Initialize image generation with Supabase client for CORS-free proxy
   const supabase = useMemo(() => {
@@ -184,6 +184,43 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
   const [customInstructions, setCustomInstructions] = useState(
     businessInfo.brandKit?.imageGeneration?.customInstructions || ''
   );
+  const [excludeText, setExcludeText] = useState(
+    businessInfo.brandKit?.imageGeneration?.excludeText ?? true
+  );
+  const [excludePeople, setExcludePeople] = useState(
+    businessInfo.brandKit?.imageGeneration?.excludePeople ?? true
+  );
+
+  // Persist exclusion toggle changes to brandKit settings (fire-and-forget)
+  const persistExclusionSettings = useCallback(async (newExcludeText: boolean, newExcludePeople: boolean) => {
+    try {
+      const topicalMapId = state.activeMapId;
+      if (!supabase || !topicalMapId) return;
+
+      const updatedBrandKit = {
+        ...businessInfo.brandKit,
+        imageGeneration: {
+          ...businessInfo.brandKit?.imageGeneration,
+          excludeText: newExcludeText,
+          excludePeople: newExcludePeople,
+        },
+      };
+
+      const updatedBusinessInfo = {
+        ...businessInfo,
+        brandKit: updatedBrandKit,
+      };
+
+      await supabase
+        .from('topical_maps')
+        .update({ business_info: updatedBusinessInfo as unknown as Json })
+        .eq('id', topicalMapId);
+
+      dispatch({ type: 'SET_BUSINESS_INFO', payload: updatedBusinessInfo });
+    } catch (err) {
+      console.error('[ImageManagement] Failed to persist exclusion settings:', err);
+    }
+  }, [supabase, state.activeMapId, businessInfo, dispatch]);
 
   // Keep a ref to the latest draft content for updates
   const draftRef = useRef(draftContent);
@@ -340,6 +377,8 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
         style: selectedStyle,
         customInstructions: effectiveCustomInstructions || undefined,
         figcaption: placeholder.figcaption || undefined,
+        excludeText,
+        excludePeople,
       },
       businessInfo,
       setProgress
@@ -366,7 +405,7 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
         setQueue(q => q.slice(1));
         setProgress(null);
       });
-  }, [queue, currentlyGenerating, placeholders, businessInfo, generatedImages, selectedStyle, customInstructions, persistGeneratedImage, isClientReady, supabase]);
+  }, [queue, currentlyGenerating, placeholders, businessInfo, generatedImages, selectedStyle, customInstructions, excludeText, excludePeople, persistGeneratedImage, isClientReady, supabase]);
 
   // Handlers
   const handleSelectAll = useCallback(() => {
@@ -757,6 +796,61 @@ export const ImageManagementPanel: React.FC<ImageManagementPanelProps> = ({
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 resize-none"
                 rows={2}
               />
+            </div>
+
+            {/* Exclusion Toggles */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1">Content Exclusions</label>
+              <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                <div>
+                  <span className="text-sm text-gray-200">Exclude text from images</span>
+                  <p className="text-[10px] text-gray-500">Reinforces no-text instructions to reduce unwanted labels and words</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={excludeText}
+                  onClick={() => {
+                    const next = !excludeText;
+                    setExcludeText(next);
+                    persistExclusionSettings(next, excludePeople);
+                  }}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
+                    excludeText ? 'bg-amber-500' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 mt-0.5 ${
+                      excludeText ? 'translate-x-4 ml-0.5' : 'translate-x-0 ml-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                <div>
+                  <span className="text-sm text-gray-200">Exclude people from images</span>
+                  <p className="text-[10px] text-gray-500">Prevents human figures, faces, and body parts in generated images</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={excludePeople}
+                  onClick={() => {
+                    const next = !excludePeople;
+                    setExcludePeople(next);
+                    persistExclusionSettings(excludeText, next);
+                  }}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
+                    excludePeople ? 'bg-amber-500' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 mt-0.5 ${
+                      excludePeople ? 'translate-x-4 ml-0.5' : 'translate-x-0 ml-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         )}

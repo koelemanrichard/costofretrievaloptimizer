@@ -118,6 +118,8 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
           templateId: placeholder.type === 'HERO' && businessInfo.markupGoApiKey ? markupGoTemplateId : undefined,
           altText,
           additionalPrompt: additionalPrompt || undefined,
+          excludeText: businessInfo.brandKit?.imageGeneration?.excludeText ?? true,
+          excludePeople: businessInfo.brandKit?.imageGeneration?.excludePeople ?? true,
         },
         businessInfo,
         setProgress
