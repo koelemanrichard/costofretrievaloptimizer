@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -27,6 +27,8 @@ export const SiteIngestionWizard: React.FC<SiteIngestionWizardProps> = ({ isOpen
     
     // Step 2 State
     const [gscFile, setGscFile] = useState<File | null>(null);
+    const [gscProperty, setGscProperty] = useState<{ id: string; property_id: string; property_name: string | null; last_synced_at: string | null } | null>(null);
+    const [gscCheckDone, setGscCheckDone] = useState(false);
 
     // Shared State
     const [isProcessing, setIsProcessing] = useState(false);
@@ -35,7 +37,51 @@ export const SiteIngestionWizard: React.FC<SiteIngestionWizardProps> = ({ isOpen
     const [error, setError] = useState<string | null>(null);
     const [successCount, setSuccessCount] = useState<number | null>(null);
 
+    // Check for linked GSC property when wizard opens
+    useEffect(() => {
+        if (!isOpen || !activeProjectId || gscCheckDone) return;
+        migrationService.getLinkedGscProperty(
+            activeProjectId,
+            businessInfo.supabaseUrl,
+            businessInfo.supabaseAnonKey
+        ).then(prop => {
+            setGscProperty(prop);
+            setGscCheckDone(true);
+        }).catch(() => setGscCheckDone(true));
+    }, [isOpen, activeProjectId, businessInfo.supabaseUrl, businessInfo.supabaseAnonKey, gscCheckDone]);
+
     if (!isOpen) return null;
+
+    const handleGscApiImport = async () => {
+        if (!activeProjectId) return;
+
+        setIsProcessing(true);
+        setError(null);
+        setStatusMessage('Fetching GSC data...');
+        setProgress(null);
+
+        try {
+            const count = await migrationService.importGscFromApi(
+                activeProjectId,
+                businessInfo.supabaseUrl,
+                businessInfo.supabaseAnonKey,
+                (current, total) => setProgress({ current, total }),
+                (msg) => setStatusMessage(msg)
+            );
+
+            dispatch({ type: 'SET_NOTIFICATION', payload: `Imported ${count} pages from GSC.` });
+
+            setTimeout(() => {
+                setStep(3);
+                setIsProcessing(false);
+                setProgress(null);
+                setStatusMessage('');
+            }, 1000);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'GSC API import failed.');
+            setIsProcessing(false);
+        }
+    };
 
     const handleSitemapImport = async () => {
         if (!activeProjectId) {
@@ -248,30 +294,66 @@ export const SiteIngestionWizard: React.FC<SiteIngestionWizardProps> = ({ isOpen
 
                         {/* Step 2: GSC Data */}
                         {step === 2 && (
-                            <div>
-                                <Label htmlFor="gsc-file">Google Search Console Export (Pages.csv)</Label>
-                                <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-blue-500 transition-colors bg-gray-800/50">
-                                    <input 
-                                        type="file" 
-                                        id="gsc-file" 
-                                        accept=".csv"
-                                        onChange={(e) => setGscFile(e.target.files?.[0] || null)}
-                                        className="hidden"
-                                    />
-                                    <label htmlFor="gsc-file" className="cursor-pointer flex flex-col items-center">
-                                        <span className="text-3xl mb-2">📄</span>
-                                        <span className="text-blue-400 font-medium hover:underline">
-                                            {gscFile ? gscFile.name : "Click to Upload 'Pages.csv'"}
-                                        </span>
-                                        <span className="text-xs text-gray-500 mt-2">
-                                            Export this from GSC performance report (Pages tab).
-                                        </span>
-                                    </label>
+                            <div className="space-y-4">
+                                {/* Option A: Fetch from connected GSC */}
+                                {gscProperty ? (
+                                    <div className="p-4 bg-green-900/20 border border-green-700/50 rounded-lg">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-sm font-medium text-green-300">Connected GSC Property</h4>
+                                                <p className="text-xs text-gray-400 font-mono mt-0.5">{gscProperty.property_id}</p>
+                                                {gscProperty.last_synced_at && (
+                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                        Last synced: {new Date(gscProperty.last_synced_at).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Button onClick={handleGscApiImport} disabled={isProcessing}>
+                                                {isProcessing ? <Loader className="w-4 h-4" /> : 'Fetch from GSC'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : gscCheckDone ? (
+                                    <div className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+                                        <p className="text-xs text-gray-500">
+                                            No GSC property linked. Connect one in <strong>Settings &rarr; Search Console</strong> to import directly, or upload a CSV below.
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                {/* Divider */}
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1 border-t border-gray-700" />
+                                    <span className="text-xs text-gray-500 uppercase">or upload CSV</span>
+                                    <div className="flex-1 border-t border-gray-700" />
                                 </div>
-                                <div className="mt-4 flex justify-end gap-3">
+
+                                {/* Option B: CSV Upload */}
+                                <div>
+                                    <Label htmlFor="gsc-file">Google Search Console Export (Pages.csv)</Label>
+                                    <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors bg-gray-800/50">
+                                        <input
+                                            type="file"
+                                            id="gsc-file"
+                                            accept=".csv"
+                                            onChange={(e) => setGscFile(e.target.files?.[0] || null)}
+                                            className="hidden"
+                                        />
+                                        <label htmlFor="gsc-file" className="cursor-pointer flex flex-col items-center">
+                                            <span className="text-blue-400 font-medium hover:underline text-sm">
+                                                {gscFile ? gscFile.name : "Click to Upload 'Pages.csv'"}
+                                            </span>
+                                            <span className="text-xs text-gray-500 mt-1">
+                                                Export from GSC performance report (Pages tab).
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-3">
                                     <Button variant="secondary" onClick={() => setStep(3)}>Skip to Audit</Button>
                                     <Button onClick={handleGscImport} disabled={!gscFile || isProcessing}>
-                                        {isProcessing ? <Loader className="w-4 h-4" /> : 'Process GSC Data'}
+                                        {isProcessing ? <Loader className="w-4 h-4" /> : 'Process CSV'}
                                     </Button>
                                 </div>
                             </div>

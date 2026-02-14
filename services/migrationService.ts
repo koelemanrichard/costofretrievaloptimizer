@@ -1,6 +1,25 @@
 import { getSupabaseClient } from './supabaseClient';
 import { extractSinglePage, getExtractionTypeForUseCase } from './pageExtractionService';
 import { BusinessInfo, SiteInventoryItem } from '../types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Ensures the Supabase client has a valid authenticated session.
+ * Without a session, RLS policies reject all writes (auth.uid() = NULL → 403).
+ * Attempts a refresh if the session is missing or expired.
+ */
+const ensureAuthenticated = async (supabase: SupabaseClient): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) return;
+
+    // Session missing — try refreshing
+    const { data: { session: refreshed }, error } = await supabase.auth.refreshSession();
+    if (!refreshed || error) {
+        throw new Error(
+            'Your session has expired. Please refresh the page and log in again.'
+        );
+    }
+};
 
 /**
  * Parses a CSV string from a Google Search Console Pages export.
@@ -180,15 +199,16 @@ export const fetchAndParseSitemap = async (sitemapUrl: string, onStatusUpdate?: 
 };
 
 export const initializeInventory = async (
-    projectId: string, 
-    urls: string[], 
-    supabaseUrl: string, 
+    projectId: string,
+    urls: string[],
+    supabaseUrl: string,
     supabaseAnonKey: string,
     onProgress?: (count: number, total: number) => void
 ): Promise<void> => {
     if (urls.length === 0) return;
 
     const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+    await ensureAuthenticated(supabase);
     const CHUNK_SIZE = 100;
     let processed = 0;
 
@@ -224,12 +244,13 @@ export const processGscPages = async (
     onProgress?: (count: number, total: number) => void
 ): Promise<void> => {
     const rows = await parseGscPagesCsv(csvContent);
-    
+
     if (rows.length === 0) {
         throw new Error("No valid rows found in GSC Pages CSV.");
     }
 
     const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+    await ensureAuthenticated(supabase);
     const CHUNK_SIZE = 100;
     let processed = 0;
 
@@ -280,6 +301,7 @@ export const runTechnicalCrawl = async (
     onProgress?: (count: number, total: number) => void
 ): Promise<void> => {
     const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+    await ensureAuthenticated(supabase);
     let processed = 0;
 
     for (const url of urls) {
@@ -479,3 +501,180 @@ export const getOriginalContent = async (
 
     return markdown;
 };
+
+/**
+ * Fetches the linked GSC property for a project, if any.
+ * Returns the analytics_properties row or null.
+ */
+export const getLinkedGscProperty = async (
+    projectId: string,
+    supabaseUrl: string,
+    supabaseAnonKey: string
+): Promise<{ id: string; property_id: string; property_name: string | null; account_id: string; last_synced_at: string | null } | null> => {
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey) as any;
+    const { data, error } = await supabase
+        .from('analytics_properties')
+        .select('id, property_id, property_name, account_id, last_synced_at')
+        .eq('project_id', projectId)
+        .eq('service', 'gsc')
+        .eq('is_primary', true)
+        .maybeSingle();
+
+    if (error) {
+        console.warn('[MigrationService] Failed to fetch linked GSC property:', error);
+        return null;
+    }
+    // If no primary, try any linked GSC property
+    if (!data) {
+        const { data: fallback } = await supabase
+            .from('analytics_properties')
+            .select('id, property_id, property_name, account_id, last_synced_at')
+            .eq('project_id', projectId)
+            .eq('service', 'gsc')
+            .limit(1)
+            .maybeSingle();
+        return fallback || null;
+    }
+    return data;
+};
+
+/**
+ * Imports GSC page-level data from gsc_search_analytics into site_inventory.
+ * Aggregates per page URL: SUM(clicks), SUM(impressions), AVG(position).
+ * If no synced data exists, triggers a manual sync via the analytics-sync-worker edge function.
+ */
+export const importGscFromApi = async (
+    projectId: string,
+    supabaseUrl: string,
+    supabaseAnonKey: string,
+    onProgress?: (count: number, total: number) => void,
+    onStatus?: (msg: string) => void
+): Promise<number> => {
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+    await ensureAuthenticated(supabase);
+
+    // 1. Get linked GSC property
+    const property = await getLinkedGscProperty(projectId, supabaseUrl, supabaseAnonKey);
+    if (!property) {
+        throw new Error('No GSC property linked to this project. Connect one in Settings → Search Console.');
+    }
+
+    onStatus?.(`Found GSC property: ${property.property_id}`);
+
+    // 2. Query gsc_search_analytics aggregated by page
+    const { data: rawRows, error: queryError } = await (supabase as any)
+        .from('gsc_search_analytics')
+        .select('page, clicks, impressions, position')
+        .eq('property_id', property.id);
+
+    if (queryError) {
+        throw new Error(`Failed to query GSC data: ${queryError.message}`);
+    }
+
+    // 3. If no data, trigger a manual sync
+    if (!rawRows || rawRows.length === 0) {
+        onStatus?.('No synced GSC data found. Triggering sync...');
+
+        const { data: syncResult, error: syncError } = await supabase.functions.invoke(
+            'analytics-sync-worker',
+            { body: { propertyId: property.id } }
+        );
+
+        if (syncError) {
+            throw new Error(
+                `GSC sync failed: ${syncError.message}. Try uploading a CSV file instead.`
+            );
+        }
+
+        const results = syncResult?.results || [];
+        const firstResult = results[0];
+        if (firstResult?.status === 'failed') {
+            throw new Error(
+                `GSC sync failed: ${firstResult.error || 'Unknown error'}. Try uploading a CSV file instead.`
+            );
+        }
+
+        onStatus?.(`Sync complete (${firstResult?.rowsSynced || 0} rows). Loading data...`);
+
+        // Re-query after sync
+        const { data: freshRows, error: freshError } = await (supabase as any)
+            .from('gsc_search_analytics')
+            .select('page, clicks, impressions, position')
+            .eq('property_id', property.id);
+
+        if (freshError || !freshRows || freshRows.length === 0) {
+            throw new Error('No GSC data available after sync. Try uploading a CSV file instead.');
+        }
+
+        return await aggregateAndUpsert(supabase, projectId, freshRows, onProgress, onStatus);
+    }
+
+    return await aggregateAndUpsert(supabase, projectId, rawRows, onProgress, onStatus);
+};
+
+/** Aggregates raw GSC rows by page URL and upserts into site_inventory. */
+async function aggregateAndUpsert(
+    supabase: SupabaseClient,
+    projectId: string,
+    rawRows: { page: string; clicks: number; impressions: number; position: number }[],
+    onProgress?: (count: number, total: number) => void,
+    onStatus?: (msg: string) => void
+): Promise<number> {
+    // Aggregate by page URL
+    const pageMap = new Map<string, { clicks: number; impressions: number; positions: number[] }>();
+    for (const row of rawRows) {
+        const existing = pageMap.get(row.page);
+        if (existing) {
+            existing.clicks += row.clicks || 0;
+            existing.impressions += row.impressions || 0;
+            existing.positions.push(row.position || 0);
+        } else {
+            pageMap.set(row.page, {
+                clicks: row.clicks || 0,
+                impressions: row.impressions || 0,
+                positions: [row.position || 0],
+            });
+        }
+    }
+
+    const pages = Array.from(pageMap.entries()).map(([url, data]) => ({
+        url,
+        clicks: data.clicks,
+        impressions: data.impressions,
+        position: data.positions.length > 0
+            ? Math.round((data.positions.reduce((a, b) => a + b, 0) / data.positions.length) * 10) / 10
+            : 0,
+    }));
+
+    onStatus?.(`Importing ${pages.length} pages into inventory...`);
+
+    // Upsert into site_inventory in chunks
+    const CHUNK_SIZE = 100;
+    let processed = 0;
+
+    for (let i = 0; i < pages.length; i += CHUNK_SIZE) {
+        const chunk = pages.slice(i, i + CHUNK_SIZE);
+        const payload = chunk.map(p => ({
+            project_id: projectId,
+            url: p.url,
+            gsc_clicks: p.clicks,
+            gsc_impressions: p.impressions,
+            gsc_position: p.position,
+            index_status: p.impressions > 0 ? 'INDEXED' : undefined,
+            updated_at: new Date().toISOString(),
+        }));
+
+        const { error } = await supabase
+            .from('site_inventory')
+            .upsert(payload as any, { onConflict: 'project_id,url' });
+
+        if (error) {
+            throw new Error(`Failed to import GSC pages: ${error.message}`);
+        }
+
+        processed += chunk.length;
+        onProgress?.(processed, pages.length);
+    }
+
+    return pages.length;
+}
