@@ -13,6 +13,8 @@ interface AuthorityWizardContainerProps {
   topics: EnrichedTopic[];
   isLoadingInventory: boolean;
   onRefreshInventory: () => void;
+  onOpenWorkbench?: (item: SiteInventoryItem) => void;
+  onCreateBrief?: (topicId: string) => void;
 }
 
 interface StepConfig {
@@ -36,6 +38,8 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
   topics,
   isLoadingInventory,
   onRefreshInventory,
+  onOpenWorkbench,
+  onCreateBrief,
 }) => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [importComplete, setImportComplete] = useState(false);
@@ -226,6 +230,8 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
             mapId={mapId}
             inventory={inventory}
             topics={topics}
+            onOpenWorkbench={onOpenWorkbench}
+            onCreateBrief={onCreateBrief}
           />
         )}
       </div>

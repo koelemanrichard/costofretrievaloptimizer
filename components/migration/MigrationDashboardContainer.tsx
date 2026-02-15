@@ -183,6 +183,10 @@ const MigrationDashboardContainer: React.FC = () => {
                             topics={allTopics}
                             isLoadingInventory={isLoadingInventory}
                             onRefreshInventory={refreshInventory}
+                            onOpenWorkbench={handleOpenWorkbench}
+                            onCreateBrief={(topicId) => {
+                                dispatch({ type: 'SET_VIEW_MODE', payload: 'CREATION' });
+                            }}
                         />
                     </div>
                 ) : (
