@@ -754,11 +754,13 @@ export const CHART_COLORS = {
 
 export const DECISION_COLORS: Record<ActionType, string> = {
   'KEEP': '#22C55E',
+  'OPTIMIZE': '#84CC16',
   'REWRITE': '#F59E0B',
   'MERGE': '#3B82F6',
   'REDIRECT_301': '#8B5CF6',
   'PRUNE_410': '#EF4444',
-  'CANONICALIZE': '#6B7280'
+  'CANONICALIZE': '#6B7280',
+  'CREATE_NEW': '#06B6D4'
 };
 
 export const STATUS_COLORS: Record<TransitionStatus, string> = {

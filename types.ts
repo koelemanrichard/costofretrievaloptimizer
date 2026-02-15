@@ -2403,7 +2403,7 @@ export interface PhaseBusinessName {
 // ============================================
 
 export type TransitionStatus = 'AUDIT_PENDING' | 'GAP_ANALYSIS' | 'ACTION_REQUIRED' | 'IN_PROGRESS' | 'OPTIMIZED';
-export type ActionType = 'KEEP' | 'REWRITE' | 'MERGE' | 'REDIRECT_301' | 'PRUNE_410' | 'CANONICALIZE';
+export type ActionType = 'KEEP' | 'OPTIMIZE' | 'REWRITE' | 'MERGE' | 'REDIRECT_301' | 'PRUNE_410' | 'CANONICALIZE' | 'CREATE_NEW';
 export type SectionType = 'CORE_SECTION' | 'AUTHOR_SECTION' | 'ORPHAN';
 
 export interface SiteInventoryItem {
