@@ -10,8 +10,61 @@ interface InventoryMatrixProps {
     onPromote?: (itemId: string) => void;
 }
 
-type SortField = 'url' | 'gsc_clicks' | 'gsc_impressions' | 'cor_score' | 'status';
+type SortField = 'url' | 'gsc_clicks' | 'gsc_impressions' | 'gsc_position' | 'audit_score' | 'cor_score' | 'cwv_assessment' | 'status' | 'recommended_action';
 type SortDirection = 'asc' | 'desc';
+
+const getQualityColor = (score: number | undefined) => {
+    if (score === undefined || score === null) return 'text-gray-500';
+    if (score >= 80) return 'text-green-400';
+    if (score >= 50) return 'text-yellow-400';
+    return 'text-red-400';
+};
+
+const getCwvBadge = (assessment: string | undefined) => {
+    switch (assessment) {
+        case 'good': return 'bg-green-900/50 text-green-300 border-green-700';
+        case 'needs-improvement': return 'bg-yellow-900/50 text-yellow-300 border-yellow-700';
+        case 'poor': return 'bg-red-900/50 text-red-300 border-red-700';
+        default: return 'bg-gray-800 text-gray-400 border-gray-700';
+    }
+};
+
+const getCwvLabel = (assessment: string | undefined) => {
+    switch (assessment) {
+        case 'good': return 'Good';
+        case 'needs-improvement': return 'NI';
+        case 'poor': return 'Poor';
+        default: return '—';
+    }
+};
+
+const getActionBadge = (action: string | undefined) => {
+    switch (action) {
+        case 'KEEP': return 'bg-green-900/50 text-green-300 border-green-700';
+        case 'OPTIMIZE': return 'bg-lime-900/50 text-lime-300 border-lime-700';
+        case 'REWRITE': return 'bg-yellow-900/50 text-yellow-300 border-yellow-700';
+        case 'MERGE': return 'bg-blue-900/50 text-blue-300 border-blue-700';
+        case 'REDIRECT_301': return 'bg-purple-900/50 text-purple-300 border-purple-700';
+        case 'PRUNE_410': return 'bg-red-900/50 text-red-300 border-red-700';
+        case 'CANONICALIZE': return 'bg-gray-800 text-gray-300 border-gray-600';
+        case 'CREATE_NEW': return 'bg-cyan-900/50 text-cyan-300 border-cyan-700';
+        default: return 'bg-gray-800 text-gray-500 border-gray-700';
+    }
+};
+
+const getActionLabel = (action: string | undefined) => {
+    switch (action) {
+        case 'KEEP': return 'Keep';
+        case 'OPTIMIZE': return 'Optimize';
+        case 'REWRITE': return 'Rewrite';
+        case 'MERGE': return 'Merge';
+        case 'REDIRECT_301': return 'Redirect';
+        case 'PRUNE_410': return 'Prune';
+        case 'CANONICALIZE': return 'Canon.';
+        case 'CREATE_NEW': return 'Create';
+        default: return '—';
+    }
+};
 
 export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onSelect, onAction, onPromote }) => {
     const [sortField, setSortField] = useState<SortField>('gsc_clicks');
@@ -28,19 +81,23 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
     };
 
     const sortedInventory = useMemo(() => {
-        return [...inventory].sort((a, b) => {
-            const aVal = a[sortField] || 0;
-            const bVal = b[sortField] || 0;
+        const stringFields: SortField[] = ['url', 'status', 'cwv_assessment', 'recommended_action'];
+        const isStringField = stringFields.includes(sortField);
 
-            if (typeof aVal === 'string' && typeof bVal === 'string') {
-                return sortDirection === 'asc' 
-                    ? aVal.localeCompare(bVal) 
+        return [...inventory].sort((a, b) => {
+            if (isStringField) {
+                const aVal = String(a[sortField] || '');
+                const bVal = String(b[sortField] || '');
+                return sortDirection === 'asc'
+                    ? aVal.localeCompare(bVal)
                     : bVal.localeCompare(aVal);
             }
-            
-            return sortDirection === 'asc' 
-                ? (aVal as number) - (bVal as number) 
-                : (bVal as number) - (aVal as number);
+
+            const aVal = (a[sortField] as number | undefined) ?? -Infinity;
+            const bVal = (b[sortField] as number | undefined) ?? -Infinity;
+            return sortDirection === 'asc'
+                ? aVal - bVal
+                : bVal - aVal;
         });
     }, [inventory, sortField, sortDirection]);
 
@@ -85,11 +142,26 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
                             <th className="p-3 font-medium text-right cursor-pointer hover:text-white" onClick={() => handleSort('gsc_clicks')}>
                                 Clicks {sortField === 'gsc_clicks' && (sortDirection === 'asc' ? '↑' : '↓')}
                             </th>
+                            <th className="p-3 font-medium text-right cursor-pointer hover:text-white" onClick={() => handleSort('gsc_impressions')}>
+                                Impr {sortField === 'gsc_impressions' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            </th>
+                            <th className="p-3 font-medium text-right cursor-pointer hover:text-white" onClick={() => handleSort('gsc_position')}>
+                                Pos {sortField === 'gsc_position' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            </th>
+                            <th className="p-3 font-medium text-center cursor-pointer hover:text-white" onClick={() => handleSort('audit_score')}>
+                                Quality {sortField === 'audit_score' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            </th>
                             <th className="p-3 font-medium text-center cursor-pointer hover:text-white" onClick={() => handleSort('cor_score')}>
                                 CoR {sortField === 'cor_score' && (sortDirection === 'asc' ? '↑' : '↓')}
                             </th>
+                            <th className="p-3 font-medium text-center cursor-pointer hover:text-white" onClick={() => handleSort('cwv_assessment')}>
+                                CWV {sortField === 'cwv_assessment' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            </th>
                             <th className="p-3 font-medium text-center cursor-pointer hover:text-white" onClick={() => handleSort('status')}>
                                 Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            </th>
+                            <th className="p-3 font-medium text-center cursor-pointer hover:text-white" onClick={() => handleSort('recommended_action')}>
+                                Action {sortField === 'recommended_action' && (sortDirection === 'asc' ? '↑' : '↓')}
                             </th>
                             <th className="p-3 w-10"></th>
                         </tr>
@@ -110,15 +182,34 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
                                         <AuditButton url={item.url} variant="icon" size="sm" />
                                     </div>
                                 </td>
-                                <td className="p-3 text-right text-white font-mono">
+                                <td className="p-3 text-right text-white font-mono text-xs">
                                     {item.gsc_clicks?.toLocaleString() || '-'}
                                 </td>
-                                <td className={`p-3 text-center font-bold ${getCoRColor(item.cor_score)}`}>
+                                <td className="p-3 text-right text-gray-300 font-mono text-xs">
+                                    {item.gsc_impressions?.toLocaleString() || '-'}
+                                </td>
+                                <td className="p-3 text-right text-gray-300 font-mono text-xs">
+                                    {item.gsc_position !== undefined ? item.gsc_position.toFixed(1) : '-'}
+                                </td>
+                                <td className={`p-3 text-center font-bold text-xs ${getQualityColor(item.audit_score)}`}>
+                                    {item.audit_score !== undefined ? Math.round(item.audit_score) : '—'}
+                                </td>
+                                <td className={`p-3 text-center font-bold text-xs ${getCoRColor(item.cor_score)}`}>
                                     {item.cor_score !== undefined ? item.cor_score : '?'}
+                                </td>
+                                <td className="p-3 text-center">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded border ${getCwvBadge(item.cwv_assessment)}`}>
+                                        {getCwvLabel(item.cwv_assessment)}
+                                    </span>
                                 </td>
                                 <td className="p-3 text-center">
                                     <span className={`text-[10px] px-2 py-0.5 rounded border ${getStatusBadge(item.status)}`}>
                                         {item.status.replace('_', ' ')}
+                                    </span>
+                                </td>
+                                <td className="p-3 text-center">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded border ${getActionBadge(item.recommended_action)}`}>
+                                        {getActionLabel(item.recommended_action)}
                                     </span>
                                 </td>
                                 <td className="p-3 text-center relative">
