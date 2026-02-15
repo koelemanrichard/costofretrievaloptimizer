@@ -1,0 +1,445 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import { SiteInventoryItem, EnrichedTopic, ActionType, TransitionStatus } from '../../../types';
+
+interface ExecuteStepProps {
+  projectId: string;
+  mapId: string;
+  inventory: SiteInventoryItem[];
+  topics: EnrichedTopic[];
+  onOpenWorkbench?: (item: SiteInventoryItem) => void;
+  onCreateBrief?: (topicId: string) => void;
+}
+
+type PriorityFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
+type ActionFilter = 'all' | ActionType;
+type ExecutionStatus = 'todo' | 'in_progress' | 'done';
+
+const PRIORITY_ORDER: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+function getExecutionStatus(status: TransitionStatus): ExecutionStatus {
+  switch (status) {
+    case 'AUDIT_PENDING':
+    case 'GAP_ANALYSIS':
+      return 'todo';
+    case 'ACTION_REQUIRED':
+    case 'IN_PROGRESS':
+      return 'in_progress';
+    case 'OPTIMIZED':
+      return 'done';
+    default:
+      return 'todo';
+  }
+}
+
+function getStatusLabel(execStatus: ExecutionStatus): string {
+  switch (execStatus) {
+    case 'todo': return 'Todo';
+    case 'in_progress': return 'In Progress';
+    case 'done': return 'Done';
+  }
+}
+
+function getStatusIcon(execStatus: ExecutionStatus): string {
+  switch (execStatus) {
+    case 'todo': return '\u2B1C'; // white square
+    case 'in_progress': return '\uD83D\uDD04'; // arrows counterclockwise
+    case 'done': return '\u2705'; // green checkmark
+  }
+}
+
+function getStatusClasses(execStatus: ExecutionStatus): string {
+  switch (execStatus) {
+    case 'todo': return 'bg-gray-700/50 text-gray-300 border-gray-600';
+    case 'in_progress': return 'bg-blue-900/30 text-blue-300 border-blue-700/50';
+    case 'done': return 'bg-green-900/30 text-green-300 border-green-700/50';
+  }
+}
+
+function getPriorityClasses(priority: string | undefined): string {
+  switch (priority) {
+    case 'critical': return 'bg-red-900/40 text-red-300 border-red-700/50';
+    case 'high': return 'bg-orange-900/40 text-orange-300 border-orange-700/50';
+    case 'medium': return 'bg-yellow-900/40 text-yellow-300 border-yellow-700/50';
+    case 'low': return 'bg-gray-700/40 text-gray-300 border-gray-600/50';
+    default: return 'bg-gray-700/40 text-gray-400 border-gray-600/50';
+  }
+}
+
+function getActionClasses(action: ActionType | undefined): string {
+  switch (action) {
+    case 'KEEP': return 'bg-green-900/30 text-green-400';
+    case 'OPTIMIZE': return 'bg-blue-900/30 text-blue-400';
+    case 'REWRITE': return 'bg-purple-900/30 text-purple-400';
+    case 'MERGE': return 'bg-indigo-900/30 text-indigo-400';
+    case 'REDIRECT_301': return 'bg-yellow-900/30 text-yellow-400';
+    case 'PRUNE_410': return 'bg-red-900/30 text-red-400';
+    case 'CANONICALIZE': return 'bg-cyan-900/30 text-cyan-400';
+    case 'CREATE_NEW': return 'bg-emerald-900/30 text-emerald-400';
+    default: return 'bg-gray-700/30 text-gray-400';
+  }
+}
+
+function formatAction(action: ActionType | undefined): string {
+  if (!action) return 'Unassigned';
+  return action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    .replace('301', '301')
+    .replace('410', '410');
+}
+
+const ACTION_TYPES: ActionType[] = [
+  'KEEP', 'OPTIMIZE', 'REWRITE', 'MERGE', 'REDIRECT_301', 'PRUNE_410', 'CANONICALIZE', 'CREATE_NEW',
+];
+
+const PRIORITY_FILTERS: { value: PriorityFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
+
+export const ExecuteStep: React.FC<ExecuteStepProps> = ({
+  projectId: _projectId,
+  mapId: _mapId,
+  inventory,
+  topics,
+  onOpenWorkbench,
+  onCreateBrief,
+}) => {
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
+  const [actionFilter, setActionFilter] = useState<ActionFilter>('all');
+
+  // Build the action queue: inventory items with actions + CREATE_NEW topics without mapped URLs
+  const actionQueue = useMemo(() => {
+    // Existing inventory items that have an action assigned
+    const inventoryActions: Array<{
+      id: string;
+      label: string;
+      url: string | null;
+      topicId: string | null;
+      topicTitle: string | null;
+      action: ActionType | undefined;
+      priority: string | undefined;
+      status: TransitionStatus;
+      execStatus: ExecutionStatus;
+      isCreateNew: boolean;
+      inventoryItem: SiteInventoryItem | null;
+    }> = inventory
+      .filter(item => item.action)
+      .map(item => {
+        const mappedTopic = item.mapped_topic_id
+          ? topics.find(t => t.id === item.mapped_topic_id)
+          : null;
+        return {
+          id: item.id,
+          label: item.url || item.title,
+          url: item.url,
+          topicId: item.mapped_topic_id,
+          topicTitle: mappedTopic?.title || null,
+          action: item.action,
+          priority: item.action_priority,
+          status: item.status,
+          execStatus: getExecutionStatus(item.status),
+          isCreateNew: item.action === 'CREATE_NEW',
+          inventoryItem: item,
+        };
+      });
+
+    // Topics that need new content (not mapped to any inventory item)
+    const mappedTopicIds = new Set(inventory.map(i => i.mapped_topic_id).filter(Boolean));
+    const unmappedTopics = topics.filter(t => !mappedTopicIds.has(t.id));
+    const createNewActions = unmappedTopics.map(topic => ({
+      id: `create-${topic.id}`,
+      label: topic.title,
+      url: null,
+      topicId: topic.id,
+      topicTitle: topic.title,
+      action: 'CREATE_NEW' as ActionType,
+      priority: topic.type === 'core' ? 'high' : 'medium',
+      status: 'AUDIT_PENDING' as TransitionStatus,
+      execStatus: 'todo' as ExecutionStatus,
+      isCreateNew: true,
+      inventoryItem: null,
+    }));
+
+    const combined = [...inventoryActions, ...createNewActions];
+
+    // Sort by priority
+    combined.sort((a, b) => {
+      const pa = PRIORITY_ORDER[a.priority || 'low'] ?? 4;
+      const pb = PRIORITY_ORDER[b.priority || 'low'] ?? 4;
+      if (pa !== pb) return pa - pb;
+      // Secondary sort: done items go to bottom
+      const statusOrder: Record<ExecutionStatus, number> = { todo: 0, in_progress: 1, done: 2 };
+      return statusOrder[a.execStatus] - statusOrder[b.execStatus];
+    });
+
+    return combined;
+  }, [inventory, topics]);
+
+  // Apply filters
+  const filteredQueue = useMemo(() => {
+    return actionQueue.filter(item => {
+      if (priorityFilter !== 'all' && item.priority !== priorityFilter) return false;
+      if (actionFilter !== 'all' && item.action !== actionFilter) return false;
+      return true;
+    });
+  }, [actionQueue, priorityFilter, actionFilter]);
+
+  // Stats
+  const totalActions = actionQueue.length;
+  const completedActions = actionQueue.filter(a => a.execStatus === 'done').length;
+  const progressPercent = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
+
+  const handleActionClick = useCallback((item: typeof actionQueue[0]) => {
+    if (item.isCreateNew && item.topicId && onCreateBrief) {
+      onCreateBrief(item.topicId);
+    } else if (item.inventoryItem && onOpenWorkbench) {
+      onOpenWorkbench(item.inventoryItem);
+    }
+  }, [onOpenWorkbench, onCreateBrief]);
+
+  const getButtonLabel = (item: typeof actionQueue[0]): string => {
+    if (item.execStatus === 'done') return 'View';
+    if (item.isCreateNew && !item.inventoryItem) return 'Create Brief';
+    if (item.execStatus === 'in_progress') return 'Continue';
+    return 'Open Workbench';
+  };
+
+  // Count per priority for filter badges
+  const priorityCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: actionQueue.length, critical: 0, high: 0, medium: 0, low: 0 };
+    for (const item of actionQueue) {
+      const p = item.priority || 'low';
+      if (p in counts) counts[p]++;
+    }
+    return counts;
+  }, [actionQueue]);
+
+  if (totalActions === 0) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div>
+          <h2 className="text-xl font-bold text-white">Execute your migration</h2>
+          <p className="text-sm text-gray-400 mt-1">Work through each URL action to complete your migration.</p>
+        </div>
+        <div className="mt-12 flex flex-col items-center justify-center text-gray-400">
+          <p className="text-lg font-medium text-white mb-2">No actions in the queue</p>
+          <p className="text-sm max-w-md text-center">
+            Go back to the Plan step and generate a migration plan to populate action items here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-white">Execute your migration</h2>
+        <p className="text-sm text-gray-400 mt-1">Work through each URL action to complete your migration.</p>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/30">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-gray-300">
+            Progress: <span className="font-semibold text-white">{completedActions}</span>
+            <span className="text-gray-500">/{totalActions}</span> actions completed
+          </span>
+          <span className="text-sm font-semibold text-white">{progressPercent}%</span>
+        </div>
+        <div className="w-full bg-gray-700 h-2.5 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progressPercent}%`,
+              background: progressPercent === 100
+                ? '#22c55e'
+                : 'linear-gradient(90deg, #3b82f6, #6366f1)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="space-y-3">
+        {/* Priority Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 uppercase tracking-wider mr-1">Priority:</span>
+          {PRIORITY_FILTERS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setPriorityFilter(f.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                priorityFilter === f.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+              }`}
+            >
+              {f.label}
+              <span className="ml-1.5 opacity-70">
+                {priorityCounts[f.value] ?? 0}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Action Type Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 uppercase tracking-wider mr-1">Action:</span>
+          <button
+            onClick={() => setActionFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              actionFilter === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+            }`}
+          >
+            All Actions
+          </button>
+          {ACTION_TYPES.map(action => {
+            const count = actionQueue.filter(a => a.action === action).length;
+            if (count === 0) return null;
+            return (
+              <button
+                key={action}
+                onClick={() => setActionFilter(action)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  actionFilter === action
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                }`}
+              >
+                {formatAction(action)}
+                <span className="ml-1.5 opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Action Queue Table */}
+      <div className="border border-gray-700 rounded-lg bg-gray-800/30 overflow-hidden">
+        <div className="overflow-x-auto max-h-[calc(100vh-480px)] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-gray-800 z-10">
+              <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 font-medium w-10">#</th>
+                <th className="px-4 py-3 font-medium">URL / Topic</th>
+                <th className="px-4 py-3 font-medium">Action</th>
+                <th className="px-4 py-3 font-medium">Priority</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700/50">
+              {filteredQueue.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    No actions match the current filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredQueue.map((item, index) => (
+                  <tr
+                    key={item.id}
+                    className={`transition-colors ${
+                      item.execStatus === 'done'
+                        ? 'bg-green-900/5 hover:bg-green-900/10'
+                        : 'hover:bg-gray-700/30'
+                    }`}
+                  >
+                    {/* Row number */}
+                    <td className="px-4 py-3 text-gray-500 tabular-nums text-xs">
+                      {index + 1}
+                    </td>
+
+                    {/* URL / Topic */}
+                    <td className="px-4 py-3 max-w-xs">
+                      <div className="truncate">
+                        {item.url ? (
+                          <span
+                            className="text-gray-300 font-mono text-xs"
+                            title={item.url}
+                          >
+                            {(() => {
+                              try {
+                                return new URL(item.url).pathname;
+                              } catch {
+                                return item.url;
+                              }
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 text-xs">{item.label}</span>
+                        )}
+                      </div>
+                      {item.topicTitle && item.url && (
+                        <div className="text-xs text-gray-500 mt-0.5 truncate" title={item.topicTitle}>
+                          &rarr; {item.topicTitle}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Action Badge */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getActionClasses(item.action)}`}>
+                        {formatAction(item.action)}
+                      </span>
+                    </td>
+
+                    {/* Priority Badge */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${getPriorityClasses(item.priority)}`}>
+                        {item.priority ? item.priority.charAt(0).toUpperCase() + item.priority.slice(1) : 'Unset'}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${getStatusClasses(item.execStatus)}`}>
+                        <span className="text-[10px]">{getStatusIcon(item.execStatus)}</span>
+                        {getStatusLabel(item.execStatus)}
+                      </span>
+                    </td>
+
+                    {/* Action Button */}
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleActionClick(item)}
+                        disabled={!onOpenWorkbench && !onCreateBrief}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          item.execStatus === 'done'
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-blue-600 text-white hover:bg-blue-500'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {getButtonLabel(item)}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer count */}
+        {filteredQueue.length > 0 && filteredQueue.length !== actionQueue.length && (
+          <div className="px-4 py-2 text-xs text-gray-500 text-center border-t border-gray-700/50">
+            Showing {filteredQueue.length} of {actionQueue.length} actions
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ExecuteStep;

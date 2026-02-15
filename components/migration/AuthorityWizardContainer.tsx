@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SiteInventoryItem, EnrichedTopic } from '../../types';
+import { ImportStep } from './steps/ImportStep';
+import { AuditStep } from './steps/AuditStep';
+import { MatchStep } from './steps/MatchStep';
+import { PlanStep } from './steps/PlanStep';
+import { ExecuteStep } from './steps/ExecuteStep';
 
 interface AuthorityWizardContainerProps {
   projectId: string;
@@ -175,75 +180,53 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
       {/* Step Content Area */}
       <div className="flex-grow overflow-y-auto">
         {currentStep === 1 && (
-          <div className="p-8 text-center text-gray-400">
-            <h2 className="text-xl text-white mb-2">Step 1: Import Website Data</h2>
-            <p className="mb-4">Import step component will be rendered here</p>
-            {inventory.length > 0 && (
-              <p className="text-sm text-green-400 mb-4">
-                {inventory.length} URL{inventory.length !== 1 ? 's' : ''} already imported
-              </p>
-            )}
-            {!importComplete && (
-              <button
-                onClick={handleMarkComplete}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors"
-              >
-                Mark Complete
-              </button>
-            )}
-          </div>
+          <ImportStep
+            projectId={projectId}
+            mapId={mapId}
+            inventory={inventory}
+            onComplete={() => setImportComplete(true)}
+            onRefreshInventory={onRefreshInventory}
+          />
         )}
 
         {currentStep === 2 && (
-          <div className="p-8 text-center text-gray-400">
-            <h2 className="text-xl text-white mb-2">Step 2: Batch Content Audit</h2>
-            <p className="mb-4">Audit step component will be rendered here</p>
-            {!auditComplete && (
-              <button
-                onClick={handleMarkComplete}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors"
-              >
-                Mark Complete
-              </button>
-            )}
-          </div>
+          <AuditStep
+            projectId={projectId}
+            mapId={mapId}
+            inventory={inventory}
+            onComplete={() => setAuditComplete(true)}
+            onRefreshInventory={onRefreshInventory}
+          />
         )}
 
         {currentStep === 3 && (
-          <div className="p-8 text-center text-gray-400">
-            <h2 className="text-xl text-white mb-2">Step 3: Match URLs to Topics</h2>
-            <p className="mb-4">Match step component will be rendered here</p>
-            {!matchComplete && (
-              <button
-                onClick={handleMarkComplete}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors"
-              >
-                Mark Complete
-              </button>
-            )}
-          </div>
+          <MatchStep
+            projectId={projectId}
+            mapId={mapId}
+            inventory={inventory}
+            topics={topics}
+            onComplete={() => setMatchComplete(true)}
+            onRefreshInventory={onRefreshInventory}
+          />
         )}
 
         {currentStep === 4 && (
-          <div className="p-8 text-center text-gray-400">
-            <h2 className="text-xl text-white mb-2">Step 4: Generate Migration Plan</h2>
-            <p className="mb-4">Plan step component will be rendered here</p>
-            {!planComplete && (
-              <button
-                onClick={handleMarkComplete}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors"
-              >
-                Mark Complete
-              </button>
-            )}
-          </div>
+          <PlanStep
+            projectId={projectId}
+            mapId={mapId}
+            inventory={inventory}
+            topics={topics}
+            onComplete={() => setPlanComplete(true)}
+          />
         )}
 
         {currentStep === 5 && (
-          <div className="p-8 text-center text-gray-400">
-            <h2 className="text-xl text-white mb-2">Step 5: Execute Migration</h2>
-            <p className="mb-4">Execute step component will be rendered here</p>
-          </div>
+          <ExecuteStep
+            projectId={projectId}
+            mapId={mapId}
+            inventory={inventory}
+            topics={topics}
+          />
         )}
       </div>
 
