@@ -2434,6 +2434,44 @@ export interface SiteInventoryItem {
     status: TransitionStatus;
     action?: ActionType;
 
+
+    // Audit integration
+    audit_score?: number;         // 0-100 from Unified Audit
+    audit_snapshot_id?: string;   // FK to unified_audit_snapshots
+    last_audited_at?: string;     // ISO timestamp
+
+    // Page metadata (extracted during audit)
+    page_title?: string;
+    page_h1?: string;
+    meta_description?: string;
+    headings?: { level: number; text: string }[];
+    internal_link_count?: number;
+    external_link_count?: number;
+    schema_types?: string[];      // e.g. ['Article','FAQPage']
+    language?: string;
+
+    // Auto-matching
+    match_confidence?: number;    // 0.00-1.00
+    match_source?: 'auto' | 'manual' | 'confirmed';
+
+    // Migration plan
+    recommended_action?: ActionType;
+    action_reasoning?: string;
+    action_priority?: 'critical' | 'high' | 'medium' | 'low';
+    action_effort?: 'none' | 'low' | 'medium' | 'high';
+
+    // CrUX / Core Web Vitals
+    cwv_lcp?: number;
+    cwv_inp?: number;
+    cwv_cls?: number;
+    cwv_assessment?: 'good' | 'needs-improvement' | 'poor';
+
+    // URL Inspection data
+    google_index_verdict?: string;
+    google_canonical?: string;
+    last_crawled_at?: string;
+    mobile_usability?: string;
+    rich_results_status?: string;
     created_at: string;
     updated_at: string;
 }
@@ -2444,6 +2482,32 @@ export interface TransitionSnapshot {
     created_at: string;
     content_markdown: string;
     snapshot_type: 'ORIGINAL_IMPORT' | 'PRE_OPTIMIZATION' | 'POST_OPTIMIZATION';
+}
+
+export interface MigrationPlan {
+    id: string;
+    project_id: string;
+    map_id: string;
+    name: string;
+    status: 'draft' | 'active' | 'completed' | 'archived';
+    gsc_start_date?: string;
+    gsc_end_date?: string;
+    total_urls: number;
+    total_topics: number;
+    matched_count: number;
+    orphan_count: number;
+    gap_count: number;
+    cannibalization_count: number;
+    keep_count: number;
+    optimize_count: number;
+    rewrite_count: number;
+    merge_count: number;
+    redirect_count: number;
+    prune_count: number;
+    create_count: number;
+    completed_count: number;
+    created_at: string;
+    updated_at: string;
 }
 
 // --- Smart Migration Types (Harvesting) ---
