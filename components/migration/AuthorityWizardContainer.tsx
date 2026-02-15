@@ -47,12 +47,36 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
   const [matchComplete, setMatchComplete] = useState(false);
   const [planComplete, setPlanComplete] = useState(false);
 
-  // Auto-detect initial state: if inventory already has items, mark import as complete
+  // Auto-detect completion state from persisted inventory data
+  const hasAutoAdvanced = React.useRef(false);
   useEffect(() => {
-    if (inventory.length > 0) {
-      setImportComplete(true);
+    if (inventory.length === 0) return;
+
+    setImportComplete(true);
+
+    const hasAuditData = inventory.some(i => i.audit_score != null);
+    if (hasAuditData) setAuditComplete(true);
+
+    const hasMatchData = inventory.some(i => i.match_category != null);
+    if (hasMatchData) setMatchComplete(true);
+
+    const hasPlanData = inventory.some(i => i.recommended_action != null || i.action != null);
+    if (hasPlanData) setPlanComplete(true);
+
+    // Auto-advance to the furthest actionable step on first load
+    if (!hasAutoAdvanced.current) {
+      hasAutoAdvanced.current = true;
+      if (hasPlanData) {
+        setCurrentStep(5);
+      } else if (hasMatchData) {
+        setCurrentStep(4);
+      } else if (hasAuditData) {
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(2);
+      }
     }
-  }, [inventory.length]);
+  }, [inventory]);
 
   const canNavigateToStep = useCallback((step: 1 | 2 | 3 | 4 | 5): boolean => {
     switch (step) {

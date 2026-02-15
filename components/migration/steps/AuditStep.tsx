@@ -97,6 +97,14 @@ export const AuditStep: React.FC<AuditStepProps> = ({
     return { good, needsWork, poor, avg };
   }, [auditedItems]);
 
+  // Auto-complete: if all items are already audited, mark step as done
+  useEffect(() => {
+    if (inventory.length > 0 && alreadyAuditedCount === inventory.length && !isRunning) {
+      setHasFinished(true);
+      onComplete();
+    }
+  }, [inventory.length, alreadyAuditedCount, isRunning, onComplete]);
+
   // Track completion: when batch finishes, refresh inventory and notify parent
   const prevIsRunning = React.useRef(isRunning);
   useEffect(() => {
