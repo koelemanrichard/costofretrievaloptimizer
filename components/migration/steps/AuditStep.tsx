@@ -371,7 +371,16 @@ export const AuditStep: React.FC<AuditStepProps> = ({
             />
           </div>
 
-          {isRunning && progress.currentUrl && (
+          {isRunning && progress.crossPagePass && (
+            <p className="text-xs text-gray-500 truncate">
+              Building link graph&hellip;
+              <span className="ml-2 text-gray-600">
+                Analyzing cross-page relationships
+              </span>
+            </p>
+          )}
+
+          {isRunning && !progress.crossPagePass && progress.currentUrl && (
             <p className="text-xs text-gray-500 truncate">
               Current: {truncateUrl(progress.currentUrl, 60)}
               {progress.currentPhase && (

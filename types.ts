@@ -2450,6 +2450,10 @@ export interface SiteInventoryItem {
     schema_types?: string[];      // e.g. ['Article','FAQPage']
     language?: string;
 
+    // Cross-page link graph (populated after batch audit)
+    inbound_link_count?: number;        // Pages linking TO this page
+    internal_link_targets?: string[];   // URLs this page links to
+
     // Auto-matching
     match_confidence?: number;    // 0.00-1.00
     match_source?: 'auto' | 'manual' | 'confirmed';

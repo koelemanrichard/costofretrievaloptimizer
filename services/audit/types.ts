@@ -206,4 +206,11 @@ export interface TopicalMapContext {
   keyAttributes?: string[];
   websiteType?: string;
   eavTriples?: Array<{ entity: string; attribute: string; value: string }>;
+
+  // Cross-page context (populated during batch audit)
+  siteCentralEntity?: string;
+  allPageUrls?: string[];
+  allPageTargetQueries?: string[];
+  allPageCentralEntities?: string[];
+  internalLinksToThisPage?: string[];
 }

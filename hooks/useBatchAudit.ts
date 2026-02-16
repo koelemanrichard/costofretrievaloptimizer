@@ -99,6 +99,15 @@ export function useBatchAudit(projectId: string, mapId: string) {
       .filter(t => t.target_url)
       .map(t => ({ url: t.target_url!, topic: t.title ?? '' }));
 
+    // Build cross-page context arrays from topics
+    const allTopics = activeMap.topics ?? [];
+    const allPageTargetQueries = allTopics
+      .map(t => t.canonical_query || t.title || '')
+      .filter(Boolean);
+    const allPageCentralEntities = allTopics
+      .map(() => pillars?.centralEntity ?? '')
+      .filter(Boolean);
+
     return {
       centralEntity: pillars?.centralEntity,
       sourceContext: bi ? {
@@ -116,8 +125,14 @@ export function useBatchAudit(projectId: string, mapId: string) {
       eavs: flatEavs,
       rootAttributes,
       otherPages,
+      relatedPages: otherPages,
       websiteType: bi?.websiteType,
       eavTriples: flatEavs.map(({ entity, attribute, value }) => ({ entity, attribute, value })),
+      // Cross-page context
+      siteCentralEntity: pillars?.centralEntity,
+      allPageUrls: otherPages.map(p => p.url),
+      allPageTargetQueries,
+      allPageCentralEntities,
     };
   }, [activeMap]);
 

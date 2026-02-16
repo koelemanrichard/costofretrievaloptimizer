@@ -36,6 +36,8 @@ export interface BatchAuditProgress {
   currentUrl: string;
   currentPhase: string;
   errors: { url: string; error: string }[];
+  /** True when the post-batch cross-page link graph pass is running. */
+  crossPagePass?: boolean;
 }
 
 export interface BatchAuditOptions {
@@ -127,6 +129,8 @@ export class BatchAuditService {
     };
 
     // 4. Process with concurrency limit using a shared-queue worker pattern
+    //    Collect outbound internal links per page for the cross-page pass.
+    const linkGraph = new Map<string, string[]>();
     const queue = [...items];
 
     const processNext = async (): Promise<void> => {
@@ -139,7 +143,10 @@ export class BatchAuditService {
         onProgress({ ...progress });
 
         try {
-          await this.auditSingleUrl(item, scrapingProvider, language, progress, onProgress);
+          const targets = await this.auditSingleUrl(item, scrapingProvider, language, progress, onProgress);
+          if (targets) {
+            linkGraph.set(item.url, targets);
+          }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
           progress.errors.push({ url: item.url, error: errorMsg });
@@ -157,6 +164,23 @@ export class BatchAuditService {
     }
 
     await Promise.allSettled(workers);
+
+    // 5. Cross-page pass: build reverse link index and persist link graph data
+    if (!abortSignal?.aborted && linkGraph.size > 0) {
+      progress.crossPagePass = true;
+      progress.currentUrl = '';
+      progress.currentPhase = 'Building link graph...';
+      onProgress({ ...progress });
+
+      try {
+        await this.runCrossPagePass(inventory, linkGraph);
+      } catch (err) {
+        console.warn('[BatchAuditService] Cross-page pass failed:', err);
+      }
+
+      progress.crossPagePass = false;
+      onProgress({ ...progress });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -169,7 +193,7 @@ export class BatchAuditService {
     language: string,
     progress: BatchAuditProgress,
     onProgress: (progress: BatchAuditProgress) => void,
-  ): Promise<void> {
+  ): Promise<string[] | null> {
     // Build the audit request
     const request: AuditRequest = {
       type: 'external',
@@ -258,6 +282,66 @@ export class BatchAuditService {
     // Cache the fetched content in transition_snapshots to avoid re-scraping
     if (fc) {
       await this.cacheContent(item.id, fc);
+    }
+
+    // Return internal link target URLs for the cross-page pass
+    if (fc?.internalLinks && fc.internalLinks.length > 0) {
+      return fc.internalLinks.map(l => l.href);
+    }
+    return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Cross-page pass — build reverse link index and persist to inventory
+  // -------------------------------------------------------------------------
+
+  private async runCrossPagePass(
+    inventory: SiteInventoryItem[],
+    linkGraph: Map<string, string[]>,
+  ): Promise<void> {
+    // Build a set of known inventory URLs (normalized) for matching
+    const inventoryByNormUrl = new Map<string, SiteInventoryItem>();
+    for (const item of inventory) {
+      inventoryByNormUrl.set(normalizeUrl(item.url), item);
+    }
+
+    // Build reverse index: for each target URL, which source URLs link to it
+    const inboundMap = new Map<string, Set<string>>();
+
+    for (const [sourceUrl, targets] of linkGraph) {
+      const normSource = normalizeUrl(sourceUrl);
+      for (const rawTarget of targets) {
+        const normTarget = normalizeUrl(rawTarget);
+        // Only count links to pages we know about in the inventory
+        if (inventoryByNormUrl.has(normTarget)) {
+          if (!inboundMap.has(normTarget)) {
+            inboundMap.set(normTarget, new Set());
+          }
+          inboundMap.get(normTarget)!.add(normSource);
+        }
+      }
+    }
+
+    // Update each inventory item with link graph data
+    for (const item of inventory) {
+      const normUrl = normalizeUrl(item.url);
+      const inboundSources = inboundMap.get(normUrl);
+      const inboundCount = inboundSources?.size ?? 0;
+
+      // Outbound targets from the link graph (already collected during audit)
+      const outboundTargets = linkGraph.get(item.url) ?? null;
+
+      try {
+        await this.supabase
+          .from('site_inventory')
+          .update({
+            inbound_link_count: inboundCount,
+            internal_link_targets: outboundTargets,
+          })
+          .eq('id', item.id);
+      } catch {
+        // Non-fatal — continue updating other items
+      }
     }
   }
 
@@ -360,5 +444,26 @@ export class BatchAuditService {
       // Content caching is non-fatal — don't break the audit flow
       console.warn('[BatchAuditService] Failed to cache content:', err);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// URL normalization — strips trailing slashes, fragments, lowercases
+// ---------------------------------------------------------------------------
+
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    // Remove fragment
+    u.hash = '';
+    // Strip trailing slash (except root path)
+    if (u.pathname.length > 1 && u.pathname.endsWith('/')) {
+      u.pathname = u.pathname.slice(0, -1);
+    }
+    // Lowercase for consistent matching
+    return u.toString().toLowerCase();
+  } catch {
+    // Fallback for invalid URLs: basic normalization
+    return url.replace(/#.*$/, '').replace(/\/+$/, '').toLowerCase();
   }
 }
