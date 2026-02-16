@@ -241,12 +241,12 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
 
   if (totalActions === 0) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="px-4 py-3">
         <div>
           <h2 className="text-xl font-bold text-white">Improve your pages</h2>
           <p className="text-sm text-gray-400 mt-1">Work through each page to apply AI-suggested improvements.</p>
         </div>
-        <div className="mt-12 flex flex-col items-center justify-center text-gray-400">
+        <div className="mt-6 flex flex-col items-center justify-center text-gray-400">
           <p className="text-lg font-medium text-white mb-2">No actions in the queue</p>
           <p className="text-sm max-w-md text-center">
             Go back to the Plan step and generate a migration plan to populate action items here.
@@ -273,7 +273,7 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
   }, [actionQueue]);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5">
+    <div className="px-4 py-3 space-y-3">
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-white">Improve your pages</h2>
@@ -407,7 +407,7 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
                     : 'No pages match the current filters.'}
                 </div>
               ) : (
-                <div className="overflow-x-auto max-h-[calc(100vh-560px)] overflow-y-auto">
+                <div className="overflow-x-auto max-h-[45vh] overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-gray-800 z-10">
                       <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
@@ -518,7 +518,7 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
                         No new content items match the current filters.
                       </div>
                     ) : (
-                      <div className="overflow-x-auto max-h-[400px] overflow-y-auto border-t border-gray-700/50">
+                      <div className="overflow-x-auto max-h-[35vh] overflow-y-auto border-t border-gray-700/50">
                         <table className="w-full text-sm">
                           <thead className="sticky top-0 bg-gray-800 z-10">
                             <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">

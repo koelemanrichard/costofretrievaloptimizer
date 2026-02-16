@@ -146,7 +146,7 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
   return (
     <div className="flex flex-col h-full bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
       {/* Step Indicator */}
-      <div className="flex-shrink-0 px-8 pt-6 pb-4">
+      <div className="flex-shrink-0 px-6 pt-3 pb-2">
         <div className="relative flex items-center justify-between max-w-2xl mx-auto">
           {/* Connecting line behind circles */}
           <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-700" />
@@ -206,7 +206,7 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
       <div className="border-t border-gray-700" />
 
       {/* Step Content Area */}
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow min-h-0 overflow-y-auto">
         {currentStep === 1 && (
           <ImportStep
             projectId={projectId}
@@ -262,7 +262,7 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
       </div>
 
       {/* Footer Navigation */}
-      <div className="flex-shrink-0 border-t border-gray-700 px-6 py-4 flex justify-between items-center">
+      <div className="flex-shrink-0 border-t border-gray-700 px-6 py-2.5 flex justify-between items-center">
         <button
           onClick={handleBack}
           disabled={currentStep === 1}

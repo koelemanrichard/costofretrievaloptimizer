@@ -249,9 +249,9 @@ export const MatchStep: React.FC<MatchStepProps> = ({
   const hasConfirmedSome = confirmedCount > 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="px-4 py-3 space-y-3">
       {/* Header */}
-      <div className="text-center">
+      <div>
         <h2 className="text-xl font-semibold text-white">
           Mapping your site to the target strategy
         </h2>
@@ -360,7 +360,7 @@ export const MatchStep: React.FC<MatchStepProps> = ({
 
       {/* No result yet */}
       {!result && !isMatching && (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-6 text-gray-500">
           <p className="text-base mb-1">No match results yet.</p>
           <p className="text-sm">
             Click &quot;Run Auto-Match&quot; to match {inventory.length} URLs against{' '}

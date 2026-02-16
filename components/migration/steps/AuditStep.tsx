@@ -140,10 +140,10 @@ export const AuditStep: React.FC<AuditStepProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="px-4 py-3 space-y-3">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-white">Analyzing every page</h2>
+        <h2 className="text-lg font-semibold text-white">Analyzing every page</h2>
         <p className="text-sm text-gray-400 mt-1">
           We'll analyze each page's content quality and technical health. This takes about 10 seconds per page.
         </p>
@@ -285,7 +285,7 @@ export const AuditStep: React.FC<AuditStepProps> = ({
             </h3>
             <span className="text-xs text-gray-500">{auditedItems.length} audited</span>
           </div>
-          <div className="overflow-x-auto max-h-80 overflow-y-auto">
+          <div className="overflow-x-auto max-h-[45vh] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-800">
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">

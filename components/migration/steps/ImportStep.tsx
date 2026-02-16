@@ -205,14 +205,14 @@ export const ImportStep: React.FC<ImportStepProps> = ({
   const gscDataCount = inventory.filter(i => i.gsc_impressions && i.gsc_impressions > 0).length;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="px-4 py-3 space-y-3">
       <div>
         <h2 className="text-xl font-bold text-white">Let's understand your website</h2>
         <p className="text-sm text-gray-400 mt-1">Import your sitemap and search console data to build a complete site inventory.</p>
       </div>
 
       {/* Section 1: Sitemap Import */}
-      <div className="border border-gray-700 rounded-lg p-5 bg-gray-800/30">
+      <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/30">
         <h3 className="text-base font-semibold text-white mb-3">Sitemap Import</h3>
         <div className="flex gap-3">
           <Input
@@ -273,7 +273,7 @@ export const ImportStep: React.FC<ImportStepProps> = ({
       </div>
 
       {/* Section 2: GSC Data */}
-      <div className="border border-gray-700 rounded-lg p-5 bg-gray-800/30">
+      <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/30">
         <h3 className="text-base font-semibold text-white mb-3">Google Search Console</h3>
 
         {/* GSC API sync */}
@@ -411,7 +411,7 @@ export const ImportStep: React.FC<ImportStepProps> = ({
               </span>
             </h3>
           </div>
-          <div className="overflow-x-auto max-h-64 overflow-y-auto">
+          <div className="overflow-x-auto max-h-[40vh] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-800 z-10">
                 <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">

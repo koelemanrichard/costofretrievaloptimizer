@@ -223,7 +223,7 @@ export const PlanStep: React.FC<PlanStepProps> = ({
   }, [savePlan]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="px-4 py-3 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -337,7 +337,7 @@ export const PlanStep: React.FC<PlanStepProps> = ({
               <span className="text-gray-500 ml-2">(sorted by priority)</span>
             </h3>
           </div>
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+          <div className="overflow-x-auto max-h-[45vh] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-800 z-10">
                 <tr className="border-b border-gray-700">
@@ -422,7 +422,7 @@ export const PlanStep: React.FC<PlanStepProps> = ({
 
       {/* Empty state when no plan is generated yet */}
       {!hasPlan && !isGenerating && (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-6 text-gray-500">
           <p className="text-lg mb-2">No migration plan generated yet</p>
           <p className="text-sm">
             Click &ldquo;Generate Migration Plan&rdquo; to create a prioritized action plan for {inventory.length} URLs
@@ -433,7 +433,7 @@ export const PlanStep: React.FC<PlanStepProps> = ({
 
       {/* Generating state */}
       {isGenerating && (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-6 text-gray-400">
           <div className="inline-block w-6 h-6 border-2 border-gray-600 border-t-blue-400 rounded-full animate-spin mb-3" />
           <p className="text-sm">Generating migration plan...</p>
         </div>
