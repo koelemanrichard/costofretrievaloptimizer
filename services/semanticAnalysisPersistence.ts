@@ -83,14 +83,9 @@ export const getExistingSemanticAnalysis = async (
             query = query.is('map_id', null);
         }
 
-        const { data, error } = await query.order('created_at', { ascending: false }).limit(1).single();
+        const { data, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
         if (error) {
-            if (error.code === 'PGRST116') {
-                // No rows returned - this is expected for first analysis
-                console.log('[SemanticPersistence] No existing analysis found');
-                return null;
-            }
             console.error('[SemanticPersistence] Error fetching existing analysis:', error);
             return null;
         }
@@ -105,6 +100,7 @@ export const getExistingSemanticAnalysis = async (
             return record.result;
         }
 
+        console.log('[SemanticPersistence] No existing analysis found');
         return null;
     } catch (err) {
         // Table might not exist yet - that's okay
