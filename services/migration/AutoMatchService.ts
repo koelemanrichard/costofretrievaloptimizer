@@ -238,6 +238,10 @@ export class AutoMatchService {
     topics: EnrichedTopic[],
     gscQueries?: Map<string, string[]>,
   ): AutoMatchResult {
+    // Deduplicate inventory items that differ only by trailing slash.
+    // Keep the item with more data (audit_score, page_title, etc.).
+    const deduped = this.deduplicateByTrailingSlash(inventory);
+
     // Pre-process topics for efficient comparison
     const preparedTopics = topics.map(prepareTopic);
 
@@ -247,7 +251,7 @@ export class AutoMatchService {
     const matches: MatchResult[] = [];
 
     // ── Phase 1: Find best topic for each inventory URL ─────────────
-    for (const item of inventory) {
+    for (const item of deduped) {
       const itemGscQueries = gscQueries?.get(item.url);
 
       let bestTopicId: string | null = null;
@@ -344,5 +348,47 @@ export class AutoMatchService {
     };
 
     return { matches, gaps, stats };
+  }
+
+  /**
+   * Deduplicate inventory items that differ only by a trailing slash.
+   * Keeps the item with more data (prefers the one with audit_score or page_title).
+   */
+  private deduplicateByTrailingSlash(inventory: SiteInventoryItem[]): SiteInventoryItem[] {
+    const normalized = new Map<string, SiteInventoryItem>();
+
+    for (const item of inventory) {
+      // Strip trailing slash for comparison (except root "/")
+      let key: string;
+      try {
+        const u = new URL(item.url);
+        if (u.pathname.length > 1 && u.pathname.endsWith('/')) {
+          u.pathname = u.pathname.slice(0, -1);
+        }
+        key = u.toString();
+      } catch {
+        key = item.url;
+      }
+
+      const existing = normalized.get(key);
+      if (!existing) {
+        normalized.set(key, item);
+        continue;
+      }
+
+      // Keep the item with more data
+      const existingScore = (existing.audit_score != null ? 2 : 0)
+        + (existing.page_title ? 1 : 0)
+        + (existing.gsc_clicks != null ? 1 : 0);
+      const newScore = (item.audit_score != null ? 2 : 0)
+        + (item.page_title ? 1 : 0)
+        + (item.gsc_clicks != null ? 1 : 0);
+
+      if (newScore > existingScore) {
+        normalized.set(key, item);
+      }
+    }
+
+    return Array.from(normalized.values());
   }
 }

@@ -342,7 +342,7 @@ export const runTechnicalCrawl = async (
                     updated_at: new Date().toISOString()
                 })
                 .eq('project_id', projectId)
-                .eq('url', url);
+                .eq('url', normalizeInventoryUrl(url));
 
         } catch (e) {
             console.warn(`Failed to audit ${url}:`, e);
