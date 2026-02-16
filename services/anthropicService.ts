@@ -1011,7 +1011,7 @@ export const analyzeContextualFlow = async (
 
     // Run both analyses in parallel with streaming
     const vProm = callApiWithStreaming(
-        prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, entity),
+        prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, entity, info),
         info,
         dispatch,
         t => sanitizer.sanitize(t, { headingVector: Array, vectorIssues: Array, attributeOrderIssues: Array }, { headingVector: [], vectorIssues: [], attributeOrderIssues: [] }),
@@ -1019,7 +1019,7 @@ export const analyzeContextualFlow = async (
         (p) => { vectorChars = p.charsReceived; combineProgress(); }
     );
     const dProm = callApiWithStreaming(
-        prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text),
+        prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text, info),
         info,
         dispatch,
         t => sanitizer.sanitize(t, { discourseGaps: Array, gapDetails: Array }, { discourseGaps: [], gapDetails: [] }),

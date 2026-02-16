@@ -50,6 +50,7 @@ export class ContentQualityPhase extends AuditPhase {
         centralEntity: contentData.centralEntity,
         eavTriples: contentData.eavTriples,
         keyAttributes: contentData.keyAttributes,
+        language: request.language,
       };
       const aiIssues = aiEngine.validateFallback(aiInput);
       for (const issue of aiIssues) {

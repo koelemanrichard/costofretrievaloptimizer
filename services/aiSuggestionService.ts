@@ -175,6 +175,8 @@ export const generateSuggestionForTask = async (
     centralEntity: project.centralEntity || undefined,
     sourceContext: project.sourceContext || undefined,
     centralSearchIntent: project.centralSearchIntent || undefined,
+    language: businessInfo.language,
+    region: businessInfo.region,
   };
 
   // Generate prompt and call AI
@@ -478,6 +480,8 @@ const generateContextAwareSuggestion = async (
     centralEntity: project.centralEntity || undefined,
     sourceContext: project.sourceContext || undefined,
     centralSearchIntent: project.centralSearchIntent || undefined,
+    language: businessInfo.language,
+    region: businessInfo.region,
   };
 
   // Use context-aware prompt that includes previous suggestions

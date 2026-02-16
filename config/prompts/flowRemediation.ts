@@ -7,11 +7,14 @@ import {
     jsonResponseInstruction,
     getStylometryInstructions,
     getLanguageAndRegionInstruction,
+    getLanguageName,
 } from './_common';
 
-export const AUDIT_INTRA_PAGE_FLOW_PROMPT = (text: string, centralEntity: string): string => `
+export const AUDIT_INTRA_PAGE_FLOW_PROMPT = (text: string, centralEntity: string, info?: BusinessInfo): string => `
 You are a Semantic Auditor specializing in Information Retrieval.
+${info?.language ? getLanguageAndRegionInstruction(info.language, info.region) : ''}
 Analyze the following text for "Vector Straightness" and "Attribute Order".
+${info?.language ? `\n**IMPORTANT: All issue descriptions, remediations, and suggested text MUST be in ${getLanguageName(info.language)}. Only JSON keys remain in English.**` : ''}
 
 **Central Entity:** "${centralEntity}"
 
@@ -29,8 +32,10 @@ Return a JSON object with:
 - "attributeOrderIssues": Array of objects { "section": string, "issue": string, "remediation": string }.
 `;
 
-export const AUDIT_DISCOURSE_INTEGRATION_PROMPT = (text: string): string => `
+export const AUDIT_DISCOURSE_INTEGRATION_PROMPT = (text: string, info?: BusinessInfo): string => `
 You are a Linguistic Auditor. Analyze the following text for "Discourse Integration".
+${info?.language ? getLanguageAndRegionInstruction(info.language, info.region) : ''}
+${info?.language ? `\n**IMPORTANT: All gap details, suggested bridges, and descriptive text MUST be in ${getLanguageName(info.language)}. Only JSON keys remain in English.**` : ''}
 
 **Objective:** Ensure sequential paragraphs are semantically linked using "Anchor Segments" (mutual words, concepts, or logical connectors).
 
@@ -122,16 +127,19 @@ Return a JSON object with a single key "polishedDraft" containing the full rewri
 export const GENERATE_TASK_SUGGESTION_PROMPT = (
   task: { ruleId: string; title: string; description: string; remediation: string; priority: string; phase?: string },
   page: { url: string; title?: string; h1?: string; contentMarkdown?: string },
-  project: { domain: string; centralEntity?: string; sourceContext?: string; centralSearchIntent?: string }
+  project: { domain: string; centralEntity?: string; sourceContext?: string; centralSearchIntent?: string; language?: string; region?: string }
 ): string => `
 You are an expert SEO consultant specializing in Holistic SEO and technical audits.
 Generate a specific, actionable remediation for this audit issue.
+${project.language ? `\n${getLanguageAndRegionInstruction(project.language, project.region)}` : ''}
+${project.language ? `\n**OUTPUT LANGUAGE: All suggestion text, remediation instructions, and reasoning MUST be written in ${getLanguageName(project.language)}. Only JSON keys remain in English.**` : ''}
 
 **Project Context:**
 - Domain: ${project.domain}
 ${project.centralEntity ? `- Central Entity: ${project.centralEntity}` : ''}
 ${project.sourceContext ? `- Source Context: ${project.sourceContext}` : ''}
 ${project.centralSearchIntent ? `- Central Search Intent: ${project.centralSearchIntent}` : ''}
+${project.language ? `- Content Language: ${getLanguageName(project.language)}${project.region ? ` (${project.region})` : ''}` : ''}
 
 **Issue to Fix:**
 - Rule ID: ${task.ruleId}
@@ -180,14 +188,17 @@ export const GENERATE_BATCH_TASK_SUGGESTIONS_PROMPT = (
     task: { ruleId: string; title: string; description: string; remediation: string; priority: string };
     pageContext?: { url: string; title?: string; h1?: string };
   }>,
-  project: { domain: string; centralEntity?: string; sourceContext?: string }
+  project: { domain: string; centralEntity?: string; sourceContext?: string; language?: string; region?: string }
 ): string => `
 You are an expert SEO consultant. Generate specific remediations for multiple audit issues.
+${project.language ? `\n${getLanguageAndRegionInstruction(project.language, project.region)}` : ''}
+${project.language ? `\n**OUTPUT LANGUAGE: All suggestion text, remediation instructions, and reasoning MUST be written in ${getLanguageName(project.language)}. Only JSON keys remain in English.**` : ''}
 
 **Project Context:**
 - Domain: ${project.domain}
 ${project.centralEntity ? `- Central Entity: ${project.centralEntity}` : ''}
 ${project.sourceContext ? `- Source Context: ${project.sourceContext}` : ''}
+${project.language ? `- Content Language: ${getLanguageName(project.language)}${project.region ? ` (${project.region})` : ''}` : ''}
 
 **Tasks to Process:**
 ${tasks.map((t, idx) => `
@@ -222,7 +233,7 @@ Return a JSON array with exactly ${tasks.length} objects in sequence order:
 export const GENERATE_CONTEXT_AWARE_TASK_SUGGESTION_PROMPT = (
   task: { ruleId: string; title: string; description: string; remediation: string; priority: string; phase?: string },
   page: { url: string; title?: string; h1?: string; contentMarkdown?: string },
-  project: { domain: string; centralEntity?: string; sourceContext?: string; centralSearchIntent?: string },
+  project: { domain: string; centralEntity?: string; sourceContext?: string; centralSearchIntent?: string; language?: string; region?: string },
   previousSuggestions: Array<{
     ruleId: string;
     title: string;
@@ -232,6 +243,8 @@ export const GENERATE_CONTEXT_AWARE_TASK_SUGGESTION_PROMPT = (
 ): string => `
 You are an expert SEO consultant specializing in Holistic SEO and technical audits.
 Generate a specific, actionable remediation for this audit issue.
+${project.language ? `\n${getLanguageAndRegionInstruction(project.language, project.region)}` : ''}
+${project.language ? `\n**OUTPUT LANGUAGE: All suggestion text, remediation instructions, and reasoning MUST be written in ${getLanguageName(project.language)}. Only JSON keys remain in English.**` : ''}
 
 **CRITICAL: CONTEXT AWARENESS & CONSISTENCY**
 You are part of a batch processing workflow. Previous suggestions have already been made for other tasks on this page.
@@ -257,6 +270,7 @@ ${idx + 1}. [${ps.ruleId}] ${ps.title}
 ${project.centralEntity ? `- Central Entity: ${project.centralEntity}` : ''}
 ${project.sourceContext ? `- Source Context: ${project.sourceContext}` : ''}
 ${project.centralSearchIntent ? `- Central Search Intent: ${project.centralSearchIntent}` : ''}
+${project.language ? `- Content Language: ${getLanguageName(project.language)}${project.region ? ` (${project.region})` : ''}` : ''}
 
 **Issue to Fix:**
 - Rule ID: ${task.ruleId}

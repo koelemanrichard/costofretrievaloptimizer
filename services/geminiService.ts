@@ -1252,8 +1252,8 @@ export const generateTopicBlueprints = async (
 
 export const analyzeContextualFlow = async (text: string, centralEntity: string, businessInfo: BusinessInfo, dispatch: React.Dispatch<any>): Promise<FlowAuditResult> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const vectorPrompt = prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, centralEntity);
-    const discoursePrompt = prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text);
+    const vectorPrompt = prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, centralEntity, businessInfo);
+    const discoursePrompt = prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text, businessInfo);
 
     const vectorFallback = { headingVector: [], vectorIssues: [], attributeOrderIssues: [] };
     const discourseFallback = { discourseGaps: [], gapDetails: [] };

@@ -45,6 +45,8 @@ export interface AiRuleInput {
   eavTriples?: Array<{ entity: string; attribute: string; value: string }>;
   headings?: string[];
   authorInfo?: { name?: string; bio?: string };
+  language?: string;
+  region?: string;
 }
 
 export interface AiRuleIssue {
@@ -60,8 +62,26 @@ export interface AiRuleIssue {
 // Helpers
 // ---------------------------------------------------------------------------
 
+function getLanguageNameForRule(language: string | undefined): string {
+  if (!language) return 'English';
+  const map: Record<string, string> = {
+    en: 'English', nl: 'Dutch', de: 'German', fr: 'French', es: 'Spanish',
+    it: 'Italian', pt: 'Portuguese', pl: 'Polish', ru: 'Russian', zh: 'Chinese',
+    ja: 'Japanese', ko: 'Korean', ar: 'Arabic', hi: 'Hindi', tr: 'Turkish',
+    sv: 'Swedish', da: 'Danish', no: 'Norwegian', fi: 'Finnish', cs: 'Czech',
+    english: 'English', dutch: 'Dutch', german: 'German', french: 'French',
+    spanish: 'Spanish', italian: 'Italian', portuguese: 'Portuguese',
+  };
+  const normalized = language.trim().toLowerCase().split('-')[0].split('_')[0];
+  return map[normalized] || language.charAt(0).toUpperCase() + language.slice(1);
+}
+
 function buildContext(input: AiRuleInput): string {
   const parts: string[] = [];
+  if (input.language) {
+    const langName = getLanguageNameForRule(input.language);
+    parts.push(`**OUTPUT LANGUAGE: ${langName}${input.region ? ` (${input.region})` : ''}** — All descriptions and suggestions MUST be in ${langName}. Only JSON keys remain in English.`);
+  }
   if (input.centralEntity) parts.push(`Central Entity: ${input.centralEntity}`);
   if (input.targetKeyword) parts.push(`Target Keyword: ${input.targetKeyword}`);
   if (input.keyAttributes?.length)
@@ -89,7 +109,8 @@ function fillTemplate(template: string, input: AiRuleInput): string {
     .replace(
       '{{keyAttributes}}',
       input.keyAttributes?.join(', ') ?? 'key attributes',
-    );
+    )
+    .replace('{{language}}', getLanguageNameForRule(input.language));
 }
 
 // ---------------------------------------------------------------------------

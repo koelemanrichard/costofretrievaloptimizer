@@ -61,6 +61,7 @@ export class WebsiteTypeSpecificPhase extends AuditPhase {
         eavTriples: contentData.eavTriples,
         headings: contentData.headings,
         authorInfo: contentData.authorInfo,
+        language: request.language,
       });
       for (const issue of aiIssues) {
         findings.push(this.createFinding({

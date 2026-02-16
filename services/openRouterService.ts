@@ -413,8 +413,8 @@ export const generateTopicBlueprints = async (topics: { title: string; id: strin
 
 export const analyzeContextualFlow = async (text: string, entity: string, info: BusinessInfo, dispatch: React.Dispatch<AppAction>): Promise<FlowAuditResult> => {
     const sanitizer = new AIResponseSanitizer(dispatch);
-    const vProm = callApi(prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, entity), info, dispatch, t => sanitizer.sanitize(t, { headingVector: Array, vectorIssues: Array, attributeOrderIssues: Array }, { headingVector: [], vectorIssues: [], attributeOrderIssues: [] }));
-    const dProm = callApi(prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text), info, dispatch, t => sanitizer.sanitize(t, { discourseGaps: Array, gapDetails: Array }, { discourseGaps: [], gapDetails: [] }));
+    const vProm = callApi(prompts.AUDIT_INTRA_PAGE_FLOW_PROMPT(text, entity, info), info, dispatch, t => sanitizer.sanitize(t, { headingVector: Array, vectorIssues: Array, attributeOrderIssues: Array }, { headingVector: [], vectorIssues: [], attributeOrderIssues: [] }));
+    const dProm = callApi(prompts.AUDIT_DISCOURSE_INTEGRATION_PROMPT(text, info), info, dispatch, t => sanitizer.sanitize(t, { discourseGaps: Array, gapDetails: Array }, { discourseGaps: [], gapDetails: [] }));
     const [vRes, dRes] = await Promise.all([vProm, dProm]);
     const issues: ContextualFlowIssue[] = [];
     if(vRes.vectorIssues) vRes.vectorIssues.forEach((i: { issue: string; heading: string; remediation: string }) => issues.push({ category: 'VECTOR', rule: 'Vector Straightness', score: 0, details: i.issue, offendingSnippet: i.heading, remediation: i.remediation }));
