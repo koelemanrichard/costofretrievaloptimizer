@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAppState } from '../state/appState';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { UnifiedAuditOrchestrator } from '../services/audit/UnifiedAuditOrchestrator';
@@ -120,13 +120,6 @@ export function useBatchAudit(projectId: string, mapId: string) {
       eavTriples: flatEavs.map(({ entity, attribute, value }) => ({ entity, attribute, value })),
     };
   }, [activeMap]);
-
-  // Cleanup abort controller on unmount
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
 
   const startBatch = useCallback(async (
     inventory: SiteInventoryItem[],

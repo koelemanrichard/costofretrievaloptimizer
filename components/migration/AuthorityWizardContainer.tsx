@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SiteInventoryItem, EnrichedTopic } from '../../types';
+import { useAppState } from '../../state/appState';
+import { useBatchAudit } from '../../hooks/useBatchAudit';
 import { ImportStep } from './steps/ImportStep';
 import { AuditStep } from './steps/AuditStep';
 import { MatchStep } from './steps/MatchStep';
@@ -41,11 +43,34 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
   onOpenWorkbench,
   onCreateBrief,
 }) => {
+  const { dispatch } = useAppState();
+
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [importComplete, setImportComplete] = useState(false);
   const [auditComplete, setAuditComplete] = useState(false);
   const [matchComplete, setMatchComplete] = useState(false);
   const [planComplete, setPlanComplete] = useState(false);
+
+  // Lifted batch audit state — persists across step navigation
+  const batchAudit = useBatchAudit(projectId, mapId);
+
+  // Track audit completion: running → done triggers notification + refresh
+  const prevAuditRunning = useRef(batchAudit.isRunning);
+  useEffect(() => {
+    if (prevAuditRunning.current && !batchAudit.isRunning && !batchAudit.error) {
+      const completed = batchAudit.progress?.completed ?? 0;
+      dispatch({
+        type: 'SET_NOTIFICATION',
+        payload: {
+          message: `Audit complete: ${completed} page${completed !== 1 ? 's' : ''} analyzed`,
+          severity: 'success',
+        },
+      });
+      onRefreshInventory();
+      setAuditComplete(true);
+    }
+    prevAuditRunning.current = batchAudit.isRunning;
+  }, [batchAudit.isRunning, batchAudit.error, batchAudit.progress, dispatch, onRefreshInventory]);
 
   // Auto-detect completion state from persisted inventory data
   const hasAutoAdvanced = React.useRef(false);
@@ -205,6 +230,33 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
       {/* Divider */}
       <div className="border-t border-gray-700" />
 
+      {/* Mini-progress bar when audit runs in background */}
+      {batchAudit.isRunning && currentStep !== 2 && batchAudit.progress && (
+        <button
+          onClick={() => setCurrentStep(2)}
+          className="flex-shrink-0 mx-4 mt-2 px-4 py-2 bg-blue-900/40 border border-blue-700/50 rounded-lg flex items-center gap-3 hover:bg-blue-900/60 transition-colors cursor-pointer group"
+        >
+          <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+          <div className="flex-grow min-w-0">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-blue-300 font-medium truncate">
+                Audit running: {batchAudit.progress.completed}/{batchAudit.progress.total} pages
+                ({Math.round((batchAudit.progress.completed / Math.max(batchAudit.progress.total, 1)) * 100)}%)
+              </span>
+              <span className="text-blue-400/70 text-[10px] ml-2 group-hover:text-blue-300">
+                View &#9654;
+              </span>
+            </div>
+            <div className="w-full h-1 bg-blue-900/60 rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((batchAudit.progress.completed / Math.max(batchAudit.progress.total, 1)) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </button>
+      )}
+
       {/* Step Content Area */}
       <div className="flex-grow min-h-0 overflow-y-auto">
         {currentStep === 1 && (
@@ -224,6 +276,11 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
             inventory={inventory}
             onComplete={() => setAuditComplete(true)}
             onRefreshInventory={onRefreshInventory}
+            isRunning={batchAudit.isRunning}
+            progress={batchAudit.progress}
+            startBatch={batchAudit.startBatch}
+            cancelBatch={batchAudit.cancelBatch}
+            auditError={batchAudit.error}
           />
         )}
 

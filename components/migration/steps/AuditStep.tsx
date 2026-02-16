@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useBatchAudit } from '../../../hooks/useBatchAudit';
 import type { SiteInventoryItem } from '../../../types';
-import type { BatchAuditOptions } from '../../../services/audit/BatchAuditService';
+import type { BatchAuditProgress, BatchAuditOptions } from '../../../services/audit/BatchAuditService';
 import { InventoryTriagePanel } from './InventoryTriagePanel';
 import {
   classifyUrl,
@@ -17,6 +16,12 @@ interface AuditStepProps {
   inventory: SiteInventoryItem[];
   onComplete: () => void;
   onRefreshInventory: () => void;
+  // Lifted audit state from useBatchAudit (lives in AuthorityWizardContainer)
+  isRunning: boolean;
+  progress: BatchAuditProgress | null;
+  startBatch: (items: SiteInventoryItem[], options?: BatchAuditOptions) => Promise<void>;
+  cancelBatch: () => void;
+  auditError: string | null;
 }
 
 type ScrapingProvider = 'jina' | 'firecrawl' | 'apify' | 'direct';
@@ -127,8 +132,12 @@ export const AuditStep: React.FC<AuditStepProps> = ({
   inventory,
   onComplete,
   onRefreshInventory,
+  isRunning,
+  progress,
+  startBatch,
+  cancelBatch,
+  auditError: error,
 }) => {
-  const { isRunning, progress, startBatch, cancelBatch, error } = useBatchAudit(projectId, mapId);
 
   // Config state
   const [scrapingProvider, setScrapingProvider] = useState<ScrapingProvider>('jina');
@@ -370,6 +379,9 @@ export const AuditStep: React.FC<AuditStepProps> = ({
                   &mdash; {progress.currentPhase}
                 </span>
               )}
+              <span className="ml-2 text-gray-600">
+                (via {scrapingProvider.charAt(0).toUpperCase() + scrapingProvider.slice(1)})
+              </span>
             </p>
           )}
 
