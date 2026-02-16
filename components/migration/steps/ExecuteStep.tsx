@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { SiteInventoryItem, EnrichedTopic, ActionType, TransitionStatus } from '../../../types';
+import { ACTION_EXPLANATIONS } from '../../../services/migration/MigrationPlanEngine';
 
 interface ExecuteStepProps {
   projectId: string;
@@ -274,10 +275,14 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
               {remainingStats.high > 0 && <span className="text-orange-400 ml-2">{remainingStats.high} high</span>}
               {remainingStats.medium > 0 && <span className="text-yellow-400 ml-2">{remainingStats.medium} medium</span>}
             </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {nextItem.action ? ACTION_EXPLANATIONS[nextItem.action] || '' : ''}
+              {nextItem.topicTitle && <span className="text-blue-300"> Target: &ldquo;{nextItem.topicTitle}&rdquo;</span>}
+            </p>
           </div>
           <button
             onClick={() => handleActionClick(nextItem)}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors flex-shrink-0 ml-4"
           >
             Start Next Item
           </button>
@@ -371,7 +376,9 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
               <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
                 <th className="px-4 py-3 font-medium w-10">#</th>
                 <th className="px-4 py-3 font-medium">URL / Topic</th>
+                <th className="px-4 py-3 font-medium">Target Topic</th>
                 <th className="px-4 py-3 font-medium">Action</th>
+                <th className="px-4 py-3 font-medium">Why</th>
                 <th className="px-4 py-3 font-medium">Priority</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right"></th>
@@ -380,7 +387,7 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
             <tbody className="divide-y divide-gray-700/50">
               {filteredQueue.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                     No actions match the current filters.
                   </td>
                 </tr>
@@ -426,10 +433,26 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
                       )}
                     </td>
 
+                    {/* Target Topic */}
+                    <td className="px-4 py-3">
+                      {item.topicTitle ? (
+                        <span className="text-xs text-blue-300 line-clamp-1" title={item.topicTitle}>{item.topicTitle}</span>
+                      ) : (
+                        <span className="text-xs text-gray-500 italic">No topic</span>
+                      )}
+                    </td>
+
                     {/* Action Badge */}
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getActionClasses(item.action)}`}>
                         {formatAction(item.action)}
+                      </span>
+                    </td>
+
+                    {/* Why */}
+                    <td className="px-4 py-3 max-w-[200px]">
+                      <span className="text-xs text-gray-400 line-clamp-2" title={item.inventoryItem?.action_reasoning}>
+                        {item.inventoryItem?.action_reasoning || '—'}
                       </span>
                     </td>
 

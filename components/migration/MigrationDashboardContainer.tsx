@@ -10,8 +10,8 @@ import { InventoryGraphView } from './InventoryGraphView';
 import { StrategySelectionModal } from './StrategySelectionModal';
 import { MigrationWorkbenchModal } from './MigrationWorkbenchModal';
 import { ExportPanel } from './ExportPanel';
-import { TriageView } from './TriageView';
 import { AuthorityWizardContainer } from './AuthorityWizardContainer';
+import { SiteHealthSummary } from './SiteHealthSummary';
 import TopicalMapDisplay from '../TopicalMapDisplay';
 import { SiteInventoryItem, ActionType, EnrichedTopic } from '../../types';
 import { useInventoryOperations } from '../../hooks/useInventoryOperations';
@@ -36,7 +36,8 @@ const MigrationDashboardContainer: React.FC = () => {
     } = useInventoryOperations(activeProjectId, businessInfo, dispatch, activeMapId, state.user?.id);
 
     const [showWizard, setShowWizard] = useState(false);
-    const [viewType, setViewType] = useState<'WIZARD' | 'MATRIX' | 'GRAPH' | 'KANBAN' | 'TRIAGE'>('WIZARD');
+    const [viewType, setViewType] = useState<'WIZARD' | 'MATRIX' | 'KANBAN'>('WIZARD');
+    const [showGraph, setShowGraph] = useState(false);
     
     // Strategy Modal State
     const [showStrategyModal, setShowStrategyModal] = useState(false);
@@ -131,31 +132,19 @@ const MigrationDashboardContainer: React.FC = () => {
                         onClick={() => setViewType('WIZARD')}
                         className={`px-3 py-1.5 rounded ${viewType === 'WIZARD' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
                       >
-                          Wizard
+                          Guided
                       </button>
                       <button
                         onClick={() => setViewType('MATRIX')}
                         className={`px-3 py-1.5 rounded ${viewType === 'MATRIX' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
                       >
-                          Matrix List
+                          Table
                       </button>
-                      <button 
+                      <button
                         onClick={() => setViewType('KANBAN')}
                         className={`px-3 py-1.5 rounded ${viewType === 'KANBAN' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
                       >
-                          Kanban
-                      </button>
-                      <button 
-                        onClick={() => setViewType('GRAPH')}
-                        className={`px-3 py-1.5 rounded ${viewType === 'GRAPH' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
-                      >
-                          Graph
-                      </button>
-                       <button 
-                        onClick={() => setViewType('TRIAGE')}
-                        className={`px-3 py-1.5 rounded ${viewType === 'TRIAGE' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
-                      >
-                          Triage Mode
+                          Board
                       </button>
                   </div>
                   <Button onClick={() => setShowWizard(true)} className="text-xs py-2">
@@ -172,6 +161,12 @@ const MigrationDashboardContainer: React.FC = () => {
                   )}
               </div>
             </header>
+
+            {inventory.length > 0 && (
+                <div className="flex-shrink-0 px-4">
+                    <SiteHealthSummary inventory={inventory} />
+                </div>
+            )}
 
             <div className="flex-grow flex gap-4 overflow-hidden px-4 pb-4">
                 {viewType === 'WIZARD' ? (
@@ -191,46 +186,48 @@ const MigrationDashboardContainer: React.FC = () => {
                     </div>
                 ) : (
                 <>
-                <div className={`${(viewType === 'KANBAN' || viewType === 'TRIAGE') ? 'w-full' : 'w-1/2'} flex flex-col min-w-[400px]`}>
+                <div className={`${viewType === 'KANBAN' ? 'w-full' : 'w-1/2'} flex flex-col min-w-[400px]`}>
                     {isLoadingInventory ? (
                         <div className="flex-grow flex items-center justify-center bg-gray-800/30 border border-gray-700 rounded-lg">
                             <Loader />
                         </div>
                     ) : (
                         <>
-                            {viewType === 'MATRIX' && (
-                                <InventoryMatrix 
-                                    inventory={inventory} 
+                            {viewType === 'MATRIX' && !showGraph && (
+                                <InventoryMatrix
+                                    inventory={inventory}
                                     onSelect={(item) => handleOpenWorkbench(item)}
                                     onAction={updateAction}
                                     onPromote={promoteToCore}
+                                    onShowGraph={() => setShowGraph(true)}
                                 />
+                            )}
+                            {viewType === 'MATRIX' && showGraph && (
+                                <div className="flex flex-col h-full">
+                                    <div className="flex-shrink-0 flex items-center gap-2 mb-2">
+                                        <button
+                                            onClick={() => setShowGraph(false)}
+                                            className="text-xs text-gray-400 hover:text-white bg-gray-800 px-2 py-1 rounded"
+                                        >
+                                            &larr; Back to Table
+                                        </button>
+                                        <span className="text-xs text-gray-500">Graph View</span>
+                                    </div>
+                                    <InventoryGraphView inventory={inventory} />
+                                </div>
                             )}
                             {viewType === 'KANBAN' && (
-                                <TransitionKanban 
-                                    inventory={inventory} 
+                                <TransitionKanban
+                                    inventory={inventory}
                                     onStatusChange={updateStatus}
                                     onSelect={handleOpenWorkbench}
-                                />
-                            )}
-                            {viewType === 'GRAPH' && (
-                                <InventoryGraphView 
-                                    inventory={inventory}
-                                />
-                            )}
-                            {viewType === 'TRIAGE' && (
-                                <TriageView 
-                                    inventory={inventory}
-                                    targetTopics={targetTopics}
-                                    onAction={updateAction}
-                                    onMap={mapInventoryItem}
                                 />
                             )}
                         </>
                     )}
                 </div>
 
-                {(viewType !== 'KANBAN' && viewType !== 'TRIAGE') && (
+                {viewType !== 'KANBAN' && (
                     <div className="w-1/2 flex flex-col min-w-[400px] bg-gray-900/30 border-l-2 border-gray-800 pl-4">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
                             <h3 className="text-lg font-bold text-blue-300">Target Strategy (Ideal Map)</h3>

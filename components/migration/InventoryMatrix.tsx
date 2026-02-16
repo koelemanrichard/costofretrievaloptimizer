@@ -8,6 +8,7 @@ interface InventoryMatrixProps {
     onSelect?: (item: SiteInventoryItem) => void;
     onAction?: (itemId: string, action: ActionType) => void;
     onPromote?: (itemId: string) => void;
+    onShowGraph?: () => void;
 }
 
 type SortField = 'url' | 'gsc_clicks' | 'gsc_impressions' | 'gsc_position' | 'audit_score' | 'cor_score' | 'cwv_assessment' | 'status' | 'recommended_action';
@@ -66,10 +67,19 @@ const getActionLabel = (action: string | undefined) => {
     }
 };
 
-export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onSelect, onAction, onPromote }) => {
+const STATUS_DISPLAY: Record<string, { label: string; description: string }> = {
+    AUDIT_PENDING:   { label: 'Not Analyzed', description: 'This page has not been audited yet' },
+    GAP_ANALYSIS:    { label: 'Analyzed',     description: 'Page has been audited, awaiting action assignment' },
+    ACTION_REQUIRED: { label: 'Needs Work',   description: 'An action has been assigned — work needed' },
+    IN_PROGRESS:     { label: 'In Progress',  description: 'Currently being optimized' },
+    OPTIMIZED:       { label: 'Complete',      description: 'Page has been optimized and is ready' },
+};
+
+export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onSelect, onAction, onPromote, onShowGraph }) => {
     const [sortField, setSortField] = useState<SortField>('gsc_clicks');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -126,9 +136,21 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
         <div className="h-full flex flex-col bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden" onClick={() => setOpenMenuId(null)}>
             <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 p-3 flex justify-between items-center">
                 <h3 className="font-semibold text-white">Site Inventory ({inventory.length})</h3>
-                <div className="text-xs text-gray-400 flex gap-4">
+                <div className="text-xs text-gray-400 flex gap-4 items-center">
                     <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-400"></div> Low Cost</span>
                     <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-400"></div> High Cost</span>
+                    {onShowGraph && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onShowGraph(); }}
+                            className="ml-2 px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                            title="View as Graph"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
+                                <line x1="6" y1="7" x2="10" y2="10"/><line x1="18" y1="7" x2="14" y2="10"/><line x1="6" y1="17" x2="10" y2="14"/><line x1="18" y1="17" x2="14" y2="14"/>
+                            </svg>
+                        </button>
+                    )}
                 </div>
             </div>
             
@@ -168,17 +190,22 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
                     </thead>
                     <tbody className="divide-y divide-gray-800 text-sm">
                         {sortedInventory.map(item => (
-                            <tr 
-                                key={item.id} 
-                                className={`hover:bg-gray-800/50 cursor-pointer transition-colors ${item.mapped_topic_id ? 'bg-blue-900/10' : ''}`}
-                                onClick={() => onSelect && onSelect(item)}
-                                draggable={!item.mapped_topic_id} 
+                            <React.Fragment key={item.id}>
+                            <tr
+                                className={`hover:bg-gray-800/50 cursor-pointer transition-colors ${item.mapped_topic_id ? 'bg-blue-900/10' : ''} ${expandedRowId === item.id ? 'bg-gray-800/30' : ''}`}
+                                onClick={() => setExpandedRowId(expandedRowId === item.id ? null : item.id)}
+                                draggable={!item.mapped_topic_id}
                                 onDragStart={(e) => handleDragStart(e, item)}
                             >
-                                <td className="p-3 max-w-[200px]" title={item.url}>
+                                <td className="p-3 max-w-[250px]" title={item.url}>
                                     <div className="flex items-center gap-2">
                                         {item.mapped_topic_id && <span title="Mapped">🔗</span>}
-                                        <span className="truncate text-gray-300">{item.url.replace(/^https?:\/\/[^/]+/, '')}</span>
+                                        <div className="min-w-0">
+                                            <span className="truncate text-gray-300 block">{item.url.replace(/^https?:\/\/[^/]+/, '')}</span>
+                                            {(item.page_title || item.title) && (
+                                                <span className="text-xs text-gray-500 truncate block">{item.page_title || item.title}</span>
+                                            )}
+                                        </div>
                                         <AuditButton url={item.url} variant="icon" size="sm" />
                                     </div>
                                 </td>
@@ -203,12 +230,18 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
                                     </span>
                                 </td>
                                 <td className="p-3 text-center">
-                                    <span className={`text-[10px] px-2 py-0.5 rounded border ${getStatusBadge(item.status)}`}>
-                                        {item.status.replace('_', ' ')}
+                                    <span
+                                        className={`text-[10px] px-2 py-0.5 rounded border ${getStatusBadge(item.status)}`}
+                                        title={STATUS_DISPLAY[item.status]?.description}
+                                    >
+                                        {STATUS_DISPLAY[item.status]?.label || item.status}
                                     </span>
                                 </td>
                                 <td className="p-3 text-center">
-                                    <span className={`text-[10px] px-2 py-0.5 rounded border ${getActionBadge(item.recommended_action)}`}>
+                                    <span
+                                        className={`text-[10px] px-2 py-0.5 rounded border ${getActionBadge(item.recommended_action)}`}
+                                        title={item.action_reasoning || 'No reasoning available — generate a plan first'}
+                                    >
                                         {getActionLabel(item.recommended_action)}
                                     </span>
                                 </td>
@@ -242,6 +275,57 @@ export const InventoryMatrix: React.FC<InventoryMatrixProps> = ({ inventory, onS
                                     )}
                                 </td>
                             </tr>
+                            {expandedRowId === item.id && (
+                                <tr className="bg-gray-800/40">
+                                    <td colSpan={10} className="px-6 py-4">
+                                        <div className="grid grid-cols-2 gap-4 text-xs">
+                                            {/* Left: Page details */}
+                                            <div className="space-y-2">
+                                                <div className="text-gray-500 uppercase tracking-wider font-medium text-[10px]">Page Details</div>
+                                                {(item.page_title || item.title) && (
+                                                    <div><span className="text-gray-500">Title:</span> <span className="text-gray-300">{item.page_title || item.title}</span></div>
+                                                )}
+                                                {item.meta_description && (
+                                                    <div><span className="text-gray-500">Description:</span> <span className="text-gray-400">{item.meta_description}</span></div>
+                                                )}
+                                                {item.page_h1 && (
+                                                    <div><span className="text-gray-500">H1:</span> <span className="text-gray-300">{item.page_h1}</span></div>
+                                                )}
+                                                {item.word_count && (
+                                                    <div><span className="text-gray-500">Words:</span> <span className="text-gray-300">{item.word_count.toLocaleString()}</span></div>
+                                                )}
+                                                <div className="pt-1">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onSelect && onSelect(item); }}
+                                                        className="text-blue-400 hover:text-blue-300 text-xs"
+                                                    >
+                                                        Open Workbench &rarr;
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {/* Right: Reasoning & data points */}
+                                            <div className="space-y-2">
+                                                <div className="text-gray-500 uppercase tracking-wider font-medium text-[10px]">Action Reasoning</div>
+                                                {item.action_reasoning ? (
+                                                    <p className="text-gray-300 leading-relaxed">{item.action_reasoning}</p>
+                                                ) : (
+                                                    <p className="text-gray-500 italic">No reasoning available — generate a plan first.</p>
+                                                )}
+                                                {item.action_data_points && item.action_data_points.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                                        {item.action_data_points.map((dp, i) => (
+                                                            <span key={i} className="px-1.5 py-0.5 bg-gray-700 rounded text-gray-400 text-[10px]" title={dp.impact}>
+                                                                {dp.label}: {dp.value}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>

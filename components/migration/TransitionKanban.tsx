@@ -9,11 +9,11 @@ interface TransitionKanbanProps {
 }
 
 const COLUMNS: { id: TransitionStatus; label: string; color: string }[] = [
-    { id: 'AUDIT_PENDING', label: 'Audit Pending', color: 'border-gray-500' },
-    { id: 'GAP_ANALYSIS', label: 'Gap Analysis', color: 'border-blue-500' },
-    { id: 'ACTION_REQUIRED', label: 'Action Required', color: 'border-yellow-500' },
+    { id: 'AUDIT_PENDING', label: 'Not Analyzed', color: 'border-gray-500' },
+    { id: 'GAP_ANALYSIS', label: 'Analyzed', color: 'border-blue-500' },
+    { id: 'ACTION_REQUIRED', label: 'Needs Work', color: 'border-yellow-500' },
     { id: 'IN_PROGRESS', label: 'In Progress', color: 'border-purple-500' },
-    { id: 'OPTIMIZED', label: 'Optimized', color: 'border-green-500' },
+    { id: 'OPTIMIZED', label: 'Complete', color: 'border-green-500' },
 ];
 
 export const TransitionKanban: React.FC<TransitionKanbanProps> = ({ inventory, onStatusChange, onSelect }) => {

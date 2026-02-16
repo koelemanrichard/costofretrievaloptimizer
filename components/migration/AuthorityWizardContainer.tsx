@@ -24,11 +24,11 @@ interface StepConfig {
 }
 
 const STEPS: StepConfig[] = [
-  { number: 1, label: 'Import', description: 'Import Website Data' },
-  { number: 2, label: 'Audit', description: 'Batch Content Audit' },
-  { number: 3, label: 'Match', description: 'Match URLs to Topics' },
-  { number: 4, label: 'Plan', description: 'Generate Migration Plan' },
-  { number: 5, label: 'Execute', description: 'Execute Migration' },
+  { number: 1, label: 'Import', description: 'Add your website pages' },
+  { number: 2, label: 'Analyze', description: 'Check content quality' },
+  { number: 3, label: 'Match', description: 'Connect pages to topics' },
+  { number: 4, label: 'Plan', description: 'Get AI recommendations' },
+  { number: 5, label: 'Improve', description: 'Apply changes' },
 ];
 
 export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> = ({

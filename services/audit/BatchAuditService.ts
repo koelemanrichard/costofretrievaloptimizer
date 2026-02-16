@@ -206,6 +206,30 @@ export class BatchAuditService {
       last_audited_at: new Date().toISOString(),
     };
 
+    // Extract COR score from the costOfRetrieval phase
+    // Phase score is 0-100 where 100 = no issues.
+    // COR should be 0-100 where 100 = very costly to retrieve (inverted).
+    const corPhase = report.phaseResults?.find(p => p.phase === 'costOfRetrieval');
+    if (corPhase) {
+      updateData.cor_score = Math.round(100 - corPhase.score);
+    }
+
+    // Extract CWV assessment from costOfRetrieval findings if not already set
+    if (corPhase && !item.cwv_assessment) {
+      const cwvFinding = corPhase.findings?.find(f =>
+        f.ruleId?.includes('cwv') || f.ruleId?.includes('core-web-vitals')
+      );
+      if (cwvFinding) {
+        if (cwvFinding.severity === 'low') {
+          updateData.cwv_assessment = 'good';
+        } else if (cwvFinding.severity === 'medium') {
+          updateData.cwv_assessment = 'needs-improvement';
+        } else if (cwvFinding.severity === 'high' || cwvFinding.severity === 'critical') {
+          updateData.cwv_assessment = 'poor';
+        }
+      }
+    }
+
     // Extract page metadata from the fetched content attached to the report
     const fc = report.fetchedContent;
     if (fc) {
@@ -235,6 +259,58 @@ export class BatchAuditService {
     if (fc) {
       await this.cacheContent(item.id, fc);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Backfill COR scores for already-audited items missing cor_score
+  // -------------------------------------------------------------------------
+
+  async backfillCorScores(projectId: string, mapId: string): Promise<number> {
+    // Find inventory items that have audit data but no COR score
+    const { data: items } = await this.supabase
+      .from('site_inventory')
+      .select('id, audit_snapshot_id')
+      .eq('project_id', projectId)
+      .not('audit_snapshot_id', 'is', null)
+      .is('cor_score', null);
+
+    if (!items || items.length === 0) return 0;
+
+    let backfilled = 0;
+
+    for (const item of items) {
+      try {
+        // Read the audit snapshot to extract COR phase score
+        const { data: snapshot } = await this.supabase
+          .from('unified_audit_snapshots')
+          .select('report_json')
+          .eq('id', item.audit_snapshot_id)
+          .maybeSingle();
+
+        if (!snapshot?.report_json) continue;
+
+        const report = typeof snapshot.report_json === 'string'
+          ? JSON.parse(snapshot.report_json)
+          : snapshot.report_json;
+
+        const corPhase = report.phaseResults?.find(
+          (p: { phase?: string }) => p.phase === 'costOfRetrieval'
+        );
+
+        if (corPhase && typeof corPhase.score === 'number') {
+          const corScore = Math.round(100 - corPhase.score);
+          await this.supabase
+            .from('site_inventory')
+            .update({ cor_score: corScore })
+            .eq('id', item.id);
+          backfilled++;
+        }
+      } catch {
+        // Non-fatal — continue backfilling other items
+      }
+    }
+
+    return backfilled;
   }
 
   // -------------------------------------------------------------------------

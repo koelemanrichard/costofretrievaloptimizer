@@ -142,6 +142,7 @@ export function useMigrationPlan(projectId: string, mapId: string) {
           .update({
             recommended_action: action.action,
             action_reasoning: action.reasoning,
+            action_data_points: action.dataPoints,
             action_priority: action.priority,
             action_effort: action.effort,
             updated_at: new Date().toISOString(),

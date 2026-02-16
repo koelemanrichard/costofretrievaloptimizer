@@ -28,6 +28,19 @@ export interface PlannedAction {
   redirectTargetUrl?: string;
 }
 
+// ── User-friendly action explanations ──────────────────────────────────────
+
+export const ACTION_EXPLANATIONS: Record<string, string> = {
+  KEEP: 'This page is fine as-is. No changes needed.',
+  OPTIMIZE: 'This page has potential but needs content improvements to rank better.',
+  REWRITE: 'This page needs to be completely rewritten to properly cover its topic.',
+  MERGE: 'This page competes with another page for the same topic. Combine them into one stronger page.',
+  REDIRECT_301: 'This page should redirect visitors to a better page, preserving any link value.',
+  PRUNE_410: 'This page should be removed. It has no traffic and low quality.',
+  CANONICALIZE: 'Google sees a different version of this page as the main one. Fix the canonical tag.',
+  CREATE_NEW: 'No page exists for this topic yet. Create new content to fill this gap.',
+};
+
 // ── Priority ordering for sort ─────────────────────────────────────────────
 
 const PRIORITY_ORDER: Record<PlannedAction['priority'], number> = {
@@ -143,7 +156,7 @@ export class MigrationPlanEngine {
         action: 'KEEP',
         priority: 'low',
         effort: 'none',
-        reasoning: `Page scores ${score}/100 and drives ${clicks} clicks/month. No changes needed.`,
+        reasoning: `This page is performing well (quality ${score}/100, ${clicks} clicks/month). Keep it as-is — focus your effort on lower-scoring pages first.`,
         dataPoints: [
           { label: 'Audit Score', value: `${score}/100`, impact: 'Above quality threshold' },
           { label: 'Monthly Clicks', value: String(clicks), impact: 'Active traffic' },
@@ -157,7 +170,7 @@ export class MigrationPlanEngine {
         action: 'KEEP',
         priority: 'low',
         effort: 'none',
-        reasoning: 'Content quality is good. Monitor for indexing/ranking improvements.',
+        reasoning: `Content quality is good (${score}/100) but not yet driving traffic. Keep it and monitor for indexing/ranking improvements.`,
         dataPoints: [
           { label: 'Audit Score', value: `${score}/100`, impact: 'Above quality threshold' },
           { label: 'Monthly Clicks', value: '0', impact: 'No traffic yet' },
@@ -171,9 +184,9 @@ export class MigrationPlanEngine {
         action: 'OPTIMIZE',
         priority: 'high',
         effort: 'medium',
-        reasoning: `This page drives ${clicks} clicks but scores only ${score}/100. Optimization protects existing traffic.`,
+        reasoning: `This page gets ${clicks} clicks/month but its quality is only ${score}/100. Improving the content will protect and grow this existing traffic.`,
         dataPoints: [
-          { label: 'Monthly Clicks', value: String(clicks), impact: 'High traffic at risk' },
+          { label: 'Monthly Clicks', value: String(clicks), impact: 'Traffic at risk without improvement' },
           { label: 'Audit Score', value: `${score}/100`, impact: 'Below quality threshold' },
         ],
       });
@@ -185,7 +198,7 @@ export class MigrationPlanEngine {
         action: 'REWRITE',
         priority: 'critical',
         effort: 'high',
-        reasoning: `Low quality (${score}/100) but ${clicks} monthly clicks. Rewrite urgently to prevent ranking loss.`,
+        reasoning: `This page gets ${clicks} clicks/month but its content quality is low (${score}/100). Without improvement, you risk losing these rankings to competitors. Rewrite the content to match the target topic.`,
         dataPoints: [
           { label: 'Monthly Clicks', value: String(clicks), impact: 'High traffic at risk' },
           { label: 'Audit Score', value: `${score}/100`, impact: 'Below quality threshold' },
@@ -199,7 +212,7 @@ export class MigrationPlanEngine {
       action: 'REWRITE',
       priority: 'medium',
       effort: 'high',
-      reasoning: "Content doesn't serve the target topic. Needs fundamental rework.",
+      reasoning: `This page scores ${score}/100 and has no traffic. The content needs a fundamental rework to properly serve its target topic.`,
       dataPoints: [
         { label: 'Audit Score', value: `${score}/100`, impact: 'Below quality threshold' },
         { label: 'Monthly Clicks', value: '0', impact: 'No traffic' },
@@ -248,8 +261,8 @@ export class MigrationPlanEngine {
         priority: 'high',
         effort: 'medium',
         reasoning: isMergeTarget
-          ? `Pages ${competingUrlList.join(' and ')} compete for '${topicTitle}'. This page has the most traffic -- merge content here and redirect others.`
-          : `Pages ${competingUrlList.join(' and ')} compete for '${topicTitle}'. Merge into stronger page, redirect the weaker.`,
+          ? `${groupItems.length} pages compete for "${topicTitle}". This page has the most traffic (${getClicks(item)} clicks) — merge the best content from the other pages here and redirect them to this URL.`
+          : `This page competes with ${groupItems.length - 1} other page(s) for "${topicTitle}". Merge its best content into the strongest page and redirect this URL there.`,
         dataPoints: [
           { label: 'Competing URLs', value: `${groupItems.length} pages`, impact: 'Diluting ranking signals' },
           { label: 'Monthly Clicks', value: String(getClicks(item)), impact: isMergeTarget ? 'Strongest page' : 'Weaker page' },
@@ -276,7 +289,7 @@ export class MigrationPlanEngine {
         action: 'CANONICALIZE',
         priority: 'high',
         effort: 'low',
-        reasoning: `Google selected a different canonical (${item.google_canonical}). Fix to consolidate ranking signals.`,
+        reasoning: `Google chose a different canonical URL (${item.google_canonical}) instead of this page. Fix the canonical tag to consolidate ranking signals into one page.`,
         dataPoints: [
           { label: 'Google Canonical', value: item.google_canonical, impact: 'Ranking signal dilution' },
           { label: 'Current URL', value: item.url, impact: 'Non-canonical' },
@@ -290,7 +303,7 @@ export class MigrationPlanEngine {
         action: 'REDIRECT_301',
         priority: 'high',
         effort: 'low',
-        reasoning: `Gets ${clicks} clicks but doesn't match any target topic. Redirect to preserve link equity.`,
+        reasoning: `This page gets ${clicks} clicks/month but doesn't match any topic in your strategy. Redirect it to a relevant page to preserve the link equity and traffic.`,
         dataPoints: [
           { label: 'Monthly Clicks', value: String(clicks), impact: 'Traffic to preserve' },
           { label: 'Match Status', value: 'No matching topic', impact: 'Orphaned content' },
@@ -304,7 +317,7 @@ export class MigrationPlanEngine {
         action: 'PRUNE_410',
         priority: 'medium',
         effort: 'low',
-        reasoning: `No traffic, low quality (${score}/100). Removing reduces crawl budget waste.`,
+        reasoning: `This page has no traffic and low quality (${score}/100). Removing it helps search engines focus on your better content instead of wasting crawl budget here.`,
         dataPoints: [
           { label: 'Monthly Clicks', value: String(clicks), impact: 'Negligible traffic' },
           { label: 'Audit Score', value: `${score}/100`, impact: 'Below quality threshold' },
@@ -317,7 +330,7 @@ export class MigrationPlanEngine {
       action: 'KEEP',
       priority: 'low',
       effort: 'none',
-      reasoning: 'Decent content but no matching topic. Consider adding to topical map or redirecting.',
+      reasoning: `Decent content (${score}/100) but no matching topic in your strategy. Consider adding a related topic to your map or redirecting this page.`,
       dataPoints: [
         { label: 'Monthly Clicks', value: String(clicks), impact: 'Low traffic' },
         { label: 'Audit Score', value: `${score}/100`, impact: 'Acceptable quality' },
@@ -338,8 +351,8 @@ export class MigrationPlanEngine {
       priority: isPillar ? 'critical' : 'medium',
       effort: 'high',
       reasoning: isPillar
-        ? 'Core pillar topic with no existing page. Essential for topical authority.'
-        : 'Supporting topic needed for complete coverage of parent cluster.',
+        ? `No page exists for "${gap.topicTitle}" — a core pillar topic. Creating this content is essential for establishing topical authority in your niche.`
+        : `No page covers "${gap.topicTitle}" yet. Adding this supporting content strengthens your topic cluster and improves overall coverage.`,
       dataPoints: [
         { label: 'Topic', value: gap.topicTitle, impact: isPillar ? 'Pillar gap' : 'Coverage gap' },
         { label: 'Importance', value: gap.importance, impact: isPillar ? 'Critical for authority' : 'Supports cluster depth' },

@@ -352,6 +352,15 @@ export const PlanStep: React.FC<PlanStepProps> = ({
                     {/* Reasoning */}
                     <td className="px-4 py-2.5">
                       <span className="text-gray-400 text-xs line-clamp-2">{action.reasoning}</span>
+                      {action.dataPoints.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {action.dataPoints.map((dp, i) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-gray-700 rounded text-gray-400" title={dp.impact}>
+                              {dp.label}: {dp.value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

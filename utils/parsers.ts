@@ -486,6 +486,7 @@ export const sanitizeInventoryFromDb = (dbItem: any): SiteInventoryItem => {
         // Migration plan
         recommended_action: recommendedAction,
         action_reasoning: dbItem.action_reasoning ? safeString(dbItem.action_reasoning) : undefined,
+        action_data_points: Array.isArray(dbItem.action_data_points) ? dbItem.action_data_points : undefined,
         action_priority: dbItem.action_priority ? safeString(dbItem.action_priority) as 'critical' | 'high' | 'medium' | 'low' : undefined,
         action_effort: dbItem.action_effort ? safeString(dbItem.action_effort) as 'none' | 'low' | 'medium' | 'high' : undefined,
 

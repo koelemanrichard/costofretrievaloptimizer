@@ -2459,6 +2459,7 @@ export interface SiteInventoryItem {
     // Migration plan
     recommended_action?: ActionType;
     action_reasoning?: string;
+    action_data_points?: { label: string; value: string; impact: string }[];
     action_priority?: 'critical' | 'high' | 'medium' | 'low';
     action_effort?: 'none' | 'low' | 'medium' | 'high';
 
