@@ -115,24 +115,30 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [actionFilter, setActionFilter] = useState<ActionFilter>('all');
 
+  const [createNewExpanded, setCreateNewExpanded] = useState(false);
+
+  // Shared action item type
+  type ActionItem = {
+    id: string;
+    label: string;
+    url: string | null;
+    topicId: string | null;
+    topicTitle: string | null;
+    action: ActionType | undefined;
+    priority: string | undefined;
+    status: TransitionStatus;
+    execStatus: ExecutionStatus;
+    isCreateNew: boolean;
+    inventoryItem: SiteInventoryItem | null;
+  };
+
   // Build the action queue: inventory items with actions + CREATE_NEW topics without mapped URLs
-  const actionQueue = useMemo(() => {
-    // Existing inventory items that have an action assigned
-    const inventoryActions: Array<{
-      id: string;
-      label: string;
-      url: string | null;
-      topicId: string | null;
-      topicTitle: string | null;
-      action: ActionType | undefined;
-      priority: string | undefined;
-      status: TransitionStatus;
-      execStatus: ExecutionStatus;
-      isCreateNew: boolean;
-      inventoryItem: SiteInventoryItem | null;
-    }> = inventory
-      .filter(item => item.action)
+  const { pageActions, createNewActions, actionQueue } = useMemo(() => {
+    // Existing inventory items that have an action assigned (check both fields)
+    const inventoryItems: ActionItem[] = inventory
+      .filter(item => item.action || item.recommended_action)
       .map(item => {
+        const effectiveAction = item.action || item.recommended_action;
         const mappedTopic = item.mapped_topic_id
           ? topics.find(t => t.id === item.mapped_topic_id)
           : null;
@@ -142,19 +148,23 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
           url: item.url,
           topicId: item.mapped_topic_id,
           topicTitle: mappedTopic?.title || null,
-          action: item.action,
+          action: effectiveAction,
           priority: item.action_priority,
           status: item.status,
           execStatus: getExecutionStatus(item.status),
-          isCreateNew: item.action === 'CREATE_NEW',
+          isCreateNew: effectiveAction === 'CREATE_NEW',
           inventoryItem: item,
         };
       });
 
+    // Split into existing pages vs CREATE_NEW from inventory
+    const pages = inventoryItems.filter(i => i.action !== 'CREATE_NEW');
+    const inventoryCreateNew = inventoryItems.filter(i => i.action === 'CREATE_NEW');
+
     // Topics that need new content (not mapped to any inventory item)
     const mappedTopicIds = new Set(inventory.map(i => i.mapped_topic_id).filter(Boolean));
     const unmappedTopics = topics.filter(t => !mappedTopicIds.has(t.id));
-    const createNewActions = unmappedTopics.map(topic => ({
+    const topicCreateNew: ActionItem[] = unmappedTopics.map(topic => ({
       id: `create-${topic.id}`,
       label: topic.title,
       url: null,
@@ -168,19 +178,26 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
       inventoryItem: null,
     }));
 
-    const combined = [...inventoryActions, ...createNewActions];
+    const allCreateNew = [...inventoryCreateNew, ...topicCreateNew];
+    const combined = [...pages, ...allCreateNew];
 
-    // Sort by priority
-    combined.sort((a, b) => {
-      const pa = PRIORITY_ORDER[a.priority || 'low'] ?? 4;
-      const pb = PRIORITY_ORDER[b.priority || 'low'] ?? 4;
-      if (pa !== pb) return pa - pb;
-      // Secondary sort: done items go to bottom
-      const statusOrder: Record<ExecutionStatus, number> = { todo: 0, in_progress: 1, done: 2 };
-      return statusOrder[a.execStatus] - statusOrder[b.execStatus];
-    });
+    // Sort helper
+    const sortByPriority = (arr: ActionItem[]) => {
+      arr.sort((a, b) => {
+        const pa = PRIORITY_ORDER[a.priority || 'low'] ?? 4;
+        const pb = PRIORITY_ORDER[b.priority || 'low'] ?? 4;
+        if (pa !== pb) return pa - pb;
+        const statusOrder: Record<ExecutionStatus, number> = { todo: 0, in_progress: 1, done: 2 };
+        return statusOrder[a.execStatus] - statusOrder[b.execStatus];
+      });
+      return arr;
+    };
 
-    return combined;
+    sortByPriority(pages);
+    sortByPriority(allCreateNew);
+    sortByPriority(combined);
+
+    return { pageActions: pages, createNewActions: allCreateNew, actionQueue: combined };
   }, [inventory, topics]);
 
   // Apply filters
@@ -226,8 +243,8 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <div>
-          <h2 className="text-xl font-bold text-white">Execute your migration</h2>
-          <p className="text-sm text-gray-400 mt-1">Work through each URL action to complete your migration.</p>
+          <h2 className="text-xl font-bold text-white">Improve your pages</h2>
+          <p className="text-sm text-gray-400 mt-1">Work through each page to apply AI-suggested improvements.</p>
         </div>
         <div className="mt-12 flex flex-col items-center justify-center text-gray-400">
           <p className="text-lg font-medium text-white mb-2">No actions in the queue</p>
@@ -259,9 +276,9 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
     <div className="p-6 max-w-5xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-white">Execute your migration</h2>
+        <h2 className="text-xl font-bold text-white">Improve your pages</h2>
         <p className="text-sm text-gray-400 mt-1">
-          Work through each URL below. Open the workbench to review and apply AI-suggested improvements.
+          Work through each page below. Open the workbench to review and apply AI-suggested improvements.
         </p>
       </div>
 
@@ -368,137 +385,203 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
         </div>
       </div>
 
-      {/* Action Queue Table */}
-      <div className="border border-gray-700 rounded-lg bg-gray-800/30 overflow-hidden">
-        <div className="overflow-x-auto max-h-[calc(100vh-480px)] overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-800 z-10">
-              <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
-                <th className="px-4 py-3 font-medium w-10">#</th>
-                <th className="px-4 py-3 font-medium">URL / Topic</th>
-                <th className="px-4 py-3 font-medium">Target Topic</th>
-                <th className="px-4 py-3 font-medium">Action</th>
-                <th className="px-4 py-3 font-medium">Why</th>
-                <th className="px-4 py-3 font-medium">Priority</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700/50">
-              {filteredQueue.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                    No actions match the current filters.
-                  </td>
-                </tr>
+      {/* Your Pages Section */}
+      {(() => {
+        const filteredPages = filteredQueue.filter(i => !i.isCreateNew);
+        const filteredCreateNew = filteredQueue.filter(i => i.isCreateNew);
+
+        return (
+          <>
+            {/* Your Pages */}
+            <div className="border border-gray-700 rounded-lg bg-gray-800/30 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-700/50 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">
+                  Your Pages
+                  <span className="ml-2 text-xs text-gray-400 font-normal">({pageActions.length})</span>
+                </h3>
+              </div>
+              {filteredPages.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                  {pageActions.length === 0
+                    ? 'No page actions found. Apply a plan first.'
+                    : 'No pages match the current filters.'}
+                </div>
               ) : (
-                filteredQueue.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className={`transition-colors ${
-                      item.execStatus === 'done'
-                        ? 'bg-green-900/5 hover:bg-green-900/10'
-                        : 'hover:bg-gray-700/30'
-                    }`}
-                  >
-                    {/* Row number */}
-                    <td className="px-4 py-3 text-gray-500 tabular-nums text-xs">
-                      {index + 1}
-                    </td>
-
-                    {/* URL / Topic */}
-                    <td className="px-4 py-3 max-w-xs">
-                      <div className="truncate">
-                        {item.url ? (
-                          <span
-                            className="text-gray-300 font-mono text-xs"
-                            title={item.url}
-                          >
-                            {(() => {
-                              try {
-                                return new URL(item.url).pathname;
-                              } catch {
-                                return item.url;
-                              }
-                            })()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300 text-xs">{item.label}</span>
-                        )}
-                      </div>
-                      {item.topicTitle && item.url && (
-                        <div className="text-xs text-gray-500 mt-0.5 truncate" title={item.topicTitle}>
-                          &rarr; {item.topicTitle}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Target Topic */}
-                    <td className="px-4 py-3">
-                      {item.topicTitle ? (
-                        <span className="text-xs text-blue-300 line-clamp-1" title={item.topicTitle}>{item.topicTitle}</span>
-                      ) : (
-                        <span className="text-xs text-gray-500 italic">No topic</span>
-                      )}
-                    </td>
-
-                    {/* Action Badge */}
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getActionClasses(item.action)}`}>
-                        {formatAction(item.action)}
-                      </span>
-                    </td>
-
-                    {/* Why */}
-                    <td className="px-4 py-3 max-w-[200px]">
-                      <span className="text-xs text-gray-400 line-clamp-2" title={item.inventoryItem?.action_reasoning}>
-                        {item.inventoryItem?.action_reasoning || '—'}
-                      </span>
-                    </td>
-
-                    {/* Priority Badge */}
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${getPriorityClasses(item.priority)}`}>
-                        {item.priority ? item.priority.charAt(0).toUpperCase() + item.priority.slice(1) : 'Unset'}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${getStatusClasses(item.execStatus)}`}>
-                        <span className="text-[10px]">{getStatusIcon(item.execStatus)}</span>
-                        {getStatusLabel(item.execStatus)}
-                      </span>
-                    </td>
-
-                    {/* Action Button */}
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleActionClick(item)}
-                        disabled={!onOpenWorkbench && !onCreateBrief}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          item.execStatus === 'done'
-                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                            : 'bg-blue-600 text-white hover:bg-blue-500'
-                        } disabled:opacity-40 disabled:cursor-not-allowed`}
-                      >
-                        {getButtonLabel(item)}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                <div className="overflow-x-auto max-h-[calc(100vh-560px)] overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-gray-800 z-10">
+                      <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 font-medium w-10">#</th>
+                        <th className="px-4 py-3 font-medium">URL / Topic</th>
+                        <th className="px-4 py-3 font-medium">Target Topic</th>
+                        <th className="px-4 py-3 font-medium">Action</th>
+                        <th className="px-4 py-3 font-medium">Why</th>
+                        <th className="px-4 py-3 font-medium">Priority</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700/50">
+                      {filteredPages.map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className={`transition-colors ${
+                            item.execStatus === 'done'
+                              ? 'bg-green-900/5 hover:bg-green-900/10'
+                              : 'hover:bg-gray-700/30'
+                          }`}
+                        >
+                          <td className="px-4 py-3 text-gray-500 tabular-nums text-xs">{index + 1}</td>
+                          <td className="px-4 py-3 max-w-xs">
+                            <div className="truncate">
+                              {item.url ? (
+                                <span className="text-gray-300 font-mono text-xs" title={item.url}>
+                                  {(() => { try { return new URL(item.url).pathname; } catch { return item.url; } })()}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 text-xs">{item.label}</span>
+                              )}
+                            </div>
+                            {item.topicTitle && item.url && (
+                              <div className="text-xs text-gray-500 mt-0.5 truncate" title={item.topicTitle}>&rarr; {item.topicTitle}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.topicTitle ? (
+                              <span className="text-xs text-blue-300 line-clamp-1" title={item.topicTitle}>{item.topicTitle}</span>
+                            ) : (
+                              <span className="text-xs text-gray-500 italic">No topic</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getActionClasses(item.action)}`}>
+                              {formatAction(item.action)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 max-w-[200px]">
+                            <span className="text-xs text-gray-400 line-clamp-2" title={item.inventoryItem?.action_reasoning}>
+                              {item.inventoryItem?.action_reasoning || '\u2014'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${getPriorityClasses(item.priority)}`}>
+                              {item.priority ? item.priority.charAt(0).toUpperCase() + item.priority.slice(1) : 'Unset'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${getStatusClasses(item.execStatus)}`}>
+                              <span className="text-[10px]">{getStatusIcon(item.execStatus)}</span>
+                              {getStatusLabel(item.execStatus)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handleActionClick(item)}
+                              disabled={!onOpenWorkbench && !onCreateBrief}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                item.execStatus === 'done'
+                                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                  : 'bg-blue-600 text-white hover:bg-blue-500'
+                              } disabled:opacity-40 disabled:cursor-not-allowed`}
+                            >
+                              {getButtonLabel(item)}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
 
-        {/* Footer count */}
-        {filteredQueue.length > 0 && filteredQueue.length !== actionQueue.length && (
-          <div className="px-4 py-2 text-xs text-gray-500 text-center border-t border-gray-700/50">
-            Showing {filteredQueue.length} of {actionQueue.length} actions
-          </div>
-        )}
-      </div>
+            {/* New Content Needed — collapsed by default */}
+            {createNewActions.length > 0 && (
+              <div className="border border-gray-700 rounded-lg bg-gray-800/30 overflow-hidden">
+                <button
+                  onClick={() => setCreateNewExpanded(!createNewExpanded)}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
+                >
+                  <h3 className="text-sm font-semibold text-white">
+                    New Content Needed
+                    <span className="ml-2 text-xs text-gray-400 font-normal">({createNewActions.length})</span>
+                  </h3>
+                  <span className="text-gray-400 text-xs">
+                    {createNewExpanded ? '\u25BE Collapse' : '\u25B8 Expand'}
+                  </span>
+                </button>
+
+                {createNewExpanded && (
+                  <>
+                    {filteredCreateNew.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-gray-500 text-sm border-t border-gray-700/50">
+                        No new content items match the current filters.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto max-h-[400px] overflow-y-auto border-t border-gray-700/50">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-gray-800 z-10">
+                            <tr className="text-left text-xs text-gray-400 uppercase tracking-wider">
+                              <th className="px-4 py-3 font-medium w-10">#</th>
+                              <th className="px-4 py-3 font-medium">Topic</th>
+                              <th className="px-4 py-3 font-medium">Action</th>
+                              <th className="px-4 py-3 font-medium">Priority</th>
+                              <th className="px-4 py-3 font-medium">Status</th>
+                              <th className="px-4 py-3 font-medium text-right"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-700/50">
+                            {filteredCreateNew.map((item, index) => (
+                              <tr key={item.id} className="hover:bg-gray-700/30 transition-colors">
+                                <td className="px-4 py-3 text-gray-500 tabular-nums text-xs">{index + 1}</td>
+                                <td className="px-4 py-3">
+                                  <span className="text-gray-300 text-xs">{item.label}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getActionClasses('CREATE_NEW')}`}>
+                                    Create New
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${getPriorityClasses(item.priority)}`}>
+                                    {item.priority ? item.priority.charAt(0).toUpperCase() + item.priority.slice(1) : 'Unset'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${getStatusClasses(item.execStatus)}`}>
+                                    <span className="text-[10px]">{getStatusIcon(item.execStatus)}</span>
+                                    {getStatusLabel(item.execStatus)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleActionClick(item)}
+                                    disabled={!onCreateBrief}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-700 text-white hover:bg-cyan-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    Create Brief
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Footer count */}
+            {filteredQueue.length > 0 && filteredQueue.length !== actionQueue.length && (
+              <div className="text-xs text-gray-500 text-center">
+                Showing {filteredQueue.length} of {actionQueue.length} total actions
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 };

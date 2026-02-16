@@ -245,6 +245,7 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
             inventory={inventory}
             topics={topics}
             onComplete={() => setPlanComplete(true)}
+            onRefreshInventory={onRefreshInventory}
           />
         )}
 

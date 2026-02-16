@@ -12,6 +12,7 @@ interface PlanStepProps {
   inventory: SiteInventoryItem[];
   topics: EnrichedTopic[];
   onComplete: () => void;
+  onRefreshInventory: () => void;
 }
 
 // ── Action badge styling (mirrors InventoryMatrix) ───────────────────────────
@@ -117,6 +118,30 @@ function getDisplayLabel(action: PlannedAction, topics: EnrichedTopic[]): string
   return action.url || 'Unknown';
 }
 
+// ── Reconstruct stats from inventory items that already have plan data ───────
+
+function computeStatsFromInventory(items: SiteInventoryItem[]): PlanStats {
+  const stats: PlanStats = {
+    total: items.length,
+    keep: 0, optimize: 0, rewrite: 0, merge: 0,
+    redirect: 0, prune: 0, create: 0, canonicalize: 0,
+  };
+  for (const item of items) {
+    const action = item.action || item.recommended_action;
+    switch (action) {
+      case 'KEEP': stats.keep++; break;
+      case 'OPTIMIZE': stats.optimize++; break;
+      case 'REWRITE': stats.rewrite++; break;
+      case 'MERGE': stats.merge++; break;
+      case 'REDIRECT_301': stats.redirect++; break;
+      case 'PRUNE_410': stats.prune++; break;
+      case 'CREATE_NEW': stats.create++; break;
+      case 'CANONICALIZE': stats.canonicalize++; break;
+    }
+  }
+  return stats;
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export const PlanStep: React.FC<PlanStepProps> = ({
@@ -125,6 +150,7 @@ export const PlanStep: React.FC<PlanStepProps> = ({
   inventory,
   topics,
   onComplete,
+  onRefreshInventory,
 }) => {
   const { plan, isGenerating, generatePlan, applyPlan, savePlan, stats, error } =
     useMigrationPlan(projectId, mapId);
@@ -134,26 +160,37 @@ export const PlanStep: React.FC<PlanStepProps> = ({
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Detect existing plan data in inventory (survives remount / navigation)
+  const existingPlanStats = useMemo(() => {
+    const withAction = inventory.filter(i => i.action || i.recommended_action);
+    if (withAction.length === 0) return null;
+    return computeStatsFromInventory(withAction);
+  }, [inventory]);
+
+  // Display stats: prefer freshly-generated stats, fall back to reconstructed stats
+  const displayStats = stats || existingPlanStats;
+  const hasPlan = !!plan || !!existingPlanStats;
+
   // Compute priority breakdown from plan actions
   const priorityBreakdown = useMemo<PriorityBreakdown | null>(
     () => (plan ? computePriorityBreakdown(plan) : null),
     [plan],
   );
 
-  // Handle plan generation: run AutoMatchService inline then generate plan, then auto-save
+  // Handle plan generation: run AutoMatchService inline then generate plan, then save immediately
   const handleGenerate = useCallback(async () => {
     const matcher = new AutoMatchService();
     const matchResult = matcher.match(inventory, topics);
-    generatePlan(inventory, topics, matchResult);
-    // Auto-save after a brief delay to let plan state settle
-    setTimeout(async () => {
+    const generatedStats = generatePlan(inventory, topics, matchResult);
+    // Save immediately with the returned stats — no setTimeout needed
+    if (generatedStats) {
       try {
-        await savePlan();
+        await savePlan(generatedStats);
         setSaved(true);
       } catch {
         // Ignore auto-save failure
       }
-    }, 500);
+    }
   }, [inventory, topics, generatePlan, savePlan]);
 
   // Handle applying plan to inventory
@@ -161,12 +198,13 @@ export const PlanStep: React.FC<PlanStepProps> = ({
     setIsApplying(true);
     try {
       await applyPlan();
+      await onRefreshInventory();
       setApplied(true);
       onComplete();
     } finally {
       setIsApplying(false);
     }
-  }, [applyPlan, onComplete]);
+  }, [applyPlan, onComplete, onRefreshInventory]);
 
   // Handle saving plan to migration_plans table
   const handleSave = useCallback(async () => {
@@ -194,7 +232,7 @@ export const PlanStep: React.FC<PlanStepProps> = ({
 
       {/* Primary action — single guided flow */}
       <div className="flex items-center gap-3">
-        {!plan ? (
+        {!hasPlan ? (
           /* Before plan: single generate button */
           <button
             onClick={handleGenerate}
@@ -210,23 +248,25 @@ export const PlanStep: React.FC<PlanStepProps> = ({
         ) : (
           /* After plan: apply as primary CTA + regenerate as secondary */
           <>
-            <button
-              onClick={handleApply}
-              disabled={isApplying || applied}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isApplying || applied
-                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                  : 'bg-green-700 text-white hover:bg-green-600 cursor-pointer'
-              }`}
-            >
-              {isApplying ? 'Applying...' : applied ? 'Plan Applied' : 'Apply Plan to Inventory'}
-            </button>
+            {plan && (
+              <button
+                onClick={handleApply}
+                disabled={isApplying || applied}
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isApplying || applied
+                    ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    : 'bg-green-700 text-white hover:bg-green-600 cursor-pointer'
+                }`}
+              >
+                {isApplying ? 'Applying...' : applied ? 'Plan Applied' : 'Apply Plan to Inventory'}
+              </button>
+            )}
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
               className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 bg-gray-800 hover:bg-gray-700 hover:text-gray-200 transition-colors"
             >
-              Regenerate
+              {isGenerating ? 'Generating...' : 'Regenerate'}
             </button>
           </>
         )}
@@ -240,24 +280,29 @@ export const PlanStep: React.FC<PlanStepProps> = ({
       )}
 
       {/* Plan Summary Stats */}
-      {stats && (
+      {displayStats && (
         <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-300">Plan Summary</h3>
-            <span className="text-xs text-gray-500">Total: {stats.total} actions</span>
+            <h3 className="text-sm font-medium text-gray-300">
+              Plan Summary
+              {!plan && existingPlanStats && (
+                <span className="text-xs text-gray-500 ml-2">(from applied plan)</span>
+              )}
+            </h3>
+            <span className="text-xs text-gray-500">Total: {displayStats.total} actions</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatBadge label="KEEP" count={stats.keep} classes={ACTION_BADGE_CLASSES.KEEP} />
-            <StatBadge label="OPTIMIZE" count={stats.optimize} classes={ACTION_BADGE_CLASSES.OPTIMIZE} />
-            <StatBadge label="REWRITE" count={stats.rewrite} classes={ACTION_BADGE_CLASSES.REWRITE} />
-            <StatBadge label="MERGE" count={stats.merge} classes={ACTION_BADGE_CLASSES.MERGE} />
-            <StatBadge label="REDIRECT" count={stats.redirect} classes={ACTION_BADGE_CLASSES.REDIRECT_301} />
-            <StatBadge label="PRUNE" count={stats.prune} classes={ACTION_BADGE_CLASSES.PRUNE_410} />
-            <StatBadge label="CREATE" count={stats.create} classes={ACTION_BADGE_CLASSES.CREATE_NEW} />
-            {stats.canonicalize > 0 && (
+            <StatBadge label="KEEP" count={displayStats.keep} classes={ACTION_BADGE_CLASSES.KEEP} />
+            <StatBadge label="OPTIMIZE" count={displayStats.optimize} classes={ACTION_BADGE_CLASSES.OPTIMIZE} />
+            <StatBadge label="REWRITE" count={displayStats.rewrite} classes={ACTION_BADGE_CLASSES.REWRITE} />
+            <StatBadge label="MERGE" count={displayStats.merge} classes={ACTION_BADGE_CLASSES.MERGE} />
+            <StatBadge label="REDIRECT" count={displayStats.redirect} classes={ACTION_BADGE_CLASSES.REDIRECT_301} />
+            <StatBadge label="PRUNE" count={displayStats.prune} classes={ACTION_BADGE_CLASSES.PRUNE_410} />
+            <StatBadge label="CREATE" count={displayStats.create} classes={ACTION_BADGE_CLASSES.CREATE_NEW} />
+            {displayStats.canonicalize > 0 && (
               <StatBadge
                 label="CANONICALIZE"
-                count={stats.canonicalize}
+                count={displayStats.canonicalize}
                 classes={ACTION_BADGE_CLASSES.CANONICALIZE}
               />
             )}
@@ -371,11 +416,11 @@ export const PlanStep: React.FC<PlanStepProps> = ({
       )}
 
       {/* Empty state when no plan is generated yet */}
-      {!plan && !isGenerating && (
+      {!hasPlan && !isGenerating && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg mb-2">No migration plan generated yet</p>
           <p className="text-sm">
-            Click "Generate Plan" to create a prioritized action plan for {inventory.length} URLs
+            Click &ldquo;Generate Migration Plan&rdquo; to create a prioritized action plan for {inventory.length} URLs
             and {topics.length} topics.
           </p>
         </div>

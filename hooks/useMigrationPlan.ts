@@ -88,13 +88,14 @@ export function useMigrationPlan(projectId: string, mapId: string) {
   /**
    * Generate a migration plan from inventory, topics, and auto-match results.
    * Uses MigrationPlanEngine (pure synchronous computation -- no network calls).
+   * Returns the computed stats so callers can pass them directly to savePlan.
    */
   const generatePlan = useCallback(
     (
       inventory: SiteInventoryItem[],
       topics: EnrichedTopic[],
       matchResult: AutoMatchResult,
-    ) => {
+    ): PlanStats | null => {
       setIsGenerating(true);
       setError(null);
       setPlan(null);
@@ -104,12 +105,15 @@ export function useMigrationPlan(projectId: string, mapId: string) {
         const engine = new MigrationPlanEngine();
         const actions = engine.generatePlan({ inventory, topics, matchResult });
 
+        const computed = computeStats(actions);
         setPlan(actions);
-        setStats(computeStats(actions));
+        setStats(computed);
+        return computed;
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Plan generation failed';
         setError(message);
         console.error('[useMigrationPlan] generatePlan error:', e);
+        return null;
       } finally {
         setIsGenerating(false);
       }
@@ -140,11 +144,13 @@ export function useMigrationPlan(projectId: string, mapId: string) {
         supabase
           .from('site_inventory')
           .update({
+            action: action.action,
             recommended_action: action.action,
             action_reasoning: action.reasoning,
             action_data_points: action.dataPoints,
             action_priority: action.priority,
             action_effort: action.effort,
+            status: 'ACTION_REQUIRED',
             updated_at: new Date().toISOString(),
           })
           .eq('id', action.inventoryId),
@@ -168,11 +174,13 @@ export function useMigrationPlan(projectId: string, mapId: string) {
 
   /**
    * Save a summary of the current plan to the migration_plans table.
+   * Accepts optional planStats to avoid stale-closure race conditions.
    */
-  const savePlan = useCallback(async (): Promise<void> => {
+  const savePlan = useCallback(async (planStats?: PlanStats): Promise<void> => {
     setError(null);
 
-    if (!stats) {
+    const effectiveStats = planStats || stats;
+    if (!effectiveStats) {
       setError('No plan stats available. Generate a plan first.');
       return;
     }
@@ -187,14 +195,14 @@ export function useMigrationPlan(projectId: string, mapId: string) {
           map_id: mapId,
           name: 'Migration Plan',
           status: 'draft',
-          total_urls: stats.total,
-          keep_count: stats.keep,
-          optimize_count: stats.optimize,
-          rewrite_count: stats.rewrite,
-          merge_count: stats.merge,
-          redirect_count: stats.redirect,
-          prune_count: stats.prune,
-          create_count: stats.create,
+          total_urls: effectiveStats.total,
+          keep_count: effectiveStats.keep,
+          optimize_count: effectiveStats.optimize,
+          rewrite_count: effectiveStats.rewrite,
+          merge_count: effectiveStats.merge,
+          redirect_count: effectiveStats.redirect,
+          prune_count: effectiveStats.prune,
+          create_count: effectiveStats.create,
         });
 
       if (insertError) {
