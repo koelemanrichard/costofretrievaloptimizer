@@ -523,6 +523,10 @@ export interface EnrichedTopic {
   // Typed metadata container (see TopicMetadata in types/content.ts)
   metadata?: Record<string, unknown>;
 
+  // Source tracking for migration flow
+  source?: 'generated' | 'discovered' | 'manual';
+  covered_by_inventory_ids?: string[];
+
   // Backwards-compatible properties for legacy code
   response_code?: ResponseCode | string; // Response format code
   target_url?: string;                   // Target URL for the topic
@@ -2467,6 +2471,16 @@ export interface SiteInventoryItem {
     action_data_points?: { label: string; value: string; impact: string }[];
     action_priority?: 'critical' | 'high' | 'medium' | 'low';
     action_effort?: 'none' | 'low' | 'medium' | 'high';
+
+    // Semantic Analysis (detected in detection mode)
+    detected_ce?: string;
+    detected_sc?: string;
+    detected_csi?: string;
+    ce_alignment?: number;
+    sc_alignment?: number;
+    csi_alignment?: number;
+    semantic_overall_score?: number;
+    overlay_status?: 'covered_aligned' | 'covered_needs_work' | 'gap' | 'orphan' | 'cannibalization';
 
     // CrUX / Core Web Vitals
     cwv_lcp?: number;
