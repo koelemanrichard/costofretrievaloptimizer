@@ -38,6 +38,25 @@ export const SiteHealthSummary: React.FC<SiteHealthSummaryProps> = ({ inventory 
       i => (i.audit_score != null && i.audit_score < 40) && (i.gsc_clicks ?? 0) > 0
     ).length;
 
+    // Site Optimization Score (traffic-weighted semantic alignment)
+    const withAlignment = inventory.filter(i =>
+      (i.ce_alignment != null || i.audit_score != null) && (i.gsc_clicks ?? 0) > 0
+    );
+    let optimizationScore: number | null = null;
+    if (withAlignment.length > 0) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+      for (const item of withAlignment) {
+        const alignment = item.ce_alignment != null
+          ? (item.ce_alignment * 0.4 + (item.sc_alignment ?? 50) * 0.3 + (item.csi_alignment ?? 50) * 0.3)
+          : (item.audit_score ?? 50);
+        const weight = Math.log10((item.gsc_clicks ?? 1) + 1) + 1;
+        weightedSum += alignment * weight;
+        totalWeight += weight;
+      }
+      optimizationScore = Math.round(weightedSum / totalWeight);
+    }
+
     return {
       total: inventory.length,
       avgQuality,
@@ -49,6 +68,7 @@ export const SiteHealthSummary: React.FC<SiteHealthSummaryProps> = ({ inventory 
       corCount: withCor.length,
       actionCounts,
       urgentItems,
+      optimizationScore,
     };
   }, [inventory]);
 
@@ -72,6 +92,22 @@ export const SiteHealthSummary: React.FC<SiteHealthSummaryProps> = ({ inventory 
 
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-lg px-5 py-3 flex-shrink-0">
+      {/* Site Optimization Score */}
+      {metrics.optimizationScore != null && (
+        <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-700/50">
+          <div className={`text-3xl font-bold ${
+            metrics.optimizationScore >= 70 ? 'text-green-400' :
+            metrics.optimizationScore >= 40 ? 'text-yellow-400' : 'text-red-400'
+          }`}>
+            {metrics.optimizationScore}
+          </div>
+          <div>
+            <div className="text-sm font-medium text-white">Site Score</div>
+            <div className="text-xs text-gray-500">Traffic-weighted optimization</div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start gap-8 flex-wrap">
         {/* Page count */}
         <div className="text-xs text-gray-400">
