@@ -4,6 +4,7 @@ import { TopicalMap } from '../../types';
 import { Button } from '../ui/Button';
 import { SmartLoader } from '../ui/FunLoaders';
 import MergeMapWizard from '../merge/MergeMapWizard';
+import { useAppState } from '../../state/appState';
 
 interface MapSelectionScreenProps {
   projectName: string;
@@ -76,7 +77,7 @@ const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
                         existing content, and build an optimized strategy around your reality.
                     </p>
                     <p className="text-xs text-gray-500 mb-4">Best for: Existing websites, site optimization, content audits</p>
-                    <Button variant="secondary" className="w-full border-green-700 text-green-400 hover:bg-green-900/30">
+                    <Button onClick={onStartAnalysis} variant="secondary" className="w-full border-green-700 text-green-400 hover:bg-green-900/30">
                         Import Site
                     </Button>
                 </div>
@@ -130,5 +131,4 @@ const MapSelectionScreen: React.FC<MapSelectionScreenProps> = ({
     );
 };
 
-import { useAppState } from '../../state/appState';
 export default MapSelectionScreen;

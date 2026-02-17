@@ -21,6 +21,7 @@ interface ExistingSiteWizardContainerProps {
   isLoadingInventory: boolean;
   onRefreshInventory: () => void;
   onOpenWorkbench?: (item: SiteInventoryItem) => void;
+  onCreateBrief?: (topicId: string) => void;
 }
 
 interface StepConfig {
@@ -49,6 +50,7 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
   isLoadingInventory,
   onRefreshInventory,
   onOpenWorkbench,
+  onCreateBrief,
 }) => {
   const { state, dispatch } = useAppState();
   const { businessInfo } = state;
@@ -641,6 +643,7 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
                 parent_topic_id: t.parent_topic_id,
               })) : topics}
               onOpenWorkbench={onOpenWorkbench}
+              onCreateBrief={onCreateBrief}
             />
             <div className="flex gap-3 justify-center mt-4">
               <button

@@ -42,7 +42,16 @@ const MigrationDashboardContainer: React.FC = () => {
     const [showWizard, setShowWizard] = useState(false);
     const [viewType, setViewType] = useState<'WIZARD' | 'MATRIX' | 'KANBAN'>('WIZARD');
     const [showGraph, setShowGraph] = useState(false);
-    const [wizardPath, setWizardPath] = useState<WizardPath>('authority');
+    const [wizardPath, setWizardPath] = useState<WizardPath>(
+        state.migrationWizardPath === 'existing' ? 'existing' : 'authority'
+    );
+
+    // Consume the one-time migration wizard path signal from state
+    useEffect(() => {
+        if (state.migrationWizardPath) {
+            dispatch({ type: 'SET_MIGRATION_WIZARD_PATH', payload: null });
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Strategy Modal State
     const [showStrategyModal, setShowStrategyModal] = useState(false);
@@ -117,6 +126,14 @@ const MigrationDashboardContainer: React.FC = () => {
 
     const handleOpenWorkbench = (item: SiteInventoryItem) => {
         setWorkbenchItem(item);
+    };
+
+    const handleCreateBrief = (topicId: string) => {
+        const topic = targetTopics.find(t => t.id === topicId);
+        if (topic) {
+            dispatch({ type: 'SET_ACTIVE_BRIEF_TOPIC', payload: topic });
+        }
+        dispatch({ type: 'SET_VIEW_MODE', payload: 'CREATION' });
     };
 
     const coreTopics = targetTopics.filter(t => t.type === 'core');
@@ -254,9 +271,7 @@ const MigrationDashboardContainer: React.FC = () => {
                                 isLoadingInventory={isLoadingInventory}
                                 onRefreshInventory={refreshInventory}
                                 onOpenWorkbench={handleOpenWorkbench}
-                                onCreateBrief={(topicId) => {
-                                    dispatch({ type: 'SET_VIEW_MODE', payload: 'CREATION' });
-                                }}
+                                onCreateBrief={handleCreateBrief}
                             />
                         ) : (
                             <ExistingSiteWizardContainer
@@ -267,6 +282,7 @@ const MigrationDashboardContainer: React.FC = () => {
                                 isLoadingInventory={isLoadingInventory}
                                 onRefreshInventory={refreshInventory}
                                 onOpenWorkbench={handleOpenWorkbench}
+                                onCreateBrief={handleCreateBrief}
                             />
                         )}
                     </div>

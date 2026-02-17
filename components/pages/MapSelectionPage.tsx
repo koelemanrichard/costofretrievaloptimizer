@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../../state/appState';
 import { MapSelectionScreen } from '../screens';
 import NewMapModal from '../modals/NewMapModal';
-import { TopicalMap, AppStep } from '../../types';
+import { TopicalMap } from '../../types';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { verifiedDelete, verifiedBulkDelete } from '../../services/verifiedDatabaseService';
 import { normalizeRpcData, parseTopicalMap } from '../../utils/parsers';
@@ -49,9 +49,26 @@ const MapSelectionPage: React.FC = () => {
         }
     };
 
-    const handleStartAnalysis = () => {
-        // Navigate to site analysis (currently disabled in UI)
-        dispatch({ type: 'SET_STEP', payload: AppStep.SITE_ANALYSIS });
+    const handleStartAnalysis = async () => {
+        if (!projectId) return;
+        const mapName = `${activeProject?.project_name || 'Site'} - Import`;
+        try {
+            const supabase = getSupabaseClient(state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey);
+            const { data, error } = await supabase.rpc('create_new_map', { p_project_id: projectId, p_map_name: mapName });
+            if (error) throw error;
+
+            const rawMap = normalizeRpcData(data);
+            const newMap = parseTopicalMap(rawMap);
+
+            dispatch({ type: 'ADD_TOPICAL_MAP', payload: newMap });
+            dispatch({ type: 'SET_ACTIVE_MAP', payload: newMap.id });
+            dispatch({ type: 'SET_MIGRATION_WIZARD_PATH', payload: 'existing' });
+            dispatch({ type: 'SET_VIEW_MODE', payload: 'MIGRATION' });
+            navigate(`/p/${projectId}/m/${newMap.id}`);
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to create map.';
+            dispatch({ type: 'SET_ERROR', payload: message });
+        }
     };
 
     const handleBackToProjects = () => {

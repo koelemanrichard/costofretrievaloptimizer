@@ -117,6 +117,7 @@ export interface AppState {
     user: User | null;
     appStep: AppStep;
     viewMode: 'CREATION' | 'MIGRATION'; // NEW: Toggle between creation and migration workflows
+    migrationWizardPath: 'authority' | 'existing' | null; // Which wizard path to open in Migration view
     isLoading: { [key: string]: boolean | undefined; };
     loadingContext: { [key: string]: string | undefined; };
     error: string | null;
@@ -212,6 +213,7 @@ export type AppAction =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_STEP'; payload: AppStep }
   | { type: 'SET_VIEW_MODE'; payload: 'CREATION' | 'MIGRATION' } // NEW: Toggle workflows
+  | { type: 'SET_MIGRATION_WIZARD_PATH'; payload: 'authority' | 'existing' | null }
   | { type: 'TOGGLE_STRATEGIST'; payload?: boolean } // NEW: Toggle strategist panel
   | { type: 'SET_LOADING'; payload: { key: string; value: boolean; context?: string } }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -335,6 +337,7 @@ export const initialState: AppState = {
     user: null,
     appStep: AppStep.AUTH,
     viewMode: 'CREATION',
+    migrationWizardPath: null,
     isLoading: {},
     loadingContext: {},
     error: null,
@@ -406,6 +409,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         case 'SET_USER': return { ...state, user: action.payload };
         case 'SET_STEP': return { ...state, appStep: action.payload };
         case 'SET_VIEW_MODE': return { ...state, viewMode: action.payload }; // Handle viewMode toggle
+        case 'SET_MIGRATION_WIZARD_PATH': return { ...state, migrationWizardPath: action.payload };
         case 'TOGGLE_STRATEGIST': return { ...state, isStrategistOpen: action.payload !== undefined ? action.payload : !state.isStrategistOpen };
         case 'SET_LOADING': {
             const newLoadingContext = { ...state.loadingContext };

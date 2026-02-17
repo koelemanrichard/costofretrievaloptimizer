@@ -302,6 +302,19 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
         return <div className="flex flex-col items-center justify-center h-screen"><Loader /><p className="mt-4">Loading Map Details...</p></div>;
     }
 
+    // Import Site: create a new map and navigate to Migration Workbench in "existing" mode
+    const handleImportSite = async () => {
+        if (!activeProjectId) return;
+        const mapName = `${activeProject?.project_name || 'Site'} - Import`;
+        try {
+            await handleCreateNewMap(mapName);
+            dispatch({ type: 'SET_MIGRATION_WIZARD_PATH', payload: 'existing' });
+            dispatch({ type: 'SET_VIEW_MODE', payload: 'MIGRATION' });
+        } catch {
+            // handleCreateNewMap already sets the error
+        }
+    };
+
     if (!activeMap) {
         return (
             <>
@@ -310,7 +323,7 @@ const ProjectDashboardContainer: React.FC<ProjectDashboardContainerProps> = ({ o
                     topicalMaps={topicalMaps}
                     onSelectMap={handleSelectMap}
                     onCreateNewMap={() => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'newMap', visible: true } })}
-                    onStartAnalysis={handleStartAnalysis}
+                    onStartAnalysis={handleImportSite}
                     onBackToProjects={onBackToProjects}
                     onInitiateDeleteMap={onInitiateDeleteMap}
                 />
