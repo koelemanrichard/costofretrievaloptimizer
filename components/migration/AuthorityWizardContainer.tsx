@@ -68,11 +68,15 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
   const effectiveLanguage = mapBizInfo?.language || businessInfo?.language;
   const effectiveIndustry = mapBizInfo?.industry || businessInfo?.industry;
   const effectiveDomain = mapBizInfo?.domain || businessInfo?.domain;
+  const effectiveAudience = mapBizInfo?.audience || businessInfo?.audience;
 
   const { handleAddTopic } = useTopicOperations(mapId, businessInfo, topics, dispatch, user);
 
   // Business context validation — check both map-level and global
   const hasBusinessInfo = !!(effectiveLanguage && effectiveIndustry);
+
+  // Collapsible business settings panel — always accessible
+  const [showBusinessSettings, setShowBusinessSettings] = useState(false);
 
   const [currentStep, setCurrentStep] = useState<StepNumber>(1);
   const [importComplete, setImportComplete] = useState(false);
@@ -95,6 +99,7 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
     const validation = validateBusinessInfoForAnalysis(businessInfo);
     if (!validation.valid) {
       setSemanticValidationError(validation.errors.join(' '));
+      setShowBusinessSettings(true); // Auto-open panel so user can fix
       return;
     }
     setSemanticValidationError(null);
@@ -375,6 +380,51 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
         </div>
       </div>
 
+      {/* Business Settings Toggle */}
+      <div className="flex-shrink-0 border-t border-gray-700 px-4 py-1.5 flex items-center gap-2">
+        <button
+          onClick={() => setShowBusinessSettings(prev => !prev)}
+          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors ${
+            showBusinessSettings
+              ? 'bg-amber-900/30 border border-amber-700 text-amber-300'
+              : !hasBusinessInfo || !effectiveAudience
+                ? 'bg-amber-900/20 border border-amber-700/50 text-amber-400 animate-pulse'
+                : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+          }`}
+        >
+          <span>{showBusinessSettings ? '\u25BC' : '\u25B6'}</span>
+          Business Settings
+          {(!hasBusinessInfo || !effectiveAudience) && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+          )}
+        </button>
+        {hasBusinessInfo && (
+          <span className="text-[10px] text-gray-500">
+            {effectiveLanguage} &middot; {effectiveIndustry}
+            {effectiveAudience ? ` \u00B7 ${effectiveAudience}` : ''}
+            {effectiveDomain ? ` \u00B7 ${effectiveDomain}` : ''}
+          </span>
+        )}
+      </div>
+
+      {/* Collapsible Business Settings Panel */}
+      {showBusinessSettings && (
+        <InlineBusinessInfoForm
+          mapId={mapId}
+          inventory={inventory}
+          initialLanguage={effectiveLanguage}
+          initialIndustry={effectiveIndustry}
+          initialDomain={effectiveDomain}
+          initialAudience={effectiveAudience}
+          currentBusinessInfo={businessInfo}
+          dispatch={dispatch}
+          onSaved={() => {
+            setSemanticValidationError(null);
+            setShowBusinessSettings(false);
+          }}
+        />
+      )}
+
       {/* Divider */}
       <div className="border-t border-gray-700" />
 
@@ -419,17 +469,6 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
 
         {currentStep === 2 && (
           <>
-            {!hasBusinessInfo && (
-              <InlineBusinessInfoForm
-                mapId={mapId}
-                inventory={inventory}
-                initialLanguage={effectiveLanguage}
-                initialIndustry={effectiveIndustry}
-                initialDomain={effectiveDomain}
-                currentBusinessInfo={businessInfo}
-                dispatch={dispatch}
-              />
-            )}
             <AuditStep
               projectId={projectId}
               mapId={mapId}
@@ -456,7 +495,13 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
                 {/* Validation error */}
                 {semanticValidationError && (
                   <div className="bg-red-900/30 border border-red-700 rounded-lg px-3 py-2 text-xs text-red-300">
-                    {semanticValidationError}
+                    {semanticValidationError.replace(/Set it in Business Info\./g, '')}
+                    <button
+                      onClick={() => setShowBusinessSettings(true)}
+                      className="ml-1 underline text-amber-400 hover:text-amber-300"
+                    >
+                      Open Business Settings
+                    </button>
                   </div>
                 )}
 
@@ -774,12 +819,14 @@ interface InlineBusinessInfoFormProps {
   initialLanguage?: string;
   initialIndustry?: string;
   initialDomain?: string;
+  initialAudience?: string;
   currentBusinessInfo: BusinessInfo;
   dispatch: React.Dispatch<any>;
+  onSaved?: () => void;
 }
 
 const InlineBusinessInfoForm: React.FC<InlineBusinessInfoFormProps> = ({
-  mapId, inventory, initialLanguage, initialIndustry, initialDomain, currentBusinessInfo, dispatch,
+  mapId, inventory, initialLanguage, initialIndustry, initialDomain, initialAudience, currentBusinessInfo, dispatch, onSaved,
 }) => {
   // Auto-detect domain from inventory URLs
   const detectedDomain = useMemo(() => {
@@ -808,45 +855,44 @@ const InlineBusinessInfoForm: React.FC<InlineBusinessInfoFormProps> = ({
   const [language, setLanguage] = useState(detectedLanguage);
   const [industry, setIndustry] = useState(initialIndustry || '');
   const [domain, setDomain] = useState(detectedDomain);
+  const [audience, setAudience] = useState(initialAudience || '');
 
   const handleSave = () => {
     if (!language.trim() || !industry.trim()) return;
+
+    const updatedFields: Partial<BusinessInfo> = {
+      language: language.trim(),
+      industry: industry.trim(),
+      domain: domain.trim(),
+      audience: audience.trim(),
+    };
 
     // Save to map-level business_info
     dispatch({
       type: 'UPDATE_MAP_DATA',
       payload: {
         mapId,
-        data: {
-          business_info: {
-            language: language.trim(),
-            industry: industry.trim(),
-            domain: domain.trim(),
-          },
-        },
+        data: { business_info: updatedFields },
       },
     });
 
     // Also update global state so downstream hooks see it immediately
     dispatch({
       type: 'SET_BUSINESS_INFO',
-      payload: {
-        ...currentBusinessInfo,
-        language: language.trim(),
-        industry: industry.trim(),
-        domain: domain.trim(),
-      },
+      payload: { ...currentBusinessInfo, ...updatedFields },
     });
+
+    onSaved?.();
   };
 
   return (
-    <div className="mx-4 mt-3 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
-      <p className="text-sm text-amber-300 mb-3">
-        <strong>Business context required.</strong> Set your language and industry to enable AI analysis.
+    <div className="flex-shrink-0 mx-4 my-2 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
+      <p className="text-xs text-amber-300 mb-2">
+        Set your business context. Language, industry, and audience are required for AI analysis.
       </p>
       <div className="flex items-end gap-3 flex-wrap">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Language</label>
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Language *</label>
           <input
             type="text"
             value={language}
@@ -856,7 +902,7 @@ const InlineBusinessInfoForm: React.FC<InlineBusinessInfoFormProps> = ({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Industry</label>
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Industry *</label>
           <input
             type="text"
             value={industry}
@@ -866,13 +912,23 @@ const InlineBusinessInfoForm: React.FC<InlineBusinessInfoFormProps> = ({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Domain</label>
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Audience *</label>
+          <input
+            type="text"
+            value={audience}
+            onChange={(e) => setAudience(e.target.value)}
+            placeholder="e.g. homeowners, business owners"
+            className="w-48 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Domain</label>
           <input
             type="text"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             placeholder="e.g. example.nl"
-            className="w-48 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+            className="w-40 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
           />
         </div>
         <button

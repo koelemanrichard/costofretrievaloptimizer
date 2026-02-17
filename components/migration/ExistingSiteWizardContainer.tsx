@@ -67,6 +67,12 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
   const effectiveLanguage = mapBizInfo?.language || businessInfo?.language;
   const effectiveIndustry = mapBizInfo?.industry || businessInfo?.industry;
   const effectiveDomain = mapBizInfo?.domain || businessInfo?.domain;
+  const effectiveAudience = mapBizInfo?.audience || businessInfo?.audience;
+
+  const hasBusinessInfo = !!(effectiveLanguage && effectiveIndustry);
+
+  // Collapsible business settings panel — always accessible
+  const [showBusinessSettings, setShowBusinessSettings] = useState(false);
 
   const [currentStep, setCurrentStep] = useState<StepNumber>(1);
 
@@ -104,6 +110,7 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
     const validation = validateBusinessInfoForAnalysis(businessInfo);
     if (!validation.valid) {
       setAnalysisValidationError(validation.errors.join(' '));
+      setShowBusinessSettings(true); // Auto-open panel so user can fix
       return;
     }
     setAnalysisValidationError(null);
@@ -252,6 +259,51 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
         </div>
       </div>
 
+      {/* Business Settings Toggle */}
+      <div className="flex-shrink-0 px-4 py-1.5 flex items-center gap-2 border-b border-gray-700/50">
+        <button
+          onClick={() => setShowBusinessSettings(prev => !prev)}
+          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors ${
+            showBusinessSettings
+              ? 'bg-amber-900/30 border border-amber-700 text-amber-300'
+              : !hasBusinessInfo || !effectiveAudience
+                ? 'bg-amber-900/20 border border-amber-700/50 text-amber-400 animate-pulse'
+                : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+          }`}
+        >
+          <span>{showBusinessSettings ? '\u25BC' : '\u25B6'}</span>
+          Business Settings
+          {(!hasBusinessInfo || !effectiveAudience) && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+          )}
+        </button>
+        {hasBusinessInfo && (
+          <span className="text-[10px] text-gray-500">
+            {effectiveLanguage} &middot; {effectiveIndustry}
+            {effectiveAudience ? ` \u00B7 ${effectiveAudience}` : ''}
+            {effectiveDomain ? ` \u00B7 ${effectiveDomain}` : ''}
+          </span>
+        )}
+      </div>
+
+      {/* Collapsible Business Settings Panel */}
+      {showBusinessSettings && (
+        <ExistingSiteInlineBusinessInfoForm
+          mapId={mapId}
+          inventory={inventory}
+          initialLanguage={effectiveLanguage}
+          initialIndustry={effectiveIndustry}
+          initialDomain={effectiveDomain}
+          initialAudience={effectiveAudience}
+          currentBusinessInfo={businessInfo}
+          dispatch={dispatch}
+          onSaved={() => {
+            setAnalysisValidationError(null);
+            setShowBusinessSettings(false);
+          }}
+        />
+      )}
+
       {/* Step Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {/* ─── Step 1: Business Context ───────────────────────────────────── */}
@@ -261,51 +313,66 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
             <p className="text-gray-400 text-sm">
               Define your business information before proceeding. This context is used by all AI-driven analysis.
             </p>
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-              {effectiveLanguage && effectiveIndustry ? (
-                <>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex gap-2">
-                      <span className="text-gray-500">Language:</span>
-                      <span className="text-white">{effectiveLanguage}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-gray-500">Industry:</span>
-                      <span className="text-white">{effectiveIndustry}</span>
-                    </div>
-                    {businessInfo.audience && (
-                      <div className="flex gap-2">
-                        <span className="text-gray-500">Audience:</span>
-                        <span className="text-white">{businessInfo.audience}</span>
-                      </div>
-                    )}
-                    {effectiveDomain && (
-                      <div className="flex gap-2">
-                        <span className="text-gray-500">Domain:</span>
-                        <span className="text-white">{effectiveDomain}</span>
-                      </div>
-                    )}
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 space-y-4">
+              {hasBusinessInfo ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex gap-2">
+                    <span className="text-gray-500">Language:</span>
+                    <span className="text-white">{effectiveLanguage}</span>
                   </div>
+                  <div className="flex gap-2">
+                    <span className="text-gray-500">Industry:</span>
+                    <span className="text-white">{effectiveIndustry}</span>
+                  </div>
+                  {effectiveAudience && (
+                    <div className="flex gap-2">
+                      <span className="text-gray-500">Audience:</span>
+                      <span className="text-white">{effectiveAudience}</span>
+                    </div>
+                  )}
+                  {effectiveDomain && (
+                    <div className="flex gap-2">
+                      <span className="text-gray-500">Domain:</span>
+                      <span className="text-white">{effectiveDomain}</span>
+                    </div>
+                  )}
+                  {!effectiveAudience && (
+                    <p className="text-xs text-amber-400 mt-2">
+                      Audience is required for semantic analysis.{' '}
+                      <button onClick={() => setShowBusinessSettings(true)} className="underline hover:text-amber-300">
+                        Open Business Settings
+                      </button>{' '}
+                      to add it.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-amber-300">
+                  <p>No business context set yet.</p>
+                  <button
+                    onClick={() => setShowBusinessSettings(true)}
+                    className="mt-2 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-500 text-sm font-medium"
+                  >
+                    Open Business Settings
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowBusinessSettings(true)}
+                  className="px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-sm"
+                >
+                  Edit Settings
+                </button>
+                {hasBusinessInfo && (
                   <button
                     onClick={() => goToStep(2)}
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 text-sm font-medium"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 text-sm font-medium"
                   >
                     Continue to Import
                   </button>
-                </>
-              ) : (
-                <>
-                  <ExistingSiteInlineBusinessInfoForm
-                    mapId={mapId}
-                    inventory={inventory}
-                    initialLanguage={effectiveLanguage}
-                    initialIndustry={effectiveIndustry}
-                    initialDomain={effectiveDomain}
-                    currentBusinessInfo={businessInfo}
-                    dispatch={dispatch}
-                  />
-                </>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -350,7 +417,13 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
             {/* Validation error */}
             {analysisValidationError && (
               <div className="bg-red-900/30 border border-red-700 rounded-lg px-4 py-3 text-sm text-red-300">
-                {analysisValidationError}
+                {analysisValidationError.replace(/Set it in Business Info\./g, '')}
+                <button
+                  onClick={() => setShowBusinessSettings(true)}
+                  className="ml-1 underline text-amber-400 hover:text-amber-300"
+                >
+                  Open Business Settings
+                </button>
               </div>
             )}
 
@@ -698,12 +771,14 @@ interface ExistingSiteInlineBusinessInfoFormProps {
   initialLanguage?: string;
   initialIndustry?: string;
   initialDomain?: string;
+  initialAudience?: string;
   currentBusinessInfo: BusinessInfo;
   dispatch: React.Dispatch<any>;
+  onSaved?: () => void;
 }
 
 const ExistingSiteInlineBusinessInfoForm: React.FC<ExistingSiteInlineBusinessInfoFormProps> = ({
-  mapId, inventory, initialLanguage, initialIndustry, initialDomain, currentBusinessInfo, dispatch,
+  mapId, inventory, initialLanguage, initialIndustry, initialDomain, initialAudience, currentBusinessInfo, dispatch, onSaved,
 }) => {
   const detectedDomain = useMemo(() => {
     if (initialDomain) return initialDomain;
@@ -728,39 +803,54 @@ const ExistingSiteInlineBusinessInfoForm: React.FC<ExistingSiteInlineBusinessInf
   const [language, setLanguage] = useState(detectedLanguage);
   const [industry, setIndustry] = useState(initialIndustry || '');
   const [domain, setDomain] = useState(detectedDomain);
+  const [audience, setAudience] = useState(initialAudience || '');
 
   const handleSave = () => {
     if (!language.trim() || !industry.trim()) return;
+
+    const updatedFields: Partial<BusinessInfo> = {
+      language: language.trim(),
+      industry: industry.trim(),
+      domain: domain.trim(),
+      audience: audience.trim(),
+    };
+
     dispatch({
       type: 'UPDATE_MAP_DATA',
-      payload: { mapId, data: { business_info: { language: language.trim(), industry: industry.trim(), domain: domain.trim() } } },
+      payload: { mapId, data: { business_info: updatedFields } },
     });
     dispatch({
       type: 'SET_BUSINESS_INFO',
-      payload: { ...currentBusinessInfo, language: language.trim(), industry: industry.trim(), domain: domain.trim() },
+      payload: { ...currentBusinessInfo, ...updatedFields },
     });
+    onSaved?.();
   };
 
   return (
-    <>
-      <p className="text-sm text-amber-300 mb-3">
-        <strong>Business context required.</strong> Set your language and industry to enable AI-driven analysis.
+    <div className="flex-shrink-0 mx-4 my-2 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
+      <p className="text-xs text-amber-300 mb-2">
+        Set your business context. Language, industry, and audience are required for AI analysis.
       </p>
       <div className="flex items-end gap-3 flex-wrap">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Language</label>
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Language *</label>
           <input type="text" value={language} onChange={(e) => setLanguage(e.target.value)}
             placeholder="e.g. nl, en" className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Industry</label>
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Industry *</label>
           <input type="text" value={industry} onChange={(e) => setIndustry(e.target.value)}
             placeholder="e.g. roofing, dental" className="w-40 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400">Domain</label>
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Audience *</label>
+          <input type="text" value={audience} onChange={(e) => setAudience(e.target.value)}
+            placeholder="e.g. homeowners, business owners" className="w-48 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider">Domain</label>
           <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)}
-            placeholder="e.g. example.nl" className="w-48 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+            placeholder="e.g. example.nl" className="w-40 px-2 py-1.5 text-sm bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
         </div>
         <button onClick={handleSave} disabled={!language.trim() || !industry.trim()}
           className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
@@ -769,7 +859,7 @@ const ExistingSiteInlineBusinessInfoForm: React.FC<ExistingSiteInlineBusinessInf
           Save
         </button>
       </div>
-    </>
+    </div>
   );
 };
 
