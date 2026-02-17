@@ -132,10 +132,31 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
     inventoryItem: SiteInventoryItem | null;
   };
 
+  // Deduplicate inventory by URL, keeping the item with more data
+  const deduplicatedInventory = useMemo(() => {
+    const urlMap = new Map<string, SiteInventoryItem>();
+    for (const item of inventory) {
+      const url = item.url?.toLowerCase();
+      if (!url) { urlMap.set(item.id, item); continue; }
+      const existing = urlMap.get(url);
+      if (!existing) {
+        urlMap.set(url, item);
+      } else {
+        // Keep the one with more data (prefer one with action, then audit_score, then more GSC data)
+        const existingScore = (existing.action ? 10 : 0) + (existing.audit_score ? 5 : 0) + (existing.gsc_clicks ?? 0);
+        const newScore = (item.action ? 10 : 0) + (item.audit_score ? 5 : 0) + (item.gsc_clicks ?? 0);
+        if (newScore > existingScore) {
+          urlMap.set(url, item);
+        }
+      }
+    }
+    return Array.from(urlMap.values());
+  }, [inventory]);
+
   // Build the action queue: inventory items with actions + CREATE_NEW topics without mapped URLs
   const { pageActions, createNewActions, actionQueue } = useMemo(() => {
     // Existing inventory items that have an action assigned (check both fields)
-    const inventoryItems: ActionItem[] = inventory
+    const inventoryItems: ActionItem[] = deduplicatedInventory
       .filter(item => item.action || item.recommended_action)
       .map(item => {
         const effectiveAction = item.action || item.recommended_action;
@@ -162,7 +183,7 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
     const inventoryCreateNew = inventoryItems.filter(i => i.action === 'CREATE_NEW');
 
     // Topics that need new content (not mapped to any inventory item)
-    const mappedTopicIds = new Set(inventory.map(i => i.mapped_topic_id).filter(Boolean));
+    const mappedTopicIds = new Set(deduplicatedInventory.map(i => i.mapped_topic_id).filter(Boolean));
     const unmappedTopics = topics.filter(t => !mappedTopicIds.has(t.id));
     const topicCreateNew: ActionItem[] = unmappedTopics.map(topic => ({
       id: `create-${topic.id}`,
@@ -198,7 +219,7 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
     sortByPriority(combined);
 
     return { pageActions: pages, createNewActions: allCreateNew, actionQueue: combined };
-  }, [inventory, topics]);
+  }, [deduplicatedInventory, topics]);
 
   // Apply filters
   const filteredQueue = useMemo(() => {
@@ -280,6 +301,19 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
         <p className="text-sm text-gray-400 mt-1">
           Work through each page below. Open the workbench to review and apply AI-suggested improvements.
         </p>
+      </div>
+
+      {/* Action Explanation Guide */}
+      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+        <h3 className="text-sm font-medium text-gray-300 mb-2">What do these actions mean?</h3>
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+          <div><span className="text-green-300 font-medium">KEEP</span> — Page is performing well, no changes needed</div>
+          <div><span className="text-lime-300 font-medium">OPTIMIZE</span> — Improve content, headings, or internal links</div>
+          <div><span className="text-yellow-300 font-medium">REWRITE</span> — Fundamental content overhaul needed</div>
+          <div><span className="text-blue-300 font-medium">MERGE</span> — Combine content from competing pages into one</div>
+          <div><span className="text-purple-300 font-medium">REDIRECT</span> — 301 redirect to a better-matching page</div>
+          <div><span className="text-red-300 font-medium">PRUNE</span> — Remove page (410 Gone) — not adding value</div>
+        </div>
       </div>
 
       {/* Start Next Item button + remaining work */}
@@ -462,6 +496,24 @@ export const ExecuteStep: React.FC<ExecuteStepProps> = ({
                             <span className="text-xs text-gray-400 line-clamp-2" title={item.inventoryItem?.action_reasoning}>
                               {item.inventoryItem?.action_reasoning || '\u2014'}
                             </span>
+                            {item.action === 'MERGE' && item.inventoryItem?.action_data_points && (() => {
+                              const mergeTarget = item.inventoryItem.action_data_points?.find(dp => dp.label === 'Merge Target');
+                              if (!mergeTarget) return null;
+                              return (
+                                <div className="text-[10px] text-blue-400 mt-0.5 truncate" title={mergeTarget.value}>
+                                  Merge into: {mergeTarget.value}
+                                </div>
+                              );
+                            })()}
+                            {item.action === 'REDIRECT_301' && item.inventoryItem?.action_data_points && (() => {
+                              const redirectTarget = item.inventoryItem.action_data_points?.find(dp => dp.label === 'Redirect Target');
+                              if (!redirectTarget) return null;
+                              return (
+                                <div className="text-[10px] text-purple-400 mt-0.5 truncate" title={redirectTarget.value}>
+                                  Redirect to: {redirectTarget.value}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${getPriorityClasses(item.priority)}`}>

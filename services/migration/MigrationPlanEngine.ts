@@ -1,5 +1,6 @@
 import type { SiteInventoryItem, EnrichedTopic, ActionType } from '../../types';
 import type { AutoMatchResult, MatchResult, GapTopic } from './AutoMatchService';
+import { classifyPageType } from './pageTypeClassifier';
 
 // ── Result interfaces ──────────────────────────────────────────────────────
 
@@ -372,6 +373,37 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
+/**
+ * Data Completeness (0-100): measures how much actual data we have for an item.
+ * Prevents destructive recommendations (PRUNE, REDIRECT) when data is insufficient.
+ */
+export function computeDataCompleteness(item: SiteInventoryItem): number {
+  let score = 0;
+  let maxScore = 0;
+
+  // Audit data (weight: 30)
+  maxScore += 30;
+  if (item.audit_score != null) score += 30;
+
+  // GSC data (weight: 25)
+  maxScore += 25;
+  if (item.gsc_clicks != null && item.gsc_impressions != null) score += 25;
+
+  // Technical data (weight: 20)
+  maxScore += 20;
+  if (item.cwv_assessment != null || item.cor_score != null) score += 20;
+
+  // Content data (weight: 15)
+  maxScore += 15;
+  if (item.word_count != null && item.word_count > 0) score += 15;
+
+  // Linking data (weight: 10)
+  maxScore += 10;
+  if (item.internal_link_count != null) score += 10;
+
+  return Math.round((score / maxScore) * 100);
+}
+
 // ── Engine ─────────────────────────────────────────────────────────────────
 
 export class MigrationPlanEngine {
@@ -474,6 +506,10 @@ export class MigrationPlanEngine {
     const impressions = item.gsc_impressions ?? 0;
     const summary = buildSignalSummary(item, scores, this.siteAverages);
     const dataPoints = buildComprehensiveDataPoints(item, scores, this.siteAverages);
+
+    // Add page type classification for context
+    const classification = classifyPageType(item.url);
+    dataPoints.push({ label: 'Page Type', value: classification.type, impact: classification.reason });
 
     // Priority 1: Striking distance — quick win, highest ROI optimization
     if (isStrikingDistance(item) && clicks > 0) {
@@ -597,6 +633,14 @@ export class MigrationPlanEngine {
         { label: 'Topic', value: topicTitle, impact: 'Keyword cannibalization' },
       );
 
+      // Add merge/redirect target as data point for non-target items
+      if (!isMergeTarget) {
+        dataPoints.push(
+          { label: 'Merge Target', value: mergeTarget.item.url, impact: 'Consolidate content here' },
+          { label: 'Redirect Target', value: mergeTarget.item.url, impact: 'Redirect this page after merge' },
+        );
+      }
+
       actions.push({
         inventoryId: item.id,
         url: item.url,
@@ -624,6 +668,36 @@ export class MigrationPlanEngine {
     const summary = buildSignalSummary(item, scores, this.siteAverages);
     const dataPoints = buildComprehensiveDataPoints(item, scores, this.siteAverages);
     dataPoints.push({ label: 'Match Status', value: 'No matching topic', impact: 'Orphaned content' });
+
+    // Classify page type for safety checks
+    const classification = classifyPageType(item.url);
+    dataPoints.push({ label: 'Page Type', value: classification.type, impact: classification.reason });
+
+    // Check data completeness — refuse destructive actions on insufficient data
+    const completeness = computeDataCompleteness(item);
+    dataPoints.push({ label: 'Data Coverage', value: `${completeness}%`, impact: completeness < 30 ? 'Low confidence — needs more data' : 'Sufficient data' });
+
+    // NEVER prune protected pages (conversion, utility, location, homepage)
+    if (classification.protectedFromPrune) {
+      return this.buildAction(item, match, {
+        action: 'KEEP',
+        priority: 'low',
+        effort: 'none',
+        reasoning: `${classification.reason} — protected from pruning. Consider mapping to a topic. ${summary}`,
+        dataPoints,
+      });
+    }
+
+    // Insufficient data — default to KEEP with warning
+    if (completeness < 30) {
+      return this.buildAction(item, match, {
+        action: 'KEEP',
+        priority: 'low',
+        effort: 'none',
+        reasoning: `Insufficient data for confident recommendation (${completeness}% data available). Audit this page first. ${summary}`,
+        dataPoints,
+      });
+    }
 
     // Check canonical mismatch first (highest specificity)
     if (item.google_canonical && item.google_canonical !== item.url) {

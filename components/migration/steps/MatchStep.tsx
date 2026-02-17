@@ -186,6 +186,7 @@ export const MatchStep: React.FC<MatchStepProps> = ({
     error,
   } = useAutoMatch(projectId, mapId);
 
+  // Only try to load from DB when we have both inventory AND topics
   useEffect(() => {
     if (inventory.length > 0 && topics.length > 0) {
       tryLoadFromDb(inventory, topics);
@@ -507,13 +508,33 @@ export const MatchStep: React.FC<MatchStepProps> = ({
         </div>
       )}
 
+      {/* Empty topics warning — no topical map to match against */}
+      {topics.length === 0 && (
+        <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6 text-center">
+          <h3 className="text-lg font-medium text-gray-300 mb-2">No topical map to match against</h3>
+          <p className="text-sm text-gray-500 mb-4 max-w-lg mx-auto">
+            Matching connects your existing pages to topics from your topical map.
+            Without topics, all pages will be classified as orphans.
+            You can either create a topical map first, or skip this step.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => onComplete()}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+            >
+              Skip Matching (all pages will be orphans)
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={handleRunMatch}
-          disabled={isMatching || inventory.length === 0}
+          disabled={isMatching || inventory.length === 0 || topics.length === 0}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-            isMatching || inventory.length === 0
+            isMatching || inventory.length === 0 || topics.length === 0
               ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-500'
           }`}
@@ -576,7 +597,7 @@ export const MatchStep: React.FC<MatchStepProps> = ({
       )}
 
       {/* No result yet */}
-      {!result && !isMatching && (
+      {!result && !isMatching && topics.length > 0 && (
         <div className="text-center py-6 text-gray-500">
           <p className="text-base mb-1">No match results yet.</p>
           <p className="text-sm">

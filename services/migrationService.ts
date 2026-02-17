@@ -6,12 +6,35 @@ import { cleanScrapedContent } from '../utils/contentCleaner';
 
 /**
  * Normalizes a URL for consistent inventory matching.
- * Strips trailing slashes (except root '/') so that sitemap URLs
- * (e.g. https://example.com/page/) match GSC URLs (https://example.com/page).
+ * - Forces HTTPS protocol
+ * - Strips www. subdomain
+ * - Removes default ports (:80, :443)
+ * - Removes tracking query params (utm_*, fbclid, gclid, etc.)
+ * - Removes fragment identifiers
+ * - Strips trailing slashes (except root '/')
+ * - Lowercases hostname
+ *
+ * This ensures variants like http://www.domain.nl/contact/ and
+ * https://domain.nl/contact resolve to the same normalized URL.
  */
 export function normalizeInventoryUrl(url: string): string {
     try {
         const u = new URL(url);
+        // Force HTTPS
+        u.protocol = 'https:';
+        // Strip www.
+        u.hostname = u.hostname.replace(/^www\./, '');
+        // Remove default ports
+        if (u.port === '80' || u.port === '443') u.port = '';
+        // Remove fragment
+        u.hash = '';
+        // Remove tracking params
+        const trackingParams = [
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+            'fbclid', 'gclid',
+        ];
+        trackingParams.forEach(p => u.searchParams.delete(p));
+        // Strip trailing slash (except root)
         if (u.pathname.length > 1 && u.pathname.endsWith('/')) {
             u.pathname = u.pathname.slice(0, -1);
         }

@@ -3,6 +3,7 @@ import type { SiteInventoryItem, EnrichedTopic, ActionType } from '../../../type
 import { useMigrationPlan, PlanStats } from '../../../hooks/useMigrationPlan';
 import { AutoMatchService } from '../../../services/migration/AutoMatchService';
 import type { PlannedAction } from '../../../services/migration/MigrationPlanEngine';
+import { computeDataCompleteness } from '../../../services/migration/MigrationPlanEngine';
 import { OpportunityScorer, OpportunityResult } from '../../../services/migration/opportunityScorer';
 import { useAppState } from '../../../state/appState';
 
@@ -183,6 +184,13 @@ export const PlanStep: React.FC<PlanStepProps> = ({
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Compute average data completeness across inventory
+  const averageCompleteness = useMemo(() => {
+    if (inventory.length === 0) return 0;
+    const total = inventory.reduce((sum, item) => sum + computeDataCompleteness(item), 0);
+    return Math.round(total / inventory.length);
+  }, [inventory]);
+
   // Detect existing plan data in inventory (survives remount / navigation)
   const existingPlanStats = useMemo(() => {
     const withAction = inventory.filter(i => i.action || i.recommended_action);
@@ -328,6 +336,15 @@ export const PlanStep: React.FC<PlanStepProps> = ({
       {error && (
         <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
           {error}
+        </div>
+      )}
+
+      {/* Low data completeness warning */}
+      {averageCompleteness < 50 && inventory.length > 0 && (
+        <div className="bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3 text-sm text-amber-300">
+          <strong>Limited data available.</strong> Only {averageCompleteness}% of page data has been collected on average.
+          Run a content audit and ensure GSC data is complete for more accurate recommendations.
+          Pages with very low data coverage will default to KEEP instead of destructive actions.
         </div>
       )}
 

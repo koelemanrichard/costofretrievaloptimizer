@@ -49,6 +49,12 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
 
   const { handleAddTopic } = useTopicOperations(mapId, businessInfo, topics, dispatch, user);
 
+  // Business context validation
+  const hasBusinessInfo = !!(
+    businessInfo?.language &&
+    businessInfo?.industry
+  );
+
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [importComplete, setImportComplete] = useState(false);
   const [auditComplete, setAuditComplete] = useState(false);
@@ -111,12 +117,12 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
     switch (step) {
       case 1: return true;
       case 2: return importComplete;
-      case 3: return importComplete && auditComplete;
-      case 4: return importComplete && auditComplete && matchComplete;
-      case 5: return importComplete && auditComplete && matchComplete && planComplete;
+      case 3: return importComplete && auditComplete && hasBusinessInfo;
+      case 4: return importComplete && auditComplete && matchComplete && hasBusinessInfo;
+      case 5: return importComplete && auditComplete && matchComplete && planComplete && hasBusinessInfo;
       default: return false;
     }
-  }, [importComplete, auditComplete, matchComplete, planComplete]);
+  }, [importComplete, auditComplete, matchComplete, planComplete, hasBusinessInfo]);
 
   const handleStepClick = (step: 1 | 2 | 3 | 4 | 5) => {
     if (canNavigateToStep(step)) {
@@ -274,18 +280,29 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
         )}
 
         {currentStep === 2 && (
-          <AuditStep
-            projectId={projectId}
-            mapId={mapId}
-            inventory={inventory}
-            onComplete={() => setAuditComplete(true)}
-            onRefreshInventory={onRefreshInventory}
-            isRunning={batchAudit.isRunning}
-            progress={batchAudit.progress}
-            startBatch={batchAudit.startBatch}
-            cancelBatch={batchAudit.cancelBatch}
-            auditError={batchAudit.error}
-          />
+          <>
+            {!hasBusinessInfo && (
+              <div className="mx-4 mt-3 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
+                <p className="text-sm text-amber-300">
+                  <strong>Business context required.</strong> Set your language and industry
+                  in the Business Info wizard before proceeding to the Match step.
+                  Go back to your project dashboard and complete the Business Info step.
+                </p>
+              </div>
+            )}
+            <AuditStep
+              projectId={projectId}
+              mapId={mapId}
+              inventory={inventory}
+              onComplete={() => setAuditComplete(true)}
+              onRefreshInventory={onRefreshInventory}
+              isRunning={batchAudit.isRunning}
+              progress={batchAudit.progress}
+              startBatch={batchAudit.startBatch}
+              cancelBatch={batchAudit.cancelBatch}
+              auditError={batchAudit.error}
+            />
+          </>
         )}
 
         {currentStep === 3 && (
