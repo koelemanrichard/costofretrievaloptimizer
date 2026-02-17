@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 import { Textarea } from '../ui/Textarea';
 import { Label } from '../ui/Label';
-import { SiteInventoryItem, ContentBrief, SmartFixResult } from '../../types';
+import { SiteInventoryItem, ContentBrief, SmartFixResult, EnrichedTopic } from '../../types';
 import { SimpleMarkdown } from '../ui/SimpleMarkdown';
 import { getOriginalContent } from '../../services/migrationService';
 import { useAppState } from '../../state/appState';
@@ -148,6 +148,8 @@ interface MigrationWorkbenchModalProps {
     inventoryItem: SiteInventoryItem | null;
     linkedBrief: ContentBrief | null; // The brief for the "New" topic if mapped
     onMarkOptimized: (itemId: string) => void;
+    mappedTopic?: EnrichedTopic | null;
+    competingPages?: SiteInventoryItem[];
 }
 
 export const MigrationWorkbenchModal: React.FC<MigrationWorkbenchModalProps> = ({
@@ -155,7 +157,9 @@ export const MigrationWorkbenchModal: React.FC<MigrationWorkbenchModalProps> = (
     onClose,
     inventoryItem,
     linkedBrief,
-    onMarkOptimized
+    onMarkOptimized,
+    mappedTopic,
+    competingPages
 }) => {
     const { state, dispatch } = useAppState();
     const { businessInfo, activeProjectId, topicalMaps, activeMapId } = state;
@@ -677,6 +681,35 @@ export const MigrationWorkbenchModal: React.FC<MigrationWorkbenchModalProps> = (
                         ) : (
                             /* Main guided view: Summary Bar + Analysis + Fixes */
                             <>
+                                {/* Strategic Context */}
+                                {mappedTopic && (
+                                  <div className="mb-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg space-y-2">
+                                    <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                                      Target Topic
+                                      <span className="text-xs px-2 py-0.5 bg-blue-900/30 text-blue-300 border border-blue-700 rounded">
+                                        {mappedTopic.type}
+                                      </span>
+                                    </h4>
+                                    <p className="text-sm text-gray-300">{mappedTopic.title}</p>
+                                    {mappedTopic.canonical_query && (
+                                      <p className="text-xs text-gray-500">Target query: {mappedTopic.canonical_query}</p>
+                                    )}
+                                    {(() => {
+                                      const topQueries = (inventoryItem as SiteInventoryItem & { gsc_top_queries?: string[] })?.gsc_top_queries;
+                                      return topQueries && Array.isArray(topQueries) && topQueries.length > 0 ? (
+                                        <div className="text-xs text-gray-500">
+                                          Ranking for: {topQueries.slice(0, 5).join(', ')}
+                                        </div>
+                                      ) : null;
+                                    })()}
+                                    {competingPages && competingPages.length > 0 && (
+                                      <div className="text-xs text-orange-400">
+                                        Cannibalization risk: {competingPages.length} other page(s) compete for this topic
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 {/* Summary Bar */}
                                 {(isAnalyzingSemantic || isLoadingCachedSemantic) && (
                                     <div className="bg-gray-800 rounded-lg p-4 flex items-center gap-3">
