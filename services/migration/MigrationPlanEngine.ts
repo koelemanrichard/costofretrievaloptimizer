@@ -90,7 +90,13 @@ function computeSiteAverages(inventory: SiteInventoryItem[]): SiteAverages {
  * Content Health (0-100): audit_score + word_count bonus + schema presence
  */
 function computeContentHealth(item: SiteInventoryItem): number {
-  const auditScore = item.audit_score ?? 0;
+  let auditScore = item.audit_score ?? 0;
+  // Blend with semantic overall score if available
+  if (item.semantic_overall_score != null) {
+    auditScore = auditScore > 0
+      ? Math.round((auditScore + item.semantic_overall_score) / 2)
+      : item.semantic_overall_score;
+  }
   // Word count bonus: thin content (<300 words) penalized, >1000 words gets bonus
   let wordCountBonus = 0;
   if (item.word_count != null) {
@@ -165,9 +171,16 @@ function computeTechnicalHealth(item: SiteInventoryItem): number {
 }
 
 /**
- * Strategic Alignment (0-100): match_confidence from auto-matching
+ * Strategic Alignment (0-100): prefer semantic alignment scores over match_confidence
  */
 function computeStrategicAlignment(item: SiteInventoryItem): number {
+  // Use semantic alignment if available (from pillar-based analysis)
+  if (item.ce_alignment != null && item.sc_alignment != null && item.csi_alignment != null) {
+    return clamp(Math.round(
+      item.ce_alignment * 0.4 + item.sc_alignment * 0.3 + item.csi_alignment * 0.3
+    ), 0, 100);
+  }
+  // Fall back to match confidence from auto-matching
   const confidence = item.match_confidence ?? 0;
   return clamp(Math.round(confidence * 100), 0, 100);
 }
