@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SiteInventoryItem, EnrichedTopic, ActionType, TransitionStatus } from '../../types';
 import { useAppState } from '../../state/appState';
 import { useBatchAudit } from '../../hooks/useBatchAudit';
@@ -57,6 +58,7 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
   onUpdateAction,
 }) => {
   const { state, dispatch } = useAppState();
+  const navigate = useNavigate();
   const { user, businessInfo } = state;
 
   const { handleAddTopic } = useTopicOperations(mapId, businessInfo, topics, dispatch, user);
@@ -366,12 +368,17 @@ export const AuthorityWizardContainer: React.FC<AuthorityWizardContainerProps> =
         {currentStep === 2 && (
           <>
             {!hasBusinessInfo && (
-              <div className="mx-4 mt-3 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
+              <div className="mx-4 mt-3 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3 flex items-center justify-between gap-4">
                 <p className="text-sm text-amber-300">
                   <strong>Business context required.</strong> Set your language and industry
-                  in the Business Info wizard before proceeding to the Match step.
-                  Go back to your project dashboard and complete the Business Info step.
+                  before proceeding to the Match step.
                 </p>
+                <button
+                  onClick={() => navigate(`/p/${projectId}/m/${mapId}/setup/business?from=migration`)}
+                  className="flex-shrink-0 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded transition-colors"
+                >
+                  Set up Business Info
+                </button>
               </div>
             )}
             <AuditStep

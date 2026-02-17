@@ -1,16 +1,22 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppState } from '../../../state/appState';
 import BusinessInfoForm from '../../BusinessInfoForm';
 import { BusinessInfo } from '../../../types';
 
 /**
  * BusinessInfoPage - Route wrapper for the Business Info wizard step.
+ *
+ * Supports `?from=migration` query param: after save, navigates back to the
+ * map dashboard (where viewMode='MIGRATION' is still active) instead of
+ * continuing the full setup wizard chain.
  */
 const BusinessInfoPage: React.FC = () => {
     const { state, dispatch } = useAppState();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { projectId, mapId } = useParams<{ projectId: string; mapId: string }>();
+    const fromMigration = searchParams.get('from') === 'migration';
 
     const handleSave = async (formData: Partial<BusinessInfo>) => {
         if (!mapId) return;
@@ -39,7 +45,13 @@ const BusinessInfoPage: React.FC = () => {
         };
 
         dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId, data: { business_info: strategicInfo } } });
-        navigate(`/p/${projectId}/m/${mapId}/setup/pillars`);
+
+        if (fromMigration) {
+            // Return to map dashboard — viewMode='MIGRATION' is still active in state
+            navigate(`/p/${projectId}/m/${mapId}`);
+        } else {
+            navigate(`/p/${projectId}/m/${mapId}/setup/pillars`);
+        }
     };
 
     const handleBack = () => {
