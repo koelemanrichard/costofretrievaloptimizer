@@ -5,6 +5,17 @@ interface SiteHealthSummaryProps {
   inventory: SiteInventoryItem[];
 }
 
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export const SiteHealthSummary: React.FC<SiteHealthSummaryProps> = ({ inventory }) => {
   const metrics = useMemo(() => {
     if (inventory.length === 0) return null;
@@ -69,6 +80,30 @@ export const SiteHealthSummary: React.FC<SiteHealthSummaryProps> = ({ inventory 
       actionCounts,
       urgentItems,
       optimizationScore,
+    };
+  }, [inventory]);
+
+  const freshnessInfo = useMemo(() => {
+    const lastAudit = inventory.reduce((latest, i) => {
+      const t = (i as any).last_audited_at ? new Date((i as any).last_audited_at).getTime() : 0;
+      return t > latest ? t : latest;
+    }, 0);
+
+    const analyzedCount = inventory.filter(i => i.detected_ce != null).length;
+
+    const lastPlanUpdate = inventory.reduce((latest, i) => {
+      if (i.recommended_action && i.updated_at) {
+        const t = new Date(i.updated_at).getTime();
+        return t > latest ? t : latest;
+      }
+      return latest;
+    }, 0);
+
+    return {
+      lastAudit: lastAudit > 0 ? new Date(lastAudit) : null,
+      analyzedCount,
+      lastPlan: lastPlanUpdate > 0 ? new Date(lastPlanUpdate) : null,
+      auditedCount: inventory.filter(i => i.audit_score != null).length,
     };
   }, [inventory]);
 
@@ -186,6 +221,21 @@ export const SiteHealthSummary: React.FC<SiteHealthSummaryProps> = ({ inventory 
           </div>
         )}
       </div>
+
+      {/* Data Freshness */}
+      {(freshnessInfo.lastAudit || freshnessInfo.analyzedCount > 0 || freshnessInfo.lastPlan) && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500 mt-2 pt-2 border-t border-gray-700/30">
+          {freshnessInfo.lastAudit && (
+            <span>Audit: {timeAgo(freshnessInfo.lastAudit)} ({freshnessInfo.auditedCount} pages)</span>
+          )}
+          {freshnessInfo.analyzedCount > 0 && (
+            <span>Semantic: {freshnessInfo.analyzedCount} pages analyzed</span>
+          )}
+          {freshnessInfo.lastPlan && (
+            <span>Plan: {timeAgo(freshnessInfo.lastPlan)}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
