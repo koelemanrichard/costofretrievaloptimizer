@@ -3,7 +3,7 @@ import type { SiteInventoryItem, EnrichedTopic } from '../../types';
 // ── Result interfaces ──────────────────────────────────────────────────────
 
 export interface MatchSignal {
-  type: 'h1' | 'title' | 'url_slug' | 'gsc_query' | 'content_body' | 'heading_keywords';
+  type: 'h1' | 'title' | 'url_slug' | 'gsc_query' | 'content_body' | 'heading_keywords' | 'detected_ce' | 'detected_sc' | 'detected_csi';
   score: number;
   detail: string;
 }
@@ -43,6 +43,22 @@ const SIGNAL_WEIGHTS: Record<MatchSignal['type'], number> = {
   gsc_query: 0.25,
   content_body: 0,       // not used in the current algorithm
   heading_keywords: 0,   // not used in the current algorithm
+  detected_ce: 0,        // only used in SEMANTIC_SIGNAL_WEIGHTS
+  detected_sc: 0,        // only used in SEMANTIC_SIGNAL_WEIGHTS
+  detected_csi: 0,       // only used in SEMANTIC_SIGNAL_WEIGHTS
+};
+
+// When semantic data IS available (rebalanced weights)
+const SEMANTIC_SIGNAL_WEIGHTS: Record<string, number> = {
+  h1: 0.15,
+  title: 0.15,
+  url_slug: 0.10,
+  gsc_query: 0.15,
+  detected_ce: 0.20,
+  detected_sc: 0.10,
+  detected_csi: 0.10,
+  content_body: 0,
+  heading_keywords: 0,
 };
 
 const MATCH_THRESHOLD = 0.4;
@@ -219,7 +235,56 @@ function computeSignals(
     totalWeight += SIGNAL_WEIGHTS.gsc_query;
   }
 
-  // Normalize confidence to account for missing signals
+  // 5. Detected CE ↔ topic title (Jaccard)
+  if (item.detected_ce) {
+    const ceTokens = tokenize(item.detected_ce);
+    const score = jaccard(ceTokens, topic.titleTokens);
+    signals.push({
+      type: 'detected_ce',
+      score,
+      detail: `CE "${item.detected_ce}" vs topic "${topic.title}": ${(score * 100).toFixed(0)}%`,
+    });
+  }
+
+  // 6. Detected SC (softer match)
+  if (item.detected_sc) {
+    const scTokens = tokenize(item.detected_sc);
+    const score = jaccard(scTokens, topic.titleTokens);
+    signals.push({
+      type: 'detected_sc',
+      score,
+      detail: `SC "${item.detected_sc}": ${(score * 100).toFixed(0)}%`,
+    });
+  }
+
+  // 7. Detected CSI ↔ topic keywords
+  if (item.detected_csi) {
+    const csiTokens = tokenize(item.detected_csi);
+    const csiScore = jaccard(csiTokens, [...topic.titleTokens, ...topic.keywordTokens]);
+    signals.push({
+      type: 'detected_csi',
+      score: csiScore,
+      detail: `CSI "${item.detected_csi}": ${(csiScore * 100).toFixed(0)}%`,
+    });
+  }
+
+  // Choose weight set based on whether semantic data exists
+  const hasSemanticData = signals.some(s =>
+    s.type === 'detected_ce' || s.type === 'detected_sc' || s.type === 'detected_csi'
+  );
+  const weights = hasSemanticData ? SEMANTIC_SIGNAL_WEIGHTS : SIGNAL_WEIGHTS;
+
+  // Recalculate weighted sum with the chosen weights
+  weightedSum = 0;
+  totalWeight = 0;
+  for (const signal of signals) {
+    const w = weights[signal.type] ?? 0;
+    if (w > 0) {
+      weightedSum += signal.score * w;
+      totalWeight += w;
+    }
+  }
+
   const confidence = totalWeight > 0 ? weightedSum / totalWeight : 0;
 
   return { confidence, signals };

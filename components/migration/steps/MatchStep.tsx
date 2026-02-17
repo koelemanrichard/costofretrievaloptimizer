@@ -122,6 +122,9 @@ const SIGNAL_DISPLAY: Record<MatchSignal['type'], { icon: string; label: string;
   gsc_query: { icon: '\uD83D\uDCCA', label: 'GSC', tooltip: 'Google Search Console query match' },
   content_body: { icon: '\uD83D\uDCDD', label: 'Body', tooltip: 'Body content keyword match' },
   heading_keywords: { icon: '\uD83D\uDCCB', label: 'Headings', tooltip: 'Sub-heading keyword match' },
+  detected_ce: { icon: '\uD83C\uDFAF', label: 'CE', tooltip: 'Detected Central Entity match' },
+  detected_sc: { icon: '\uD83D\uDDE3\uFE0F', label: 'SC', tooltip: 'Detected Speaking Context match' },
+  detected_csi: { icon: '\uD83D\uDD0D', label: 'CSI', tooltip: 'Detected Content Search Intent match' },
 };
 
 function formatSignals(signals: MatchSignal[]): React.ReactNode {
