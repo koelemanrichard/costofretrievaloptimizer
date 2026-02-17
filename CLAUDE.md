@@ -279,6 +279,8 @@ npx playwright test    # Run E2E tests (requires dev server running)
 
 ## Critical Implementation Notes
 
+**Business Info + Pillars Are Non-Negotiable**: Business context (`BusinessInfo`: language, region, targetMarket, industry, audience) and SEO Pillars (Central Entity, Source Context, Central Search Intent) are **mandatory prerequisites** for ALL system operations — including topical map generation, semantic analysis, content optimization, migration matching, and fix generation. If these are incorrect or missing, the entire optimization output will be misaligned. **Every user path** (greenfield, existing site optimization, migration) MUST ensure business info and pillars are validated before any AI-driven analysis or map generation begins. When building new features or flows, always verify that business info and pillars are available and correct before invoking semantic analysis, matching, or planning services. The per-map overrides in `topical_maps.business_info` (language, region) take precedence over global settings.
+
 **AI Response Sanitization**: The `AIResponseSanitizer` must validate all nested structures from AI responses. The common failure mode is when AI returns a string instead of an expected object (e.g., `serpAnalysis: "Not available"` instead of `serpAnalysis: { peopleAlsoAsk: [], ... }`). Uncaught malformed responses cause React render crashes (Error #31).
 
 **Semantic Triples (EAVs)**: Entity-Attribute-Value triples are central to the SEO strategy. See `SemanticTriple` interface in `types.ts` for the structure with categories (UNIQUE/ROOT/RARE/COMMON) and classifications (TYPE/COMPONENT/BENEFIT/RISK/PROCESS/SPECIFICATION).
