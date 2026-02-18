@@ -108,8 +108,9 @@ export function useBatchSemanticAnalysis(
         }));
 
       if (updates.length > 0) {
+        let writeFailures = 0;
         for (const update of updates) {
-          await (supabase as any)
+          const { error: updateError } = await (supabase as any)
             .from('site_inventory')
             .update({
               detected_ce: update.detected_ce,
@@ -117,6 +118,14 @@ export function useBatchSemanticAnalysis(
               detected_csi: update.detected_csi,
             })
             .eq('id', update.id);
+
+          if (updateError) {
+            writeFailures++;
+            console.error(`[SemanticAnalysis] Failed to write detected_ce for ${update.id}:`, updateError);
+          }
+        }
+        if (writeFailures > 0) {
+          console.warn(`[SemanticAnalysis] ${writeFailures}/${updates.length} DB write-backs failed`);
         }
       }
 

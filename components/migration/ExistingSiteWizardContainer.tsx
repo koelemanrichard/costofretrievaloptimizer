@@ -130,6 +130,10 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
             firecrawlApiKey: businessInfo.firecrawlApiKey,
             extractionType: 'semantic_only',
             enableFallback: true,
+            proxyConfig: {
+              supabaseUrl: businessInfo.supabaseUrl,
+              supabaseAnonKey: businessInfo.supabaseAnonKey,
+            },
           });
           if (extracted.semantic?.content) {
             contentMapRef.current.set(item.id, extracted.semantic.content);
@@ -149,11 +153,35 @@ export const ExistingSiteWizardContainer: React.FC<ExistingSiteWizardContainerPr
   }, [inventory, businessInfo, batchAnalysis, onRefreshInventory]);
 
   // ── Step 4: Auto-detect pillars when entering ──────────────────────────
+  // Merge in-memory analysis results with inventory so pillar detection works
+  // even if DB write-back is slow or failed
+  const inventoryWithSemanticData = useMemo(() => {
+    if (!batchAnalysis.results || batchAnalysis.results.length === 0) return inventory;
+    const resultMap = new Map(
+      batchAnalysis.results
+        .filter(r => r.success && r.detectedCE)
+        .map(r => [r.inventoryId, r])
+    );
+    if (resultMap.size === 0) return inventory;
+    return inventory.map(item => {
+      const result = resultMap.get(item.id);
+      if (result && !item.detected_ce) {
+        return {
+          ...item,
+          detected_ce: result.detectedCE ?? null,
+          detected_sc: result.detectedSC ?? null,
+          detected_csi: result.detectedCSI ?? null,
+        };
+      }
+      return item;
+    });
+  }, [inventory, batchAnalysis.results]);
+
   useEffect(() => {
     if (currentStep === 4 && !pillarDetection.suggestion && !pillarDetection.isLoading) {
-      pillarDetection.detect(inventory);
+      pillarDetection.detect(inventoryWithSemanticData);
     }
-  }, [currentStep, inventory, pillarDetection]);
+  }, [currentStep, inventoryWithSemanticData, pillarDetection]);
 
   const handlePillarConfirm = useCallback((pillars: SEOPillars, _language: string, _region: string) => {
     setConfirmedPillars(pillars);
