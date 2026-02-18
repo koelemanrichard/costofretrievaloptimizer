@@ -13,6 +13,9 @@
  *   317 - X-Frame-Options should be DENY or SAMEORIGIN
  *   318 - Referrer-Policy should be present
  *   319 - Content-Security-Policy should be present
+ *   320b - Brotli compression support (Content-Encoding: br preferred over gzip)
+ *   321b - HTTP/2 protocol support
+ *   322b - UTF-8 consistency in Content-Type header
  */
 
 export interface HttpHeadersInput {
@@ -22,6 +25,8 @@ export interface HttpHeadersInput {
   isStaticAsset?: boolean;
   /** The URL being checked */
   url?: string;
+  /** The HTTP protocol version (e.g., "h2", "http/2", "http/1.1") */
+  protocol?: string;
 }
 
 export interface HttpHeaderIssue {
@@ -48,6 +53,9 @@ export class HttpHeadersAuditor {
     this.checkFrameOptions(headers, issues);
     this.checkReferrerPolicy(headers, issues);
     this.checkContentSecurityPolicy(headers, issues);
+    this.checkBrotliCompression(headers, issues);
+    this.checkHttp2Protocol(input.protocol, issues);
+    this.checkUtf8Consistency(headers, issues);
 
     return issues;
   }
@@ -327,6 +335,122 @@ export class HttpHeadersAuditor {
           'by specifying which content sources are allowed.',
         affectedElement: 'Content-Security-Policy',
         exampleFix: "Content-Security-Policy: default-src 'self'; script-src 'self'",
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Compression & protocol rules (320b-322b)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Rule 320b: Brotli compression support. Brotli (br) provides 15-25% better
+   * compression than gzip. If compression is gzip-only, recommend Brotli.
+   */
+  private checkBrotliCompression(
+    headers: Record<string, string>,
+    issues: HttpHeaderIssue[]
+  ): void {
+    const contentEncoding = headers['content-encoding'];
+    if (!contentEncoding) return; // No compression at all is handled by rule 308
+
+    const encoding = contentEncoding.toLowerCase();
+    const hasBrotli = encoding.includes('br');
+    const hasGzip = encoding.includes('gzip') || encoding.includes('deflate');
+
+    if (!hasBrotli && hasGzip) {
+      issues.push({
+        ruleId: 'rule-320b',
+        severity: 'low',
+        title: 'Brotli compression not enabled',
+        description:
+          `The response uses "${contentEncoding}" compression but not Brotli (br). ` +
+          'Brotli provides 15-25% better compression ratios than gzip for text-based content, ' +
+          'reducing transfer size and improving load times. All modern browsers support Brotli.',
+        affectedElement: `Content-Encoding: ${contentEncoding}`,
+        exampleFix:
+          'Enable Brotli compression on the server. In Nginx: brotli on; In Apache: use mod_brotli. ' +
+          'Most CDNs (Cloudflare, Fastly, AWS CloudFront) support Brotli natively.',
+      });
+    }
+  }
+
+  /**
+   * Rule 321b: HTTP/2 protocol support. HTTP/2 enables multiplexing, header
+   * compression, and server push for significantly faster page loads.
+   */
+  private checkHttp2Protocol(
+    protocol: string | undefined,
+    issues: HttpHeaderIssue[]
+  ): void {
+    if (!protocol) return;
+
+    const normalized = protocol.toLowerCase().replace(/\s+/g, '');
+    const isHttp2OrAbove =
+      normalized.includes('h2') ||
+      normalized.includes('http/2') ||
+      normalized.includes('h3') ||
+      normalized.includes('http/3');
+
+    if (!isHttp2OrAbove) {
+      issues.push({
+        ruleId: 'rule-321b',
+        severity: 'medium',
+        title: 'HTTP/2 not supported',
+        description:
+          `The server is using "${protocol}" instead of HTTP/2 or HTTP/3. ` +
+          'HTTP/2 enables multiplexed requests, header compression (HPACK), and eliminates ' +
+          'head-of-line blocking, resulting in significantly faster page loads. ' +
+          'HTTP/2 is supported by all modern browsers and most hosting providers.',
+        affectedElement: `Protocol: ${protocol}`,
+        exampleFix:
+          'Enable HTTP/2 on the server. In Nginx: listen 443 ssl http2; ' +
+          'In Apache: Protocols h2 http/1.1. Ensure TLS 1.2+ is configured.',
+      });
+    }
+  }
+
+  /**
+   * Rule 322b: UTF-8 consistency in Content-Type header. The Content-Type
+   * should explicitly declare charset=utf-8 for HTML documents.
+   */
+  private checkUtf8Consistency(
+    headers: Record<string, string>,
+    issues: HttpHeaderIssue[]
+  ): void {
+    const contentType = headers['content-type'];
+    if (!contentType) return;
+
+    // Only check HTML documents
+    if (!contentType.toLowerCase().includes('text/html')) return;
+
+    const hasCharset = /charset\s*=/i.test(contentType);
+    const hasUtf8 = /charset\s*=\s*utf-?8/i.test(contentType);
+
+    if (!hasCharset) {
+      issues.push({
+        ruleId: 'rule-322b',
+        severity: 'medium',
+        title: 'Content-Type missing charset declaration',
+        description:
+          `The Content-Type header "${contentType}" does not declare a character encoding. ` +
+          'Without an explicit charset, browsers may use heuristic encoding detection, ' +
+          'potentially causing garbled text for international content. ' +
+          'Always declare charset=utf-8 for HTML documents.',
+        affectedElement: `Content-Type: ${contentType}`,
+        exampleFix: 'Content-Type: text/html; charset=utf-8',
+      });
+    } else if (!hasUtf8) {
+      issues.push({
+        ruleId: 'rule-322b',
+        severity: 'low',
+        title: 'Content-Type uses non-UTF-8 charset',
+        description:
+          `The Content-Type header "${contentType}" declares a charset that is not UTF-8. ` +
+          'UTF-8 is the universal standard encoding for the web, supporting all languages and scripts. ' +
+          'Using a different encoding may cause character rendering issues and is not recommended.',
+        affectedElement: `Content-Type: ${contentType}`,
+        exampleFix: 'Content-Type: text/html; charset=utf-8',
       });
     }
   }

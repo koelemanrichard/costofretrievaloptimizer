@@ -24,7 +24,7 @@ export class LinkStructurePhase extends AuditPhase {
 
     // Rules 162-184: Internal linking validation (anchor text, placement, volume)
     if (contentData?.html && request.url) {
-      totalChecks += 9; // generic anchor, short anchor, long anchor, dup anchor, main content, context, too few, density, excessive
+      totalChecks += 16; // generic anchor, short anchor, long anchor, dup anchor, main content, context, too few, density, excessive, annotation quality, first sentence page, first sentence sections, link distribution, anchor repetition, toc presence, heading ids
       const linkValidator = new InternalLinkingValidator();
       const linkIssues = linkValidator.validate({
         html: contentData.html,

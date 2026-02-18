@@ -688,8 +688,46 @@ export class LayoutEngine {
       issues.push('FS protection not maintained for some sections');
     }
 
-    // Check semantic SEO compliance (placeholder - always true for now)
-    const semanticSeoCompliant = true;
+    // Check semantic SEO compliance
+    let semanticSeoCompliant = true;
+
+    // LIFT Model validation: Logo → Index/Navigation → Featured Content → Topic Content
+    // The first content section should be featured/hero, not supplementary
+    if (sections.length >= 2) {
+      const firstContent = sections[0];
+      const lastContent = sections[sections.length - 1];
+      // Featured/high-weight content should come before supplementary
+      if (firstContent.semanticWeight < lastContent.semanticWeight &&
+          firstContent.contentZone === 'SUPPLEMENTARY' &&
+          lastContent.contentZone === 'MAIN') {
+        issues.push('LIFT model violation: Featured/main content should appear before supplementary content');
+        semanticSeoCompliant = false;
+      }
+    }
+
+    // IR Zone validation: first section should be introduction-type content
+    if (sections.length > 0) {
+      const firstSection = sections[0];
+      if (firstSection.contentZone === 'SUPPLEMENTARY') {
+        issues.push('IR Zone: First section is supplementary — main content should appear first for core answer visibility');
+      }
+    }
+
+    // Visual hierarchy: heading sizes should decrease with depth
+    let prevHeadingLevel = 0;
+    for (const section of sections) {
+      if (section.headingLevel) {
+        if (section.headingLevel < prevHeadingLevel &&
+            section.headingLevel !== 1) {
+          // Heading level jumped up (e.g., H3 followed by H2 in non-structural way)
+          // Flag if weight doesn't match heading level
+          if (section.semanticWeight > 3 && section.headingLevel > 2) {
+            issues.push(`Visual hierarchy: High-weight section "${section.heading}" uses H${section.headingLevel} — consider promoting`);
+          }
+        }
+        prevHeadingLevel = section.headingLevel;
+      }
+    }
 
     // Calculate brand alignment score
     const brandAlignmentScore = calculateBrandAlignmentScore(sections, dna);

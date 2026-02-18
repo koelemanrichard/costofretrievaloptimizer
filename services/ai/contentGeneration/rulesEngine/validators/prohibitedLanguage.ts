@@ -16,6 +16,10 @@ interface LanguagePatterns {
   FUTURE_FOR_FACTS: RegExp[];
   AMBIGUOUS_PRONOUNS: RegExp[];
   FLUFF_OPENERS: RegExp[];
+  /** LLM-typical phrases that reveal AI authorship (Expression Identity) */
+  EXPRESSION_IDENTITY: RegExp[];
+  /** Words that indicate weak semantic connections ("also" ban) */
+  WEAK_CONNECTORS: string[];
 }
 
 const MULTILINGUAL_PATTERNS: Record<string, LanguagePatterns> = {
@@ -47,6 +51,24 @@ const MULTILINGUAL_PATTERNS: Record<string, LanguagePatterns> = {
       /^(In this (article|guide|post|section)|Let's (dive|explore|look|discuss)|Have you ever wondered)/i,
       /^(Welcome to|Today we|We will|We're going to)/i,
     ],
+    EXPRESSION_IDENTITY: [
+      /\b(it's important to note|it is important to note|it's worth noting|it is worth noting)\b/gi,
+      /\b(delve into|delve deeper|delving into)\b/gi,
+      /\b(in the realm of|in the world of|in the landscape of)\b/gi,
+      /\b(navigate the (landscape|complexities|challenges|world))\b/gi,
+      /\b(tapestry of|myriad of|plethora of|multifaceted)\b/gi,
+      /\b(it's crucial to|it is crucial to|it's essential to|it is essential to)\b/gi,
+      /\b(at the end of the day|when it comes to|in terms of)\b/gi,
+      /\b(shed light on|pave the way|game changer|cutting edge|cutting-edge)\b/gi,
+      /\b(leverag(e|ing)|synergy|synergies|paradigm shift|holistic approach)\b/gi,
+      /\b(unlock(ing)? the (power|potential|secrets)|harness(ing)? the power)\b/gi,
+      /\b(dive deep|deep dive|take a closer look|closer look at)\b/gi,
+      /\b(the bottom line is|at its core|when all is said and done)\b/gi,
+      /\b(stands? as a testament|serves? as a reminder)\b/gi,
+      /\b(in today's (digital|modern|fast-paced|ever-changing))\b/gi,
+      /\b(embark on a journey|on this journey|transformative)\b/gi,
+    ],
+    WEAK_CONNECTORS: ['also', 'additionally', 'furthermore', 'moreover'],
   },
 
   'Dutch': {
@@ -79,6 +101,17 @@ const MULTILINGUAL_PATTERNS: Record<string, LanguagePatterns> = {
       /^(In dit (artikel|gids|bericht|sectie)|Laten we (duiken|verkennen|kijken|bespreken)|Heb je je ooit afgevraagd)/i,
       /^(Welkom bij|Vandaag gaan we|We zullen|We gaan)\b/i,
     ],
+    EXPRESSION_IDENTITY: [
+      /\b(het is belangrijk om op te merken|het is vermeldenswaard)\b/gi,
+      /\b(duiken in|dieper duiken|verdiepen in)\b/gi,
+      /\b(in het landschap van|in de wereld van)\b/gi,
+      /\b(het navigeren door de (complexiteit|uitdagingen))\b/gi,
+      /\b(een veelheid aan|een overvloed aan|veelzijdig)\b/gi,
+      /\b(het is cruciaal om|het is essentieel om)\b/gi,
+      /\b(uiteindelijk|als het aankomt op|in termen van)\b/gi,
+      /\b(licht werpen op|de weg vrijmaken|baanbrekend)\b/gi,
+    ],
+    WEAK_CONNECTORS: ['ook', 'daarnaast', 'bovendien', 'tevens'],
   },
 
   'German': {
@@ -111,6 +144,17 @@ const MULTILINGUAL_PATTERNS: Record<string, LanguagePatterns> = {
       /^(In diesem (Artikel|Leitfaden|Beitrag|Abschnitt)|Lassen Sie uns (eintauchen|erkunden|schauen|besprechen)|Haben Sie sich jemals gefragt)/i,
       /^(Willkommen bei|Heute werden wir|Wir werden|Wir werden)\b/i,
     ],
+    EXPRESSION_IDENTITY: [
+      /\b(es ist wichtig zu beachten|es ist erwähnenswert)\b/gi,
+      /\b(tiefer eintauchen|eintauchen in|vertiefen in)\b/gi,
+      /\b(in der Landschaft von|in der Welt von)\b/gi,
+      /\b(die (Komplexität|Herausforderungen) navigieren)\b/gi,
+      /\b(eine Vielzahl von|eine Fülle von|vielschichtig)\b/gi,
+      /\b(es ist entscheidend|es ist wesentlich)\b/gi,
+      /\b(letztendlich|wenn es darum geht|in Bezug auf)\b/gi,
+      /\b(Licht werfen auf|den Weg ebnen|bahnbrechend)\b/gi,
+    ],
+    WEAK_CONNECTORS: ['auch', 'darüber hinaus', 'außerdem', 'zudem'],
   },
 
   'French': {
@@ -142,6 +186,17 @@ const MULTILINGUAL_PATTERNS: Record<string, LanguagePatterns> = {
       /^(Dans cet? (article|guide|publication|section)|Plongeons|Explorons|Regardons|Discutons|Vous êtes-vous jamais demandé)/i,
       /^(Bienvenue|Aujourd'hui nous|Nous allons|Nous allons)\b/i,
     ],
+    EXPRESSION_IDENTITY: [
+      /\b(il est important de noter|il convient de noter)\b/gi,
+      /\b(plonger dans|approfondir|se pencher sur)\b/gi,
+      /\b(dans le paysage de|dans le monde de)\b/gi,
+      /\b(naviguer dans (la complexité|les défis))\b/gi,
+      /\b(une multitude de|une pléthore de|multifacette)\b/gi,
+      /\b(il est crucial de|il est essentiel de)\b/gi,
+      /\b(en fin de compte|quand il s'agit de|en termes de)\b/gi,
+      /\b(mettre en lumière|ouvrir la voie|révolutionnaire)\b/gi,
+    ],
+    WEAK_CONNECTORS: ['aussi', 'de plus', 'en outre', 'par ailleurs'],
   },
 
   'Spanish': {
@@ -173,6 +228,17 @@ const MULTILINGUAL_PATTERNS: Record<string, LanguagePatterns> = {
       /^(En est[ea] (artículo|guía|publicación|sección)|Vamos a (sumergirnos|explorar|ver|discutir)|¿Alguna vez te has preguntado)/i,
       /^(Bienvenido a|Hoy vamos|Vamos a|Iremos a)\b/i,
     ],
+    EXPRESSION_IDENTITY: [
+      /\b(es importante notar|vale la pena mencionar|cabe destacar)\b/gi,
+      /\b(profundizar en|sumergirse en|adentrarse en)\b/gi,
+      /\b(en el panorama de|en el mundo de|en el ámbito de)\b/gi,
+      /\b(navegar por (la complejidad|los desafíos))\b/gi,
+      /\b(una multitud de|una plétora de|multifacético)\b/gi,
+      /\b(es crucial|es esencial|es fundamental)\b/gi,
+      /\b(al final del día|cuando se trata de|en términos de)\b/gi,
+      /\b(arrojar luz sobre|allanar el camino|revolucionario)\b/gi,
+    ],
+    WEAK_CONNECTORS: ['también', 'además', 'asimismo', 'igualmente'],
   },
 };
 
@@ -296,6 +362,41 @@ export class ProhibitedLanguageValidator {
           suggestion: `Convert passive voice "${match[0]}" to active voice - clarify the subject/agent`,
           severity: 'warning',
         });
+      }
+    }
+
+    // Check Expression Identity (LLM-typical phrases) - BLOCKING
+    if (patterns.EXPRESSION_IDENTITY) {
+      for (const pattern of patterns.EXPRESSION_IDENTITY) {
+        const matches = content.matchAll(new RegExp(pattern.source, 'gi'));
+        for (const match of matches) {
+          violations.push({
+            rule: 'EXPRESSION_IDENTITY',
+            text: match[0],
+            position: match.index || 0,
+            suggestion: `Remove LLM-typical phrase "${match[0]}" - it signals AI authorship and adds no semantic value. Replace with specific, factual language.`,
+            severity: 'error',
+          });
+        }
+      }
+    }
+
+    // Check Weak Connectors ("also" ban) - flag "also" specifically as it creates weak semantic connections
+    if (patterns.WEAK_CONNECTORS) {
+      for (const connector of patterns.WEAK_CONNECTORS) {
+        const sentencesWithConnector = sentences.filter(s =>
+          new RegExp(`\\b${connector}\\b`, 'i').test(s)
+        );
+        // Flag if >20% of sentences use weak connectors
+        if (sentences.length >= 5 && sentencesWithConnector.length > sentences.length * 0.2) {
+          violations.push({
+            rule: 'WEAK_CONNECTOR',
+            text: `"${connector}" used in ${sentencesWithConnector.length}/${sentences.length} sentences`,
+            position: 0,
+            suggestion: `Reduce use of "${connector}" - it creates weak semantic connections. Replace with specific causal or consequential connectors (because, therefore, as a result).`,
+            severity: 'warning',
+          });
+        }
       }
     }
 

@@ -4,7 +4,7 @@ import { RuleRegistry, QualityRule, RuleCategory, RuleSeverity } from '../ruleRe
 describe('RuleRegistry', () => {
   it('should return all rules', () => {
     const rules = RuleRegistry.getAllRules();
-    expect(rules.length).toBeGreaterThanOrEqual(113);
+    expect(rules.length).toBeGreaterThanOrEqual(131);
   });
 
   it('should get rule by ID', () => {
@@ -55,7 +55,9 @@ describe('RuleRegistry', () => {
     expect(categories).toContain('Schema');
     expect(categories).toContain('Audit');
     expect(categories).toContain('Systemic');
-    expect(categories.length).toBe(18);
+    expect(categories).toContain('Internal Linking');
+    expect(categories).toContain('Query Intelligence');
+    expect(categories.length).toBe(20);
   });
 
   it('should return correct rule count', () => {
@@ -66,15 +68,15 @@ describe('RuleRegistry', () => {
 
   it('should have correct category counts', () => {
     expect(RuleRegistry.getRulesByCategory('Central Entity').length).toBe(7);
-    expect(RuleRegistry.getRulesByCategory('Introduction').length).toBe(7);
+    expect(RuleRegistry.getRulesByCategory('Introduction').length).toBe(8);
     expect(RuleRegistry.getRulesByCategory('EAV Integration').length).toBe(8);
-    expect(RuleRegistry.getRulesByCategory('Sentence Structure').length).toBe(8);
+    expect(RuleRegistry.getRulesByCategory('Sentence Structure').length).toBe(13);
     expect(RuleRegistry.getRulesByCategory('Headings').length).toBe(9);
     expect(RuleRegistry.getRulesByCategory('Paragraphs').length).toBe(6);
     expect(RuleRegistry.getRulesByCategory('Word Count').length).toBe(5);
-    expect(RuleRegistry.getRulesByCategory('Vocabulary').length).toBe(9);
+    expect(RuleRegistry.getRulesByCategory('Vocabulary').length).toBe(13);
     expect(RuleRegistry.getRulesByCategory('Modality').length).toBe(5);
-    expect(RuleRegistry.getRulesByCategory('YMYL').length).toBe(6);
+    expect(RuleRegistry.getRulesByCategory('YMYL').length).toBe(9);
     expect(RuleRegistry.getRulesByCategory('Lists').length).toBe(8);
     expect(RuleRegistry.getRulesByCategory('Tables').length).toBe(7);
     expect(RuleRegistry.getRulesByCategory('Images').length).toBe(7);
@@ -83,6 +85,8 @@ describe('RuleRegistry', () => {
     expect(RuleRegistry.getRulesByCategory('Schema').length).toBe(10);
     expect(RuleRegistry.getRulesByCategory('Audit').length).toBe(6);
     expect(RuleRegistry.getRulesByCategory('Systemic').length).toBe(5);
+    expect(RuleRegistry.getRulesByCategory('Internal Linking').length).toBe(3);
+    expect(RuleRegistry.getRulesByCategory('Query Intelligence').length).toBe(2);
   });
 
   it('should have key critical rules defined correctly', () => {

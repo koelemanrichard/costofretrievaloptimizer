@@ -123,13 +123,48 @@ export class ListStructureValidator {
   }
 
   /**
-   * Validate list structure rules K4 and K5
+   * Check if a list has a proper introductory sentence before it.
+   * Lists must be introduced with a complete sentence ending in colon or period.
+   */
+  static checkIntroductorySentence(content: string, listPosition: number): boolean {
+    // Get text before the list
+    const textBefore = content.substring(0, listPosition).trimEnd();
+    if (textBefore.length === 0) return false;
+
+    // Get the last line before the list
+    const lines = textBefore.split('\n').filter(l => l.trim().length > 0);
+    const lastLine = lines[lines.length - 1]?.trim() || '';
+
+    // Should end with colon or be a complete sentence
+    if (lastLine.endsWith(':')) return true;
+    if (/[.!?]$/.test(lastLine) && lastLine.split(/\s+/).length >= 3) return true;
+
+    // Check for heading (which serves as introduction)
+    if (/^#{1,6}\s+/.test(lastLine)) return true;
+    if (/<h[1-6]/i.test(lastLine)) return true;
+
+    return false;
+  }
+
+  /**
+   * Validate list structure rules K4, K5, and K6
    */
   static validate(content: string, context: SectionGenerationContext): ValidationViolation[] {
     const violations: ValidationViolation[] = [];
     const lists = this.extractLists(content);
 
     for (const list of lists) {
+      // K6: Introductory sentence validation
+      if (!this.checkIntroductorySentence(content, list.position)) {
+        violations.push({
+          rule: 'K6_LIST_INTRO',
+          text: `List at position ${list.position} lacks introductory sentence`,
+          position: list.position,
+          suggestion: 'Every list must be preceded by a complete introductory sentence. Add a sentence ending with ":" or "." before the list.',
+          severity: 'warning',
+        });
+      }
+
       // K4: Item count validation
       if (list.items.length < MIN_LIST_ITEMS) {
         violations.push({

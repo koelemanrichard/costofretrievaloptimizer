@@ -30,6 +30,9 @@ export class InformationDensityValidator {
     this.checkFillerParagraphs(paragraphs, issues); // Rule 95
     this.checkVagueStatements(text, issues); // Rule 96
     this.checkPreamble(text, issues); // Rule 98
+    this.checkStopWordRatio(text, issues); // Rule 99 - Stop word ratio <30%
+    this.checkFactDensity(text, issues); // Rule 100 - Facts per 100 words
+    this.checkInformationDensityScore(text, issues); // Rule 101 - Composite IDS
 
     return issues;
   }
@@ -226,5 +229,137 @@ export class InformationDensityValidator {
     const intersection = new Set([...setA].filter((x) => setB.has(x)));
     const union = new Set([...setA, ...setB]);
     return intersection.size / union.size;
+  }
+
+  /**
+   * Rule 99: Stop word ratio should be <30%.
+   * High stop word ratio indicates low information density.
+   */
+  checkStopWordRatio(text: string, issues: DensityIssue[]): void {
+    const stopWords = new Set([
+      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+      'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
+      'on', 'with', 'at', 'by', 'from', 'and', 'or', 'but', 'not', 'if',
+      'this', 'that', 'it', 'its', 'as', 'so', 'than', 'then', 'too',
+      'also', 'very', 'just', 'about', 'up', 'out', 'no', 'only', 'into',
+      'over', 'after', 'before', 'between', 'through', 'during', 'each',
+      'all', 'both', 'few', 'more', 'most', 'other', 'some', 'such',
+      'own', 'same', 'any', 'what', 'which', 'who', 'whom', 'when',
+      'where', 'why', 'how', 'here', 'there', 'their', 'they', 'them',
+      'he', 'she', 'him', 'her', 'his', 'we', 'our', 'us', 'you', 'your',
+      'me', 'my', 'i', 'am',
+    ]);
+
+    const words = text.toLowerCase().replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    if (words.length < 50) return;
+
+    const stopCount = words.filter(w => stopWords.has(w)).length;
+    const ratio = stopCount / words.length;
+
+    if (ratio > 0.30) {
+      issues.push({
+        ruleId: 'rule-99',
+        severity: 'medium',
+        title: 'High stop word ratio',
+        description: `Stop word ratio is ${Math.round(ratio * 100)}% (target: <30%). ${stopCount} of ${words.length} words are stop words.`,
+        currentValue: `${Math.round(ratio * 100)}%`,
+        exampleFix: 'Replace filler with specific entities, attributes, and data points.',
+      });
+    }
+  }
+
+  /**
+   * Rule 100: Fact density (facts per 100 words).
+   * Counts numbers, proper nouns, technical terms, and specific data.
+   */
+  checkFactDensity(text: string, issues: DensityIssue[]): void {
+    const words = text.split(/\s+/).length;
+    if (words < 100) return;
+
+    let factIndicators = 0;
+
+    // Numbers and measurements
+    const numbers = text.match(/\b\d+(?:\.\d+)?(?:\s*%|px|em|rem|KB|MB|GB|ms|s|kg|g|m|cm|mm|km|°[CF])?\b/g);
+    factIndicators += (numbers?.length || 0);
+
+    // Proper nouns (capitalized words mid-sentence)
+    const properNouns = text.match(/(?<=[.!?]\s+\w+\s+)[A-Z][a-z]{2,}/g);
+    factIndicators += (properNouns?.length || 0);
+
+    // Years
+    const years = text.match(/\b(19|20)\d{2}\b/g);
+    factIndicators += (years?.length || 0);
+
+    // Technical terms in backticks/code
+    const codeTerms = text.match(/`[^`]+`/g);
+    factIndicators += (codeTerms?.length || 0);
+
+    const factsPer100 = (factIndicators / words) * 100;
+
+    if (factsPer100 < 3) {
+      issues.push({
+        ruleId: 'rule-100',
+        severity: 'medium',
+        title: 'Low fact density',
+        description: `Only ${factsPer100.toFixed(1)} factual data points per 100 words (target: 3+). Content lacks specific numbers, entities, and concrete data.`,
+        currentValue: `${factsPer100.toFixed(1)} facts/100 words`,
+        exampleFix: 'Add specific numbers, measurements, dates, entity names, and concrete data points.',
+      });
+    }
+  }
+
+  /**
+   * Rule 101: Information Density Score (IDS) - composite metric.
+   * IDS = (1 - stopWordRatio) × factDensity × (1 - redundancyScore)
+   * Target: IDS > 2.0
+   */
+  checkInformationDensityScore(text: string, issues: DensityIssue[]): void {
+    const words = text.toLowerCase().replace(/<[^>]*>/g, ' ').split(/\s+/).filter(w => w.length > 0);
+    if (words.length < 100) return;
+
+    // Stop word component
+    const stopWords = new Set([
+      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+      'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
+      'on', 'with', 'at', 'by', 'from', 'and', 'or', 'but', 'not', 'if',
+      'this', 'that', 'it', 'as', 'so', 'than', 'also', 'very', 'just',
+    ]);
+    const stopRatio = words.filter(w => stopWords.has(w)).length / words.length;
+
+    // Fact density component
+    let facts = 0;
+    const numbers = text.match(/\b\d+(?:\.\d+)?\b/g);
+    facts += (numbers?.length || 0);
+    const properNouns = text.match(/(?<=[.!?]\s+\w+\s+)[A-Z][a-z]{2,}/g);
+    facts += (properNouns?.length || 0);
+    const factDensity = (facts / words.length) * 100;
+
+    // Redundancy component (simplified)
+    const paragraphs = this.splitParagraphs(text);
+    let redundantPairs = 0;
+    for (let i = 0; i < paragraphs.length - 1; i++) {
+      const sim = this.jaccardSimilarity(
+        this.getSignificantWords(paragraphs[i]),
+        this.getSignificantWords(paragraphs[i + 1])
+      );
+      if (sim >= 0.4) redundantPairs++;
+    }
+    const redundancyScore = paragraphs.length > 1 ? redundantPairs / (paragraphs.length - 1) : 0;
+
+    // Composite IDS
+    const ids = (1 - stopRatio) * factDensity * (1 - redundancyScore);
+
+    if (ids < 2.0) {
+      issues.push({
+        ruleId: 'rule-101',
+        severity: 'medium',
+        title: 'Low Information Density Score (IDS)',
+        description: `IDS = ${ids.toFixed(2)} (target: >2.0). Components: stop ratio ${Math.round(stopRatio * 100)}%, fact density ${factDensity.toFixed(1)}/100w, redundancy ${Math.round(redundancyScore * 100)}%.`,
+        currentValue: ids.toFixed(2),
+        exampleFix: 'Increase information density by reducing filler words, adding specific data, and removing repetitive content.',
+      });
+    }
   }
 }

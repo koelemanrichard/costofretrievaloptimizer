@@ -173,13 +173,15 @@ describe('HtmlStructureExtendedValidator', () => {
 
   it('passes clean HTML with zero issues', () => {
     const html =
-      '<article>' +
+      '<header><nav>Navigation links here</nav></header>' +
+      '<main><article>' +
       '<h1>Title</h1>' +
       '<p>Content paragraph</p>' +
       '<ul><li>Item 1</li><li>Item 2</li></ul>' +
       '<table><thead><tr><th>Col</th></tr></thead>' +
       '<tbody><tr><td>Data</td></tr></tbody></table>' +
-      '</article>';
+      '</article></main>' +
+      '<footer><p>Footer content</p></footer>';
     const issues = validator.validate(html);
     expect(issues).toHaveLength(0);
   });

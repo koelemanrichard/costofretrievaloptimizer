@@ -64,15 +64,42 @@ export class FormatCodeValidator {
   private static validatePAA(content: string): ValidationViolation[] {
     const violations: ValidationViolation[] = [];
 
-    // PAA should have definition + expansion structure
     const sentences = splitSentences(content);
 
+    // PAA should have definition + expansion structure
     if (sentences.length < 2) {
       violations.push({
         rule: 'PAA_STRUCTURE',
         text: content,
         position: 0,
         suggestion: 'PAA answer needs Definition + Expansion. Add elaboration after the direct answer.',
+        severity: 'warning',
+      });
+    }
+
+    // First sentence should be a direct definition/answer
+    if (sentences.length > 0) {
+      const first = sentences[0];
+      const isDirectAnswer = /\b(is|are|refers?\s+to|means?|stands?\s+for|involves?|requires?|includes?)\b/i.test(first);
+      if (!isDirectAnswer) {
+        violations.push({
+          rule: 'PAA_DIRECT_ANSWER',
+          text: first.substring(0, 60) + '...',
+          position: 0,
+          suggestion: 'PAA first sentence should be a direct answer: "[Entity] is/are [definition]". Start with the entity as subject.',
+          severity: 'warning',
+        });
+      }
+    }
+
+    // Total word count check: PAA answers should be concise (40-60 words)
+    const words = content.trim().split(/\s+/).length;
+    if (words > 80) {
+      violations.push({
+        rule: 'PAA_LENGTH',
+        text: `${words} words`,
+        position: 0,
+        suggestion: `PAA answers should be concise (40-60 words). Current: ${words}. Trim to essential definition + one expansion.`,
         severity: 'warning',
       });
     }

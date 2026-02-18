@@ -1,5 +1,5 @@
 // services/audit/ruleRegistry.ts
-// Rule registry and inventory builder for the 437-rule audit system.
+// Rule registry and inventory builder for the audit system (~282 static rules + dynamic templates).
 //
 // Rather than statically listing all rules (which would drift from actual code),
 // the inventory is built dynamically from phase results after each audit.
@@ -72,6 +72,19 @@ export const DATA_DEPENDENCIES: DataDependency[] = [
   { rulePrefix: 'rule-368', dataSource: 'gscStatus', requiredKey: 'gscStatus', skipReason: 'GSC data not available' },
   { rulePrefix: 'rule-369', dataSource: 'gscStatus', requiredKey: 'gscStatus', skipReason: 'GSC data not available' },
   { rulePrefix: 'rule-370', dataSource: 'gscStatus', requiredKey: 'gscStatus', skipReason: 'GSC data not available' },
+
+  // Hreflang rules (hreflang-2 through hreflang-7) — require hreflang annotations
+  { rulePrefix: 'hreflang-2', dataSource: 'hreflangAnnotations', requiredKey: 'hreflangAnnotations', skipReason: 'Hreflang annotations not available' },
+  { rulePrefix: 'hreflang-3', dataSource: 'hreflangAnnotations', requiredKey: 'hreflangAnnotations', skipReason: 'Hreflang annotations not available' },
+  { rulePrefix: 'hreflang-4', dataSource: 'hreflangAnnotations', requiredKey: 'hreflangAnnotations', skipReason: 'Hreflang annotations not available' },
+  { rulePrefix: 'hreflang-5', dataSource: 'hreflangAnnotations', requiredKey: 'hreflangAnnotations', skipReason: 'Hreflang annotations not available' },
+  { rulePrefix: 'hreflang-6', dataSource: 'hreflangAnnotations', requiredKey: 'hreflangAnnotations', skipReason: 'Hreflang annotations not available' },
+  { rulePrefix: 'hreflang-7', dataSource: 'hreflangAnnotations', requiredKey: 'hreflangAnnotations', skipReason: 'Hreflang annotations not available' },
+
+  // N-gram consistency (ngram-*) — requires cross-page content
+  { rulePrefix: 'ngram-boilerplate-ratio', dataSource: 'crossPageContent', requiredKey: 'crossPageContent', skipReason: 'Cross-page content not available' },
+  { rulePrefix: 'ngram-missing-ce', dataSource: 'crossPageContent', requiredKey: 'crossPageContent', skipReason: 'Cross-page content not available' },
+  { rulePrefix: 'ngram-inconsistent-terminology', dataSource: 'crossPageContent', requiredKey: 'crossPageContent', skipReason: 'Cross-page content not available' },
 
   // URL status / response time (348, 354-355, 359, 367)
   { rulePrefix: 'rule-348', dataSource: 'statusCode', requiredKey: 'statusCode', skipReason: 'HTTP status not available' },
@@ -209,8 +222,18 @@ export function summarizeRuleInventory(inventory: RuleInventoryItem[]): {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Infer the audit phase from a rule ID number range. */
+/** Infer the audit phase from a rule ID number range or prefix. */
 function inferPhaseFromRuleId(ruleId: string): AuditPhaseName {
+  // Handle non-numeric prefixed rule IDs
+  if (ruleId.startsWith('hreflang-')) return 'urlArchitecture';
+  if (ruleId.startsWith('ngram-')) return 'crossPageConsistency';
+  if (ruleId.startsWith('rule-bp-')) return 'internalLinking';
+  if (ruleId.startsWith('rule-asc-')) return 'contextualFlow';
+  if (ruleId.startsWith('img-sitemap-')) return 'urlArchitecture';
+  if (ruleId.startsWith('sf-ce-')) return 'strategicFoundation';
+  if (ruleId.startsWith('eav-')) return 'eavSystem';
+  if (ruleId.startsWith('fv-')) return 'factValidation';
+
   const match = ruleId.match(/rule-(\d+)/);
   if (!match) return 'costOfRetrieval';
   const num = parseInt(match[1], 10);

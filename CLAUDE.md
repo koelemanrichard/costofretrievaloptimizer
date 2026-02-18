@@ -106,14 +106,18 @@ Database tables (see migrations):
 
 ### Unified Content Audit System
 
-The `services/audit/` module implements a 437-rule content audit system with 15 phases, multilingual support, and export capabilities.
+The `services/audit/` module implements a 282+ rule content audit system with 15 phases, multilingual support, site-level aggregation, auto-fix, and export capabilities.
 
 **Architecture:**
 - `services/audit/UnifiedAuditOrchestrator.ts` - Facade that coordinates all 15 audit phases
 - `services/audit/phases/` - Phase adapters extending `AuditPhase` abstract base class
-- `services/audit/rules/` - Standalone rule validators (33+ files) implementing specific audit checks
+- `services/audit/rules/` - Standalone rule validators (40+ files) implementing specific audit checks
 - `services/audit/types.ts` - Core types: `AuditRequest`, `AuditPhaseResult`, `AuditFinding`, `UnifiedAuditReport`
 - `services/audit/AuditReportExporter.ts` - Export to CSV, HTML, JSON
+- `services/audit/SiteAuditAggregator.ts` - Site-level audit aggregation across pages
+- `services/audit/AutoFixEngine.ts` - Auto-fix suggestion engine for common issues
+- `services/audit/verifiers/PerplexityFactVerifier.ts` - Fact verification via Perplexity AI
+- `services/audit/ruleRegistry.ts` - Dynamic rule inventory builder with data dependencies
 
 **15 Audit Phases** (in `services/audit/phases/`):
 1. Strategic Foundation (10%) - CE positioning, author entity, context qualifiers
@@ -139,8 +143,16 @@ Each validator is a standalone class with a `validate()` method returning typed 
 - `CanonicalValidator` - Canonical URL validation
 - `CoreWebVitalsChecker` - LCP, INP, CLS thresholds
 - `AiAssistedRuleEngine` - Rules requiring LLM analysis
-- `WebsiteTypeRuleEngine` - Industry-specific rules
+- `WebsiteTypeRuleEngine` - Industry-specific rules (e-commerce LIFT, SaaS hybrid, B2B augmentation, homepage)
 - `ExternalDataRuleEngine` - GSC/navigation/citation rules
+- `SchemaValidator` - About vs mentions, @graph consolidation, Content Parity, ImageObject licensing
+- `InternalLinkingValidator` - Annotation text quality, placement rules, anchor repetition, ToC validation
+- `BoilerplateDetector` - Main content vs boilerplate weighting
+- `AnchorSegmentChainValidator` - Anchor segment chain and LIFT model validation
+- `HreflangValidator` - Bidirectional hreflang symmetry
+- `NgramConsistencyChecker` - Cross-page N-gram distribution and boilerplate ratio
+- `ImageSitemapGenerator` - Image sitemap validation
+- `CrossPageEavAuditor` - Cross-page EAV consistency
 
 **Adding New Rules:**
 1. Create validator in `services/audit/rules/NewValidator.ts`
@@ -211,6 +223,25 @@ The `services/layout-engine/` module transforms content into design-agency quali
 - `components/publishing/steps/PreviewStep.tsx` - Step 3: Live preview with BrandMatchIndicator
 - `components/publishing/SectionPreviewCard.tsx` - Compact section summary card
 - `components/publishing/BrandMatchIndicator.tsx` - Brand alignment score (0-100%)
+
+### Topical Map Intelligence Services
+Advanced semantic analysis services in `services/ai/`:
+- `topicalBorderValidator.ts` - Semantic boundary enforcement from Central Entity
+- `tmdDetector.ts` - Topical Map Depth skew detection and cluster redistribution
+- `indexConstructionRule.ts` - 7-factor standalone page vs section decision engine
+- `queryDeservesPage.ts` - Query Deserves Page matrix (volume + intent + depth)
+- `frameSemanticsAnalyzer.ts` - Frame Semantics coverage analysis
+- `knowledgePanelBuilder.ts` - Knowledge Panel readiness scoring (6 dimensions)
+- `eavCompositeResolver.ts` - Composite/derived EAV attribute resolution
+- `eavTraversal.ts` - Cross-entity EAV traversal through shared attributes
+
+### Supporting Services
+- `services/contentRefreshTracker.ts` - 30% Refresh Rule implementation
+- `services/momentumTracker.ts` - Publication velocity and frequency tracking
+- `services/contentPruningAdvisor.ts` - Content pruning (410 vs 301 vs keep) recommendations
+- `services/competitorTracker.ts` - Competitor snapshot comparison and change detection
+- `services/imageProcessingService.ts` - Image SEO validation (AVIF, EXIF/IPTC, hybrid category)
+- `lib/pageRankSimulator.ts` - PageRank flow simulation from internal link structure
 
 ### Key Directories
 - `components/` - React components (wizards, modals, dashboard panels)

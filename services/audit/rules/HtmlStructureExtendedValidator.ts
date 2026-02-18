@@ -11,6 +11,11 @@
  *   248 - No inline styles (style="" attributes; prefer CSS classes)
  *   249 - Proper table structure (<table> should have <thead> with <th> elements)
  *   250 - No excessive nesting (elements nested >6 levels deep)
+ *   251 - Semantic <article> tag usage in main content
+ *   252 - Semantic <section> tag usage
+ *   253 - Semantic <nav> tag for navigation
+ *   254 - Images should be wrapped in <figure> + <figcaption>
+ *   255b - ARIA landmarks for accessibility
  */
 
 export interface HtmlStructureIssue {
@@ -39,6 +44,11 @@ export class HtmlStructureExtendedValidator {
     this.checkInlineStyles(html, issues);         // Rule 248
     this.checkTableStructure(html, issues);       // Rule 249
     this.checkExcessiveNesting(html, issues);     // Rule 250
+    this.checkArticleTag(html, issues);           // Rule 251
+    this.checkSectionTag(html, issues);           // Rule 252
+    this.checkNavTag(html, issues);               // Rule 253
+    this.checkFigureFigcaption(html, issues);     // Rule 254
+    this.checkAriaLandmarks(html, issues);        // Rule 255b
 
     return issues;
   }
@@ -268,6 +278,190 @@ export class HtmlStructureExtendedValidator {
         exampleFix:
           'Flatten the DOM structure by reducing wrapper elements. Use CSS flexbox/grid ' +
           'instead of deeply nested <div> elements.',
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule 251: Semantic <article> tag usage in main content
+  // ---------------------------------------------------------------------------
+
+  private checkArticleTag(html: string, issues: HtmlStructureIssue[]): void {
+    const hasArticle = /<article\b/i.test(html);
+
+    // Only flag if the page has substantial content (multiple paragraphs)
+    const paragraphCount = (html.match(/<p\b/gi) || []).length;
+    if (paragraphCount < 3) return;
+
+    if (!hasArticle) {
+      issues.push({
+        ruleId: 'rule-251',
+        severity: 'medium',
+        title: 'No <article> tag for main content',
+        description:
+          'The page contains substantial content but does not use the <article> semantic element. ' +
+          'The <article> tag identifies self-contained, independently distributable content, ' +
+          'helping search engines and screen readers identify the primary content area.',
+        exampleFix:
+          'Wrap the main article content in <article>...</article> tags.',
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule 252: Semantic <section> tag usage
+  // ---------------------------------------------------------------------------
+
+  private checkSectionTag(html: string, issues: HtmlStructureIssue[]): void {
+    const hasSection = /<section\b/i.test(html);
+
+    // Only flag if the page has multiple headings (indicating sections)
+    const headingCount = (html.match(/<h[2-6]\b/gi) || []).length;
+    if (headingCount < 2) return;
+
+    if (!hasSection) {
+      issues.push({
+        ruleId: 'rule-252',
+        severity: 'low',
+        title: 'No <section> tags for content grouping',
+        description:
+          `The page has ${headingCount} subheadings but does not use <section> elements to group content. ` +
+          'The <section> tag provides semantic grouping of thematically related content, ' +
+          'improving document outline and accessibility for screen readers.',
+        exampleFix:
+          'Wrap each thematic group of content (heading + associated paragraphs) in <section>...</section> tags.',
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule 253: Semantic <nav> tag for navigation
+  // ---------------------------------------------------------------------------
+
+  private checkNavTag(html: string, issues: HtmlStructureIssue[]): void {
+    const hasNav = /<nav\b/i.test(html);
+
+    // Detect navigation patterns: multiple links in a list or a header area
+    const navPatterns = [
+      /<ul\b[^>]*>(\s*<li\b[^>]*>\s*<a\b[^>]*>[\s\S]*?<\/a>\s*<\/li>\s*){3,}<\/ul>/gi,
+      /class=["'][^"']*nav[^"']*["']/gi,
+      /id=["'][^"']*nav[^"']*["']/gi,
+    ];
+
+    const hasNavPattern = navPatterns.some((pattern) => pattern.test(html));
+
+    if (!hasNav && hasNavPattern) {
+      issues.push({
+        ruleId: 'rule-253',
+        severity: 'low',
+        title: 'Navigation not wrapped in <nav> tag',
+        description:
+          'The page appears to contain navigation link patterns but does not use the <nav> semantic element. ' +
+          'The <nav> tag identifies major navigation blocks, helping screen readers offer ' +
+          'skip-to-navigation shortcuts and helping search engines understand site structure.',
+        exampleFix:
+          'Wrap navigation link groups in <nav>...</nav> tags. For multiple nav blocks, ' +
+          'use aria-label to distinguish them (e.g., <nav aria-label="Main navigation">).',
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule 254: Images should be wrapped in <figure> + <figcaption>
+  // ---------------------------------------------------------------------------
+
+  private checkFigureFigcaption(html: string, issues: HtmlStructureIssue[]): void {
+    const imgCount = (html.match(/<img\b/gi) || []).length;
+    if (imgCount === 0) return;
+
+    const figureCount = (html.match(/<figure\b/gi) || []).length;
+    const figcaptionCount = (html.match(/<figcaption\b/gi) || []).length;
+
+    // Count images inside <figure> elements
+    const figureImgPattern = /<figure\b[^>]*>[\s\S]*?<img\b[\s\S]*?<\/figure>/gi;
+    const figureImgs = (html.match(figureImgPattern) || []).length;
+
+    const unwrappedImgs = imgCount - figureImgs;
+
+    if (unwrappedImgs > 0 && imgCount >= 2) {
+      issues.push({
+        ruleId: 'rule-254',
+        severity: 'low',
+        title: 'Images not wrapped in <figure> with <figcaption>',
+        description:
+          `${unwrappedImgs} of ${imgCount} image(s) are not wrapped in <figure> elements. ` +
+          'The <figure> element with a <figcaption> provides semantic association between an image ' +
+          'and its caption, improving accessibility and giving search engines additional context ' +
+          'about the image content.',
+        affectedElement: `${unwrappedImgs} unwrapped image(s), ${figureCount} <figure>(s), ${figcaptionCount} <figcaption>(s)`,
+        exampleFix:
+          'Wrap images in <figure><img src="..." alt="..."><figcaption>Description</figcaption></figure>.',
+      });
+    }
+
+    // Also flag figures without figcaptions
+    if (figureCount > 0 && figcaptionCount < figureCount) {
+      issues.push({
+        ruleId: 'rule-254',
+        severity: 'low',
+        title: '<figure> elements missing <figcaption>',
+        description:
+          `${figureCount - figcaptionCount} <figure> element(s) lack a <figcaption>. ` +
+          'Each <figure> should include a <figcaption> to provide a text description ' +
+          'that search engines and screen readers can use as additional context.',
+        affectedElement: `${figureCount} <figure>(s), ${figcaptionCount} <figcaption>(s)`,
+        exampleFix:
+          'Add <figcaption> inside each <figure>: <figure><img ...><figcaption>Caption text</figcaption></figure>.',
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule 255b: ARIA landmarks for accessibility
+  // ---------------------------------------------------------------------------
+
+  private checkAriaLandmarks(html: string, issues: HtmlStructureIssue[]): void {
+    // Only check pages with substantial content (at least a heading or body tag)
+    const hasSubstantialContent =
+      /<body\b/i.test(html) ||
+      /<h[1-6]\b/i.test(html) ||
+      (html.match(/<[a-z]/gi) || []).length >= 5;
+    if (!hasSubstantialContent) return;
+
+    // Check for key ARIA landmark roles or their semantic HTML equivalents
+    const landmarks = {
+      banner: { role: /role=["']banner["']/i, tag: /<header\b/i, label: 'banner (<header>)' },
+      navigation: { role: /role=["']navigation["']/i, tag: /<nav\b/i, label: 'navigation (<nav>)' },
+      main: { role: /role=["']main["']/i, tag: /<main\b/i, label: 'main (<main>)' },
+      contentinfo: { role: /role=["']contentinfo["']/i, tag: /<footer\b/i, label: 'contentinfo (<footer>)' },
+    };
+
+    const missingLandmarks: string[] = [];
+
+    for (const [, config] of Object.entries(landmarks)) {
+      const hasRole = config.role.test(html);
+      const hasTag = config.tag.test(html);
+      if (!hasRole && !hasTag) {
+        missingLandmarks.push(config.label);
+      }
+    }
+
+    // Only flag if multiple landmarks are missing (page likely lacks semantic structure)
+    if (missingLandmarks.length >= 2) {
+      issues.push({
+        ruleId: 'rule-255b',
+        severity: 'low',
+        title: 'Missing ARIA landmarks',
+        description:
+          `The page is missing ${missingLandmarks.length} key ARIA landmark(s): ${missingLandmarks.join(', ')}. ` +
+          'ARIA landmarks (or their semantic HTML equivalents like <header>, <nav>, <main>, <footer>) ' +
+          'enable screen readers to provide quick navigation between page regions and help search engines ' +
+          'understand page structure.',
+        affectedElement: `Missing: ${missingLandmarks.join(', ')}`,
+        exampleFix:
+          'Use semantic HTML elements: <header> for banner, <nav> for navigation, ' +
+          '<main> for main content, and <footer> for content info. ' +
+          'Alternatively, add role="banner", role="navigation", role="main", role="contentinfo" attributes.',
       });
     }
   }

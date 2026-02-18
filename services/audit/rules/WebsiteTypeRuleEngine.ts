@@ -128,6 +128,9 @@ export class WebsiteTypeRuleEngine {
       });
     }
 
+    // Enhanced: E-commerce LIFT model and 4-pillar money page
+    issues.push(...this.validateEcommerceLift(input));
+
     return issues;
   }
 
@@ -178,6 +181,9 @@ export class WebsiteTypeRuleEngine {
       });
     }
 
+    // Enhanced: SaaS hybrid category strategy
+    issues.push(...this.validateSaasHybrid(input));
+
     return issues;
   }
 
@@ -215,6 +221,9 @@ export class WebsiteTypeRuleEngine {
           'Add a JSON-LD script block with "@type": "Service" including name, description, provider.',
       });
     }
+
+    // Enhanced: B2B augmentation rules
+    issues.push(...this.validateB2bAugmentation(input));
 
     return issues;
   }
@@ -554,5 +563,227 @@ export class WebsiteTypeRuleEngine {
     const categoryText =
       /\b(category|categories|tags?|filed\s*under|topics?)\s*:/i.test(html);
     return categoryClass || categoryRel || categoryText;
+  }
+
+  // -----------------------------------------------------------------------
+  // Enhanced Rules: E-commerce LIFT, SaaS Hybrid, B2B Augmentation,
+  // 4-Pillar Money Page, Homepage Validation (Findings #15, #97)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Validate e-commerce LIFT model (Logo, Index, Featured, Topic ordering).
+   * Returns issues for e-commerce pages that don't follow content hierarchy.
+   */
+  validateEcommerceLift(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+
+    // Rule 404: Product page should have breadcrumb (navigation index)
+    if (!/<nav\b[^>]*breadcrumb/i.test(html) && !/"BreadcrumbList"/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-404',
+        severity: 'medium',
+        title: 'E-commerce LIFT: Missing breadcrumb navigation',
+        description: 'Product pages should include breadcrumb navigation (Index element of LIFT model) for category hierarchy.',
+        exampleFix: 'Add BreadcrumbList schema and visible breadcrumb navigation above product content.',
+      });
+    }
+
+    // Rule 405: Featured product info before reviews/related
+    const productTitlePos = html.search(/<h1\b/i);
+    const reviewSection = html.search(/\b(reviews?|ratings?|customer feedback)\b/i);
+    if (productTitlePos > -1 && reviewSection > -1 && reviewSection < productTitlePos) {
+      issues.push({
+        ruleId: 'rule-405',
+        severity: 'medium',
+        title: 'E-commerce LIFT: Reviews appear before product info',
+        description: 'Product details (Featured content) should appear before reviews and supplementary content per LIFT model.',
+        exampleFix: 'Move product title, description, and price above the reviews section.',
+      });
+    }
+
+    // Rule 406: Money page must have 4 pillars: Value Prop, Social Proof, Objection Handling, CTA
+    const hasValueProp = /\b(benefit|advantage|why choose|what you get|features)\b/i.test(html);
+    const hasSocialProof = /\b(testimonial|review|rating|case study|trusted by|customers say)\b/i.test(html);
+    const hasObjectionHandling = /\b(FAQ|frequently asked|guarantee|refund|return policy|money back)\b/i.test(html);
+    const hasCTA = /\b(buy now|add to cart|get started|sign up|subscribe|order now|shop now)\b/i.test(html);
+
+    const pillarsPresent = [hasValueProp, hasSocialProof, hasObjectionHandling, hasCTA].filter(Boolean).length;
+    if (pillarsPresent < 3) {
+      const missing: string[] = [];
+      if (!hasValueProp) missing.push('Value Proposition');
+      if (!hasSocialProof) missing.push('Social Proof');
+      if (!hasObjectionHandling) missing.push('Objection Handling (FAQ/Guarantee)');
+      if (!hasCTA) missing.push('Call-to-Action');
+      issues.push({
+        ruleId: 'rule-406',
+        severity: 'high',
+        title: `Money page missing ${4 - pillarsPresent} of 4 pillars`,
+        description: `Money pages need 4 pillars: Value Proposition, Social Proof, Objection Handling, and CTA. Missing: ${missing.join(', ')}.`,
+        exampleFix: `Add sections for: ${missing.join(', ')}.`,
+      });
+    }
+
+    return issues;
+  }
+
+  /**
+   * Validate SaaS hybrid category strategy.
+   * SaaS pages often need both informational and transactional elements.
+   */
+  validateSaasHybrid(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+
+    // Rule 414: SaaS pages should blend informational + transactional content
+    const hasEducational = /\b(how to|guide|tutorial|learn|understand|what is)\b/i.test(html);
+    const hasTransactional = /\b(pricing|sign up|free trial|get started|demo|buy)\b/i.test(html);
+
+    if (hasEducational && !hasTransactional) {
+      issues.push({
+        ruleId: 'rule-414',
+        severity: 'medium',
+        title: 'SaaS hybrid: Educational content without conversion path',
+        description: 'SaaS educational pages should include conversion elements (CTA, pricing link, demo request) as a hybrid strategy.',
+        exampleFix: 'Add a CTA section like "Ready to try [Product]? Start your free trial" or link to pricing.',
+      });
+    }
+
+    // Rule 415: SaaS should have demo/trial path
+    if (!/(free trial|demo|sandbox|playground|try (it|now)|test drive)/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-415',
+        severity: 'low',
+        title: 'SaaS: No trial/demo path detected',
+        description: 'SaaS pages benefit from a visible path to trial or demo.',
+        exampleFix: 'Add a "Start Free Trial" or "Request Demo" button.',
+      });
+    }
+
+    return issues;
+  }
+
+  /**
+   * Validate B2B augmented content requirements.
+   */
+  validateB2bAugmentation(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+
+    // Rule 423: B2B should have ROI/metrics
+    if (!/\b(ROI|return on investment|\d+%\s+(increase|decrease|improvement|reduction)|metrics|KPI)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-423',
+        severity: 'medium',
+        title: 'B2B: No ROI or metrics found',
+        description: 'B2B content should include quantifiable results, ROI data, or performance metrics for credibility.',
+        exampleFix: 'Add specific metrics: "Our clients see a 40% increase in efficiency" or include a case study with numbers.',
+      });
+    }
+
+    // Rule 424: B2B should have industry-specific trust signals
+    if (!/\b(ISO|SOC\s*2|GDPR|HIPAA|certified|compliance|security|enterprise|SLA)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-424',
+        severity: 'low',
+        title: 'B2B: No compliance/trust signals',
+        description: 'B2B pages benefit from trust signals like certifications, compliance badges, and security mentions.',
+        exampleFix: 'Add compliance badges (SOC 2, ISO 27001) or security/privacy assurance text.',
+      });
+    }
+
+    // Rule 425: B2B lead capture
+    if (!/<form\b/i.test(html) && !/\b(contact us|request a quote|get in touch|schedule a call|book a meeting)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-425',
+        severity: 'high',
+        title: 'B2B: No lead capture mechanism',
+        description: 'B2B pages should include a contact form, quote request, or meeting scheduler for lead generation.',
+        exampleFix: 'Add a contact form, "Request a Quote" button, or Calendly-style meeting scheduler.',
+      });
+    }
+
+    return issues;
+  }
+
+  /**
+   * Validate homepage-specific requirements (Finding #97).
+   * - Central Entity in first 100 words
+   * - All pillars linked
+   * - WebSite schema
+   * - Minimum content depth
+   */
+  validateHomepage(input: WebsiteTypeInput & { centralEntity?: string; pillarUrls?: string[] }): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 438: WebSite schema on homepage
+    if (!schemas.includes('WebSite')) {
+      issues.push({
+        ruleId: 'rule-438',
+        severity: 'high',
+        title: 'Homepage missing WebSite schema',
+        description: 'The homepage should include "@type": "WebSite" schema with name, url, and potentialAction (SearchAction).',
+        exampleFix: 'Add WebSite JSON-LD with name, url, and optional SearchAction for sitelinks search box.',
+      });
+    }
+
+    // Rule 439: Central Entity in first 100 words
+    if (input.centralEntity) {
+      const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const first100Words = textContent.split(/\s+/).slice(0, 100).join(' ').toLowerCase();
+      if (!first100Words.includes(input.centralEntity.toLowerCase())) {
+        issues.push({
+          ruleId: 'rule-439',
+          severity: 'high',
+          title: 'Central Entity not in first 100 words',
+          description: `The Central Entity "${input.centralEntity}" should appear within the first 100 words of the homepage for strong topical signaling.`,
+          exampleFix: `Ensure "${input.centralEntity}" appears in the hero section or first paragraph.`,
+        });
+      }
+    }
+
+    // Rule 440: All pillars linked from homepage
+    if (input.pillarUrls && input.pillarUrls.length > 0) {
+      const linkedPillars = input.pillarUrls.filter(url =>
+        html.includes(url) || html.includes(url.replace(/^https?:\/\/[^/]+/, ''))
+      );
+      const missingCount = input.pillarUrls.length - linkedPillars.length;
+      if (missingCount > 0) {
+        issues.push({
+          ruleId: 'rule-440',
+          severity: 'high',
+          title: `Homepage missing links to ${missingCount} pillar page(s)`,
+          description: 'The homepage should link to all pillar/hub pages to distribute PageRank and signal topical structure.',
+          exampleFix: 'Add navigation or content links to all pillar pages from the homepage.',
+        });
+      }
+    }
+
+    // Rule 441: Homepage minimum content
+    const textLength = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).length;
+    if (textLength < 200) {
+      issues.push({
+        ruleId: 'rule-441',
+        severity: 'medium',
+        title: 'Homepage has insufficient content',
+        description: `Homepage has approximately ${textLength} words. Aim for at least 200 words to establish topical context.`,
+        exampleFix: 'Add introductory content about your Central Entity, value proposition, and key topics.',
+      });
+    }
+
+    // Rule 442: Organization schema on homepage
+    if (!schemas.some(s => s === 'Organization' || s === 'LocalBusiness' || s === 'Corporation')) {
+      issues.push({
+        ruleId: 'rule-442',
+        severity: 'medium',
+        title: 'Homepage missing Organization schema',
+        description: 'The homepage should include Organization (or LocalBusiness) schema with logo, sameAs, and contactPoint.',
+        exampleFix: 'Add "@type": "Organization" JSON-LD with name, logo, url, sameAs (social profiles), and contactPoint.',
+      });
+    }
+
+    return issues;
   }
 }

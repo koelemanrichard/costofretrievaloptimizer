@@ -1,7 +1,7 @@
 /**
  * Rule Registry - Central repository for all quality enforcement rules
  *
- * This module defines 113+ quality rules organized into 18 categories
+ * This module defines 131+ quality rules organized into 20 categories
  * for the Holistic SEO content generation quality enforcement system.
  */
 
@@ -25,7 +25,9 @@ export type RuleCategory =
   | 'Format Codes'
   | 'Schema'
   | 'Audit'
-  | 'Systemic';
+  | 'Systemic'
+  | 'Internal Linking'
+  | 'Query Intelligence';
 
 export interface QualityRule {
   id: string;
@@ -1255,6 +1257,197 @@ const QUALITY_RULES: QualityRule[] = [
     severity: 'warning',
     isCritical: false,
     validatorName: 'BriefAdherenceValidator'
+  },
+
+  // ============================================
+  // Category D (extended): Sentence Structure (D9-D13)
+  // ============================================
+  {
+    id: 'D9',
+    category: 'Sentence Structure',
+    name: 'Active voice enforcement',
+    description: 'Content should use active voice in 70%+ of sentences for clarity and directness',
+    severity: 'warning',
+    isCritical: false,
+    threshold: { minActivePercentage: 70 },
+    validatorName: 'ActiveVoiceValidator'
+  },
+  {
+    id: 'D10',
+    category: 'Sentence Structure',
+    name: 'Definitional sentence length',
+    description: 'Definitional sentences (containing "is", "are", "refers to") should be 15-20 words',
+    severity: 'info',
+    isCritical: false,
+    threshold: { minWords: 15, maxWords: 20 },
+    validatorName: 'SentenceLengthValidator'
+  },
+  {
+    id: 'D11',
+    category: 'Sentence Structure',
+    name: 'Explanatory sentence length',
+    description: 'Explanatory sentences (containing "because", "since") should be 20-30 words',
+    severity: 'info',
+    isCritical: false,
+    threshold: { minWords: 20, maxWords: 30 },
+    validatorName: 'SentenceLengthValidator'
+  },
+  {
+    id: 'D12',
+    category: 'Sentence Structure',
+    name: 'Instructional sentence length',
+    description: 'Instructional sentences (imperatives, steps) should be 10-15 words',
+    severity: 'info',
+    isCritical: false,
+    threshold: { minWords: 10, maxWords: 15 },
+    validatorName: 'SentenceLengthValidator'
+  },
+  {
+    id: 'D13',
+    category: 'Sentence Structure',
+    name: 'Future tense for facts',
+    description: 'Established facts should use present tense, not future tense ("will")',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'FutureTenseValidator'
+  },
+
+  // ============================================
+  // Category H (extended): Vocabulary (H10-H13)
+  // ============================================
+  {
+    id: 'H10',
+    category: 'Vocabulary',
+    name: 'Stop word ratio',
+    description: 'Stop words should comprise less than 30% of total content words',
+    severity: 'warning',
+    isCritical: false,
+    threshold: { maxRatio: 30 },
+    validatorName: 'StopWordValidator'
+  },
+  {
+    id: 'H11',
+    category: 'Vocabulary',
+    name: 'Information density score',
+    description: 'Content should maintain a minimum information density (facts per 100 words)',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'StopWordValidator'
+  },
+  {
+    id: 'H12',
+    category: 'Vocabulary',
+    name: 'Expression identity detection',
+    description: 'Content must not contain LLM signature phrases ("It\'s important to note", "delve into", "In the realm of")',
+    severity: 'error',
+    isCritical: true,
+    validatorName: 'ProhibitedLanguageValidator'
+  },
+  {
+    id: 'H13',
+    category: 'Vocabulary',
+    name: 'Weak connector ban',
+    description: 'Avoid "also" as a weak connector; use specific semantic bridges instead',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'ProhibitedLanguageValidator'
+  },
+
+  // ============================================
+  // Category J (extended): YMYL (J7-J9)
+  // ============================================
+  {
+    id: 'J7',
+    category: 'YMYL',
+    name: 'YMYL conditions step',
+    description: 'YMYL Safe Answer Protocol: conditions/exceptions must follow the direct answer',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'YMYLValidator'
+  },
+  {
+    id: 'J8',
+    category: 'YMYL',
+    name: 'YMYL perspectives step',
+    description: 'YMYL Safe Answer Protocol: multiple perspectives must be presented after conditions',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'YMYLValidator'
+  },
+  {
+    id: 'J9',
+    category: 'YMYL',
+    name: 'YMYL citation ordering',
+    description: 'YMYL Safe Answer Protocol: citations must appear after perspectives',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'YMYLValidator'
+  },
+
+  // ============================================
+  // Category B (extended): Introduction (B8)
+  // ============================================
+  {
+    id: 'B8',
+    category: 'Introduction',
+    name: 'Negative constraints',
+    description: 'Definitions should include "what X is NOT" statements for disambiguation',
+    severity: 'info',
+    isCritical: false,
+    validatorName: 'NegativeConstraintValidator'
+  },
+
+  // ============================================
+  // Category R: Internal Linking (3 rules: R1-R3)
+  // ============================================
+  {
+    id: 'R1',
+    category: 'Internal Linking',
+    name: 'Link semantic alignment',
+    description: 'Internal links must be semantically aligned with surrounding content context',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'LinkSemanticValidator'
+  },
+  {
+    id: 'R2',
+    category: 'Internal Linking',
+    name: 'Link after definition',
+    description: 'Internal links must be placed after the linked entity/concept is defined',
+    severity: 'warning',
+    isCritical: false,
+    validatorName: 'LinkInsertionValidator'
+  },
+  {
+    id: 'R3',
+    category: 'Internal Linking',
+    name: 'Link density',
+    description: 'Internal link density should be 1 link per 100-200 words in main content',
+    severity: 'info',
+    isCritical: false,
+    validatorName: 'LinkInsertionValidator'
+  },
+
+  // ============================================
+  // Category T: Query Intelligence (2 rules: T1-T2)
+  // ============================================
+  {
+    id: 'T1',
+    category: 'Query Intelligence',
+    name: 'Query probability ordering',
+    description: 'Sections should be ordered by search volume/probability from the brief',
+    severity: 'info',
+    isCritical: false,
+    validatorName: 'QueryOrderingValidator'
+  },
+  {
+    id: 'T2',
+    category: 'Query Intelligence',
+    name: 'Query category ordering',
+    description: 'Informational queries before commercial queries in the content structure',
+    severity: 'info',
+    isCritical: false,
+    validatorName: 'QueryOrderingValidator'
   }
 ];
 

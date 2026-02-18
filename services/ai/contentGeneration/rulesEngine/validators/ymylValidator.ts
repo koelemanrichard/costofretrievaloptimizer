@@ -373,8 +373,13 @@ export class YMYLValidator {
   }
 
   /**
-   * Validate YMYL content follows Safe Answer Protocol
-   * Uses language-specific patterns for condition detection
+   * Validate YMYL content follows full 4-step Safe Answer Protocol:
+   * 1. Direct Answer — factual statement
+   * 2. Conditions/Exceptions — caveats, nuances
+   * 3. Multiple Perspectives — alternative viewpoints
+   * 4. Professional Citation — authoritative source reference
+   *
+   * Uses language-specific patterns for each step.
    */
   static validate(content: string, context: SectionGenerationContext): ValidationViolation[] {
     const violations: ValidationViolation[] = [];
@@ -383,23 +388,90 @@ export class YMYLValidator {
 
     const language = context.language || context.businessInfo?.language;
     const patterns = getConditionPatterns(language);
+    const sentences = splitSentences(content);
 
-    // Safe Answer Protocol: Check for condition/exception
+    if (sentences.length === 0) return violations;
+
+    // Step 1: Direct Answer — first sentence should be factual, not hedging
+    const firstSentence = sentences[0]?.trim() || '';
+    const hedgingStart = /^(it depends|there is no simple|the answer (varies|depends)|this is (complex|complicated))/i;
+    if (hedgingStart.test(firstSentence)) {
+      violations.push({
+        rule: 'YMYL_DIRECT_ANSWER',
+        text: firstSentence.substring(0, 80),
+        position: 0,
+        suggestion: 'YMYL Step 1: Start with a direct, factual answer before adding conditions. Lead with the most common/accepted answer.',
+        severity: 'error',
+      });
+    }
+
+    // Step 2: Conditions/Exceptions
     const hasCondition = patterns.conditions.some(pattern => pattern.test(content));
-
     if (!hasCondition) {
       violations.push({
-        rule: 'YMYL_SAFE_ANSWER',
+        rule: 'YMYL_CONDITIONS',
         text: content.substring(0, 100) + '...',
         position: 0,
-        suggestion: 'YMYL content requires Safe Answer Protocol: Add condition/exception or professional consultation recommendation',
+        suggestion: 'YMYL Step 2: Add conditions/exceptions (however, unless, depending on, in certain cases) to acknowledge nuance.',
+        severity: 'warning',
+      });
+    }
+
+    // Step 3: Multiple Perspectives
+    const perspectivePatterns = [
+      /\b(some (experts?|studies|researchers?|professionals?)|others? (argue|suggest|recommend|believe))\b/i,
+      /\b(alternative(ly)?|on the other hand|conversely|in contrast)\b/i,
+      /\b(one (approach|view|perspective)|another (approach|view|perspective))\b/i,
+      // Dutch
+      /\b(sommige (experts?|studies|onderzoekers?)|anderen (beweren|suggereren|aanbevelen))\b/i,
+      // German
+      /\b(einige (Experten|Studien|Forscher)|andere (argumentieren|vorschlagen|empfehlen))\b/i,
+      // French
+      /\b(certains (experts?|études|chercheurs?)|d'autres (suggèrent|recommandent|pensent))\b/i,
+      // Spanish
+      /\b(algunos (expertos?|estudios|investigadores?)|otros (argumentan|sugieren|recomiendan))\b/i,
+    ];
+    const hasPerspectives = perspectivePatterns.some(p => p.test(content));
+    if (!hasPerspectives && sentences.length >= 4) {
+      violations.push({
+        rule: 'YMYL_PERSPECTIVES',
+        text: content.substring(0, 100) + '...',
+        position: 0,
+        suggestion: 'YMYL Step 3: Include multiple perspectives where applicable (some experts suggest, alternatively, on the other hand).',
+        severity: 'info',
+      });
+    }
+
+    // Step 4: Professional Citation
+    const citationPatterns = [
+      /\b(according to|as (stated|reported|published) (by|in)|per|source:)\b/i,
+      /\b(study|research|report|data) (by|from|published)\b/i,
+      /\b(consult|speak with|see)\s+(a|your)?\s*(doctor|physician|professional|advisor|lawyer|attorney|accountant|financial advisor)\b/i,
+      // Dutch
+      /\b(volgens|zoals (vermeld|gerapporteerd) (door|in))\b/i,
+      /\b(raadpleeg|neem contact op met)\s+(een|uw)?\s*(arts|professional|adviseur|advocaat)\b/i,
+      // German
+      /\b(laut|gemäß|wie (berichtet|veröffentlicht) (von|in))\b/i,
+      /\b(konsultieren Sie|wenden Sie sich an)\s+(einen|Ihren)?\s*(Arzt|Fachmann|Berater|Anwalt)\b/i,
+      // French
+      /\b(selon|d'après|comme (rapporté|publié) (par|dans))\b/i,
+      /\b(consultez)\s+(un|votre)?\s*(médecin|professionnel|conseiller|avocat)\b/i,
+      // Spanish
+      /\b(según|de acuerdo con|como (informado|publicado) (por|en))\b/i,
+      /\b(consulte)\s+(un|su)?\s*(médico|profesional|asesor|abogado)\b/i,
+    ];
+    const hasCitation = citationPatterns.some(p => p.test(content));
+    if (!hasCitation) {
+      violations.push({
+        rule: 'YMYL_CITATION',
+        text: content.substring(0, 100) + '...',
+        position: 0,
+        suggestion: 'YMYL Step 4: Add professional citation or recommendation to consult a qualified professional.',
         severity: 'warning',
       });
     }
 
     // Check for citation placement (fact first, then source)
-    const sentences = splitSentences(content);
-
     sentences.forEach(sentence => {
       if (patterns.badCitation.test(sentence.trim())) {
         violations.push({

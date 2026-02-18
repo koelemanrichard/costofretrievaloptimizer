@@ -14,6 +14,7 @@
  *   325 - TBT (Total Blocking Time) — medium
  *   326 - Speed Index — medium
  *   327 - DOM size — low (CWV context, see also rule 292)
+ *   327b - DOM size framework target — medium (>1500 nodes)
  *   328 - JavaScript payload — medium
  *   329 - CSS payload — medium
  *   330 - Third-party impact — low
@@ -340,22 +341,35 @@ export class CoreWebVitalsChecker {
   }
 
   // ---------------------------------------------------------------------------
-  // Rule 327: DOM Size
-  // Good: <1500 nodes
+  // Rule 327: DOM Size (CWV critical threshold: 5000 nodes)
+  // Rule 327b: DOM Size (framework target: 1500 nodes)
   // ---------------------------------------------------------------------------
 
   private checkDomSize(input: CoreWebVitalsInput, issues: CwvIssue[]): void {
     if (input.domNodes === undefined) return;
 
-    if (input.domNodes >= 1500) {
+    if (input.domNodes >= 5000) {
       issues.push({
         ruleId: 'rule-327',
-        severity: 'low',
-        title: 'Large DOM size',
+        severity: 'critical',
+        title: 'DOM size exceeds CWV critical threshold',
         description:
-          `DOM contains ${input.domNodes} nodes (recommended: <1500). ` +
+          `DOM contains ${input.domNodes} nodes (CWV critical threshold: 5000). ` +
+          'A DOM this large causes severe performance degradation: slow style recalculations, ' +
+          'high memory usage, and poor CLS and INP scores. Google Lighthouse flags DOMs exceeding 1500 nodes.',
+        affectedElement: `DOM nodes: ${input.domNodes}`,
+        exampleFix:
+          'Use virtualization for long lists, lazy-load off-screen content, and simplify nested layouts.',
+      });
+    } else if (input.domNodes >= 1500) {
+      issues.push({
+        ruleId: 'rule-327b',
+        severity: 'medium',
+        title: 'DOM size exceeds framework target',
+        description:
+          `DOM contains ${input.domNodes} nodes (framework target: <1500). ` +
           'A large DOM increases memory usage, slows style recalculations, and can degrade CLS and INP. ' +
-          'Note: also flagged by rule 292 for HTML technical audit.',
+          'While below the 5000-node CWV critical threshold, aim for fewer than 1500 nodes for optimal performance.',
         affectedElement: `DOM nodes: ${input.domNodes}`,
         exampleFix:
           'Use virtualization for long lists, lazy-load off-screen content, and simplify nested layouts.',

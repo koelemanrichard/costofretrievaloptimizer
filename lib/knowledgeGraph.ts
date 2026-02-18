@@ -55,6 +55,51 @@ export interface StructuralHole {
     priority: 'critical' | 'high' | 'medium' | 'low';
 }
 
+/**
+ * Snapshot of graph state at a point in time.
+ * Used as a baseline for drift detection.
+ */
+export interface GraphSnapshot {
+    timestamp: number;
+    entityIds: Set<string>;
+    entityTerms: Map<string, string>;
+    edgeKeys: Set<string>;         // Composite keys: "source::target::relation"
+    edgeIds: Set<string>;
+    nodeCount: number;
+    edgeCount: number;
+}
+
+/**
+ * Result of comparing the current graph state against a baseline snapshot.
+ */
+export interface GraphDriftResult {
+    baselineTimestamp: number;
+    currentTimestamp: number;
+    addedEntities: Array<{ id: string; term: string }>;
+    removedEntities: Array<{ id: string; term: string }>;
+    addedEdges: Array<{ source: string; target: string; relation: string }>;
+    removedEdges: Array<{ source: string; target: string; relation: string }>;
+    orphanedEntities: Array<{ id: string; term: string }>;
+    /** Overall drift score: 0 = no drift, 100 = completely different */
+    driftScore: number;
+    /** Entity-only drift score (0-100) */
+    entityDrift: number;
+    /** Edge-only drift score (0-100) */
+    edgeDrift: number;
+    /** Summary counts for quick overview */
+    summary: {
+        entitiesAdded: number;
+        entitiesRemoved: number;
+        edgesAdded: number;
+        edgesRemoved: number;
+        orphanedCount: number;
+        baselineNodeCount: number;
+        baselineEdgeCount: number;
+        currentNodeCount: number;
+        currentEdgeCount: number;
+    };
+}
+
 // Position weights for context calculation
 const POSITION_WEIGHTS: Record<EntityPosition, number> = {
     h1: 1.0,
@@ -1238,6 +1283,164 @@ export class KnowledgeGraph {
         });
 
         return holes;
+    }
+
+    // ==========================================================================
+    // GRAPH DRIFT MONITORING (Finding #54)
+    // ==========================================================================
+
+    /**
+     * Snapshot of graph state at a point in time, used as a baseline for drift detection.
+     */
+    static createSnapshot(graph: KnowledgeGraph): GraphSnapshot {
+        return {
+            timestamp: Date.now(),
+            entityIds: new Set(Array.from(graph.getNodes().keys())),
+            entityTerms: new Map(
+                Array.from(graph.getNodes().entries()).map(([id, node]) => [id, node.term])
+            ),
+            edgeKeys: new Set(
+                Array.from(graph.getEdges().values()).map(
+                    edge => `${edge.source}::${edge.target}::${edge.relation}`
+                )
+            ),
+            edgeIds: new Set(Array.from(graph.getEdges().keys())),
+            nodeCount: graph.getNodes().size,
+            edgeCount: graph.getEdges().size,
+        };
+    }
+
+    /**
+     * Compare the current graph state against a baseline snapshot to detect drift.
+     *
+     * Drift detection identifies structural changes between two graph states:
+     * - Added/removed entities (nodes)
+     * - Added/removed edges (relationships)
+     * - Orphaned entities (nodes with no edges after changes)
+     *
+     * The drift score (0-100) measures how different the current state is from the baseline:
+     * - 0 = no drift (identical graphs)
+     * - 100 = completely different (no overlap)
+     *
+     * The score is calculated as a weighted combination of:
+     * - Entity drift (50%): Jaccard distance of entity sets
+     * - Edge drift (50%): Jaccard distance of edge sets
+     *
+     * @param baseline A snapshot created earlier via KnowledgeGraph.createSnapshot()
+     * @returns Detailed drift report with added/removed items and drift score
+     */
+    detectDrift(baseline: GraphSnapshot): GraphDriftResult {
+        // Current state
+        const currentEntityIds = new Set(Array.from(this.nodes.keys()));
+        const currentEdgeKeys = new Set(
+            Array.from(this.edges.values()).map(
+                edge => `${edge.source}::${edge.target}::${edge.relation}`
+            )
+        );
+
+        // --- Entity drift ---
+        const addedEntities: Array<{ id: string; term: string }> = [];
+        const removedEntities: Array<{ id: string; term: string }> = [];
+
+        // Find added entities (in current but not in baseline)
+        for (const [id, node] of this.nodes) {
+            if (!baseline.entityIds.has(id)) {
+                addedEntities.push({ id, term: node.term });
+            }
+        }
+
+        // Find removed entities (in baseline but not in current)
+        for (const id of baseline.entityIds) {
+            if (!currentEntityIds.has(id)) {
+                const term = baseline.entityTerms.get(id) || id;
+                removedEntities.push({ id, term });
+            }
+        }
+
+        // --- Edge drift ---
+        const addedEdges: Array<{ source: string; target: string; relation: string }> = [];
+        const removedEdges: Array<{ source: string; target: string; relation: string }> = [];
+
+        // Find added edges (in current but not in baseline)
+        for (const edge of this.edges.values()) {
+            const key = `${edge.source}::${edge.target}::${edge.relation}`;
+            if (!baseline.edgeKeys.has(key)) {
+                addedEdges.push({
+                    source: edge.source,
+                    target: edge.target,
+                    relation: edge.relation,
+                });
+            }
+        }
+
+        // Find removed edges (in baseline but not in current)
+        for (const key of baseline.edgeKeys) {
+            if (!currentEdgeKeys.has(key)) {
+                const [source, target, relation] = key.split('::');
+                removedEdges.push({ source, target, relation });
+            }
+        }
+
+        // --- Orphaned entities ---
+        // Entities that exist in the current graph but have zero edges
+        const orphanedEntities: Array<{ id: string; term: string }> = [];
+        for (const [id, node] of this.nodes) {
+            const edges = this.getEdgesForNode(id);
+            if (edges.length === 0) {
+                orphanedEntities.push({ id, term: node.term });
+            }
+        }
+
+        // --- Drift score calculation ---
+        // Using Jaccard distance: 1 - (|intersection| / |union|)
+        // Weighted: 50% entity drift + 50% edge drift
+
+        // Entity Jaccard distance
+        const entityUnionSize = new Set([...baseline.entityIds, ...currentEntityIds]).size;
+        const entityIntersectionSize = entityUnionSize > 0
+            ? Array.from(baseline.entityIds).filter(id => currentEntityIds.has(id)).length
+            : 0;
+        const entityJaccardDistance = entityUnionSize > 0
+            ? 1 - (entityIntersectionSize / entityUnionSize)
+            : 0;
+
+        // Edge Jaccard distance
+        const edgeUnionSize = new Set([...baseline.edgeKeys, ...currentEdgeKeys]).size;
+        const edgeIntersectionSize = edgeUnionSize > 0
+            ? Array.from(baseline.edgeKeys).filter(key => currentEdgeKeys.has(key)).length
+            : 0;
+        const edgeJaccardDistance = edgeUnionSize > 0
+            ? 1 - (edgeIntersectionSize / edgeUnionSize)
+            : 0;
+
+        // Weighted drift score (0-100)
+        const driftScore = Math.round(
+            (entityJaccardDistance * 0.5 + edgeJaccardDistance * 0.5) * 100
+        );
+
+        return {
+            baselineTimestamp: baseline.timestamp,
+            currentTimestamp: Date.now(),
+            addedEntities,
+            removedEntities,
+            addedEdges,
+            removedEdges,
+            orphanedEntities,
+            driftScore: Math.min(100, Math.max(0, driftScore)),
+            entityDrift: Math.round(entityJaccardDistance * 100),
+            edgeDrift: Math.round(edgeJaccardDistance * 100),
+            summary: {
+                entitiesAdded: addedEntities.length,
+                entitiesRemoved: removedEntities.length,
+                edgesAdded: addedEdges.length,
+                edgesRemoved: removedEdges.length,
+                orphanedCount: orphanedEntities.length,
+                baselineNodeCount: baseline.nodeCount,
+                baselineEdgeCount: baseline.edgeCount,
+                currentNodeCount: this.nodes.size,
+                currentEdgeCount: this.edges.size,
+            },
+        };
     }
 
     /**

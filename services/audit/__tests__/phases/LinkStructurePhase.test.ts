@@ -32,7 +32,7 @@ describe('LinkStructurePhase', () => {
     expect(result.findings).toHaveLength(0);
   });
 
-  it('runs both validators when HTML and URL present (totalChecks = 22)', async () => {
+  it('runs both validators when HTML and URL present (totalChecks = 29)', async () => {
     const phase = new LinkStructurePhase();
     const html = `<html><body>
       <nav><a href="https://example.com/">Home</a><a href="https://example.com/about">About</a><a href="https://example.com/contact">Contact</a></nav>
@@ -44,8 +44,8 @@ describe('LinkStructurePhase', () => {
     </body></html>`;
     const request = makeRequest('https://example.com/test-page');
     const result = await phase.execute(request, { html, totalWords: 400 });
-    // 9 (internal linking) + 13 (external data) = 22
-    expect(result.totalChecks).toBe(22);
+    // 16 (internal linking) + 13 (external data) = 29
+    expect(result.totalChecks).toBe(29);
   });
 
   it('detects generic anchor text', async () => {

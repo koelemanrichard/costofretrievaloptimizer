@@ -77,11 +77,17 @@ describe('WebsiteTypeRuleEngine', () => {
         websiteType: 'ecommerce',
         html: `<html><body>
           <script type="application/ld+json">{"@type":"Product","name":"Widget","offers":{"@type":"Offer","price":"29.99","priceCurrency":"USD","availability":"InStock"}}</script>
+          <script type="application/ld+json">{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home"},{"@type":"ListItem","position":2,"name":"Widgets"}]}</script>
+          <nav aria-label="breadcrumb"><a href="/">Home</a> &gt; <a href="/widgets">Widgets</a></nav>
           <h1>Widget Pro</h1>
           <p>Only $29.99 - In Stock and ready to ship.</p>
+          <p>Key benefits: Why choose Widget Pro? Advanced features for every need.</p>
           <img src="front.jpg" alt="Widget front view">
           <img src="back.jpg" alt="Widget back view">
           <img src="detail.jpg" alt="Widget detail">
+          <section><h2>Customer Reviews</h2><p>Testimonial: "Best widget I have ever used!" - Jane D.</p></section>
+          <section><h2>FAQ</h2><p>Q: What is your return policy? A: 30-day money back guarantee.</p></section>
+          <button>Add to Cart</button>
         </body></html>`,
       };
       const issues = engine.validate(input);

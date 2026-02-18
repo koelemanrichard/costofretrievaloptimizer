@@ -238,8 +238,173 @@ describe('InternalLinkingValidator', () => {
       { href: '/on-page-seo', anchor: 'on-page optimization tips' },
       { href: '/link-building', anchor: 'link building techniques' },
     ];
-    const html = buildHtml(links, { extraWords: 50 });
+    // Build with a leading intro paragraph so first sentence has no link
+    const padding = ' ' + Array(50).fill('lorem').join(' ');
+    const body = links
+      .map(l => `<p>This is contextual surrounding text about the topic. We recommend <a href="${l.href}">${l.anchor}</a> for further reading.${padding}</p>`)
+      .join('\n');
+    const html = `<article><p>Welcome to our comprehensive guide on search engine optimization. This article covers the most important strategies.</p>\n${body}</article>`;
     const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 800 });
     expect(issues).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // Rule 185 — Annotation text quality (Finding #62)
+  // -------------------------------------------------------------------------
+
+  it('detects weak annotation text around links (rule 185)', () => {
+    // Paragraphs with only 1 sentence each containing a link
+    const html = `<article>
+      <p>Introduction paragraph without links. This sets up the topic properly.</p>
+      <p>See <a href="/a">topic A guide</a>.</p>
+      <p>Check <a href="/b">topic B overview</a>.</p>
+      <p>Read <a href="/c">topic C analysis</a>.</p>
+      <p>Visit <a href="/d">topic D reference</a>.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 500 });
+    expect(issues).toContainEqual(expect.objectContaining({ ruleId: 'rule-185' }));
+  });
+
+  it('passes when link paragraphs have 2+ sentences (rule 185 negative)', () => {
+    const html = `<article>
+      <p>Introduction to the concept of SEO linking. This covers everything you need to know about it.</p>
+      <p>Internal links help users navigate your site. For detailed guidance see our <a href="/a">linking best practices guide</a>.</p>
+      <p>Anchor text matters for SEO signals. Read our <a href="/b">anchor text optimization tips</a> for more.</p>
+      <p>Link placement affects user experience. Our <a href="/c">placement strategy article</a> explains the rules.</p>
+      <p>Volume should be balanced across sections. Learn more in our <a href="/d">link density calculator</a> overview.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 800 });
+    expect(issues.find(i => i.ruleId === 'rule-185')).toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // Rule 186 — Link in first sentence of page (Finding #63)
+  // -------------------------------------------------------------------------
+
+  it('detects link in first sentence of content (rule 186)', () => {
+    const html = `<article>
+      <p>For more information visit our <a href="/guide">comprehensive SEO guide</a> which covers all the basics.</p>
+      <p>This paragraph has no links and sets the scene.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 300 });
+    expect(issues).toContainEqual(expect.objectContaining({ ruleId: 'rule-186' }));
+  });
+
+  it('passes when first sentence has no link (rule 186 negative)', () => {
+    const html = `<article>
+      <p>Search engine optimization is a broad field. Our <a href="/guide">comprehensive SEO guide</a> covers the fundamentals.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 300 });
+    expect(issues.find(i => i.ruleId === 'rule-186')).toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // Rule 187 — Links in first sentence of sections (Finding #63)
+  // -------------------------------------------------------------------------
+
+  it('detects links in first sentence of sections (rule 187)', () => {
+    const html = `<article>
+      <p>Introduction paragraph without links that sets up the context nicely for readers.</p>
+      <h2>Section One</h2>
+      <p>Check out <a href="/a">topic A guide</a> for more. This section covers the basics.</p>
+      <h2>Section Two</h2>
+      <p>Visit our <a href="/b">topic B overview</a> for details. We have extensive coverage.</p>
+      <h2>Section Three</h2>
+      <p>Read the <a href="/c">topic C analysis</a> before continuing. It provides key insights.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 500 });
+    expect(issues).toContainEqual(expect.objectContaining({ ruleId: 'rule-187' }));
+  });
+
+  // -------------------------------------------------------------------------
+  // Rule 189 — Anchor text repetition (Finding #64)
+  // -------------------------------------------------------------------------
+
+  it('detects repeated anchor+destination combinations (rule 189)', () => {
+    const html = `<article>
+      <p>Introduction paragraph to set the context. This is about SEO strategies.</p>
+      <p>Read our <a href="/guide">SEO best practices</a> for better rankings.</p>
+      <p>You should follow <a href="/guide">SEO best practices</a> consistently.</p>
+      <p>Always remember <a href="/guide">SEO best practices</a> in your workflow.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 500 });
+    expect(issues).toContainEqual(expect.objectContaining({ ruleId: 'rule-189' }));
+  });
+
+  it('allows up to 2 repeated anchor+destination combinations (rule 189 negative)', () => {
+    const html = `<article>
+      <p>Introduction paragraph about SEO topics. This covers our key strategies.</p>
+      <p>Read our <a href="/guide">SEO best practices</a> for insights.</p>
+      <p>Follow <a href="/guide">SEO best practices</a> consistently for results.</p>
+      <p>Also check our <a href="/tools">SEO analysis tools</a> for auditing.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 500 });
+    expect(issues.find(i => i.ruleId === 'rule-189')).toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // Rule 190 — Long content missing ToC (Finding #66)
+  // -------------------------------------------------------------------------
+
+  it('detects long content missing Table of Contents (rule 190)', () => {
+    const html = `<article>
+      <p>Introduction paragraph.</p>
+      <h2>Section One</h2>
+      <p>Content here.</p>
+      <h2>Section Two</h2>
+      <p>More content here.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 3000 });
+    expect(issues).toContainEqual(expect.objectContaining({ ruleId: 'rule-190' }));
+  });
+
+  it('passes when long content has fragment links for ToC (rule 190 negative)', () => {
+    const html = `<article>
+      <nav class="toc">
+        <a href="#section-one">Section One</a>
+        <a href="#section-two">Section Two</a>
+        <a href="#section-three">Section Three</a>
+      </nav>
+      <h2 id="section-one">Section One</h2>
+      <p>Content here.</p>
+      <h2 id="section-two">Section Two</h2>
+      <p>More content.</p>
+      <h2 id="section-three">Section Three</h2>
+      <p>Final content.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 3000 });
+    expect(issues.find(i => i.ruleId === 'rule-190')).toBeUndefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // Rule 191 — Headings missing id attributes (Finding #66)
+  // -------------------------------------------------------------------------
+
+  it('detects headings without id attributes in long content (rule 191)', () => {
+    const html = `<article>
+      <h2>Section One</h2>
+      <p>Content here.</p>
+      <h2>Section Two</h2>
+      <p>More content.</p>
+      <h2>Section Three</h2>
+      <p>Even more content.</p>
+      <h2>Section Four</h2>
+      <p>Final content.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 3000 });
+    expect(issues).toContainEqual(expect.objectContaining({ ruleId: 'rule-191' }));
+  });
+
+  it('passes when headings have id attributes (rule 191 negative)', () => {
+    const html = `<article>
+      <h2 id="section-one">Section One</h2>
+      <p>Content here.</p>
+      <h2 id="section-two">Section Two</h2>
+      <p>More content.</p>
+      <h2 id="section-three">Section Three</h2>
+      <p>Final content.</p>
+    </article>`;
+    const issues = validator.validate({ html, pageUrl: PAGE_URL, totalWords: 3000 });
+    expect(issues.find(i => i.ruleId === 'rule-191')).toBeUndefined();
   });
 });

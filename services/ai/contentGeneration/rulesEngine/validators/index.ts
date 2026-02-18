@@ -28,6 +28,12 @@ import { FactConsistencyValidator } from './factConsistencyValidator';
 import { HierarchyValidator } from './hierarchyValidator';
 import { BriefCompletenessValidator } from './briefCompletenessValidator';
 import { EavDistributionValidator } from './eavDistributionValidator';
+import { ActiveVoiceValidator } from './activeVoiceValidator';
+import { SentenceLengthValidator } from './sentenceLengthValidator';
+import { StopWordValidator } from './stopWordValidator';
+import { FutureTenseValidator } from './futureTenseValidator';
+import { NegativeConstraintValidator } from './negativeConstraintValidator';
+import { QueryOrderingValidator } from './queryOrderingValidator';
 
 export class RulesValidator {
   /**
@@ -211,6 +217,42 @@ export class RulesValidator {
       violations.push(...BriefCompletenessValidator.validate(content, context));
     }
 
+    // 23. Active Voice (>70% sentences should use active voice)
+    // Skip in Pass 1 - voice quality refined in later passes
+    if (runAll || !isPass1) {
+      violations.push(...ActiveVoiceValidator.validate(content, context));
+    }
+
+    // 24. Sentence Length by Type (definitional 15-20, explanatory 20-30, instructional 10-15)
+    // Skip in Pass 1 - sentence structure refined in later passes
+    if (runAll || !isPass1) {
+      violations.push(...SentenceLengthValidator.validate(content, context));
+    }
+
+    // 25. Stop Word Ratio + Information Density (<30% stop words)
+    // Skip in Pass 1 - density improves through passes
+    if (runAll || !isPass1) {
+      violations.push(...StopWordValidator.validate(content, context));
+    }
+
+    // 26. Future Tense for Facts (use present tense for permanent facts)
+    // Skip in Pass 1 - tense refined in later passes
+    if (runAll || !isPass1) {
+      violations.push(...FutureTenseValidator.validate(content, context));
+    }
+
+    // 27. Negative Constraints (definitions should include "what X is NOT")
+    // Only runs during audit - requires full section context
+    if (runAll) {
+      violations.push(...NegativeConstraintValidator.validate(content, context));
+    }
+
+    // 28. Query Probability Ordering (sections ordered by search volume)
+    // Only runs during audit - requires all sections
+    if (runAll) {
+      violations.push(...QueryOrderingValidator.validate(content, context));
+    }
+
     // Build fix instructions
     const fixInstructions = this.buildFixInstructions(violations);
 
@@ -277,3 +319,9 @@ export { LinkInsertionValidator, validateLinkInsertion, extractContextualBridgeL
 export type { LinkInsertionResult } from './linkInsertionValidator';
 export { BriefCompletenessValidator } from './briefCompletenessValidator';
 export { EavDistributionValidator } from './eavDistributionValidator';
+export { ActiveVoiceValidator } from './activeVoiceValidator';
+export { SentenceLengthValidator } from './sentenceLengthValidator';
+export { StopWordValidator } from './stopWordValidator';
+export { FutureTenseValidator } from './futureTenseValidator';
+export { NegativeConstraintValidator } from './negativeConstraintValidator';
+export { QueryOrderingValidator } from './queryOrderingValidator';

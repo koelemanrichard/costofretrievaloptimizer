@@ -336,6 +336,163 @@ export const validateNavigation = (
     return result;
 };
 
+// --- Deterministic Topical Authority Formula (Finding #41) ---
+
+/**
+ * Input metrics for the deterministic topical authority calculation.
+ * Each metric is a normalized value between 0 and 1 (or a raw count/percentage
+ * that will be normalized internally).
+ */
+export interface TopicalAuthorityMetrics {
+    /** Average topic depth across clusters (e.g., average nesting level: 1 = flat, 4+ = deep) */
+    depth: number;
+    /** Number of clusters/pillars covered */
+    breadth: number;
+    /** Total number of expected clusters/pillars (used to normalize breadth) */
+    totalExpectedBreadth: number;
+    /** Percentage of topics with at least one internal link (0-100) */
+    linkingPercentage: number;
+    /** Average EAV (Entity-Attribute-Value) count per topic */
+    averageEavCount: number;
+    /** Percentage of topics updated within the freshness window (0-100) */
+    freshnessPercentage: number;
+    /** EAV distribution balance: standard deviation of EAV counts across categories (lower = more balanced) */
+    eavDistributionStdDev: number;
+    /** Maximum observed EAV count per topic (used to normalize averageEavCount) */
+    maxEavCount?: number;
+}
+
+/**
+ * Detailed result from the deterministic authority formula.
+ */
+export interface TopicalAuthorityFormulaResult {
+    /** Overall authority score (0-100) */
+    overallScore: number;
+    /** Breakdown of individual dimension scores (each 0-100) */
+    breakdown: {
+        contentDepth: number;
+        contentBreadth: number;
+        interlinking: number;
+        semanticRichness: number;
+        freshness: number;
+        eavBalance: number;
+    };
+    /** Weighted contributions of each dimension to the overall score */
+    weightedContributions: {
+        contentDepth: number;
+        contentBreadth: number;
+        interlinking: number;
+        semanticRichness: number;
+        freshness: number;
+        eavBalance: number;
+    };
+}
+
+/**
+ * Dimension weights for the topical authority formula.
+ * These sum to 1.0 and reflect the relative importance of each factor
+ * in the Holistic SEO framework.
+ */
+const AUTHORITY_WEIGHTS = {
+    contentDepth: 0.20,
+    contentBreadth: 0.20,
+    interlinking: 0.20,
+    semanticRichness: 0.15,
+    freshness: 0.10,
+    eavBalance: 0.15,
+} as const;
+
+/**
+ * Calculates topical authority using a deterministic, formula-based approach.
+ * Unlike the AI-based `calculateTopicalAuthority()`, this function requires no
+ * AI calls and produces reproducible scores from raw metrics.
+ *
+ * The formula computes a weighted average of six normalized dimensions:
+ * - Depth (20%): How deep the topic hierarchy goes (diminishing returns past depth 4)
+ * - Breadth (20%): Coverage across expected clusters/pillars
+ * - Linking (20%): Percentage of topics with internal links
+ * - Richness (15%): Average EAV count per topic (normalized against max)
+ * - Freshness (10%): Percentage of recently updated topics
+ * - EAV Balance (15%): How evenly EAVs are distributed across categories
+ *
+ * @param metrics Raw metrics from the topical map
+ * @returns Authority score 0-100 with full breakdown
+ */
+export const calculateTopicalAuthorityFormula = (
+    metrics: TopicalAuthorityMetrics
+): TopicalAuthorityFormulaResult => {
+    // --- Normalize each dimension to 0-100 ---
+
+    // Depth: logarithmic scale, diminishing returns past depth 4
+    // depth=1 is minimal (25), depth=2 is moderate (50), depth=3 is good (75), depth=4+ is excellent (90-100)
+    const depthScore = Math.min(100, Math.round(
+        100 * (Math.log2(Math.max(1, metrics.depth) + 1) / Math.log2(5))
+    ));
+
+    // Breadth: linear ratio of covered vs. expected clusters, capped at 100
+    const normalizedBreadth = metrics.totalExpectedBreadth > 0
+        ? metrics.breadth / metrics.totalExpectedBreadth
+        : 0;
+    const breadthScore = Math.min(100, Math.round(normalizedBreadth * 100));
+
+    // Linking: direct percentage (already 0-100)
+    const linkingScore = Math.min(100, Math.max(0, Math.round(metrics.linkingPercentage)));
+
+    // Richness: normalized against max observed EAV count (or default max of 10)
+    const maxEav = metrics.maxEavCount || 10;
+    const richnessRatio = maxEav > 0 ? metrics.averageEavCount / maxEav : 0;
+    const richnessScore = Math.min(100, Math.round(richnessRatio * 100));
+
+    // Freshness: direct percentage (already 0-100)
+    const freshnessScore = Math.min(100, Math.max(0, Math.round(metrics.freshnessPercentage)));
+
+    // EAV Balance: inverse of normalized standard deviation
+    // Lower stdDev = more balanced = higher score
+    // Normalize: stdDev of 0 = perfect (100), stdDev >= maxEav = poor (0)
+    const maxStdDev = maxEav > 0 ? maxEav : 10;
+    const balanceRatio = 1 - Math.min(1, metrics.eavDistributionStdDev / maxStdDev);
+    const eavBalanceScore = Math.round(balanceRatio * 100);
+
+    // --- Calculate weighted overall score ---
+    const weightedContributions = {
+        contentDepth: depthScore * AUTHORITY_WEIGHTS.contentDepth,
+        contentBreadth: breadthScore * AUTHORITY_WEIGHTS.contentBreadth,
+        interlinking: linkingScore * AUTHORITY_WEIGHTS.interlinking,
+        semanticRichness: richnessScore * AUTHORITY_WEIGHTS.semanticRichness,
+        freshness: freshnessScore * AUTHORITY_WEIGHTS.freshness,
+        eavBalance: eavBalanceScore * AUTHORITY_WEIGHTS.eavBalance,
+    };
+
+    const overallScore = Math.min(100, Math.max(0, Math.round(
+        weightedContributions.contentDepth +
+        weightedContributions.contentBreadth +
+        weightedContributions.interlinking +
+        weightedContributions.semanticRichness +
+        weightedContributions.freshness +
+        weightedContributions.eavBalance
+    )));
+
+    return {
+        overallScore,
+        breakdown: {
+            contentDepth: depthScore,
+            contentBreadth: breadthScore,
+            interlinking: linkingScore,
+            semanticRichness: richnessScore,
+            freshness: freshnessScore,
+            eavBalance: eavBalanceScore,
+        },
+        weightedContributions: {
+            contentDepth: Math.round(weightedContributions.contentDepth * 100) / 100,
+            contentBreadth: Math.round(weightedContributions.contentBreadth * 100) / 100,
+            interlinking: Math.round(weightedContributions.interlinking * 100) / 100,
+            semanticRichness: Math.round(weightedContributions.semanticRichness * 100) / 100,
+            freshness: Math.round(weightedContributions.freshness * 100) / 100,
+            eavBalance: Math.round(weightedContributions.eavBalance * 100) / 100,
+        },
+    };
+};
+
 // --- Main Exported Functions ---
 
 export const analyzeGscDataForOpportunities = (

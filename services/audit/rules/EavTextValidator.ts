@@ -24,11 +24,21 @@ export interface EavIssue {
 export class EavTextValidator {
   validate(content: {
     text: string;
-    eavs?: { entity: string; attribute: string; value: string }[];
+    eavs?: { entity: string; attribute: string; value: string; category?: string; predicateType?: string }[];
     rootAttributes?: string[];
   }): EavIssue[] {
     const issues: EavIssue[] = [];
     const lowerText = content.text.toLowerCase();
+
+    // Rule 46: Category distribution enforcement
+    if (content.eavs && content.eavs.length >= 4) {
+      this.checkCategoryDistribution(content.eavs, issues);
+    }
+
+    // Rule 47: Predicate diversity scoring
+    if (content.eavs && content.eavs.length >= 3) {
+      this.checkPredicateDiversity(content.eavs, issues);
+    }
 
     // Rules 33-36: Check explicit EAV triples in text
     if (content.eavs && content.eavs.length > 0) {
@@ -94,6 +104,116 @@ export class EavTextValidator {
         exampleFix: 'Replace pronouns with explicit entity names for better semantic clarity.',
       });
     }
+  }
+
+  /**
+   * Rule 46: Category distribution targets.
+   * UNIQUE: 15-25%, ROOT: 25-35%, RARE: 20-30%, COMMON: 20-30%
+   */
+  checkCategoryDistribution(
+    eavs: { entity: string; attribute: string; value: string; category?: string }[],
+    issues: EavIssue[]
+  ): void {
+    const total = eavs.length;
+    const counts: Record<string, number> = { UNIQUE: 0, ROOT: 0, RARE: 0, COMMON: 0 };
+
+    for (const eav of eavs) {
+      const cat = (eav.category || 'COMMON').toUpperCase();
+      if (cat in counts) {
+        counts[cat]++;
+      }
+    }
+
+    const targets: Record<string, { min: number; max: number }> = {
+      UNIQUE: { min: 0.15, max: 0.25 },
+      ROOT: { min: 0.25, max: 0.35 },
+      RARE: { min: 0.20, max: 0.30 },
+      COMMON: { min: 0.20, max: 0.30 },
+    };
+
+    const outOfRange: string[] = [];
+    for (const [cat, target] of Object.entries(targets)) {
+      const ratio = counts[cat] / total;
+      if (ratio < target.min || ratio > target.max) {
+        outOfRange.push(
+          `${cat}: ${Math.round(ratio * 100)}% (target: ${Math.round(target.min * 100)}-${Math.round(target.max * 100)}%)`
+        );
+      }
+    }
+
+    if (outOfRange.length > 0) {
+      issues.push({
+        ruleId: 'rule-46',
+        severity: 'medium',
+        title: 'EAV category distribution outside targets',
+        description: `Category distribution deviates from framework targets: ${outOfRange.join('; ')}`,
+        exampleFix: 'Adjust EAV distribution: UNIQUE 15-25%, ROOT 25-35%, RARE 20-30%, COMMON 20-30%.',
+      });
+    }
+  }
+
+  /**
+   * Rule 47: Predicate diversity scoring.
+   * Each entity should use 3+ predicate types. Uses Shannon entropy.
+   */
+  checkPredicateDiversity(
+    eavs: { entity: string; attribute: string; value: string; predicateType?: string }[],
+    issues: EavIssue[]
+  ): void {
+    // Group by entity
+    const entityPredicates = new Map<string, Set<string>>();
+
+    for (const eav of eavs) {
+      const entity = eav.entity.toLowerCase();
+      if (!entityPredicates.has(entity)) {
+        entityPredicates.set(entity, new Set());
+      }
+      // Use predicate type if available, otherwise use attribute as proxy
+      const predicateType = eav.predicateType || this.inferPredicateType(eav.attribute);
+      entityPredicates.get(entity)!.add(predicateType);
+    }
+
+    const lowDiversityEntities: string[] = [];
+    for (const [entity, types] of entityPredicates) {
+      if (types.size < 3 && entityPredicates.size > 1) {
+        lowDiversityEntities.push(`"${entity}" (${types.size} type(s))`);
+      }
+    }
+
+    if (lowDiversityEntities.length > 0) {
+      // Calculate Shannon entropy for overall diversity
+      const allTypes = new Map<string, number>();
+      for (const [, types] of entityPredicates) {
+        for (const type of types) {
+          allTypes.set(type, (allTypes.get(type) || 0) + 1);
+        }
+      }
+      const total = Array.from(allTypes.values()).reduce((s, c) => s + c, 0);
+      let entropy = 0;
+      for (const count of allTypes.values()) {
+        const p = count / total;
+        if (p > 0) entropy -= p * Math.log2(p);
+      }
+
+      issues.push({
+        ruleId: 'rule-47',
+        severity: 'medium',
+        title: 'Low predicate diversity',
+        description: `Entities with <3 predicate types: ${lowDiversityEntities.join(', ')}. Shannon entropy: ${entropy.toFixed(2)}.`,
+        exampleFix: 'Add TYPE, COMPONENT, BENEFIT, RISK, PROCESS, SPECIFICATION predicates for each entity.',
+      });
+    }
+  }
+
+  private inferPredicateType(attribute: string): string {
+    const lower = attribute.toLowerCase();
+    if (/type|kind|class|category/.test(lower)) return 'TYPE';
+    if (/part|component|element|contains/.test(lower)) return 'COMPONENT';
+    if (/benefit|advantage|pro|strength/.test(lower)) return 'BENEFIT';
+    if (/risk|disadvantage|con|weakness|danger/.test(lower)) return 'RISK';
+    if (/process|method|step|procedure/.test(lower)) return 'PROCESS';
+    if (/spec|measurement|dimension|size|weight|height/.test(lower)) return 'SPECIFICATION';
+    return 'ATTRIBUTE';
   }
 
   checkQuantitativeValues(text: string, issues: EavIssue[]): void {

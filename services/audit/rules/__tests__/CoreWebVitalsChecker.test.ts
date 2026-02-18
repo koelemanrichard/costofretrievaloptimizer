@@ -163,12 +163,20 @@ describe('CoreWebVitalsChecker', () => {
   // Rule 327 — DOM Size
   // ===========================================================================
 
-  it('reports DOM size issue when nodes ≥ 1500 (rule 327)', () => {
+  it('reports DOM size framework target when 1500 ≤ nodes < 5000 (rule 327b)', () => {
     const issues = checker.validate({ domNodes: 2200 });
+    const issue = issues.find(i => i.ruleId === 'rule-327b');
+    expect(issue).toBeDefined();
+    expect(issue!.severity).toBe('medium');
+    expect(issue!.description).toContain('2200');
+  });
+
+  it('reports DOM size critical when nodes ≥ 5000 (rule 327)', () => {
+    const issues = checker.validate({ domNodes: 6000 });
     const issue = issues.find(i => i.ruleId === 'rule-327');
     expect(issue).toBeDefined();
-    expect(issue!.severity).toBe('low');
-    expect(issue!.description).toContain('2200');
+    expect(issue!.severity).toBe('critical');
+    expect(issue!.description).toContain('6000');
   });
 
   // ===========================================================================
@@ -312,7 +320,7 @@ describe('CoreWebVitalsChecker', () => {
       ttfb: 3000,
       tbt: 900,
       speedIndex: 7000,
-      domNodes: 3000,
+      domNodes: 6000,
       jsPayloadKb: 500,
       cssPayloadKb: 200,
       thirdPartyJsKb: 300,

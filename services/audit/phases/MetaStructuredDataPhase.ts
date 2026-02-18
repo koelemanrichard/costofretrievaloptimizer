@@ -10,12 +10,17 @@
  *   346 - Canonical should be self-referencing
  *   347 - Canonical URL must be absolute and well-formed
  *   349 - HTML canonical and HTTP Link header canonical must match
+ *   285 - Schema about vs mentions: about for primary entity, mentions for secondary
+ *   286 - @graph consolidation: single @graph, resolved @id, no duplicates
+ *   287 - Content parity: schema facts must match visible HTML text
+ *   288 - ImageObject licensing: acquireLicensePage and license properties
  */
 
 import { AuditPhase } from './AuditPhase';
 import type { AuditPhaseName, AuditRequest, AuditPhaseResult, AuditFinding } from '../types';
 import { CanonicalValidator } from '../rules/CanonicalValidator';
 import { MetaValidator } from '../rules/MetaValidator';
+import { SchemaValidator } from '../rules/SchemaValidator';
 
 export class MetaStructuredDataPhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'metaStructuredData';
@@ -63,6 +68,26 @@ export class MetaStructuredDataPhase extends AuditPhase {
           currentValue: issue.currentValue,
           exampleFix: issue.exampleFix,
           whyItMatters: 'Complete and valid meta tags ensure proper indexing and rich result eligibility.',
+          category: 'Meta & Structured Data',
+        }));
+      }
+    }
+
+    // Rules 285-288: Schema semantic validation (about/mentions, @graph, content parity, ImageObject licensing)
+    if (contentData?.html) {
+      totalChecks += 4;
+      const schemaValidator = new SchemaValidator();
+      const schemaIssues = schemaValidator.validate(contentData.html);
+      for (const issue of schemaIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          currentValue: issue.currentValue,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Semantic schema validation ensures structured data accurately represents page content and maximizes rich result eligibility.',
           category: 'Meta & Structured Data',
         }));
       }

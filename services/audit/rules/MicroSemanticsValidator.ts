@@ -28,6 +28,10 @@ export class MicroSemanticsValidator {
     this.checkModality(sentences, issues);             // Rules 57-58
     this.checkPredicateSpecificity(sentences, issues);  // Rule 61
     this.checkSpoPattern(sentences, issues);            // Rule 73
+    this.checkActiveVoice(sentences, issues);           // Rule 74 - Active voice
+    this.checkSentenceLength(sentences, issues);        // Rule 75 - Sentence length by type
+    this.checkAlsoUsage(sentences, issues);             // Rule 76 - "Also" ban
+    this.checkExpressionIdentity(sentences, issues);    // Rule 77 - LLM phrase detection
 
     return issues;
   }
@@ -126,6 +130,149 @@ export class MicroSemanticsValidator {
         title: 'Weak sentence structure (non-SPO)',
         description: `${weakStartCount} of ${sentences.length} sentences start with weak patterns (There is/It is). Use Subject-Predicate-Object structure.`,
         exampleFix: 'Replace "There are many benefits" with "React hooks provide many benefits".',
+      });
+    }
+  }
+
+  /**
+   * Rule 74: Active voice validation.
+   * Content should use >70% active voice. Passive voice obscures the agent.
+   */
+  checkActiveVoice(sentences: string[], issues: MicroSemanticsIssue[]): void {
+    const passivePattern = /\b(is|are|was|were|been|being)\s+(being\s+)?(\w+ed|built|broken|bought|caught|chosen|done|drawn|driven|eaten|found|given|gone|grown|held|hidden|kept|known|led|left|lost|made|meant|met|paid|read|run|said|seen|sent|set|shown|sold|spoken|spent|taken|taught|thought|told|understood|won|worn|written)\b/gi;
+    const allowedPassive = /\b(is (called|named|known as|defined as|considered|classified))\b/i;
+
+    let passiveCount = 0;
+    const meaningful = sentences.filter(s => s.split(/\s+/).length >= 5);
+
+    for (const sentence of meaningful) {
+      if (allowedPassive.test(sentence)) continue;
+      passivePattern.lastIndex = 0;
+      if (passivePattern.test(sentence)) {
+        passiveCount++;
+      }
+    }
+
+    const activeRatio = meaningful.length > 0 ? 1 - (passiveCount / meaningful.length) : 1;
+
+    if (meaningful.length > 5 && activeRatio < 0.7) {
+      issues.push({
+        ruleId: 'rule-74',
+        severity: 'medium',
+        title: 'Insufficient active voice',
+        description: `Only ${Math.round(activeRatio * 100)}% of sentences use active voice (target: 70%). ${passiveCount} of ${meaningful.length} sentences use passive voice.`,
+        exampleFix: 'Replace "The data is processed by the server" with "The server processes the data".',
+      });
+    }
+  }
+
+  /**
+   * Rule 75: Sentence length by type.
+   * Definitional: 15-20 words, Explanatory: 20-30 words, Instructional: 10-15 words.
+   */
+  checkSentenceLength(sentences: string[], issues: MicroSemanticsIssue[]): void {
+    const definitionPattern = /\b(is|are|refers?\s+to|means?|denotes?)\s+(a|an|the)\b/i;
+    const instructionPattern = /^(install|configure|run|create|add|remove|update|check|verify|use|set|click|open|step\s+\d+|first|next|then|finally)\b/i;
+
+    let outOfRange = 0;
+    let total = 0;
+
+    for (const sentence of sentences) {
+      const words = sentence.split(/\s+/).length;
+      if (words < 3) continue;
+      total++;
+
+      if (definitionPattern.test(sentence)) {
+        // Definitional: 15-20 words (tolerance ±5)
+        if (words < 10 || words > 25) outOfRange++;
+      } else if (instructionPattern.test(sentence)) {
+        // Instructional: 10-15 words (tolerance ±5)
+        if (words < 5 || words > 20) outOfRange++;
+      } else {
+        // Explanatory: 20-30 words (tolerance ±5)
+        if (words > 35) outOfRange++;
+      }
+    }
+
+    if (total > 5 && outOfRange > total * 0.3) {
+      issues.push({
+        ruleId: 'rule-75',
+        severity: 'low',
+        title: 'Sentence length varies from type targets',
+        description: `${outOfRange} of ${total} sentences fall outside target word counts (definitions: 15-20, explanations: 20-30, instructions: 10-15).`,
+        exampleFix: 'Shorten overly long definitions and expand too-brief explanatory sentences.',
+      });
+    }
+  }
+
+  /**
+   * Rule 76: "Also" ban - weak connector usage.
+   * "Also" creates weak semantic connections between statements.
+   */
+  checkAlsoUsage(sentences: string[], issues: MicroSemanticsIssue[]): void {
+    const alsoPattern = /\balso\b/gi;
+    let alsoCount = 0;
+
+    for (const sentence of sentences) {
+      alsoPattern.lastIndex = 0;
+      if (alsoPattern.test(sentence)) {
+        alsoCount++;
+      }
+    }
+
+    if (sentences.length >= 5 && alsoCount > sentences.length * 0.15) {
+      issues.push({
+        ruleId: 'rule-76',
+        severity: 'medium',
+        title: 'Excessive "also" usage (weak connector)',
+        description: `"Also" appears in ${alsoCount} of ${sentences.length} sentences. This creates weak semantic connections.`,
+        exampleFix: 'Replace "X also has Y" with causal connectors: "Because X includes Y" or "X integrates Y to achieve Z".',
+      });
+    }
+  }
+
+  /**
+   * Rule 77: Expression Identity detection.
+   * Detects LLM-typical phrases that signal AI authorship.
+   */
+  checkExpressionIdentity(sentences: string[], issues: MicroSemanticsIssue[]): void {
+    const llmPhrases = [
+      /\b(it's important to note|it is important to note|it's worth noting)\b/i,
+      /\b(delve into|delve deeper|delving into)\b/i,
+      /\b(in the realm of|in the world of|in the landscape of)\b/i,
+      /\b(navigate the (landscape|complexities|challenges))\b/i,
+      /\b(tapestry of|myriad of|plethora of|multifaceted)\b/i,
+      /\b(it's crucial to|it is crucial to|it's essential to)\b/i,
+      /\b(shed light on|pave the way|game changer|cutting.edge)\b/i,
+      /\b(unlock(ing)? the (power|potential|secrets))\b/i,
+      /\b(dive deep|deep dive|take a closer look)\b/i,
+      /\b(stands? as a testament|serves? as a reminder)\b/i,
+      /\b(in today's (digital|modern|fast-paced|ever-changing))\b/i,
+      /\b(embark on a journey|on this journey|transformative)\b/i,
+      /\b(leverag(e|ing)|synergy|paradigm shift)\b/i,
+    ];
+
+    let llmCount = 0;
+    const examples: string[] = [];
+
+    for (const sentence of sentences) {
+      for (const pattern of llmPhrases) {
+        const match = sentence.match(pattern);
+        if (match) {
+          llmCount++;
+          if (examples.length < 3) examples.push(match[0]);
+          break;
+        }
+      }
+    }
+
+    if (llmCount > 0) {
+      issues.push({
+        ruleId: 'rule-77',
+        severity: 'high',
+        title: 'Expression Identity detected (LLM phrases)',
+        description: `Found ${llmCount} LLM-typical phrase(s): "${examples.join('", "')}". These signal AI authorship.`,
+        exampleFix: 'Remove or replace with specific, factual language. "It\'s important to note that X" → "X is [fact]".',
       });
     }
   }
