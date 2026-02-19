@@ -1061,6 +1061,8 @@ export {
   getComponentRenderer,
   hasRenderer,
   getAvailableComponents,
+  getRegisteredComponents,
+  isRegisteredComponent,
   markdownToHtml,
   extractListItems,
   extractFaqItems,

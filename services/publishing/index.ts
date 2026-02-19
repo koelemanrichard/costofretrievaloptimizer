@@ -319,6 +319,8 @@ export {
   getComponentRenderer,
   hasRenderer,
   getAvailableComponents,
+  getRegisteredComponents,
+  isRegisteredComponent,
 } from './renderer';
 
 export type {

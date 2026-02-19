@@ -1009,4 +1009,25 @@ export function getAvailableComponents(): ComponentType[] {
   return Object.keys(componentRenderers) as ComponentType[];
 }
 
+/**
+ * Get all registered component type names as plain strings.
+ *
+ * Unlike `getAvailableComponents()` which returns typed `ComponentType[]`,
+ * this returns `string[]` so callers (e.g. LayoutEngine) can validate
+ * arbitrary strings without needing to cast to `ComponentType` first.
+ */
+export function getRegisteredComponents(): string[] {
+  return Object.keys(componentRenderers);
+}
+
+/**
+ * Check if an arbitrary string is a registered component type with a renderer.
+ *
+ * This accepts a plain `string` (not `ComponentType`) so LayoutEngine and
+ * ComponentSelector can validate AI-returned component names before rendering.
+ */
+export function isRegisteredComponent(componentType: string): boolean {
+  return componentType in componentRenderers;
+}
+
 export { markdownToHtml, extractListItems, extractFaqItems, extractSteps };
