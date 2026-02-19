@@ -777,4 +777,103 @@ describe('ComponentSelector', () => {
       expect(result.reasoning).toMatch(/steps|timeline|corporate/i);
     });
   });
+
+  // =============================================================================
+  // CONTENT TYPE SOURCE OF TRUTH TESTS
+  // =============================================================================
+
+  describe('analysis.contentType as single source of truth', () => {
+    it('should use analysis.contentType as source of truth, not re-detect from heading patterns', () => {
+      const analysis = createMockSectionAnalysis({
+        sectionId: 'test',
+        heading: 'How to process data step by step',  // matches steps pattern
+        contentType: 'explanation',  // But analyzer said explanation
+        semanticWeight: 3,
+        wordCount: 200,
+      });
+
+      const result = ComponentSelector.selectComponent(analysis);
+      // Should use 'explanation' (from analyzer), not 'steps' (from heading pattern)
+      expect(result.primaryComponent).toBe('prose');  // explanation maps to prose
+    });
+
+    it('should use analysis.contentType even when heading suggests FAQ', () => {
+      const analysis = createMockSectionAnalysis({
+        sectionId: 'test-faq-heading',
+        heading: 'Frequently Asked Questions about SEO',  // FAQ-like heading
+        contentType: 'explanation',  // Analyzer determined explanation
+        semanticWeight: 3,
+        wordCount: 300,
+      });
+
+      const result = ComponentSelector.selectComponent(analysis);
+      // Should NOT override to faq-accordion based on heading
+      expect(result.primaryComponent).toBe('prose');
+    });
+
+    it('should use analysis.contentType even when heading suggests comparison', () => {
+      const analysis = createMockSectionAnalysis({
+        sectionId: 'test-comparison-heading',
+        heading: 'Comparing WordPress vs Shopify: Key Differences',
+        contentType: 'steps',  // Analyzer determined steps
+        semanticWeight: 3,
+        wordCount: 250,
+      });
+
+      const result = ComponentSelector.selectComponent(analysis);
+      // Should use 'steps' (from analyzer), not 'comparison' (from heading)
+      expect(result.primaryComponent).toBe('timeline');  // steps maps to timeline
+    });
+
+    it('should allow content pattern detection for sub-type refinement without overriding content type', () => {
+      // Content patterns (alert-box, info-box, lead-paragraph) are sub-type refinements
+      // that operate on body content, not heading text. They are allowed to select
+      // specialized components because they detect specific presentation needs.
+      const analysis = createMockSectionAnalysis({
+        sectionId: 'test-alert',
+        heading: 'Understanding data processing',
+        contentType: 'explanation',
+        semanticWeight: 3,
+        wordCount: 150,
+      });
+
+      // Without content options, should use matrix selection (explanation -> prose)
+      const resultWithoutContent = ComponentSelector.selectComponent(analysis);
+      expect(resultWithoutContent.primaryComponent).toBe('prose');
+
+      // With alert content, content pattern detection may refine to alert-box
+      const resultWithAlertContent = ComponentSelector.selectComponent(
+        analysis,
+        undefined,
+        { content: '<p><strong>Warning:</strong> This process can cause data loss if not handled correctly. Risk of corruption is high.</p>' }
+      );
+      expect(resultWithAlertContent.primaryComponent).toBe('alert-box');
+    });
+
+    it('should select lead-paragraph only when contentType is introduction and isFirstSection', () => {
+      const analysis = createMockSectionAnalysis({
+        sectionId: 'test-lead',
+        heading: 'Introduction to Topic',
+        contentType: 'introduction',
+        semanticWeight: 3,
+        wordCount: 100,
+      });
+
+      // Lead paragraph requires BOTH contentType === 'introduction' AND isFirstSection
+      const resultFirstSection = ComponentSelector.selectComponent(
+        analysis,
+        undefined,
+        { isFirstSection: true }
+      );
+      expect(resultFirstSection.primaryComponent).toBe('lead-paragraph');
+
+      // Not first section: should use matrix selection for introduction
+      const resultNotFirst = ComponentSelector.selectComponent(
+        analysis,
+        undefined,
+        { isFirstSection: false }
+      );
+      expect(resultNotFirst.primaryComponent).toBe('hero');  // introduction maps to hero
+    });
+  });
 });
