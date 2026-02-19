@@ -202,9 +202,10 @@ function generatePlaceholderSpec(
 
 export class ImageHandler implements IImageHandler {
   /**
-   * Track float alternation state for batch processing
+   * Track float alternation state for batch processing.
+   * Public so callers can seed the state for single-section calls.
    */
-  private floatState: 'left' | 'right' = 'left';
+  floatState: 'left' | 'right' = 'left';
 
   /**
    * Reset float state for new batch
@@ -337,7 +338,8 @@ export class ImageHandler implements IImageHandler {
   static determineImagePlacement(
     analysis: SectionAnalysis,
     designDna?: DesignDNA,
-    sectionContent?: string
+    sectionContent?: string,
+    options?: { floatHint?: 'left' | 'right' }
   ): SemanticImagePlacement | null {
     // Priority 1: Section has generated image
     if (hasGeneratedImage(analysis)) {
@@ -346,8 +348,12 @@ export class ImageHandler implements IImageHandler {
 
     // Priority 2: Section requires image (from constraints)
     if (requiresImage(analysis)) {
-      // Use instance for float alternation, but create temporary instance for static call
+      // Use instance for float alternation, but create temporary instance for static call.
+      // When floatHint is provided, seed the instance so the caller controls direction.
       const handler = new ImageHandler();
+      if (options?.floatHint) {
+        handler.floatState = options.floatHint;
+      }
       return handler.handleRequiredImage(analysis, designDna);
     }
 
@@ -405,7 +411,8 @@ export class ImageHandler implements IImageHandler {
   determineImagePlacement(
     analysis: SectionAnalysis,
     designDna?: DesignDNA,
-    sectionContent?: string
+    sectionContent?: string,
+    options?: { floatHint?: 'left' | 'right' }
   ): SemanticImagePlacement | null {
     // Priority 1: Section has generated image
     if (hasGeneratedImage(analysis)) {
@@ -414,6 +421,10 @@ export class ImageHandler implements IImageHandler {
 
     // Priority 2: Section requires image (from constraints)
     if (requiresImage(analysis)) {
+      // When floatHint is provided, seed float state before calling handleRequiredImage
+      if (options?.floatHint) {
+        this.floatState = options.floatHint;
+      }
       return this.handleRequiredImage(analysis, designDna);
     }
 

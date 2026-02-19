@@ -697,6 +697,68 @@ describe('ImageHandler', () => {
   });
 
   // =============================================================================
+  // FLOAT HINT FOR SINGLE-SECTION CALLS
+  // =============================================================================
+
+  describe('static determineImagePlacement with floatHint', () => {
+    it('static determineImagePlacement should accept floatHint for required images', () => {
+      const analysis: SectionAnalysis = {
+        sectionId: 'test',
+        heading: 'Test',
+        headingLevel: 2,
+        contentType: 'explanation',
+        semanticWeight: 2,
+        semanticWeightFactors: { baseWeight: 3, topicCategoryBonus: 0, coreTopicBonus: 0, fsTargetBonus: 0, mainIntentBonus: 0, totalWeight: 2 },
+        constraints: { imageRequired: true },
+        wordCount: 200,
+        hasTable: false, hasList: false, hasQuote: false, hasImage: false,
+        isCoreTopic: false, answersMainIntent: false,
+        contentZone: 'MAIN',
+      };
+
+      const dna = { layout: { gridStyle: 'asymmetric' } } as any;
+
+      const result1 = ImageHandler.determineImagePlacement(analysis, dna, undefined, { floatHint: 'left' });
+      expect(result1?.position).toBe('float-left');
+
+      const result2 = ImageHandler.determineImagePlacement(analysis, dna, undefined, { floatHint: 'right' });
+      expect(result2?.position).toBe('float-right');
+    });
+
+    it('should default to float-left when no floatHint is provided for asymmetric layout', () => {
+      const analysis = createMockSectionAnalysis({
+        semanticWeight: 2,
+        hasImage: false,
+        constraints: { imageRequired: true },
+      });
+
+      const dna = createMockDesignDNA({
+        layout: {
+          gridStyle: 'asymmetric',
+          alignment: 'left',
+          heroStyle: 'contained',
+          cardLayout: 'grid',
+          ctaPlacement: 'section-end',
+          navigationStyle: 'standard',
+        },
+      });
+
+      const result = ImageHandler.determineImagePlacement(analysis, dna);
+      expect(result?.position).toBe('float-left');
+    });
+
+    it('should ignore floatHint when section has generated image (not required)', () => {
+      const analysis = createMockSectionAnalysis({
+        semanticWeight: 3,
+        hasImage: true,
+      });
+
+      const result = ImageHandler.determineImagePlacement(analysis, undefined, undefined, { floatHint: 'right' });
+      expect(result?.position).toBe('after-intro-paragraph');
+    });
+  });
+
+  // =============================================================================
   // EDGE CASES
   // =============================================================================
 

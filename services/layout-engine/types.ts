@@ -453,7 +453,8 @@ export interface IImageHandler {
   determineImagePlacement(
     analysis: SectionAnalysis,
     designDna?: DesignDNA,
-    sectionContent?: string
+    sectionContent?: string,
+    options?: { floatHint?: 'left' | 'right' }
   ): SemanticImagePlacement | null;
   determineAllImagePlacements(
     analyses: SectionAnalysis[],
