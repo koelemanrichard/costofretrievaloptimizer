@@ -17,6 +17,10 @@ export { ImageHandler } from './ImageHandler';
 export { LayoutEngine } from './LayoutEngine';
 export type { LayoutBlueprintOutput } from './LayoutEngine';
 
+// Audit-layout bridge
+export { LayoutRuleEngine } from './LayoutRuleEngine';
+export type { LayoutConstraints, LayoutViolation } from './LayoutRuleEngine';
+
 // AI-powered layout planning (for agency-quality results)
 export { generateAILayoutBlueprint } from './AILayoutPlanner';
 
