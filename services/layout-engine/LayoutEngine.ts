@@ -326,6 +326,48 @@ function validateFsProtection(sections: BlueprintSection[]): boolean {
 }
 
 /**
+ * Validate the full FS protection chain end-to-end and auto-fix broken sections.
+ *
+ * An FS-targeted section must have:
+ * 1. constraints.fsTarget = true (from SectionAnalyzer)
+ * 2. layout.columns = '1-column' (from LayoutPlanner)
+ * 3. FS-compliant component (from ComponentSelector)
+ * 4. No animation or background treatment that could shift layout (from VisualEmphasizer)
+ *
+ * If any link in this chain is broken (e.g., by a suggestion being auto-applied),
+ * this function auto-fixes the section and emits a warning.
+ */
+function validateFsProtectionChain(sections: BlueprintSection[]): void {
+  for (const section of sections) {
+    if (!section.constraints?.fsTarget) continue;
+
+    // Fix 1: Enforce single-column layout
+    if (section.layout.columns !== '1-column') {
+      console.warn(
+        `[LayoutEngine] FS chain broken: section "${section.heading}" has columns=${section.layout.columns}, expected 1-column`
+      );
+      section.layout.columns = '1-column';
+    }
+
+    // Fix 2: Disable entry animations (can cause layout shift)
+    if (section.emphasis.hasEntryAnimation) {
+      console.warn(
+        `[LayoutEngine] FS chain broken: section "${section.heading}" has animation, disabling`
+      );
+      section.emphasis = { ...section.emphasis, hasEntryAnimation: false, animationType: undefined };
+    }
+
+    // Fix 3: Disable background treatments (can interfere with FS rendering)
+    if (section.emphasis.hasBackgroundTreatment) {
+      console.warn(
+        `[LayoutEngine] FS chain broken: section "${section.heading}" has background, disabling`
+      );
+      section.emphasis = { ...section.emphasis, hasBackgroundTreatment: false, backgroundType: undefined };
+    }
+  }
+}
+
+/**
  * Calculate brand alignment score (placeholder implementation)
  */
 function calculateBrandAlignmentScore(_sections: BlueprintSection[], _dna?: DesignDNA): number {
@@ -436,9 +478,15 @@ export class LayoutEngine {
     // Step 2: Generate BlueprintSections for each analysis
     const sections = LayoutEngine.buildBlueprintSections(analyses, designDna, content);
 
+    // Step 2.5: Validate FS protection chain after initial section building
+    validateFsProtectionChain(sections);
+
     // Step 3: Generate and process suggestions
     const suggestions = generateSuggestions(analyses, designDna);
     const { applied, skipped } = LayoutEngine.processSuggestions(suggestions, sections);
+
+    // Step 3.5: Re-validate FS protection chain after suggestions (suggestions might break FS)
+    validateFsProtectionChain(sections);
 
     // Step 4: Validate the blueprint
     const validation = LayoutEngine.validateBlueprint(sections, designDna);

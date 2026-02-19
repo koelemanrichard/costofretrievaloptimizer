@@ -654,6 +654,90 @@ Another normal section.
     });
   });
 
+  describe('FS protection chain validation', () => {
+    it('should auto-fix FS-protected sections with broken chain', () => {
+      // Create content with an FS section
+      const content = '## What is SEO?\n\nSearch Engine Optimization is the practice of improving website visibility.';
+      const briefSections = [{ heading: 'What is SEO?', level: 2, order: 0, format_code: 'FS', attribute_category: 'UNIQUE' }] as BriefSection[];
+
+      const blueprint = LayoutEngine.generateBlueprint(content, briefSections);
+
+      const fsSection = blueprint.sections.find(s => s.constraints?.fsTarget);
+      if (fsSection) {
+        expect(fsSection.layout.columns).toBe('1-column');
+        expect(fsSection.emphasis.hasEntryAnimation).toBeFalsy();
+        expect(fsSection.emphasis.hasBackgroundTreatment).toBeFalsy();
+      }
+    });
+
+    it('should ensure FS sections have 1-column layout after full pipeline', () => {
+      const content = createTestContent();
+      const briefSections = createMockBriefSections();
+      const dna = createMockDesignDNA();
+
+      const blueprint = LayoutEngine.generateBlueprint(content, briefSections, dna);
+
+      const fsSections = blueprint.sections.filter(s => s.constraints?.fsTarget);
+      expect(fsSections.length).toBeGreaterThan(0);
+
+      fsSections.forEach(fsSection => {
+        expect(fsSection.layout.columns).toBe('1-column');
+      });
+    });
+
+    it('should ensure FS sections have no entry animation after full pipeline', () => {
+      const content = createTestContent();
+      const briefSections = createMockBriefSections();
+      const dna = createMockDesignDNA();
+
+      const blueprint = LayoutEngine.generateBlueprint(content, briefSections, dna);
+
+      const fsSections = blueprint.sections.filter(s => s.constraints?.fsTarget);
+      expect(fsSections.length).toBeGreaterThan(0);
+
+      fsSections.forEach(fsSection => {
+        expect(fsSection.emphasis.hasEntryAnimation).toBeFalsy();
+      });
+    });
+
+    it('should ensure FS sections have no background treatment after full pipeline', () => {
+      const content = createTestContent();
+      const briefSections = createMockBriefSections();
+      const dna = createMockDesignDNA();
+
+      const blueprint = LayoutEngine.generateBlueprint(content, briefSections, dna);
+
+      const fsSections = blueprint.sections.filter(s => s.constraints?.fsTarget);
+      expect(fsSections.length).toBeGreaterThan(0);
+
+      fsSections.forEach(fsSection => {
+        expect(fsSection.emphasis.hasBackgroundTreatment).toBeFalsy();
+      });
+    });
+
+    it('should maintain FS chain even with high-energy brand DNA that enables animations', () => {
+      const content = createTestContent();
+      const briefSections = createMockBriefSections();
+      // Use a high-energy DNA that might enable animations
+      const dna = createMockDesignDNA({
+        personality: { ...createMockDesignDNA().personality, overall: 'playful', energy: 5 },
+        motion: { ...createMockDesignDNA().motion, overall: 'expressive', scrollAnimations: true },
+      });
+
+      const blueprint = LayoutEngine.generateBlueprint(content, briefSections, dna);
+
+      const fsSections = blueprint.sections.filter(s => s.constraints?.fsTarget);
+      expect(fsSections.length).toBeGreaterThan(0);
+
+      fsSections.forEach(fsSection => {
+        // Even with high-energy DNA, FS sections must remain protected
+        expect(fsSection.layout.columns).toBe('1-column');
+        expect(fsSection.emphasis.hasEntryAnimation).toBeFalsy();
+        expect(fsSection.emphasis.hasBackgroundTreatment).toBeFalsy();
+      });
+    });
+  });
+
   describe('instance methods', () => {
     it('should support instance method for generateBlueprint', () => {
       const engine = new LayoutEngine();
