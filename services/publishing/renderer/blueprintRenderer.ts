@@ -17,6 +17,7 @@ import type { ContentBrief, EnrichedTopic, TopicalMap } from '../../../types';
 import type { DesignPersonality } from '../../../config/designTokens/personalities';
 import { designPersonalities } from '../../../config/designTokens/personalities';
 import type { BrandDesignSystem } from '../../../types/designDna';
+import { LayoutRuleEngine } from '../../layout-engine/LayoutRuleEngine';
 
 // ============================================================================
 // TYPES
@@ -104,6 +105,8 @@ export interface BlueprintRenderOutput {
   css: string;
   /** JSON-LD structured data */
   jsonLd: string;
+  /** Post-render layout violations detected by LayoutRuleEngine */
+  layoutViolations?: import('../../layout-engine/LayoutRuleEngine').LayoutViolation[];
   /** Metadata about the render */
   metadata: {
     blueprint: {
@@ -514,10 +517,17 @@ ${brandCss}`;
     jsonLd = jsonLd + '\n' + componentJsonLd;
   }
 
+  // Post-render validation: check for layout rule violations in generated HTML
+  const violations = LayoutRuleEngine.validateRenderedOutput(html);
+  if (violations.length > 0) {
+    console.warn(`[BlueprintRenderer] ${violations.length} layout violation(s) detected:`, violations);
+  }
+
   return {
     html,
     css, // THE KEY FIX: Now uses BrandDesignSystem.compiledCss when available
     jsonLd,
+    layoutViolations: violations.length > 0 ? violations : undefined,
     metadata: {
       blueprint: {
         id: blueprint.id,

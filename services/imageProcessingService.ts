@@ -1,5 +1,7 @@
 // services/imageProcessingService.ts
 
+import { SERVICE_REGISTRY } from '../config/serviceRegistry';
+
 /**
  * ImageProcessingService
  *
@@ -169,9 +171,10 @@ export class ImageProcessingService {
     const issues: string[] = [];
     let score = 100;
 
-    // Check format
-    if (metadata.format && !['avif', 'webp'].includes(metadata.format.toLowerCase())) {
-      issues.push(`Image format is ${metadata.format}. Prefer AVIF or WebP for better compression.`);
+    // Check format (preferred formats from SERVICE_REGISTRY)
+    const preferredFormats = SERVICE_REGISTRY.layoutEngine.image.preferredFormats;
+    if (metadata.format && !preferredFormats.includes(metadata.format.toLowerCase())) {
+      issues.push(`Image format is ${metadata.format}. Prefer ${preferredFormats.join(' or ').toUpperCase()} for better compression.`);
       score -= 10;
     }
 
@@ -189,15 +192,17 @@ export class ImageProcessingService {
       score -= 5;
     }
 
-    // Check dimensions
-    if (metadata.width && metadata.width > 2000) {
-      issues.push(`Image width ${metadata.width}px exceeds recommended 2000px max. Consider resizing.`);
+    // Check dimensions (max width from SERVICE_REGISTRY)
+    const maxWidth = SERVICE_REGISTRY.layoutEngine.image.maxWidthPx;
+    if (metadata.width && metadata.width > maxWidth) {
+      issues.push(`Image width ${metadata.width}px exceeds recommended ${maxWidth}px max. Consider resizing.`);
       score -= 10;
     }
 
-    // Check file size
-    if (metadata.fileSize && metadata.fileSize > 500000) { // 500KB
-      issues.push(`Image file size ${Math.round(metadata.fileSize / 1024)}KB exceeds 500KB. Compress or convert to AVIF.`);
+    // Check file size (max size from SERVICE_REGISTRY)
+    const maxFileSize = SERVICE_REGISTRY.layoutEngine.image.maxFileSizeBytes;
+    if (metadata.fileSize && metadata.fileSize > maxFileSize) {
+      issues.push(`Image file size ${Math.round(metadata.fileSize / 1024)}KB exceeds ${Math.round(maxFileSize / 1024)}KB. Compress or convert to AVIF.`);
       score -= 15;
     }
 

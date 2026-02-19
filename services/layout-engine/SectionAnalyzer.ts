@@ -8,6 +8,7 @@
 
 import { AttributeCategory, BriefSection, FormatCode } from '../../types';
 import { SERVICE_REGISTRY } from '../../config/serviceRegistry';
+import { getWebsiteTypeLayout } from './websiteTypeLayouts';
 import {
   ContentType,
   ISectionAnalyzer,
@@ -231,7 +232,7 @@ function headingSimilarityScore(heading1: string, heading2: string): number {
   if (n1 === n2) return 1.0;
 
   // One contains the other (full containment)
-  if (n1 === n2) return 1.0;
+  if (n1.includes(n2) || n2.includes(n1)) return 0.9;
 
   // Word-level analysis
   const words1 = n1.split(' ').filter((w) => w.length > 0);
@@ -288,6 +289,15 @@ export class SectionAnalyzer implements ISectionAnalyzer {
     // Answers main intent bonus
     if (input.answersMainIntent) {
       weight = Math.min(MAX_WEIGHT, weight + MAIN_INTENT_BONUS);
+    }
+
+    // Website-type role bonus (e.g., 'product-hero' +2 for e-commerce)
+    if (input.websiteType && input.websiteTypeRole) {
+      const typeLayout = getWebsiteTypeLayout(input.websiteType);
+      const bonus = typeLayout?.weightBonuses?.[input.websiteTypeRole] || 0;
+      if (bonus > 0) {
+        weight = Math.min(MAX_WEIGHT, weight + bonus);
+      }
     }
 
     return Math.max(MIN_WEIGHT, weight);
@@ -487,6 +497,7 @@ export class SectionAnalyzer implements ISectionAnalyzer {
       topicTitle?: string;
       isCoreTopic?: boolean;
       mainIntent?: string;
+      websiteType?: string;
     }
   ): SectionAnalysis[] {
     if (!content || !content.trim()) {
@@ -558,6 +569,35 @@ export class SectionAnalyzer implements ISectionAnalyzer {
           },
         };
         console.log(`[SectionAnalyzer] Intro section "${analysis.heading?.substring(0, 30)}" boosted: ${analysis.semanticWeight} -> ${newWeight}`);
+      }
+    }
+
+    // Apply website-type role bonuses (e.g., e-commerce 'product-hero' +2)
+    if (options?.websiteType) {
+      const typeLayout = getWebsiteTypeLayout(options.websiteType);
+      if (typeLayout?.weightBonuses) {
+        for (let i = 0; i < analyses.length; i++) {
+          const analysis = analyses[i];
+          // Match section to website-type role by finding the role whose heading pattern
+          // or preferred component type best matches the section's content type
+          const matchingRole = typeLayout.componentOrder.find(role =>
+            analysis.heading?.toLowerCase().includes(role.role.replace(/-/g, ' ')) ||
+            role.role.replace(/-/g, ' ').includes(analysis.contentType)
+          );
+          if (matchingRole && typeLayout.weightBonuses[matchingRole.role]) {
+            const bonus = typeLayout.weightBonuses[matchingRole.role];
+            const newWeight = Math.min(MAX_WEIGHT, analysis.semanticWeight + bonus);
+            analyses[i] = {
+              ...analysis,
+              semanticWeight: newWeight,
+              semanticWeightFactors: {
+                ...analysis.semanticWeightFactors,
+                totalWeight: newWeight,
+              },
+            };
+            console.log(`[SectionAnalyzer] Website-type "${options.websiteType}" role "${matchingRole.role}" bonus +${bonus}: "${analysis.heading?.substring(0, 30)}" weight ${analysis.semanticWeight} -> ${newWeight}`);
+          }
+        }
       }
     }
 
@@ -691,6 +731,7 @@ export class SectionAnalyzer implements ISectionAnalyzer {
       topicTitle?: string;
       isCoreTopic?: boolean;
       mainIntent?: string;
+      websiteType?: string;
     }
   ): SectionAnalysis[] {
     return SectionAnalyzer.analyzeAllSections(content, briefSections, options);

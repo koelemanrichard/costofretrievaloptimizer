@@ -343,6 +343,9 @@ export interface BlueprintSection {
     desktop: { columns: ColumnLayout; width: LayoutWidth };
   };
 
+  // NEW: Accessibility
+  requiresAriaLabels?: boolean;
+
   // NEW: Website type context
   websiteTypeRole?: string;
   liftPriority?: number;
@@ -386,6 +389,10 @@ export interface SemanticWeightInput {
   isCoreTopic?: boolean;
   hasFSTarget?: boolean;
   answersMainIntent?: boolean;
+  /** Website type for industry-specific weight bonuses */
+  websiteType?: string;
+  /** Website-type role this section fulfills (e.g., 'product-hero', 'pricing') */
+  websiteTypeRole?: string;
 }
 
 /**
@@ -431,7 +438,7 @@ export interface ISectionAnalyzer {
   analyzeAllSections(
     content: string,
     briefSections?: BriefSection[],
-    options?: { topicTitle?: string; isCoreTopic?: boolean; mainIntent?: string }
+    options?: { topicTitle?: string; isCoreTopic?: boolean; mainIntent?: string; websiteType?: string }
   ): SectionAnalysis[];
   calculateSemanticWeight(input: SemanticWeightInput): number;
   detectContentType(heading: string, content: string, formatCode?: FormatCode): ContentType;

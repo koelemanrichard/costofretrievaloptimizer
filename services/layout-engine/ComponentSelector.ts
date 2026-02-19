@@ -612,7 +612,7 @@ export class ComponentSelector implements IComponentSelector {
           primaryComponent: preferred,
           alternativeComponents: [mapping.componentType, ...(mapping.alternatives || [])].filter(c => c !== preferred),
           componentVariant: variant,
-          confidence: Math.max(STANDARD_CONFIDENCE, STANDARD_CONFIDENCE),
+          confidence: STANDARD_CONFIDENCE,
           reasoning: `Audit rule constraint: ${preferred} preferred for ${analysis.contentType}`,
         };
       }
