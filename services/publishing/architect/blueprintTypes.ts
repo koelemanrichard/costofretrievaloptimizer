@@ -5,6 +5,27 @@
  * The blueprint is a declarative specification of how content should be rendered,
  * produced by AI analysis and consumed by a deterministic renderer.
  *
+ * NOTE ON TYPE RELATIONSHIP WITH layout-engine/types.ts:
+ * Both this file and `services/layout-engine/types.ts` define types named
+ * `ComponentType` and `LayoutBlueprint`. These are intentionally SEPARATE types
+ * with different structures:
+ *
+ *   - `ComponentType` here has 47 specialized rendering variants (prose,
+ *     lead-paragraph, pull-quote, timeline-zigzag, etc.) used by the AI Architect.
+ *     `layout-engine/types.ts` has 19 broader variants (prose, card, hero, etc.)
+ *     used by the legacy layout engine.
+ *
+ *   - `LayoutBlueprint` here uses `SectionDesign[]`, `PageStrategy`, and
+ *     `globalElements` for AI-driven rendering. `layout-engine/types.ts` uses
+ *     `BlueprintSection[]`, `globalSettings`, and different metadata for the
+ *     legacy semantic-weight-based engine.
+ *
+ * When importing from both modules, use aliased imports to disambiguate:
+ *   import type { LayoutBlueprint as ArchitectBlueprint } from '.../architect/blueprintTypes';
+ *   import type { LayoutBlueprint as LayoutEngineBlueprint } from '.../layout-engine/types';
+ *
+ * @see services/layout-engine/types.ts — Legacy layout engine types
+ * @see services/brand-replication/integration/decisionMapper.ts — Example of aliased imports
  * @module services/publishing/architect/blueprintTypes
  */
 
@@ -15,6 +36,10 @@
 /**
  * All available component types for content rendering.
  * The AI Architect selects appropriate components based on content analysis.
+ *
+ * NOTE: This is a DIFFERENT type from `ComponentType` in `layout-engine/types.ts`,
+ * which has 19 broader variants. This architect version has 47 specialized variants
+ * for fine-grained AI-driven component selection.
  */
 export type ComponentType =
   // Core content
@@ -213,6 +238,11 @@ export interface SectionDesign {
 /**
  * Complete layout blueprint for an article.
  * This is the primary output from the AI Architect.
+ *
+ * NOTE: This is a DIFFERENT interface from `LayoutBlueprint` in `layout-engine/types.ts`.
+ * The layout-engine version uses `BlueprintSection[]`, numeric `version`, and `globalSettings`.
+ * This architect version uses `SectionDesign[]`, string `version: '1.0'`, `PageStrategy`,
+ * and `globalElements`. Use aliased imports when both are needed in the same file.
  */
 export interface LayoutBlueprint {
   /** Schema version for forward compatibility */

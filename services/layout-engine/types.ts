@@ -4,6 +4,14 @@
  * Comprehensive types for the intelligent layout engine that transforms
  * content briefs into visual layouts based on semantic weight, brand DNA,
  * and SEO best practices.
+ *
+ * NOTE ON TYPE RELATIONSHIP WITH architect/blueprintTypes.ts:
+ * Both this file and `services/publishing/architect/blueprintTypes.ts` define
+ * types named `ComponentType` and `LayoutBlueprint`. These are intentionally
+ * SEPARATE types with different structures. See the module-level doc comment
+ * in `architect/blueprintTypes.ts` for a full comparison.
+ *
+ * @see services/publishing/architect/blueprintTypes.ts — AI Architect types
  */
 
 import { AttributeCategory, BriefSection, FormatCode } from '../../types';
