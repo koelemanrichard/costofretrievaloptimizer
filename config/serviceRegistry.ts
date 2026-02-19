@@ -422,6 +422,67 @@ export const SERVICE_REGISTRY = {
     maxDelayMs: 8000,
     largePromptThreshold: 40_000,
   },
+
+  /** Layout engine configuration for visual semantics pipeline */
+  layoutEngine: {
+    weights: {
+      base: 3,
+      min: 1,
+      max: 5,
+      bonuses: {
+        coreTopic: 0.5,
+        fsTarget: 0.5,
+        mainIntent: 0.5,
+        firstMainSection: 1,
+        intro: 0.5,
+      },
+      categoryBonuses: {
+        UNIQUE: 2,
+        RARE: 1,
+        ROOT: 0.5,
+        COMMON: 0,
+        CORE_DEFINITION: 0.5,
+        SEARCH_DEMAND: 0.5,
+        COMPETITIVE_EXPANSION: 0.25,
+        COMPOSITE: 0.25,
+        UNCLASSIFIED: 0,
+      },
+    },
+    confidence: {
+      fsCompliant: 0.95,
+      highValue: 0.85,
+      standard: 0.75,
+      fallback: 0.6,
+      autoApplyThreshold: 0.8,
+      patternBoosts: {
+        alert: 0.7,
+        info: 0.6,
+        lead: 0.8,
+        featureGrid: 0.75,
+        sequential: 0.7,
+        qa: 0.7,
+      },
+    },
+    emphasis: {
+      energyThresholdForBackground: 3,
+      defaultAnimationType: 'fade' as const,
+      heroHeadingSize: 'xl' as const,
+      featuredHeadingSize: 'lg' as const,
+      heroPaddingMultiplier: 2,
+      featuredPaddingMultiplier: 1.5,
+      supportingPaddingMultiplier: 0.75,
+      minimalPaddingMultiplier: 0.5,
+    },
+    image: {
+      maxWidthPx: 2000,
+      maxFileSizeBytes: 500000,
+      preferredFormats: ['avif', 'webp'] as readonly string[],
+      heroWeightThreshold: 5,
+      featuredWeightThreshold: 4,
+      noImageContentTypes: ['faq', 'definition', 'testimonial'] as readonly string[],
+      flowchartContentTypes: ['steps', 'process'] as readonly string[],
+    },
+  },
 } as const;
 
 // ============================================================================

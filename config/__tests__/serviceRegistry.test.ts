@@ -207,6 +207,32 @@ describe('Service Registry', () => {
     });
   });
 
+  describe('SERVICE_REGISTRY.layoutEngine', () => {
+    it('should have weights config', () => {
+      expect(SERVICE_REGISTRY.layoutEngine).toBeDefined();
+      expect(SERVICE_REGISTRY.layoutEngine.weights.base).toBe(3);
+      expect(SERVICE_REGISTRY.layoutEngine.weights.max).toBe(5);
+      expect(SERVICE_REGISTRY.layoutEngine.weights.min).toBe(1);
+    });
+
+    it('should have category bonuses matching attribute categories', () => {
+      expect(SERVICE_REGISTRY.layoutEngine.weights.categoryBonuses.UNIQUE).toBe(2);
+      expect(SERVICE_REGISTRY.layoutEngine.weights.categoryBonuses.RARE).toBe(1);
+      expect(SERVICE_REGISTRY.layoutEngine.weights.categoryBonuses.ROOT).toBe(0.5);
+      expect(SERVICE_REGISTRY.layoutEngine.weights.categoryBonuses.COMMON).toBe(0);
+    });
+
+    it('should have confidence thresholds', () => {
+      expect(SERVICE_REGISTRY.layoutEngine.confidence.autoApplyThreshold).toBe(0.8);
+      expect(SERVICE_REGISTRY.layoutEngine.confidence.fsCompliant).toBe(0.95);
+    });
+
+    it('should have image config', () => {
+      expect(SERVICE_REGISTRY.layoutEngine.image.preferredFormats).toContain('avif');
+      expect(SERVICE_REGISTRY.layoutEngine.image.maxFileSizeBytes).toBe(500000);
+    });
+  });
+
   describe('Backward-compatible builders', () => {
     it('buildFlatPricingTable includes all provider models', () => {
       const table = buildFlatPricingTable();
