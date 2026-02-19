@@ -236,7 +236,7 @@ function createVisualEmphasis(
     hero: {
       level: 'hero',
       headingSize: 'xl',
-      headingDecoration: true,
+      headingDecoration: { type: 'background' },
       paddingMultiplier: 2,
       marginMultiplier: 2,
       hasBackgroundTreatment: true,
@@ -248,7 +248,7 @@ function createVisualEmphasis(
     featured: {
       level: 'featured',
       headingSize: 'lg',
-      headingDecoration: true,
+      headingDecoration: { type: 'border-bottom' },
       paddingMultiplier: 1.5,
       marginMultiplier: 1.5,
       hasBackgroundTreatment: hasBackground,
@@ -260,7 +260,7 @@ function createVisualEmphasis(
     standard: {
       level: 'standard',
       headingSize: 'md',
-      headingDecoration: false,
+      headingDecoration: { type: 'none' },
       paddingMultiplier: 1,
       marginMultiplier: 1,
       hasBackgroundTreatment: hasBackground,
@@ -271,7 +271,7 @@ function createVisualEmphasis(
     supporting: {
       level: 'supporting',
       headingSize: 'sm',
-      headingDecoration: false,
+      headingDecoration: { type: 'none' },
       paddingMultiplier: 0.75,
       marginMultiplier: 0.75,
       hasBackgroundTreatment: false,
@@ -281,7 +281,7 @@ function createVisualEmphasis(
     minimal: {
       level: 'minimal',
       headingSize: 'sm',
-      headingDecoration: false,
+      headingDecoration: { type: 'none' },
       paddingMultiplier: 0.5,
       marginMultiplier: 0.5,
       hasBackgroundTreatment: false,
@@ -295,7 +295,7 @@ function createVisualEmphasis(
   return {
     level: config.level || 'standard',
     headingSize: config.headingSize || 'md',
-    headingDecoration: config.headingDecoration || false,
+    headingDecoration: config.headingDecoration || { type: 'none' },
     paddingMultiplier: config.paddingMultiplier || 1,
     marginMultiplier: config.marginMultiplier || 1,
     hasBackgroundTreatment: config.hasBackgroundTreatment || false,

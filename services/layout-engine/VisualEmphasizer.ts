@@ -121,7 +121,7 @@ function calculateHeroEmphasis(dna?: DesignDNA): VisualEmphasis {
   return {
     level: 'hero',
     headingSize: 'xl',
-    headingDecoration: true,
+    headingDecoration: { type: 'background' },
     paddingMultiplier: 2,
     marginMultiplier: 2,
     hasBackgroundTreatment: true,
@@ -148,7 +148,7 @@ function calculateFeaturedEmphasis(dna?: DesignDNA): VisualEmphasis {
   return {
     level: 'featured',
     headingSize: 'lg',
-    headingDecoration: true,
+    headingDecoration: { type: 'border-bottom' },
     paddingMultiplier: 1.5,
     marginMultiplier: 1.5,
     hasBackgroundTreatment: hasHighEnergy,
@@ -168,7 +168,7 @@ function calculateStandardEmphasis(): VisualEmphasis {
   return {
     level: 'standard',
     headingSize: 'md',
-    headingDecoration: false,
+    headingDecoration: { type: 'none' },
     paddingMultiplier: 1,
     marginMultiplier: 1,
     hasBackgroundTreatment: false,
@@ -188,7 +188,7 @@ function calculateSupportingEmphasis(): VisualEmphasis {
   return {
     level: 'supporting',
     headingSize: 'sm',
-    headingDecoration: false,
+    headingDecoration: { type: 'none' },
     paddingMultiplier: 0.75,
     marginMultiplier: 0.75,
     hasBackgroundTreatment: false,
@@ -208,7 +208,7 @@ function calculateMinimalEmphasis(): VisualEmphasis {
   return {
     level: 'minimal',
     headingSize: 'sm',
-    headingDecoration: false,
+    headingDecoration: { type: 'none' },
     paddingMultiplier: 0.5,
     marginMultiplier: 0.5,
     hasBackgroundTreatment: false,

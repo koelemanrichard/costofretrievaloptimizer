@@ -408,7 +408,7 @@ function buildSectionsFromAIDecisions(
       ? {
           level: aiDecision.emphasisLevel,
           headingSize: aiDecision.emphasisLevel === 'hero' ? 'xl' : aiDecision.emphasisLevel === 'featured' ? 'lg' : 'md',
-          headingDecoration: ['hero', 'featured'].includes(aiDecision.emphasisLevel),
+          headingDecoration: aiDecision.emphasisLevel === 'hero' ? { type: 'background' as const } : aiDecision.emphasisLevel === 'featured' ? { type: 'border-bottom' as const } : { type: 'none' as const },
           paddingMultiplier: aiDecision.emphasisLevel === 'hero' ? 2 : aiDecision.emphasisLevel === 'featured' ? 1.5 : 1,
           marginMultiplier: aiDecision.emphasisLevel === 'hero' ? 2 : aiDecision.emphasisLevel === 'featured' ? 1.5 : 1,
           hasBackgroundTreatment: ['hero', 'featured'].includes(aiDecision.emphasisLevel),

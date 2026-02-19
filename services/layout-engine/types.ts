@@ -164,7 +164,7 @@ export type ElevationLevel = 0 | 1 | 2 | 3;
 export interface VisualEmphasis {
   level: EmphasisLevel;
   headingSize: HeadingSize;
-  headingDecoration: boolean;
+  headingDecoration: { type: 'underline' | 'border-bottom' | 'background' | 'none'; color?: string };
   paddingMultiplier: number;
   marginMultiplier: number;
   hasBackgroundTreatment: boolean;

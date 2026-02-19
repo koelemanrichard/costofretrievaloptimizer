@@ -258,11 +258,11 @@ describe('VisualEmphasizer', () => {
       expect(result.headingSize).toBe('xl');
     });
 
-    it('should have heading decoration', () => {
+    it('should have heading decoration with type background', () => {
       const analysis = createMockSectionAnalysis({ semanticWeight: 5 });
       const result = VisualEmphasizer.calculateEmphasis(analysis);
 
-      expect(result.headingDecoration).toBe(true);
+      expect(result.headingDecoration).toEqual(expect.objectContaining({ type: 'background' }));
     });
 
     it('should have 2x padding multiplier', () => {
@@ -383,11 +383,11 @@ describe('VisualEmphasizer', () => {
       expect(result.headingSize).toBe('lg');
     });
 
-    it('should have heading decoration', () => {
+    it('should have heading decoration with type border-bottom', () => {
       const analysis = createMockSectionAnalysis({ semanticWeight: 4 });
       const result = VisualEmphasizer.calculateEmphasis(analysis);
 
-      expect(result.headingDecoration).toBe(true);
+      expect(result.headingDecoration).toEqual(expect.objectContaining({ type: 'border-bottom' }));
     });
 
     it('should have 1.5x padding multiplier', () => {
@@ -547,11 +547,11 @@ describe('VisualEmphasizer', () => {
       expect(result.headingSize).toBe('md');
     });
 
-    it('should not have heading decoration', () => {
+    it('should have no heading decoration', () => {
       const analysis = createMockSectionAnalysis({ semanticWeight: 3 });
       const result = VisualEmphasizer.calculateEmphasis(analysis);
 
-      expect(result.headingDecoration).toBe(false);
+      expect(result.headingDecoration).toEqual({ type: 'none' });
     });
 
     it('should have 1x padding multiplier', () => {
@@ -634,11 +634,11 @@ describe('VisualEmphasizer', () => {
       expect(result.marginMultiplier).toBe(0.75);
     });
 
-    it('should not have heading decoration', () => {
+    it('should have no heading decoration', () => {
       const analysis = createMockSectionAnalysis({ semanticWeight: 2 });
       const result = VisualEmphasizer.calculateEmphasis(analysis);
 
-      expect(result.headingDecoration).toBe(false);
+      expect(result.headingDecoration).toEqual({ type: 'none' });
     });
 
     it('should not have background treatment', () => {
@@ -696,11 +696,11 @@ describe('VisualEmphasizer', () => {
       expect(result.marginMultiplier).toBe(0.5);
     });
 
-    it('should not have heading decoration', () => {
+    it('should have no heading decoration', () => {
       const analysis = createMockSectionAnalysis({ semanticWeight: 1 });
       const result = VisualEmphasizer.calculateEmphasis(analysis);
 
-      expect(result.headingDecoration).toBe(false);
+      expect(result.headingDecoration).toEqual({ type: 'none' });
     });
 
     it('should not have background treatment', () => {
@@ -1059,6 +1059,52 @@ describe('VisualEmphasizer', () => {
 
       // Should clamp to minimal
       expect(result.level).toBe('minimal');
+    });
+  });
+
+  // =============================================================================
+  // STRUCTURED HEADING DECORATION TESTS
+  // =============================================================================
+
+  describe('structured headingDecoration type', () => {
+    it('hero emphasis should have headingDecoration with type background', () => {
+      const analysis = createMockSectionAnalysis({ semanticWeight: 5 });
+      const emphasis = VisualEmphasizer.calculateEmphasis(analysis);
+      expect(emphasis.headingDecoration).toEqual(expect.objectContaining({ type: 'background' }));
+    });
+
+    it('featured emphasis should have border-bottom decoration', () => {
+      const analysis = createMockSectionAnalysis({ semanticWeight: 4 });
+      const emphasis = VisualEmphasizer.calculateEmphasis(analysis);
+      expect(emphasis.headingDecoration).toEqual(expect.objectContaining({ type: 'border-bottom' }));
+    });
+
+    it('standard emphasis should have no decoration', () => {
+      const analysis = createMockSectionAnalysis({ semanticWeight: 3 });
+      const emphasis = VisualEmphasizer.calculateEmphasis(analysis);
+      expect(emphasis.headingDecoration).toEqual({ type: 'none' });
+    });
+
+    it('supporting emphasis should have no decoration', () => {
+      const analysis = createMockSectionAnalysis({ semanticWeight: 2 });
+      const emphasis = VisualEmphasizer.calculateEmphasis(analysis);
+      expect(emphasis.headingDecoration).toEqual({ type: 'none' });
+    });
+
+    it('minimal emphasis should have no decoration', () => {
+      const analysis = createMockSectionAnalysis({ semanticWeight: 1 });
+      const emphasis = VisualEmphasizer.calculateEmphasis(analysis);
+      expect(emphasis.headingDecoration).toEqual({ type: 'none' });
+    });
+
+    it('headingDecoration should always be an object with a type property', () => {
+      const weights = [1, 2, 3, 4, 5];
+      for (const weight of weights) {
+        const analysis = createMockSectionAnalysis({ semanticWeight: weight });
+        const emphasis = VisualEmphasizer.calculateEmphasis(analysis);
+        expect(emphasis.headingDecoration).toHaveProperty('type');
+        expect(['underline', 'border-bottom', 'background', 'none']).toContain(emphasis.headingDecoration.type);
+      }
     });
   });
 });

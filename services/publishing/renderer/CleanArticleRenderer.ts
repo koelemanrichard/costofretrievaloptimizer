@@ -244,7 +244,7 @@ export class CleanArticleRenderer {
             emphasis: {
               level: isFirst ? 'hero' as const : (i <= 2 ? 'featured' as const : 'standard' as const),
               headingSize: isFirst ? 'xl' as const : 'lg' as const,
-              headingDecoration: false,
+              headingDecoration: { type: 'none' as const },
               paddingMultiplier: 1,
               marginMultiplier: 1,
               hasBackgroundTreatment: false,

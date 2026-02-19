@@ -112,12 +112,12 @@ export class ComponentRenderer {
     const classes = [
       'section-heading',
       `heading-${emphasis.headingSize}`,
-      emphasis.headingDecoration ? 'heading-decorated' : '',
+      emphasis.headingDecoration.type !== 'none' ? `heading-decorated heading-deco-${emphasis.headingDecoration.type}` : '',
     ].filter(Boolean).join(' ');
 
     // Add decoration for hero/featured emphasis
     let decoration = '';
-    if (emphasis.level === 'hero' || (emphasis.level === 'featured' && emphasis.headingDecoration)) {
+    if (emphasis.level === 'hero' || (emphasis.level === 'featured' && emphasis.headingDecoration.type !== 'none')) {
       decoration = '<span class="heading-accent"></span>';
     }
 
