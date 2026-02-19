@@ -320,6 +320,24 @@ export interface BlueprintSection {
   contentZone: 'MAIN' | 'SUPPLEMENTARY';
   cssClasses: string[];
   customStyles?: Record<string, string>;
+
+  // NEW: Cost of Retrieval impact
+  estimatedDomNodes?: number;
+  layoutComplexity?: 'lightweight' | 'moderate' | 'heavy';
+
+  // NEW: Accessibility
+  accessibilityRating?: 'AAA' | 'AA' | 'A';
+
+  // NEW: Responsive behavior
+  responsiveBreakpoints?: {
+    mobile: { columns: ColumnLayout; width: LayoutWidth };
+    tablet: { columns: ColumnLayout; width: LayoutWidth };
+    desktop: { columns: ColumnLayout; width: LayoutWidth };
+  };
+
+  // NEW: Website type context
+  websiteTypeRole?: string;
+  liftPriority?: number;
 }
 
 /**
