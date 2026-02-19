@@ -25,6 +25,7 @@
  */
 
 import { DesignDNA } from '../../types/designDna';
+import { SERVICE_REGISTRY } from '../../config/serviceRegistry';
 import {
   IImageHandler,
   ImagePlaceholderSpec,
@@ -36,18 +37,11 @@ import {
 } from './types';
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS (from SERVICE_REGISTRY.layoutEngine)
 // =============================================================================
 
-/**
- * Weight threshold for featured sections
- */
-const FEATURED_WEIGHT_THRESHOLD = 4;
-
-/**
- * Weight threshold for hero sections
- */
-const HERO_WEIGHT_THRESHOLD = 5;
+const FEATURED_WEIGHT_THRESHOLD = SERVICE_REGISTRY.layoutEngine.image.featuredWeightThreshold;
+const HERO_WEIGHT_THRESHOLD = SERVICE_REGISTRY.layoutEngine.image.heroWeightThreshold;
 
 /**
  * Patterns indicating complex concepts that would benefit from diagrams
@@ -67,15 +61,8 @@ const COMPLEX_CONCEPT_PATTERNS = [
   /\binteraction\s+between\b/i,
 ];
 
-/**
- * Content types that typically benefit from flowchart placeholders
- */
-const FLOWCHART_CONTENT_TYPES = ['steps', 'process'];
-
-/**
- * Content types that typically don't need images
- */
-const NO_IMAGE_CONTENT_TYPES = ['faq', 'definition', 'testimonial'];
+const NO_IMAGE_CONTENT_TYPES = [...SERVICE_REGISTRY.layoutEngine.image.noImageContentTypes];
+const FLOWCHART_CONTENT_TYPES = [...SERVICE_REGISTRY.layoutEngine.image.flowchartContentTypes];
 
 // =============================================================================
 // HELPER FUNCTIONS

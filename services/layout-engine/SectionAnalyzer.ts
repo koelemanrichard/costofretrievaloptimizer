@@ -7,6 +7,7 @@
  */
 
 import { AttributeCategory, BriefSection, FormatCode } from '../../types';
+import { SERVICE_REGISTRY } from '../../config/serviceRegistry';
 import {
   ContentType,
   ISectionAnalyzer,
@@ -18,32 +19,18 @@ import {
 } from './types';
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS (from SERVICE_REGISTRY.layoutEngine)
 // =============================================================================
 
-const BASE_WEIGHT = 3;
-const MAX_WEIGHT = 5;
-const MIN_WEIGHT = 1;
-
-const CATEGORY_BONUSES: Record<AttributeCategory, number> = {
-  UNIQUE: 2,
-  RARE: 1,
-  ROOT: 0.5,
-  COMMON: 0,
-  CORE_DEFINITION: 0.5,
-  SEARCH_DEMAND: 0.5,
-  COMPETITIVE_EXPANSION: 0.25,
-  COMPOSITE: 0.25,
-  UNCLASSIFIED: 0,
-};
-
-const CORE_TOPIC_BONUS = 0.5;
-const FS_TARGET_BONUS = 0.5;
-const MAIN_INTENT_BONUS = 0.5;
-/** First section in MAIN zone gets featured status (bonus +1) */
-const FIRST_MAIN_SECTION_BONUS = 1;
-/** Introduction sections get a small boost */
-const INTRO_CONTENT_BONUS = 0.5;
+const BASE_WEIGHT: number = SERVICE_REGISTRY.layoutEngine.weights.base;
+const MAX_WEIGHT: number = SERVICE_REGISTRY.layoutEngine.weights.max;
+const MIN_WEIGHT: number = SERVICE_REGISTRY.layoutEngine.weights.min;
+const CATEGORY_BONUSES = SERVICE_REGISTRY.layoutEngine.weights.categoryBonuses as Record<string, number>;
+const CORE_TOPIC_BONUS: number = SERVICE_REGISTRY.layoutEngine.weights.bonuses.coreTopic;
+const FS_TARGET_BONUS: number = SERVICE_REGISTRY.layoutEngine.weights.bonuses.fsTarget;
+const MAIN_INTENT_BONUS: number = SERVICE_REGISTRY.layoutEngine.weights.bonuses.mainIntent;
+const FIRST_MAIN_SECTION_BONUS: number = SERVICE_REGISTRY.layoutEngine.weights.bonuses.firstMainSection;
+const INTRO_CONTENT_BONUS: number = SERVICE_REGISTRY.layoutEngine.weights.bonuses.intro;
 
 // =============================================================================
 // HEADING PATTERNS

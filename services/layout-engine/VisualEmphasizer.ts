@@ -13,6 +13,7 @@
  */
 
 import { DesignDNA } from '../../types/designDna';
+import { SERVICE_REGISTRY } from '../../config/serviceRegistry';
 import {
   AccentPosition,
   AnimationType,
@@ -26,18 +27,11 @@ import {
 } from './types';
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS (from SERVICE_REGISTRY.layoutEngine)
 // =============================================================================
 
-/**
- * Default energy threshold for enabling background treatment on featured sections
- */
-const ENERGY_THRESHOLD_FOR_BACKGROUND = 3;
-
-/**
- * Default animation type when animations are enabled
- */
-const DEFAULT_ANIMATION_TYPE: AnimationType = 'fade';
+const ENERGY_THRESHOLD_FOR_BACKGROUND = SERVICE_REGISTRY.layoutEngine.emphasis.energyThresholdForBackground;
+const DEFAULT_ANIMATION_TYPE = SERVICE_REGISTRY.layoutEngine.emphasis.defaultAnimationType as AnimationType;
 
 // =============================================================================
 // HELPER FUNCTIONS

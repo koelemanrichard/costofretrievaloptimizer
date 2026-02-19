@@ -30,23 +30,24 @@ import {
   getVariantForPersonality,
   PersonalityType,
 } from './componentMappings';
+import { SERVICE_REGISTRY } from '../../config/serviceRegistry';
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS (from SERVICE_REGISTRY.layoutEngine)
 // =============================================================================
 
 const DEFAULT_PERSONALITY: PersonalityType = 'corporate';
 
-const FS_CONFIDENCE = 0.95;
-const HIGH_VALUE_BASE_CONFIDENCE = 0.85;
-const CONTENT_PATTERN_ALERT_CONFIDENCE = 0.7;
-const CONTENT_PATTERN_INFO_CONFIDENCE = 0.6;
-const CONTENT_PATTERN_LEAD_CONFIDENCE = 0.8;
-const CONTENT_PATTERN_FEATURE_GRID_CONFIDENCE = 0.75;
-const CONTENT_PATTERN_SEQUENTIAL_CONFIDENCE = 0.7;
-const CONTENT_PATTERN_QA_CONFIDENCE = 0.7;
-const STANDARD_CONFIDENCE = 0.75;
-const FALLBACK_CONFIDENCE = 0.6;
+const FS_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.fsCompliant;
+const HIGH_VALUE_BASE_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.highValue;
+const CONTENT_PATTERN_ALERT_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.patternBoosts.alert;
+const CONTENT_PATTERN_INFO_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.patternBoosts.info;
+const CONTENT_PATTERN_LEAD_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.patternBoosts.lead;
+const CONTENT_PATTERN_FEATURE_GRID_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.patternBoosts.featureGrid;
+const CONTENT_PATTERN_SEQUENTIAL_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.patternBoosts.sequential;
+const CONTENT_PATTERN_QA_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.patternBoosts.qa;
+const STANDARD_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.standard;
+const FALLBACK_CONFIDENCE = SERVICE_REGISTRY.layoutEngine.confidence.fallback;
 
 // =============================================================================
 // HELPER FUNCTIONS
