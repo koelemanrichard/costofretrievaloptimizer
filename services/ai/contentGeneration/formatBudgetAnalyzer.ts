@@ -253,10 +253,11 @@ export async function analyzeContentFormatBudget(
   const proseToStructuredRatio = totalChars > 0 ? totalProseChars / totalChars : 0.7;
 
   // Define constraints based on optimal ratios
-  // Target: 60-80% prose, max 40% of sections with lists, max 15% with tables
+  // Target: 60-80% prose, max 40% of sections with lists, max 15% with tables, max 50% with images
   const constraints = {
     maxListSections: Math.floor(totalSections * 0.4),
     maxTableSections: Math.floor(totalSections * 0.15),
+    maxImageSections: Math.max(1, Math.floor(totalSections * 0.5)),
     targetProseRatio: 0.7, // 70% prose target
   };
 

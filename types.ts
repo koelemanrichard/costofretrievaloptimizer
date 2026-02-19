@@ -3879,6 +3879,8 @@ export interface ContentFormatBudget {
     maxListSections: number;
     /** Maximum sections that can have tables (e.g., 15% of total) */
     maxTableSections: number;
+    /** Maximum sections that can have images (e.g., 50% of total) */
+    maxImageSections: number;
     /** Target prose ratio (0.6-0.8 = 60-80% prose) */
     targetProseRatio: number;
   };
