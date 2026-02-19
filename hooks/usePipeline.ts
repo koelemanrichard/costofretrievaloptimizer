@@ -195,9 +195,12 @@ export function usePipeline() {
   // ──── Persist pipeline state to Supabase ────
 
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistFailedRef = useRef(false);
 
   useEffect(() => {
     if (!pipeline.isActive || !state.activeMapId) return;
+    // Stop trying if a previous persist already failed (column likely doesn't exist)
+    if (persistFailedRef.current) return;
 
     // Debounce: save 500ms after last state change
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
@@ -207,12 +210,16 @@ export function usePipeline() {
           state.businessInfo.supabaseUrl,
           state.businessInfo.supabaseAnonKey
         );
-        await supabase
+        const { error } = await supabase
           .from('topical_maps')
           .update({ pipeline_state: pipeline } as any)
           .eq('id', state.activeMapId);
+        if (error) {
+          console.warn('[Pipeline] Persist failed (run migration to add pipeline_state column):', error.message);
+          persistFailedRef.current = true;
+        }
       } catch {
-        // Silent fail — pipeline state is also in memory
+        persistFailedRef.current = true;
       }
     }, 500);
 
