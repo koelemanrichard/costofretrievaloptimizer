@@ -29,6 +29,7 @@ export interface UseSmartWizardReturn {
 
   // Actions
   research: () => Promise<BusinessResearchResult | null>;
+  researchUrl: (url: string) => Promise<BusinessResearchResult | null>;
   applySuggestions: (
     currentValues: Partial<BusinessInfo>,
     setValues: (values: Partial<BusinessInfo>) => void
@@ -79,6 +80,30 @@ export const useSmartWizard = (): UseSmartWizardReturn => {
       setIsResearching(false);
     }
   }, [input, state.businessInfo, dispatch]);
+
+  const researchUrl = useCallback(async (url: string): Promise<BusinessResearchResult | null> => {
+    setInput(url);
+    setIsResearching(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const researchResult = await researchBusiness(url, state.businessInfo, dispatch);
+      setResult(researchResult);
+
+      if (researchResult.warnings.length > 0 && researchResult.confidence === 'low') {
+        setError(researchResult.warnings.join(' '));
+      }
+
+      return researchResult;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Research failed. Please try again.';
+      setError(message);
+      return null;
+    } finally {
+      setIsResearching(false);
+    }
+  }, [state.businessInfo, dispatch]);
 
   const applySuggestions = useCallback(
     (
@@ -170,6 +195,7 @@ export const useSmartWizard = (): UseSmartWizardReturn => {
     error,
     appliedFields,
     research,
+    researchUrl,
     applySuggestions,
     clearResult,
     isFieldSuggested,

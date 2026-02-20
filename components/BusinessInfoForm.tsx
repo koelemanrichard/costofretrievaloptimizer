@@ -214,6 +214,7 @@ interface SmartWizardPanelProps {
     setLocalBusinessInfo: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>>;
     isFieldSuggested: (fieldName: string) => boolean;
     markFieldEdited: (fieldName: string) => void;
+    autoResearchUrl?: string;
 }
 
 const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
@@ -221,9 +222,11 @@ const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
     setLocalBusinessInfo,
     isFieldSuggested,
     markFieldEdited,
+    autoResearchUrl,
 }) => {
     const smartWizard = useSmartWizard();
     const [showApplyButton, setShowApplyButton] = useState(false);
+    const autoResearchTriggeredRef = useRef(false);
 
     const handleResearch = async () => {
         const result = await smartWizard.research();
@@ -236,6 +239,19 @@ const SmartWizardPanel: React.FC<SmartWizardPanelProps> = ({
         smartWizard.applySuggestions(localBusinessInfo, setLocalBusinessInfo);
         setShowApplyButton(false);
     };
+
+    // Auto-trigger research when autoResearchUrl is provided
+    useEffect(() => {
+        if (autoResearchUrl && !autoResearchTriggeredRef.current && !smartWizard.isResearching && !smartWizard.result) {
+            autoResearchTriggeredRef.current = true;
+            smartWizard.researchUrl(autoResearchUrl).then((result) => {
+                if (result && result.suggestions && Object.keys(result.suggestions).length > 0) {
+                    // Auto-apply suggestions for pipeline flow
+                    smartWizard.applySuggestions(localBusinessInfo, setLocalBusinessInfo);
+                }
+            });
+        }
+    }, [autoResearchUrl]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
@@ -405,9 +421,26 @@ interface BusinessInfoFormProps {
   onSave: (formData: Partial<BusinessInfo>) => void;
   onBack: () => void;
   isLoading: boolean;
+  // Pipeline reuse props:
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+  showBackButton?: boolean;
+  autoResearchUrl?: string;
+  embedded?: boolean;
 }
 
-const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isLoading }) => {
+const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({
+  onSave,
+  onBack,
+  isLoading,
+  title = 'Define Business Context',
+  description: descriptionText = 'Provide core details about the business. This context is crucial for the AI to generate a relevant topical map.',
+  submitLabel = 'Save & Start Pillar Definition',
+  showBackButton = true,
+  autoResearchUrl,
+  embedded = false,
+}) => {
     const { state, dispatch } = useAppState();
     const activeMap = state.topicalMaps.find(m => m.id === state.activeMapId);
 
@@ -503,14 +536,15 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
         onSave(localBusinessInfo);
     };
 
-    return (
-        <Card className="max-w-3xl w-full">
-            <form onSubmit={handleSubmit}>
-                <div className="p-8">
-                    <header className="mb-8">
-                        <h1 className="text-3xl font-bold text-white">Define Business Context</h1>
-                        <p className="text-gray-400 mt-2">Provide core details about the business. This context is crucial for the AI to generate a relevant topical map.</p>
-                    </header>
+    const formBody = (
+        <>
+                <div className={embedded ? '' : 'p-8'}>
+                    {!embedded && (
+                        <header className="mb-8">
+                            <h1 className="text-3xl font-bold text-white">{title}</h1>
+                            <p className="text-gray-400 mt-2">{descriptionText}</p>
+                        </header>
+                    )}
 
                     {/* Smart Wizard Panel */}
                     <SmartWizardPanel
@@ -518,6 +552,7 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                         setLocalBusinessInfo={setLocalBusinessInfo}
                         isFieldSuggested={isFieldSuggested}
                         markFieldEdited={markFieldEdited}
+                        autoResearchUrl={autoResearchUrl}
                     />
 
                     <div className="space-y-6">
@@ -695,12 +730,69 @@ const BusinessInfoForm: React.FC<BusinessInfoFormProps> = ({ onSave, onBack, isL
                         </FormAccordion>
                     </div>
                 </div>
-                <footer className="sticky bottom-0 p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center z-10">
-                    <Button type="button" onClick={onBack} variant="secondary">Back</Button>
+                <footer className={`${embedded ? 'pt-6' : 'sticky bottom-0 p-4 bg-gray-800 border-t border-gray-700'} flex justify-between items-center z-10`}>
+                    {showBackButton ? (
+                        <Button type="button" onClick={onBack} variant="secondary">Back</Button>
+                    ) : (
+                        <div />
+                    )}
                     <Button type="submit" disabled={isLoading}>
-                        {isLoading ? <Loader className="w-5 h-5" /> : 'Save & Start Pillar Definition'}
+                        {isLoading ? <Loader className="w-5 h-5" /> : submitLabel}
                     </Button>
                 </footer>
+        </>
+    );
+
+    if (embedded) {
+        return (
+            <form onSubmit={handleSubmit}>
+                {formBody}
+
+                {/* Portal-rendered tooltip for website types - escapes overflow containers */}
+                {activeTooltip && createPortal(
+                    <div
+                        className="fixed z-[9999] pointer-events-none"
+                        style={{
+                            left: activeTooltip.rect.left + activeTooltip.rect.width / 2,
+                            top: activeTooltip.rect.top - 8,
+                            transform: 'translate(-50%, -100%)',
+                        }}
+                    >
+                        <div className="bg-slate-950 border-2 border-cyan-500/50 rounded-lg p-3 shadow-2xl shadow-black/50 text-xs ring-1 ring-cyan-500/20 max-w-xs">
+                            <div className="mb-2">
+                                <span className="text-cyan-300 font-semibold">Key Attributes:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {WEBSITE_TYPE_CONFIG[activeTooltip.type].keyAttributes.slice(0, 6).map(attr => (
+                                        <span key={attr} className="bg-cyan-900/50 text-cyan-100 px-1.5 py-0.5 rounded text-[10px] border border-cyan-700/50">
+                                            {attr.replace(/_/g, ' ')}
+                                        </span>
+                                    ))}
+                                    {WEBSITE_TYPE_CONFIG[activeTooltip.type].keyAttributes.length > 6 && (
+                                        <span className="text-gray-400 text-[10px]">+{WEBSITE_TYPE_CONFIG[activeTooltip.type].keyAttributes.length - 6} more</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="mb-2">
+                                <span className="text-emerald-400 font-semibold">Core Focus:</span>
+                                <p className="text-gray-100 mt-0.5">{WEBSITE_TYPE_CONFIG[activeTooltip.type].coreSectionFocus}</p>
+                            </div>
+                            <div>
+                                <span className="text-violet-400 font-semibold">Authority Focus:</span>
+                                <p className="text-gray-100 mt-0.5">{WEBSITE_TYPE_CONFIG[activeTooltip.type].authorSectionFocus}</p>
+                            </div>
+                            <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 bg-slate-950 border-r-2 border-b-2 border-cyan-500/50 transform rotate-45"></div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+            </form>
+        );
+    }
+
+    return (
+        <Card className="max-w-3xl w-full">
+            <form onSubmit={handleSubmit}>
+                {formBody}
             </form>
 
             {/* Portal-rendered tooltip for website types - escapes overflow containers */}
