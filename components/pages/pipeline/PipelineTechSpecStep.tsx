@@ -125,7 +125,9 @@ const PipelineTechSpecStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -335,14 +337,15 @@ const PipelineTechSpecStep: React.FC = () => {
       </div>
 
       {/* Approval Gate */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="tech_spec"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('tech_spec')}
+          onApprove={() => approveGate('tech_spec')}
           onReject={(reason) => rejectGate('tech_spec', reason)}
+          onRevise={() => reviseStep('tech_spec')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             {

@@ -226,6 +226,7 @@ export type PipelineAction =
   | { type: 'PIPELINE_ADVANCE_STEP'; payload: { fromStep: PipelineStep } }
   | { type: 'PIPELINE_APPROVE_GATE'; payload: { step: PipelineStep; approvedBy?: string } }
   | { type: 'PIPELINE_REJECT_GATE'; payload: { step: PipelineStep; reason: string } }
+  | { type: 'PIPELINE_CLEAR_APPROVAL'; payload: { step: PipelineStep } }
   | { type: 'PIPELINE_SET_CURRENT_STEP'; payload: PipelineStep }
   | { type: 'PIPELINE_TOGGLE_AUTO_APPROVE'; payload?: boolean }
   | { type: 'PIPELINE_SET_WAVE_CONFIG'; payload: WaveConfiguration }
@@ -243,6 +244,7 @@ const PIPELINE_ACTION_TYPES = new Set([
   'PIPELINE_ADVANCE_STEP',
   'PIPELINE_APPROVE_GATE',
   'PIPELINE_REJECT_GATE',
+  'PIPELINE_CLEAR_APPROVAL',
   'PIPELINE_SET_CURRENT_STEP',
   'PIPELINE_TOGGLE_AUTO_APPROVE',
   'PIPELINE_SET_WAVE_CONFIG',
@@ -305,6 +307,30 @@ export function pipelineReducer(
 
     case 'PIPELINE_SET_STEP_STATUS': {
       const { step, status } = action.payload;
+
+      // When auto-approve is ON and a step is set to pending_approval, auto-complete it
+      if (status === 'pending_approval' && state.autoApprove) {
+        const nextStep = getNextStep(step);
+        let newSteps = updateStep(state.steps, step, {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          approval: { status: 'approved', approvedAt: new Date().toISOString(), approvedBy: 'auto' },
+        });
+        if (nextStep) {
+          const nextStepState = newSteps.find(s => s.step === nextStep);
+          if (nextStepState?.autoSkipped) {
+            const stepAfter = getNextStep(nextStep);
+            if (stepAfter) {
+              newSteps = updateStep(newSteps, stepAfter, { status: 'available' });
+              return { ...state, steps: newSteps, currentStep: stepAfter };
+            }
+          }
+          newSteps = updateStep(newSteps, nextStep, { status: 'available' });
+          return { ...state, steps: newSteps, currentStep: nextStep };
+        }
+        return { ...state, steps: newSteps };
+      }
+
       const updates: Partial<PipelineStepState> = { status };
       if (status === 'in_progress' && !state.steps.find(s => s.step === step)?.startedAt) {
         updates.startedAt = new Date().toISOString();
@@ -392,14 +418,53 @@ export function pipelineReducer(
       };
     }
 
+    case 'PIPELINE_CLEAR_APPROVAL': {
+      const { step } = action.payload;
+      return {
+        ...state,
+        steps: updateStep(state.steps, step, {
+          status: 'in_progress',
+          approval: undefined,
+        }),
+      };
+    }
+
     case 'PIPELINE_SET_CURRENT_STEP':
       return { ...state, currentStep: action.payload };
 
-    case 'PIPELINE_TOGGLE_AUTO_APPROVE':
-      return {
-        ...state,
-        autoApprove: action.payload !== undefined ? action.payload : !state.autoApprove,
-      };
+    case 'PIPELINE_TOGGLE_AUTO_APPROVE': {
+      const newAutoApprove = action.payload !== undefined ? action.payload : !state.autoApprove;
+      let newState: PipelineState = { ...state, autoApprove: newAutoApprove };
+
+      // When toggled ON, auto-advance any step currently in pending_approval
+      if (newAutoApprove) {
+        const pendingStep = state.steps.find(s => s.status === 'pending_approval');
+        if (pendingStep) {
+          const nextStep = getNextStep(pendingStep.step);
+          let newSteps = updateStep(state.steps, pendingStep.step, {
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            approval: { status: 'approved', approvedAt: new Date().toISOString(), approvedBy: 'auto' },
+          });
+          if (nextStep) {
+            const nextStepState = newSteps.find(s => s.step === nextStep);
+            if (nextStepState?.autoSkipped) {
+              const stepAfter = getNextStep(nextStep);
+              if (stepAfter) {
+                newSteps = updateStep(newSteps, stepAfter, { status: 'available' });
+                newState = { ...newState, steps: newSteps, currentStep: stepAfter };
+                return newState;
+              }
+            }
+            newSteps = updateStep(newSteps, nextStep, { status: 'available' });
+            newState = { ...newState, steps: newSteps, currentStep: nextStep };
+          } else {
+            newState = { ...newState, steps: newSteps };
+          }
+        }
+      }
+      return newState;
+    }
 
     case 'PIPELINE_SET_WAVE_CONFIG':
       return { ...state, waveConfig: action.payload };
@@ -470,6 +535,10 @@ export const pipelineActions = {
   rejectGate: (step: PipelineStep, reason: string): PipelineAction => ({
     type: 'PIPELINE_REJECT_GATE',
     payload: { step, reason },
+  }),
+  clearApproval: (step: PipelineStep): PipelineAction => ({
+    type: 'PIPELINE_CLEAR_APPROVAL',
+    payload: { step },
   }),
   setCurrentStep: (step: PipelineStep): PipelineAction => ({
     type: 'PIPELINE_SET_CURRENT_STEP',

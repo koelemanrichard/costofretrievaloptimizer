@@ -214,7 +214,9 @@ const PipelineContentStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -459,14 +461,15 @@ const PipelineContentStep: React.FC = () => {
       <QualityScoresTable pages={qualityPages} />
 
       {/* Approval Gate */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="content"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('content')}
+          onApprove={() => approveGate('content')}
           onReject={(reason) => rejectGate('content', reason)}
+          onRevise={() => reviseStep('content')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Pages Complete', value: `${totalDone}/${totalWithBriefs}`, color: totalDone > 0 ? 'green' : 'gray' },

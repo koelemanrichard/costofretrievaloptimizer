@@ -173,7 +173,9 @@ const PipelineEavsStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -373,14 +375,15 @@ const PipelineEavsStep: React.FC = () => {
       <DataRequestsPanel questions={[]} />
 
       {/* Approval Gate */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="eavs"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('eavs')}
+          onApprove={() => approveGate('eavs')}
           onReject={(reason) => rejectGate('eavs', reason)}
+          onRevise={() => reviseStep('eavs')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Total Triples', value: totalTriples, color: totalTriples > 0 ? 'green' : 'gray' },

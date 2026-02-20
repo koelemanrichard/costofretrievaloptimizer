@@ -290,7 +290,9 @@ const PipelineGapStep: React.FC = () => {
     isGreenfield,
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setCurrentStep,
@@ -391,14 +393,15 @@ const PipelineGapStep: React.FC = () => {
           />
 
           {/* Approval Gate */}
-          {gate && (
+          {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
             <ApprovalGate
               step="gap_analysis"
               gate={gate}
               approval={stepState?.approval}
               autoApprove={autoApprove}
-              onApprove={() => advanceStep('gap_analysis')}
+              onApprove={() => approveGate('gap_analysis')}
               onReject={(reason) => rejectGate('gap_analysis', reason)}
+              onRevise={() => reviseStep('gap_analysis')}
               onToggleAutoApprove={toggleAutoApprove}
               summaryMetrics={summaryMetrics}
             />

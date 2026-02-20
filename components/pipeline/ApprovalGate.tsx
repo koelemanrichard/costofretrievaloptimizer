@@ -16,6 +16,7 @@ interface ApprovalGateProps {
   }>;
   onApprove: () => void;
   onReject: (reason: string) => void;
+  onRevise: () => void;
   onToggleAutoApprove: (value: boolean) => void;
   children?: React.ReactNode;
 }
@@ -86,7 +87,7 @@ function PendingGate({
   onReject,
   onToggleAutoApprove,
   children,
-}: Omit<ApprovalGateProps, 'step' | 'approval'>) {
+}: Omit<ApprovalGateProps, 'step' | 'approval' | 'onRevise'>) {
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -266,6 +267,7 @@ const ApprovalGate: React.FC<ApprovalGateProps> = ({
   summaryMetrics,
   onApprove,
   onReject,
+  onRevise,
   onToggleAutoApprove,
   children,
 }) => {
@@ -277,7 +279,7 @@ const ApprovalGate: React.FC<ApprovalGateProps> = ({
   }
 
   if (status === 'rejected' && approval) {
-    return <RejectedGate approval={approval} onRevise={() => { /* Reset to pending by re-approving flow */ }} />;
+    return <RejectedGate approval={approval} onRevise={onRevise} />;
   }
 
   // Default: pending

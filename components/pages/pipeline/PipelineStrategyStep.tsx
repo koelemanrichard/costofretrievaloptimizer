@@ -89,7 +89,9 @@ const PipelineStrategyStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -338,14 +340,15 @@ const PipelineStrategyStep: React.FC = () => {
       </div>
 
       {/* Approval Gate — G1, most critical */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="strategy"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('strategy')}
+          onApprove={() => approveGate('strategy')}
           onReject={(reason) => rejectGate('strategy', reason)}
+          onRevise={() => reviseStep('strategy')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Central Entity', value: ceName || '(not set)', color: ceName ? 'green' : 'amber' },

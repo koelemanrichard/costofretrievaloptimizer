@@ -3,6 +3,7 @@ import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
 import * as migrationService from '../../../services/migrationService';
+import { getSupabaseClient } from '../../../services/supabaseClient';
 
 // ──── Metric Card ────
 
@@ -64,13 +65,20 @@ function PhaseIndicator({ currentPhase }: { currentPhase: number }) {
 
 // ──── Greenfield Mode ────
 
-function GreenfieldForm({ onSubmit }: { onSubmit: () => void }) {
-  // TODO: Integrate BusinessInfoPage form fields
+function GreenfieldForm({ onSubmit }: { onSubmit: (data: {
+  seedKeyword: string;
+  businessType: string;
+  language: string;
+  description: string;
+  domainUrl: string;
+}) => void }) {
   const [seedKeyword, setSeedKeyword] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [language, setLanguage] = useState('en');
   const [description, setDescription] = useState('');
   const [domainUrl, setDomainUrl] = useState('');
+
+  const canSubmit = seedKeyword.trim() && businessType && description.trim();
 
   return (
     <div className="space-y-6">
@@ -163,8 +171,8 @@ function GreenfieldForm({ onSubmit }: { onSubmit: () => void }) {
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={onSubmit}
-          disabled={!seedKeyword.trim() || !businessType || !description.trim()}
+          onClick={() => canSubmit && onSubmit({ seedKeyword, businessType, language, description, domainUrl })}
+          disabled={!canSubmit}
           className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-md font-medium transition-colors"
         >
           Save & Continue
@@ -364,16 +372,80 @@ const PipelineCrawlStep: React.FC = () => {
     autoApprove,
     setStepStatus,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
+    activeMap,
   } = usePipeline();
 
+  const { state, dispatch } = useAppState();
   const stepState = getStepState('crawl');
   const gate = stepState?.gate;
   const [crawlResults, setCrawlResults] = useState<CrawlResults | null>(null);
 
-  const handleGreenfieldSubmit = () => {
+  const handleGreenfieldSubmit = async (data: {
+    seedKeyword: string;
+    businessType: string;
+    language: string;
+    description: string;
+    domainUrl: string;
+  }) => {
+    // Save business info to global state
+    const updatedBusinessInfo = {
+      ...state.businessInfo,
+      seedKeyword: data.seedKeyword,
+      industry: data.businessType,
+      language: data.language,
+      valueProp: data.description,
+      domain: data.domainUrl,
+    };
+    dispatch({ type: 'SET_BUSINESS_INFO', payload: updatedBusinessInfo });
+
+    // Also save to the active map's business_info
+    if (state.activeMapId) {
+      dispatch({
+        type: 'UPDATE_MAP_DATA',
+        payload: {
+          mapId: state.activeMapId,
+          data: {
+            business_info: {
+              ...activeMap?.business_info,
+              seedKeyword: data.seedKeyword,
+              industry: data.businessType,
+              language: data.language,
+              valueProp: data.description,
+              domain: data.domainUrl,
+            },
+          },
+        },
+      });
+
+      // Persist to Supabase
+      try {
+        const supabase = getSupabaseClient(
+          state.businessInfo.supabaseUrl,
+          state.businessInfo.supabaseAnonKey
+        );
+        await supabase
+          .from('topical_maps')
+          .update({
+            business_info: {
+              ...activeMap?.business_info,
+              seedKeyword: data.seedKeyword,
+              industry: data.businessType,
+              language: data.language,
+              valueProp: data.description,
+              domain: data.domainUrl,
+            },
+          } as any)
+          .eq('id', state.activeMapId);
+      } catch {
+        // Non-fatal — state is saved in memory
+      }
+    }
+
     setStepStatus('crawl', 'completed');
     advanceStep('crawl');
   };
@@ -408,14 +480,15 @@ const PipelineCrawlStep: React.FC = () => {
       )}
 
       {/* Approval Gate (existing site mode only) */}
-      {!isGreenfield && gate && (
+      {!isGreenfield && gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="crawl"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('crawl')}
+          onApprove={() => approveGate('crawl')}
           onReject={(reason) => rejectGate('crawl', reason)}
+          onRevise={() => reviseStep('crawl')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Pages Found', value: crawlResults?.pagesFound ?? 0, color: crawlResults ? 'green' : 'gray' },

@@ -108,6 +108,10 @@ export function usePipeline() {
     dispatch(pipelineActions.rejectGate(step, reason));
   }, [dispatch]);
 
+  const reviseStep = useCallback((step: PipelineStep) => {
+    dispatch(pipelineActions.clearApproval(step));
+  }, [dispatch]);
+
   const setCurrentStep = useCallback((step: PipelineStep) => {
     dispatch(pipelineActions.setCurrentStep(step));
   }, [dispatch]);
@@ -192,6 +196,22 @@ export function usePipeline() {
     return detected;
   }, []);
 
+  // ──── Auto-navigate when auto-approve advances the current step ────
+
+  const prevCurrentStepRef = useRef(pipeline.currentStep);
+  useEffect(() => {
+    if (pipeline.currentStep !== prevCurrentStepRef.current) {
+      const prevStep = prevCurrentStepRef.current;
+      prevCurrentStepRef.current = pipeline.currentStep;
+      // If the previous step was auto-approved (completed by toggle or auto-approve on set_status),
+      // navigate to the new current step
+      const prevStepState = pipeline.steps.find(s => s.step === prevStep);
+      if (prevStepState?.approval?.approvedBy === 'auto') {
+        setTimeout(() => navigateToStep(pipeline.currentStep), 50);
+      }
+    }
+  }, [pipeline.currentStep, pipeline.steps, navigateToStep]);
+
   // ──── Persist pipeline state to Supabase ────
 
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -254,6 +274,7 @@ export function usePipeline() {
     advanceStep,
     approveGate,
     rejectGate,
+    reviseStep,
     setCurrentStep,
     toggleAutoApprove,
     setWaveConfig,

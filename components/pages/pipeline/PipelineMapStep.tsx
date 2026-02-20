@@ -247,7 +247,9 @@ const PipelineMapStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -430,14 +432,15 @@ const PipelineMapStep: React.FC = () => {
       </div>
 
       {/* Approval Gate */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="map_planning"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('map_planning')}
+          onApprove={() => approveGate('map_planning')}
           onReject={(reason) => rejectGate('map_planning', reason)}
+          onRevise={() => reviseStep('map_planning')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Clusters', value: clusterCount, color: clusterCount > 0 ? 'green' : 'gray' },

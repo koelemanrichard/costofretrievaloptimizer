@@ -289,7 +289,9 @@ const PipelineBriefsStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -508,14 +510,15 @@ const PipelineBriefsStep: React.FC = () => {
       </div>
 
       {/* Approval Gate */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="briefs"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('briefs')}
+          onApprove={() => approveGate('briefs')}
           onReject={(reason) => rejectGate('briefs', reason)}
+          onRevise={() => reviseStep('briefs')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Hub Briefs', value: `${generatedHubBriefs}/${hubTopics.length}`, color: generatedHubBriefs > 0 ? 'green' : 'gray' },

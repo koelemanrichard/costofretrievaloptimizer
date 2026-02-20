@@ -274,7 +274,9 @@ const PipelineAuditStep: React.FC = () => {
   const {
     autoApprove,
     advanceStep,
+    approveGate,
     rejectGate,
+    reviseStep,
     toggleAutoApprove,
     getStepState,
     setStepStatus,
@@ -499,14 +501,15 @@ const PipelineAuditStep: React.FC = () => {
       </div>
 
       {/* Approval Gate */}
-      {gate && (
+      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="audit"
           gate={gate}
           approval={stepState?.approval}
           autoApprove={autoApprove}
-          onApprove={() => advanceStep('audit')}
+          onApprove={() => approveGate('audit')}
           onReject={(reason) => rejectGate('audit', reason)}
+          onRevise={() => reviseStep('audit')}
           onToggleAutoApprove={toggleAutoApprove}
           summaryMetrics={[
             { label: 'Semantic Compliance', value: complianceRate !== null ? `${complianceRate}%` : '--%', color: complianceRate !== null && complianceRate >= 80 ? 'green' : complianceRate !== null ? 'amber' : 'gray' },
