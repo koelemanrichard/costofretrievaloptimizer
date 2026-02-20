@@ -317,8 +317,11 @@ const PipelineGapStep: React.FC = () => {
     const businessInfo = state.businessInfo;
     const pillars = activeMap?.pillars;
 
-    if (!pillars?.centralEntity) {
-      setError('Central Entity is required. Complete the Strategy step first, or set business info.');
+    // Central Entity from pillars, or fall back to seedKeyword from business info (set during crawl step)
+    const centralEntity = pillars?.centralEntity || businessInfo.seedKeyword;
+
+    if (!centralEntity) {
+      setError('Central Entity or Seed Keyword is required. Complete the Crawl step with business context first.');
       return;
     }
 
@@ -328,7 +331,7 @@ const PipelineGapStep: React.FC = () => {
     setStepStatus('gap_analysis', 'in_progress');
 
     const config: QueryNetworkAuditConfig = {
-      seedKeyword: pillars.centralEntity,
+      seedKeyword: centralEntity,
       targetDomain: businessInfo.domain,
       maxQueries: 10,
       maxCompetitors: 5,
