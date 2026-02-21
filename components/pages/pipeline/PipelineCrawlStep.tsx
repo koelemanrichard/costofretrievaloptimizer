@@ -718,15 +718,25 @@ const PipelineCrawlStep: React.FC = () => {
           {/* ──── Full edit form (when user clicks Edit) ──── */}
           {discoveryPhase === 'editing' && (
             <BusinessInfoForm
-              onSave={handleSaveBusinessContext}
-              onBack={() => setDiscoveryPhase('done')}
+              onSave={(formData) => {
+                handleSaveBusinessContext(formData);
+                setContextSaved(true);
+                setDiscoveryPhase('done');
+              }}
+              onBack={() => {
+                // Go back to review card if already saved, or discovery results if not
+                if (contextSaved) {
+                  setDiscoveryPhase('done');
+                } else {
+                  setDiscoveryPhase('done');
+                }
+              }}
               isLoading={false}
-              title="Edit Business Context"
-              description="Review and adjust the discovered details."
-              submitLabel="Save & Continue"
+              title="Edit Business Profile"
+              description="Review and correct the details below. Fields were pre-filled from your website."
+              submitLabel="Save Changes"
               showBackButton={true}
               embedded={true}
-              autoResearchUrl={url.trim()}
             />
           )}
 
