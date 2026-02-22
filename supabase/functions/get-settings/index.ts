@@ -53,7 +53,8 @@ const keysToDecrypt = [
     'jinaApiKey', 'firecrawlApiKey',
     'apitemplateApiKey', 'geminiApiKey', 'openAiApiKey', 'anthropicApiKey',
     'perplexityApiKey', 'openRouterApiKey', 'neo4jUri',
-    'neo4jUser', 'neo4jPassword', 'cloudinaryApiKey', 'markupGoApiKey'
+    'neo4jUser', 'neo4jPassword', 'cloudinaryApiKey', 'markupGoApiKey',
+    'googleApiKey', 'googleKnowledgeGraphApiKey', 'googleCloudNlpApiKey', 'serpApiKey'
 ];
 
 Deno.serve(async (req: Request) => {

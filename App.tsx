@@ -425,7 +425,10 @@ const App: React.FC = () => {
                         'neo4jUri', 'neo4jUser', 'neo4jPassword',
                         'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
                         'auditScrapingProvider', 'auditScrapingFallback',
-                        'language', 'targetMarket', 'expertise'
+                        'language', 'targetMarket', 'expertise',
+                        'googleApiKey', 'googleKnowledgeGraphApiKey',
+                        'googleCloudNlpApiKey', 'serpApiKey',
+                        'enableUrlInspection', 'enableGa4Integration'
                     ];
                     const filteredSettings: Record<string, any> = {};
                     for (const key of GLOBAL_SETTINGS_FIELDS) {
@@ -473,7 +476,10 @@ const App: React.FC = () => {
         'cloudinaryCloudName', 'cloudinaryApiKey', 'cloudinaryUploadPreset', 'markupGoApiKey',
         'auditScrapingProvider', 'auditScrapingFallback',
         'supabaseUrl', 'supabaseAnonKey',
-        'language', 'targetMarket', 'expertise'
+        'language', 'targetMarket', 'expertise',
+        'googleApiKey', 'googleKnowledgeGraphApiKey',
+        'googleCloudNlpApiKey', 'serpApiKey',
+        'enableUrlInspection', 'enableGa4Integration'
     ];
 
     const handleSaveSettings = async (settings: Partial<BusinessInfo>) => {
