@@ -60,8 +60,11 @@ async function resolveAccessToken(
   const anonKey = Deno.env.get('ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
   const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+  console.log('[gsc] resolveAccessToken: accountId=', accountId, 'hasProjectUrl=', !!projectUrl, 'hasAnonKey=', !!anonKey, 'hasServiceRoleKey=', !!serviceRoleKey);
+
   if (!projectUrl || !anonKey || !serviceRoleKey) {
-    return { error: json({ error: 'Server configuration error' }, 500, origin) };
+    console.error('[gsc] Missing env vars: projectUrl=', !!projectUrl, 'anonKey=', !!anonKey, 'serviceRoleKey=', !!serviceRoleKey);
+    return { error: json({ error: 'Server configuration error', detail: `missing: ${!projectUrl ? 'PROJECT_URL ' : ''}${!anonKey ? 'ANON_KEY ' : ''}${!serviceRoleKey ? 'SERVICE_ROLE_KEY' : ''}` }, 500, origin) };
   }
 
   // Authenticate calling user
@@ -70,8 +73,10 @@ async function resolveAccessToken(
   });
   const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
   if (authError || !user) {
-    return { error: json({ error: 'Authentication failed' }, 401, origin) };
+    console.error('[gsc] Auth failed:', authError?.message);
+    return { error: json({ error: 'Authentication failed', detail: authError?.message }, 401, origin) };
   }
+  console.log('[gsc] Authenticated user:', user.id);
 
   // Fetch account with service role (to read encrypted tokens)
   const serviceClient = createClient(projectUrl, serviceRoleKey);
@@ -83,31 +88,39 @@ async function resolveAccessToken(
     .single();
 
   if (fetchError || !account) {
-    return { error: json({ error: 'Account not found or access denied' }, 404, origin) };
+    console.error('[gsc] Account fetch failed:', fetchError?.message, 'accountId=', accountId, 'userId=', user.id);
+    return { error: json({ error: 'Account not found or access denied', detail: fetchError?.message }, 404, origin) };
   }
+  console.log('[gsc] Account found:', account.id, 'email=', account.account_email, 'expires=', account.token_expires_at);
 
   // Decrypt access token
   let accessToken: string | null;
   try {
     accessToken = await decrypt(account.access_token_encrypted);
-  } catch {
-    return { error: json({ error: 'Token decryption failed' }, 500, origin) };
+  } catch (e: any) {
+    console.error('[gsc] Token decryption threw:', e?.message);
+    return { error: json({ error: 'Token decryption failed', detail: e?.message }, 500, origin) };
   }
 
   if (!accessToken) {
+    console.error('[gsc] Decrypted token is null/empty');
     return { error: json({ error: 'No access token available' }, 500, origin) };
   }
+  console.log('[gsc] Token decrypted successfully, length=', accessToken.length);
 
   // Refresh if expired
   const tokenExpiry = account.token_expires_at ? new Date(account.token_expires_at) : null;
   const isExpired = tokenExpiry && tokenExpiry.getTime() < Date.now() + 60000;
+  console.log('[gsc] Token expiry check: expires=', tokenExpiry?.toISOString(), 'isExpired=', isExpired);
 
   if (isExpired && account.refresh_token_encrypted) {
+    console.log('[gsc] Token expired, refreshing...');
     try {
       const refreshToken = await decrypt(account.refresh_token_encrypted);
       if (refreshToken) {
         const newTokens = await refreshGoogleToken(refreshToken);
         accessToken = newTokens.access_token;
+        console.log('[gsc] Token refreshed successfully, new expiry in', newTokens.expires_in, 'seconds');
 
         const newAccessEncrypted = await encrypt(accessToken);
         await serviceClient
@@ -120,9 +133,12 @@ async function resolveAccessToken(
             updated_at: new Date().toISOString(),
           })
           .eq('id', accountId);
+      } else {
+        console.error('[gsc] Refresh token decryption returned null');
       }
-    } catch {
-      return { error: json({ error: 'Token refresh failed' }, 500, origin) };
+    } catch (e: any) {
+      console.error('[gsc] Token refresh failed:', e?.message);
+      return { error: json({ error: 'Token refresh failed', detail: e?.message }, 500, origin) };
     }
   }
 
@@ -138,6 +154,7 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const { siteUrl, accessToken, accountId, startDate, endDate, dimensions, rowLimit } = body;
+    console.log('[gsc] Request: siteUrl=', siteUrl, 'hasAccessToken=', !!accessToken, 'accountId=', accountId);
 
     if (!siteUrl) {
       return json({ error: "Missing siteUrl" }, 400, origin);
@@ -159,6 +176,8 @@ Deno.serve(async (req: Request) => {
     if (!resolvedToken) {
       return json({ error: "Missing accessToken or accountId" }, 400, origin);
     }
+
+    console.log('[gsc] Token resolved, calling GSC API for', siteUrl);
 
     // Default to last 28 days
     const end = endDate || new Date().toISOString().split('T')[0];
