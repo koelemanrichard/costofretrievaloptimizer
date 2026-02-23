@@ -144,7 +144,17 @@ const AIProviderSettings: React.FC<{ settings: Partial<BusinessInfo>, setSetting
     );
 };
 
-const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void, setSettings: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>>, projectId?: string, projectName?: string }> = ({ settings, handleChange, setSettings, projectId, projectName }) => (
+const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void, setSettings: React.Dispatch<React.SetStateAction<Partial<BusinessInfo>>>, projectId?: string, projectName?: string }> = ({ settings, handleChange, setSettings, projectId, projectName }) => {
+  const [ga4Linked, setGa4Linked] = useState(false);
+
+  const handleGa4LinkedChange = useCallback((linked: boolean) => {
+    setGa4Linked(linked);
+    if (linked) {
+      setSettings(prev => ({ ...prev, enableGa4Integration: true }));
+    }
+  }, [setSettings]);
+
+  return (
     <div className="space-y-6">
         <h3 className="text-lg font-semibold text-cyan-400">Research & Smart Auto-Fill</h3>
         <p className="text-sm text-gray-400 -mt-3">Used by Smart Auto-Fill to research businesses via web search.</p>
@@ -190,8 +200,9 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
                     window.open(authUrl, 'gsc-oauth', 'width=600,height=700,left=200,top=100');
                 }}
                 onDisconnect={() => {
-                    console.log('[Settings] GSC account disconnected');
+                    console.log('[Settings] Google account disconnected');
                 }}
+                onGa4LinkedChange={handleGa4LinkedChange}
             />
         </div>
 
@@ -263,19 +274,35 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
                     <p className="text-xs text-gray-500">Checks index status of your pages via GSC OAuth. Free: 2,000/day.</p>
                 </div>
             </div>
-            <div className="flex items-center gap-3 pt-2">
-                <input
-                    type="checkbox"
-                    id="enableGa4Integration"
-                    name="enableGa4Integration"
-                    checked={settings.enableGa4Integration || false}
-                    onChange={(e) => setSettings(prev => ({ ...prev, enableGa4Integration: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-emerald-500 focus:ring-emerald-500"
-                />
-                <div>
-                    <Label htmlFor="enableGa4Integration" className="!mb-0">Enable GA4 Integration</Label>
-                    <p className="text-xs text-gray-500">Fetches traffic and engagement data for content performance analysis.</p>
-                </div>
+            <div className="pt-2">
+                {ga4Linked ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-900/20 border border-green-700/40 rounded">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-sm text-green-300">GA4 Connected</span>
+                    <span className="text-xs text-gray-500">Traffic and engagement data will be fetched automatically.</span>
+                  </div>
+                ) : settings.enableGa4Integration ? (
+                  <div className="flex items-center gap-2 p-2 bg-amber-900/20 border border-amber-700/40 rounded">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-sm text-amber-300">GA4 Not Connected</span>
+                    <span className="text-xs text-gray-500">Link a GA4 property in the Google section above.</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <input
+                        type="checkbox"
+                        id="enableGa4Integration"
+                        name="enableGa4Integration"
+                        checked={false}
+                        onChange={(e) => setSettings(prev => ({ ...prev, enableGa4Integration: e.target.checked }))}
+                        className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-emerald-500 focus:ring-emerald-500"
+                    />
+                    <div>
+                        <Label htmlFor="enableGa4Integration" className="!mb-0">Enable GA4 Integration</Label>
+                        <p className="text-xs text-gray-500">Link a GA4 property above to fetch traffic and engagement data.</p>
+                    </div>
+                  </div>
+                )}
             </div>
         </div>
 
@@ -317,7 +344,8 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
             </div>
         </div>
     </div>
-);
+  );
+};
 
 
 // --- Main Modal Component ---

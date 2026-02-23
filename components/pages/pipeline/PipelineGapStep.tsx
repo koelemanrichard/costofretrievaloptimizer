@@ -263,6 +263,8 @@ function GscConnectionPanel({
   gscError,
   gscNeedsRelink,
   ga4Enabled,
+  ga4PropertyName,
+  ga4Connected,
 }: {
   gscState: GscConnectionState;
   onConnect: () => void;
@@ -271,6 +273,8 @@ function GscConnectionPanel({
   gscError?: string | null;
   gscNeedsRelink?: boolean;
   ga4Enabled?: boolean;
+  ga4PropertyName?: string | null;
+  ga4Connected?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(!gscState.isConnected);
 
@@ -382,12 +386,18 @@ function GscConnectionPanel({
           )}
 
           {/* Google Analytics 4 */}
-          <div className={`flex items-center justify-between ${ga4Enabled ? '' : 'opacity-50'}`}>
+          <div className={`flex items-center justify-between ${ga4Connected || ga4Enabled ? '' : 'opacity-50'}`}>
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${ga4Enabled ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className={`w-2 h-2 rounded-full ${ga4Connected ? 'bg-green-500' : ga4Enabled ? 'bg-amber-500' : 'bg-gray-600'}`} />
               <span className="text-sm text-gray-300">Google Analytics 4</span>
-              {ga4Enabled ? (
-                <span className="text-[9px] text-green-400 px-1.5 py-0.5 rounded border border-green-700/40 bg-green-900/20">Enabled</span>
+              {ga4Connected ? (
+                <span className="text-[9px] text-green-400 px-1.5 py-0.5 rounded border border-green-700/40 bg-green-900/20">
+                  Connected{ga4PropertyName ? `: ${ga4PropertyName}` : ''}
+                </span>
+              ) : ga4Enabled ? (
+                <span className="text-[9px] text-amber-400 px-1.5 py-0.5 rounded border border-amber-700/40 bg-amber-900/20">
+                  Not Connected — Link in Settings
+                </span>
               ) : (
                 <span className="text-[9px] text-gray-500 px-1.5 py-0.5 rounded border border-gray-700">Enable in Settings</span>
               )}
@@ -1415,6 +1425,10 @@ const PipelineGapStep: React.FC = () => {
   const [gscError, setGscError] = useState<string | null>(null);
   const [gscNeedsRelink, setGscNeedsRelink] = useState(false);
 
+  // GA4 state
+  const [ga4Connected, setGa4Connected] = useState(false);
+  const [ga4PropertyName, setGa4PropertyName] = useState<string | null>(null);
+
   const eventIdCounter = useRef(0);
   const addEvent = useCallback((type: AnalysisEvent['type'], message: string, detail?: string) => {
     eventIdCounter.current++;
@@ -1479,6 +1493,38 @@ const PipelineGapStep: React.FC = () => {
     };
 
     checkGscConnection();
+  }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, state.activeProjectId]);
+
+  // Check GA4 connection on mount
+  useEffect(() => {
+    const checkGa4Connection = async () => {
+      const supabaseUrl = state.businessInfo.supabaseUrl;
+      const supabaseAnonKey = state.businessInfo.supabaseAnonKey;
+      if (!supabaseUrl || !supabaseAnonKey || !state.activeProjectId) return;
+
+      try {
+        const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+        const { data, error: fetchError } = await (supabase as any)
+          .from('analytics_properties')
+          .select('id, property_id, property_name')
+          .eq('project_id', state.activeProjectId)
+          .eq('service', 'ga4')
+          .limit(1);
+
+        if (!fetchError && data && data.length > 0) {
+          setGa4Connected(true);
+          setGa4PropertyName(data[0].property_name || data[0].property_id);
+        } else {
+          setGa4Connected(false);
+          setGa4PropertyName(null);
+        }
+      } catch {
+        setGa4Connected(false);
+        setGa4PropertyName(null);
+      }
+    };
+
+    checkGa4Connection();
   }, [state.businessInfo.supabaseUrl, state.businessInfo.supabaseAnonKey, state.activeProjectId]);
 
   // Listen for OAuth completion
@@ -1851,6 +1897,8 @@ const PipelineGapStep: React.FC = () => {
             gscError={gscError}
             gscNeedsRelink={gscNeedsRelink}
             ga4Enabled={!!state.businessInfo.enableGa4Integration}
+            ga4Connected={ga4Connected}
+            ga4PropertyName={ga4PropertyName}
           />
 
           <GapAnalysisContent
