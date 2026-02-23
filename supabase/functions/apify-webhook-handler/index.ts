@@ -24,8 +24,17 @@ function corsHeaders(requestOrigin?: string | null) {
   };
 }
 
+const ENV_PREFERRED: Record<string, string> = {
+  'PROJECT_URL': 'SUPABASE_URL',
+  'ANON_KEY': 'SUPABASE_ANON_KEY',
+  'SERVICE_ROLE_KEY': 'SUPABASE_SERVICE_ROLE_KEY',
+};
 function getEnvVar(name: string): string {
-  const value = (globalThis as any).Deno.env.get(name);
+  const Deno = (globalThis as any).Deno;
+  const preferred = ENV_PREFERRED[name];
+  const value = preferred
+    ? (Deno.env.get(preferred) || Deno.env.get(name))
+    : Deno.env.get(name);
   if (!value) {
     console.warn(`Environment variable ${name} is not set.`);
   }

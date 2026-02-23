@@ -11,9 +11,17 @@
  * Uses the PageSpeed Insights API (free, API key optional for higher quota).
  */
 
+const ENV_PREFERRED: Record<string, string> = {
+  'PROJECT_URL': 'SUPABASE_URL',
+  'ANON_KEY': 'SUPABASE_ANON_KEY',
+  'SERVICE_ROLE_KEY': 'SUPABASE_SERVICE_ROLE_KEY',
+};
 function getEnvVar(name: string): string {
   const Deno = (globalThis as any).Deno;
-  const value = Deno.env.get(name);
+  const preferred = ENV_PREFERRED[name];
+  const value = preferred
+    ? (Deno.env.get(preferred) || Deno.env.get(name))
+    : Deno.env.get(name);
   if (!value) {
     console.warn(`Environment variable ${name} is not set.`);
   }
