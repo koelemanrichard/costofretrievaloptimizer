@@ -7,7 +7,7 @@
 // Core modals
 export { default as NewMapModal } from './NewMapModal';
 export { default as HelpModal } from './HelpModal';
-export { default as SettingsModal, AIProviderSettings, ServiceSettings } from './SettingsModal';
+export { default as SettingsModal, AIProviderSettings, ServiceSettings, SettingsFormContent } from './SettingsModal';
 export { default as AddTopicModal } from './AddTopicModal';
 export { default as BusinessInfoModal } from './BusinessInfoModal';
 export { default as DraftingModal } from './DraftingModal';

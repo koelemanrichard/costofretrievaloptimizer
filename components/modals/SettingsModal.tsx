@@ -156,7 +156,84 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
 
   return (
     <div className="space-y-6">
-        <h3 className="text-lg font-semibold text-cyan-400">Research & Smart Auto-Fill</h3>
+        {/* ── 1. GOOGLE SERVICES ── */}
+        <h3 className="text-lg font-semibold text-emerald-400">Google Services</h3>
+        <p className="text-sm text-gray-400 -mt-3">Connect your Google account and configure API keys for Search Console, GA4, and enhanced SEO analysis.</p>
+
+        {/* 1a. Google Account Connection (OAuth — GSC + GA4 property linking) */}
+        <SearchConsoleConnection
+            supabaseUrl={settings.supabaseUrl || ''}
+            supabaseAnonKey={settings.supabaseAnonKey || ''}
+            projectId={projectId}
+            projectName={projectName}
+            onConnect={() => {
+                const adapter = new GscApiAdapter();
+                const authUrl = adapter.getAuthorizationUrl(
+                    'settings',
+                    `${window.location.origin}/oauth-callback.html`
+                );
+                window.open(authUrl, 'gsc-oauth', 'width=600,height=700,left=200,top=100');
+            }}
+            onDisconnect={() => {
+                console.log('[Settings] Google account disconnected');
+            }}
+            onGa4LinkedChange={handleGa4LinkedChange}
+        />
+
+        {/* 1b. Google API Keys */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+                <Label htmlFor="googleApiKey">Google API Key</Label>
+                <Input id="googleApiKey" name="googleApiKey" value={settings.googleApiKey || ''} onChange={handleChange} type="password" placeholder="Google API Key" />
+                <p className="text-xs text-gray-500 mt-1">Enables: Knowledge Graph Search, PageSpeed Insights, CrUX API. Free: 100 KG queries/day, 25K PageSpeed/day.</p>
+            </div>
+            <div>
+                <Label htmlFor="googleCloudNlpApiKey">Google Cloud NLP API Key</Label>
+                <Input id="googleCloudNlpApiKey" name="googleCloudNlpApiKey" value={settings.googleCloudNlpApiKey || ''} onChange={handleChange} type="password" placeholder="Cloud NLP API Key" />
+                <p className="text-xs text-gray-500 mt-1">Entity salience analysis — measures Central Entity prominence. ~$1/1000 docs, 5K free/month.</p>
+            </div>
+            <div>
+                <Label htmlFor="serpApiKey">SerpAPI Key</Label>
+                <Input id="serpApiKey" name="serpApiKey" value={settings.serpApiKey || ''} onChange={handleChange} type="password" placeholder="SerpAPI Key" />
+                <p className="text-xs text-gray-500 mt-1">Google Trends data — seasonal patterns and rising queries. 100 free searches/month.</p>
+            </div>
+        </div>
+
+        {/* 1c. Google OAuth-dependent features */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+                <input
+                    type="checkbox"
+                    id="enableUrlInspection"
+                    name="enableUrlInspection"
+                    checked={settings.enableUrlInspection || false}
+                    onChange={(e) => setSettings(prev => ({ ...prev, enableUrlInspection: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-emerald-500 focus:ring-emerald-500"
+                />
+                <div>
+                    <Label htmlFor="enableUrlInspection" className="!mb-0">Enable URL Inspection API</Label>
+                    <p className="text-xs text-gray-500">Checks index status via GSC OAuth. Free: 2,000/day.</p>
+                </div>
+            </div>
+            <div>
+                {ga4Linked ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-900/20 border border-green-700/40 rounded">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-sm text-green-300">GA4 Connected</span>
+                    <span className="text-xs text-gray-500">Traffic data will be fetched automatically.</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-gray-800/50 border border-gray-700/50 rounded">
+                    <div className="w-2 h-2 rounded-full bg-gray-600" />
+                    <span className="text-sm text-gray-400">GA4 Not Linked</span>
+                    <span className="text-xs text-gray-500">Connect above and link a GA4 property.</span>
+                  </div>
+                )}
+            </div>
+        </div>
+
+        {/* ── 2. RESEARCH ── */}
+        <h3 className="text-lg font-semibold text-cyan-400 pt-4 border-t border-gray-700">Research & Smart Auto-Fill</h3>
         <p className="text-sm text-gray-400 -mt-3">Used by Smart Auto-Fill to research businesses via web search.</p>
         <div className="grid grid-cols-1 gap-6">
             <div>
@@ -165,7 +242,9 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
             </div>
         </div>
 
-        <h3 className="text-lg font-semibold text-purple-400 pt-4 border-t border-gray-700">SERP & Crawling Credentials</h3>
+        {/* ── 3. SERP & CRAWLING ── */}
+        <h3 className="text-lg font-semibold text-purple-400 pt-4 border-t border-gray-700">SERP & Crawling</h3>
+        <p className="text-sm text-gray-400 -mt-3">SERP data retrieval and web page crawling for audits and analysis.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <Label htmlFor="dataforseoLogin">DataForSEO Login</Label>
@@ -176,50 +255,21 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
                 <Input id="dataforseoPassword" name="dataforseoPassword" value={settings.dataforseoPassword || ''} onChange={handleChange} type="password" placeholder="API Password" />
             </div>
             <div>
-                <Label htmlFor="apifyToken">Apify Token</Label>
-                <Input id="apifyToken" name="apifyToken" value={settings.apifyToken || ''} onChange={handleChange} type="password" placeholder="Apify API Token" />
+                <Label htmlFor="jinaApiKey">Jina API Key</Label>
+                <Input id="jinaApiKey" name="jinaApiKey" value={settings.jinaApiKey || ''} onChange={handleChange} type="password" placeholder="Jina API Key" />
+                <p className="text-xs text-gray-500 mt-1">Page content fetching and scraping. Also used as default audit scraping provider.</p>
             </div>
-             <div>
+            <div>
                 <Label htmlFor="firecrawlApiKey">Firecrawl API Key</Label>
                 <Input id="firecrawlApiKey" name="firecrawlApiKey" value={settings.firecrawlApiKey || ''} onChange={handleChange} type="password" placeholder="Firecrawl API Key" />
             </div>
-        </div>
-
-        <div className="pt-4 border-t border-gray-700">
-            <SearchConsoleConnection
-                supabaseUrl={settings.supabaseUrl || ''}
-                supabaseAnonKey={settings.supabaseAnonKey || ''}
-                projectId={projectId}
-                projectName={projectName}
-                onConnect={() => {
-                    const adapter = new GscApiAdapter();
-                    const authUrl = adapter.getAuthorizationUrl(
-                        'settings',
-                        `${window.location.origin}/oauth-callback.html`
-                    );
-                    window.open(authUrl, 'gsc-oauth', 'width=600,height=700,left=200,top=100');
-                }}
-                onDisconnect={() => {
-                    console.log('[Settings] Google account disconnected');
-                }}
-                onGa4LinkedChange={handleGa4LinkedChange}
-            />
-        </div>
-
-        <h3 className="text-lg font-semibold text-green-400 pt-4 border-t border-gray-700">Knowledge Graph & Tools</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div>
-                <Label htmlFor="jinaApiKey">Jina API Key</Label>
-                <Input id="jinaApiKey" name="jinaApiKey" value={settings.jinaApiKey || ''} onChange={handleChange} type="password" placeholder="Jina API Key" />
-            </div>
             <div>
-                <Label htmlFor="apitemplateApiKey">APITemplate.io API Key</Label>
-                <Input id="apitemplateApiKey" name="apitemplateApiKey" value={settings.apitemplateApiKey || ''} onChange={handleChange} type="password" placeholder="APITemplate.io API Key" />
+                <Label htmlFor="apifyToken">Apify Token</Label>
+                <Input id="apifyToken" name="apifyToken" value={settings.apifyToken || ''} onChange={handleChange} type="password" placeholder="Apify API Token" />
             </div>
         </div>
-        
-        <h3 className="text-lg font-semibold text-teal-400 pt-4 border-t border-gray-700">Content Fetching (Audit)</h3>
-        <p className="text-sm text-gray-400 -mt-3">Configure how the audit system fetches external page content for analysis.</p>
+
+        {/* 3b. Audit scraping preferences */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <Label htmlFor="auditScrapingProvider">Preferred Scraping Provider</Label>
@@ -242,86 +292,7 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
             </div>
         </div>
 
-        <h3 className="text-lg font-semibold text-emerald-400 pt-4 border-t border-gray-700">Google API Services</h3>
-        <p className="text-sm text-gray-400 -mt-3">Configure Google APIs for enhanced SEO analysis. All services are optional — the system works without them.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-                <Label htmlFor="googleApiKey">Google API Key</Label>
-                <Input id="googleApiKey" name="googleApiKey" value={settings.googleApiKey || ''} onChange={handleChange} type="password" placeholder="Google API Key" />
-                <p className="text-xs text-gray-500 mt-1">Enables: Knowledge Graph Search, PageSpeed Insights, CrUX API. Free: 100 KG queries/day, 25K PageSpeed/day.</p>
-            </div>
-            <div>
-                <Label htmlFor="googleCloudNlpApiKey">Google Cloud NLP API Key</Label>
-                <Input id="googleCloudNlpApiKey" name="googleCloudNlpApiKey" value={settings.googleCloudNlpApiKey || ''} onChange={handleChange} type="password" placeholder="Cloud NLP API Key" />
-                <p className="text-xs text-gray-500 mt-1">Entity salience analysis — measures Central Entity prominence. ~$1/1000 docs, 5K free/month.</p>
-            </div>
-            <div>
-                <Label htmlFor="serpApiKey">SerpAPI Key</Label>
-                <Input id="serpApiKey" name="serpApiKey" value={settings.serpApiKey || ''} onChange={handleChange} type="password" placeholder="SerpAPI Key" />
-                <p className="text-xs text-gray-500 mt-1">Google Trends data — seasonal patterns and rising queries. 100 free searches/month.</p>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-                <input
-                    type="checkbox"
-                    id="enableUrlInspection"
-                    name="enableUrlInspection"
-                    checked={settings.enableUrlInspection || false}
-                    onChange={(e) => setSettings(prev => ({ ...prev, enableUrlInspection: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-emerald-500 focus:ring-emerald-500"
-                />
-                <div>
-                    <Label htmlFor="enableUrlInspection" className="!mb-0">Enable URL Inspection API</Label>
-                    <p className="text-xs text-gray-500">Checks index status of your pages via GSC OAuth. Free: 2,000/day.</p>
-                </div>
-            </div>
-            <div className="pt-2">
-                {ga4Linked ? (
-                  <div className="flex items-center gap-2 p-2 bg-green-900/20 border border-green-700/40 rounded">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-sm text-green-300">GA4 Connected</span>
-                    <span className="text-xs text-gray-500">Traffic and engagement data will be fetched automatically.</span>
-                  </div>
-                ) : settings.enableGa4Integration ? (
-                  <div className="flex items-center gap-2 p-2 bg-amber-900/20 border border-amber-700/40 rounded">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-sm text-amber-300">GA4 Not Connected</span>
-                    <span className="text-xs text-gray-500">Link a GA4 property in the Google section above.</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        id="enableGa4Integration"
-                        name="enableGa4Integration"
-                        checked={false}
-                        onChange={(e) => setSettings(prev => ({ ...prev, enableGa4Integration: e.target.checked }))}
-                        className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <div>
-                        <Label htmlFor="enableGa4Integration" className="!mb-0">Enable GA4 Integration</Label>
-                        <p className="text-xs text-gray-500">Link a GA4 property above to fetch traffic and engagement data.</p>
-                    </div>
-                  </div>
-                )}
-            </div>
-        </div>
-
-        <h3 className="text-lg font-semibold text-gray-400 pt-4 border-t border-gray-700">Neo4j Database (Optional)</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-                <Label htmlFor="neo4jUri">Neo4j URI</Label>
-                <Input id="neo4jUri" name="neo4jUri" value={settings.neo4jUri || ''} onChange={handleChange} placeholder="neo4j+s://instance.databases.neo4j.io" />
-            </div>
-            <div>
-                <Label htmlFor="neo4jUser">Neo4j User</Label>
-                <Input id="neo4jUser" name="neo4jUser" value={settings.neo4jUser || ''} onChange={handleChange} placeholder="neo4j" />
-            </div>
-             <div>
-                <Label htmlFor="neo4jPassword">Neo4j Password</Label>
-                <Input id="neo4jPassword" name="neo4jPassword" value={settings.neo4jPassword || ''} onChange={handleChange} type="password" placeholder="Database Password" />
-            </div>
-        </div>
-
+        {/* ── 4. IMAGE GENERATION ── */}
         <h3 className="text-lg font-semibold text-amber-400 pt-4 border-t border-gray-700">Image Generation</h3>
         <p className="text-sm text-gray-400 -mt-3">Configure API credentials for hero image generation and optimization.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -342,43 +313,63 @@ const ServiceSettings: React.FC<{ settings: Partial<BusinessInfo>, handleChange:
                 <Label htmlFor="markupGoApiKey">MarkupGo API Key</Label>
                 <Input id="markupGoApiKey" name="markupGoApiKey" value={settings.markupGoApiKey || ''} onChange={handleChange} type="password" placeholder="MarkupGo API Key for image generation" />
             </div>
+            <div>
+                <Label htmlFor="apitemplateApiKey">APITemplate.io API Key</Label>
+                <Input id="apitemplateApiKey" name="apitemplateApiKey" value={settings.apitemplateApiKey || ''} onChange={handleChange} type="password" placeholder="APITemplate.io API Key" />
+            </div>
+        </div>
+
+        {/* ── 5. DATABASES ── */}
+        <h3 className="text-lg font-semibold text-gray-400 pt-4 border-t border-gray-700">Neo4j Database (Optional)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+                <Label htmlFor="neo4jUri">Neo4j URI</Label>
+                <Input id="neo4jUri" name="neo4jUri" value={settings.neo4jUri || ''} onChange={handleChange} placeholder="neo4j+s://instance.databases.neo4j.io" />
+            </div>
+            <div>
+                <Label htmlFor="neo4jUser">Neo4j User</Label>
+                <Input id="neo4jUser" name="neo4jUser" value={settings.neo4jUser || ''} onChange={handleChange} placeholder="neo4j" />
+            </div>
+             <div>
+                <Label htmlFor="neo4jPassword">Neo4j Password</Label>
+                <Input id="neo4jPassword" name="neo4jPassword" value={settings.neo4jPassword || ''} onChange={handleChange} type="password" placeholder="Database Password" />
+            </div>
         </div>
     </div>
   );
 };
 
 
-// --- Main Modal Component ---
+// --- Shared Settings Form Content (used by both Modal and SettingsPage) ---
 
-interface SettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+type SettingsTab = 'ai' | 'services' | 'wordpress' | 'organization' | 'project' | 'health';
+
+interface SettingsFormContentProps {
   onSave: (settings: Partial<BusinessInfo>) => Promise<void>;
   initialSettings: BusinessInfo;
+  /** "modal" = compact sidebar tabs, "page" = full-width layout */
+  layout?: 'modal' | 'page';
+  onClose?: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, initialSettings }) => {
+const SettingsFormContent: React.FC<SettingsFormContentProps> = ({ onSave, initialSettings, layout = 'modal', onClose }) => {
     const { state } = useAppState();
     const [settings, setSettings] = useState<Partial<BusinessInfo>>(initialSettings);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'ai' | 'services' | 'wordpress' | 'organization' | 'project' | 'health'>('ai');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('ai');
     const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
     const [isCostModalOpen, setIsCostModalOpen] = useState(false);
     const [isApiKeysModalOpen, setIsApiKeysModalOpen] = useState(false);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
 
-    // Get active project info for project-specific settings
     const activeProject = state.activeProjectId
       ? state.projects?.find(p => p.id === state.activeProjectId)
       : null;
 
     useEffect(() => {
-        if (isOpen) {
-            // When modal opens, sync its state with the latest global state
-            setSettings(initialSettings);
-        }
-    }, [isOpen, initialSettings]);
+        setSettings(initialSettings);
+    }, [initialSettings]);
 
     const handleGeneralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSettings(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -389,15 +380,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
         setIsSaving(true);
         try {
             await onSave(settings);
-            // Parent handles closing on success
-        } catch (e) {
+        } catch {
             // Parent handles displaying error
         } finally {
             setIsSaving(false);
         }
     };
 
-    const TabButton: React.FC<{ tab: 'ai' | 'services' | 'wordpress' | 'organization' | 'project' | 'health', label: string, id: string, disabled?: boolean }> = ({ tab, label, id, disabled }) => (
+    const isPage = layout === 'page';
+
+    const TabButton: React.FC<{ tab: SettingsTab, label: string, id: string, disabled?: boolean }> = ({ tab, label, id, disabled }) => (
       <button
         type="button"
         role="tab"
@@ -406,7 +398,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
         aria-controls={`${tab}-panel`}
         onClick={() => !disabled && setActiveTab(tab)}
         disabled={disabled}
-        className={`w-full text-left px-4 py-3 text-sm font-medium rounded-md transition-colors ${
+        className={`w-full text-left ${isPage ? 'px-4 py-2.5' : 'px-4 py-3'} text-sm font-medium rounded-md transition-colors ${
           disabled
             ? 'text-gray-500 cursor-not-allowed opacity-50'
             : activeTab === tab
@@ -418,109 +410,107 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
       </button>
     );
 
-    // Footer content with form buttons
-    const footerContent = (
-        <div className="flex justify-end gap-4 w-full">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
-            <Button type="submit" form="settings-form" disabled={isSaving || state.isLoading.settings}>
-                {(isSaving || state.isLoading.settings) ? <SmartLoader context="saving" size="sm" showText={false} /> : 'Save Settings'}
-            </Button>
-        </div>
+    const tabContent = (
+      <>
+        {activeTab === 'ai' && <AIProviderSettings settings={settings} setSettings={setSettings} />}
+        {activeTab === 'services' && <ServiceSettings settings={settings} handleChange={handleGeneralChange} setSettings={setSettings} projectId={state.activeProjectId || undefined} projectName={activeProject?.project_name} />}
+        {activeTab === 'wordpress' && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-blue-400">WordPress Connections</h3>
+            <p className="text-sm text-gray-400 -mt-2">Connect your WordPress sites to publish content directly from the app.</p>
+            <WordPressConnectionManager projectId={state.activeProjectId || undefined} />
+          </div>
+        )}
+        {activeTab === 'organization' && (
+          <OrganizationSettingsTab
+            onOpenMemberManagement={() => setIsMemberModalOpen(true)}
+            onOpenCosts={() => setIsCostModalOpen(true)}
+            onOpenApiKeys={() => setIsApiKeysModalOpen(true)}
+            onOpenSubscription={() => setIsSubscriptionModalOpen(true)}
+          />
+        )}
+        {activeTab === 'project' && activeProject && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-400">Project Settings</h3>
+                <p className="text-sm text-gray-400">Configure settings for: {activeProject.project_name}</p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => setIsProjectSettingsOpen(true)}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Manage External Collaborators
+                </span>
+              </Button>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+              <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+                Project Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Name:</span>
+                  <span className="ml-2 text-gray-200">{activeProject.project_name}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">ID:</span>
+                  <span className="ml-2 text-gray-400 font-mono text-xs">{activeProject.id}</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">
+              External collaborators are users added directly to this project (not via organization membership).
+              You can set monthly cost limits to control AI usage costs.
+            </p>
+          </div>
+        )}
+      </>
     );
 
     return (
-    <>
-        <Modal
-            isOpen={isOpen}
-            onClose={onClose}
-            title="Application Settings"
-            description="Configure AI providers, API keys, and service settings"
-            maxWidth="max-w-4xl"
-            zIndex="z-[60]"
-            footer={footerContent}
-            className="max-h-[90vh] flex flex-col"
-        >
-            <form id="settings-form" onSubmit={handleSubmit} className="flex flex-grow overflow-hidden -m-6">
-                <nav className="w-1/3 md:w-1/4 p-4 border-r border-gray-700 overflow-y-auto" aria-label="Settings categories">
-                    <div className="space-y-2" role="tablist" aria-label="Settings tabs">
-                       <TabButton tab="ai" label="AI Providers" id="tab-ai" />
-                       <TabButton tab="services" label="SERP & Services" id="tab-services" />
-                       <TabButton tab="wordpress" label="WordPress" id="tab-wordpress" />
-                       <TabButton tab="organization" label="Organization" id="tab-organization" />
-                       <TabButton
-                         tab="project"
-                         label={activeProject?.project_name ? `Project: ${activeProject.project_name.slice(0, 15)}${activeProject.project_name.length > 15 ? '...' : ''}` : 'Project'}
-                         id="tab-project"
-                         disabled={!activeProject}
-                       />
-                    </div>
-                </nav>
-                <main
-                    id={`${activeTab}-panel`}
-                    role="tabpanel"
-                    aria-labelledby={`tab-${activeTab}`}
-                    className="w-2/3 md:w-3/4 p-6 overflow-y-auto"
-                >
-                     {activeTab === 'ai' && <AIProviderSettings settings={settings} setSettings={setSettings} />}
-                     {activeTab === 'services' && <ServiceSettings settings={settings} handleChange={handleGeneralChange} setSettings={setSettings} projectId={state.activeProjectId || undefined} projectName={activeProject?.project_name} />}
-                     {activeTab === 'wordpress' && (
-                       <div className="space-y-4">
-                         <h3 className="text-lg font-semibold text-blue-400">WordPress Connections</h3>
-                         <p className="text-sm text-gray-400 -mt-2">Connect your WordPress sites to publish content directly from the app.</p>
-                         <WordPressConnectionManager projectId={state.activeProjectId || undefined} />
-                       </div>
-                     )}
-                     {activeTab === 'organization' && (
-                       <OrganizationSettingsTab
-                         onOpenMemberManagement={() => setIsMemberModalOpen(true)}
-                         onOpenCosts={() => setIsCostModalOpen(true)}
-                         onOpenApiKeys={() => setIsApiKeysModalOpen(true)}
-                         onOpenSubscription={() => setIsSubscriptionModalOpen(true)}
-                       />
-                     )}
-                     {activeTab === 'project' && activeProject && (
-                       <div className="space-y-4">
-                         <div className="flex items-center justify-between">
-                           <div>
-                             <h3 className="text-lg font-semibold text-blue-400">Project Settings</h3>
-                             <p className="text-sm text-gray-400">Configure settings for: {activeProject.project_name}</p>
-                           </div>
-                           <Button
-                             variant="secondary"
-                             onClick={() => setIsProjectSettingsOpen(true)}
-                           >
-                             <span className="flex items-center gap-2">
-                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                               </svg>
-                               Manage External Collaborators
-                             </span>
-                           </Button>
-                         </div>
-                         <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                           <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
-                             Project Information
-                           </h4>
-                           <div className="grid grid-cols-2 gap-4 text-sm">
-                             <div>
-                               <span className="text-gray-500">Name:</span>
-                               <span className="ml-2 text-gray-200">{activeProject.project_name}</span>
-                             </div>
-                             <div>
-                               <span className="text-gray-500">ID:</span>
-                               <span className="ml-2 text-gray-400 font-mono text-xs">{activeProject.id}</span>
-                             </div>
-                           </div>
-                         </div>
-                         <p className="text-sm text-gray-500">
-                           External collaborators are users added directly to this project (not via organization membership).
-                           You can set monthly cost limits to control AI usage costs.
-                         </p>
-                       </div>
-                     )}
-                </main>
-            </form>
-        </Modal>
+      <>
+        <form id="settings-form" onSubmit={handleSubmit} className={`flex ${isPage ? 'min-h-[calc(100vh-8rem)]' : 'flex-grow overflow-hidden -m-6'}`}>
+          <nav className={`${isPage ? 'w-48 flex-shrink-0 sticky top-16 self-start' : 'w-1/3 md:w-1/4'} p-4 border-r border-gray-700 overflow-y-auto`} aria-label="Settings categories">
+            <div className="space-y-1" role="tablist" aria-label="Settings tabs">
+              <TabButton tab="ai" label="AI Providers" id="tab-ai" />
+              <TabButton tab="services" label="Services & APIs" id="tab-services" />
+              <TabButton tab="wordpress" label="WordPress" id="tab-wordpress" />
+              <TabButton tab="organization" label="Organization" id="tab-organization" />
+              <TabButton
+                tab="project"
+                label={activeProject?.project_name ? `Project: ${activeProject.project_name.slice(0, 15)}${activeProject.project_name.length > 15 ? '...' : ''}` : 'Project'}
+                id="tab-project"
+                disabled={!activeProject}
+              />
+            </div>
+          </nav>
+          <main
+            id={`${activeTab}-panel`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab}`}
+            className={`flex-1 ${isPage ? 'p-8 max-w-4xl' : 'p-6 overflow-y-auto'}`}
+          >
+            {tabContent}
+
+            {/* Save button — inline for page layout */}
+            {isPage && (
+              <div className="flex items-center gap-4 pt-8 mt-8 border-t border-gray-700">
+                <Button type="submit" disabled={isSaving || state.isLoading.settings}>
+                  {(isSaving || state.isLoading.settings) ? <SmartLoader context="saving" size="sm" showText={false} /> : 'Save Settings'}
+                </Button>
+                {onClose && (
+                  <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
+                )}
+              </div>
+            )}
+          </main>
+        </form>
+
         <MemberManagementModal
           isOpen={isMemberModalOpen}
           onClose={() => setIsMemberModalOpen(false)}
@@ -545,11 +535,49 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
             projectName={activeProject.project_name}
           />
         )}
-    </>
+      </>
+    );
+};
+
+
+// --- Modal Wrapper (for EdgeToolbar shortcut) ---
+
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (settings: Partial<BusinessInfo>) => Promise<void>;
+  initialSettings: BusinessInfo;
+}
+
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, initialSettings }) => {
+    const { state } = useAppState();
+
+    const footerContent = (
+        <div className="flex justify-end gap-4 w-full">
+            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="settings-form" disabled={state.isLoading.settings}>
+                {state.isLoading.settings ? <SmartLoader context="saving" size="sm" showText={false} /> : 'Save Settings'}
+            </Button>
+        </div>
+    );
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Application Settings"
+            description="Configure AI providers, API keys, and service settings"
+            maxWidth="max-w-4xl"
+            zIndex="z-[60]"
+            footer={footerContent}
+            className="max-h-[90vh] flex flex-col"
+        >
+            <SettingsFormContent onSave={onSave} initialSettings={initialSettings} layout="modal" onClose={onClose} />
+        </Modal>
     );
 };
 
 export default SettingsModal;
 
 // Named exports for sub-components used by other modules
-export { AIProviderSettings, ServiceSettings };
+export { AIProviderSettings, ServiceSettings, SettingsFormContent };

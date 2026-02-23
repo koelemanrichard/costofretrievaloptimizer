@@ -611,7 +611,7 @@ const App: React.FC = () => {
                                     id: 'settings',
                                     icon: ToolbarIcons.settings,
                                     label: 'Settings',
-                                    onClick: () => dispatch({ type: 'SET_MODAL_VISIBILITY', payload: { modal: 'settings', visible: true } }),
+                                    onClick: () => navigate('/settings'),
                                 },
                             ]}
                         />

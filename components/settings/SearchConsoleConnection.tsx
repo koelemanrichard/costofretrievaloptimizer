@@ -489,6 +489,29 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
         </div>
       )}
 
+      {/* GA4 scope upgrade banner — shown when accounts exist but none have analytics scope */}
+      {!isLoading && accounts.length > 0 && ga4LinkedProperties.length === 0 && !accounts.some(a => hasAnalyticsScope(a)) && (
+        <div className="p-3 bg-purple-900/20 border border-purple-700/40 rounded-md">
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-purple-300 font-medium">GA4 Analytics Access Required</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Your Google account was connected before GA4 support was added. Re-connect to grant Analytics access, then link a GA4 property.
+              </p>
+              <button
+                type="button"
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="mt-2 text-xs bg-purple-700 hover:bg-purple-600 text-white px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+              >
+                {isConnecting ? 'Connecting...' : 'Re-connect Google Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center gap-2 p-3 bg-gray-800 border border-gray-700 rounded-md">
           <span className="text-gray-500 text-sm">Checking connection...</span>
