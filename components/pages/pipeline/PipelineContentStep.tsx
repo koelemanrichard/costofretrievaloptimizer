@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
@@ -317,7 +317,7 @@ const PipelineContentStep: React.FC = () => {
     setStepStatus,
     activeMap,
   } = usePipeline();
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
 
   const stepState = getStepState('content');
   const gate = stepState?.gate;
@@ -325,13 +325,21 @@ const PipelineContentStep: React.FC = () => {
   const topics = activeMap?.topics ?? [];
   const briefs = activeMap?.briefs ?? {};
 
+  // Merge per-map business_info overrides with global state (per-map takes precedence)
+  const effectiveBusinessInfo = useMemo(() => {
+    const mapBI = activeMap?.business_info;
+    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+  }, [state.businessInfo, activeMap?.business_info]);
+
   // Track content per topic
   const [contentMap, setContentMap] = useState<Record<string, { draft: string; wordCount: number; score: number }>>(() => {
     const initial: Record<string, { draft: string; wordCount: number; score: number }> = {};
     for (const [topicId, brief] of Object.entries(briefs)) {
       if (brief.articleDraft) {
         const words = brief.articleDraft.split(/\s+/).filter(Boolean).length;
-        initial[topicId] = { draft: brief.articleDraft, wordCount: words, score: 75 };
+        const targetWords = brief.serpAnalysis?.avgWordCount || 1500;
+        const completeness = Math.min(98, Math.round((words / targetWords) * 100));
+        initial[topicId] = { draft: brief.articleDraft, wordCount: words, score: completeness };
       }
     }
     return initial;
@@ -342,7 +350,7 @@ const PipelineContentStep: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerateWave = useCallback(async (waveNumber: number) => {
-    const businessInfo = state.businessInfo;
+    const businessInfo = effectiveBusinessInfo;
     const pillars = activeMap?.pillars;
     const userId = state.user?.id;
     const mapId = state.activeMapId;
@@ -424,10 +432,28 @@ const PipelineContentStep: React.FC = () => {
         const draft = await orchestrator.assembleDraft(job.id);
         const wordCount = draft.split(/\s+/).filter(Boolean).length;
 
-        setContentMap(prev => ({ ...prev, [topic.id]: { draft, wordCount, score: 75 } }));
+        const targetWords = brief.serpAnalysis?.avgWordCount || 1500;
+        const completeness = Math.min(98, Math.round((wordCount / targetWords) * 100));
+        setContentMap(prev => ({ ...prev, [topic.id]: { draft, wordCount, score: completeness } }));
 
         // Sync draft back to brief
         await orchestrator.syncDraftToBrief(brief.id, draft);
+
+        // Dispatch to global state so briefs reflect the articleDraft
+        if (state.activeMapId) {
+          dispatch({
+            type: 'UPDATE_MAP_DATA',
+            payload: {
+              mapId: state.activeMapId,
+              data: {
+                briefs: {
+                  ...activeMap?.briefs,
+                  [topic.id]: { ...brief, articleDraft: draft },
+                },
+              },
+            },
+          });
+        }
       }
 
       setStepStatus('content', 'pending_approval');
@@ -440,7 +466,7 @@ const PipelineContentStep: React.FC = () => {
       setActiveGeneratingWave(null);
       setProgressText('');
     }
-  }, [state, activeMap, topics, briefs, contentMap, setStepStatus]);
+  }, [state, activeMap, topics, briefs, contentMap, setStepStatus, effectiveBusinessInfo, dispatch]);
 
   // Build wave progress data
   const waveConfigs = [

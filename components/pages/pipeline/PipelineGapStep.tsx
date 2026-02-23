@@ -2074,20 +2074,35 @@ const PipelineGapStep: React.FC = () => {
 
       setResults(result);
 
-      // Persist to map state
+      // Persist to map state and Supabase
       if (state.activeMapId) {
+        const updatedAnalysisState = {
+          ...activeMap?.analysis_state,
+          gap_analysis: result,
+        };
         dispatch({
           type: 'UPDATE_MAP_DATA',
           payload: {
             mapId: state.activeMapId,
             data: {
-              analysis_state: {
-                ...activeMap?.analysis_state,
-                gap_analysis: result,
-              },
+              analysis_state: updatedAnalysisState,
             } as any,
           },
         });
+
+        // Persist to Supabase so results survive refresh
+        try {
+          const sbUrl = effectiveBusinessInfo.supabaseUrl;
+          const sbKey = effectiveBusinessInfo.supabaseAnonKey;
+          if (sbUrl && sbKey) {
+            const supabase = getSupabaseClient(sbUrl, sbKey);
+            await supabase.from('topical_maps')
+              .update({ analysis_state: updatedAnalysisState } as any)
+              .eq('id', state.activeMapId);
+          }
+        } catch (persistErr) {
+          console.warn('[GapAnalysis] Failed to persist analysis_state to Supabase:', persistErr);
+        }
       }
 
       setStepStatus('gap_analysis', 'pending_approval');

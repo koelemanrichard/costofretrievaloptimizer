@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
@@ -654,8 +654,16 @@ const PipelineAuditStep: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
-  const [report, setReport] = useState<UnifiedAuditReport | null>(null);
+  const [report, setReport] = useState<UnifiedAuditReport | null>(
+    () => (activeMap?.analysis_state as any)?.audit_report ?? null
+  );
   const [error, setError] = useState<string | null>(null);
+
+  // Merge per-map business_info overrides with global state (per-map takes precedence)
+  const effectiveBusinessInfo = useMemo(() => {
+    const mapBI = activeMap?.business_info;
+    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+  }, [state.businessInfo, activeMap?.business_info]);
 
   // A1: Handler to standardize duplicate EAV values to canonical form
   const handleStandardizeEavs = (predicate: string, canonicalValue: string) => {
@@ -720,7 +728,7 @@ const PipelineAuditStep: React.FC = () => {
   };
 
   const handleRunAudit = async () => {
-    const businessInfo = state.businessInfo;
+    const businessInfo = effectiveBusinessInfo;
     const activeProjectId = state.activeProjectId;
     const activeMapId = state.activeMapId;
 
@@ -810,6 +818,35 @@ const PipelineAuditStep: React.FC = () => {
 
       const result = await orchestrator.runAudit(request, onProgress);
       setReport(result);
+
+      // Persist audit report to analysis_state (dispatch + Supabase)
+      if (activeMapId) {
+        const updatedAnalysisState = {
+          ...activeMap?.analysis_state,
+          audit_report: result,
+        };
+        dispatch({
+          type: 'UPDATE_MAP_DATA',
+          payload: {
+            mapId: activeMapId,
+            data: { analysis_state: updatedAnalysisState } as any,
+          },
+        });
+
+        try {
+          const sbUrl = effectiveBusinessInfo.supabaseUrl;
+          const sbKey = effectiveBusinessInfo.supabaseAnonKey;
+          if (sbUrl && sbKey) {
+            const persistSupabase = getSupabaseClient(sbUrl, sbKey);
+            await persistSupabase.from('topical_maps')
+              .update({ analysis_state: updatedAnalysisState } as any)
+              .eq('id', activeMapId);
+          }
+        } catch (persistErr) {
+          console.warn('[Audit] Failed to persist audit report to Supabase:', persistErr);
+        }
+      }
+
       setStepStatus('audit', 'pending_approval');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Audit failed';

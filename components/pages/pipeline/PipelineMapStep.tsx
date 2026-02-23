@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
@@ -1052,6 +1052,12 @@ const PipelineMapStep: React.FC = () => {
   } = usePipeline();
   const { state, dispatch } = useAppState();
 
+  // Merge per-map business_info overrides with global state (per-map takes precedence)
+  const effectiveBusinessInfo = useMemo(() => {
+    const mapBI = activeMap?.business_info;
+    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+  }, [state.businessInfo, activeMap?.business_info]);
+
   const stepState = getStepState('map_planning');
   const gate = stepState?.gate;
 
@@ -1080,7 +1086,7 @@ const PipelineMapStep: React.FC = () => {
   const internalLinksEstimate = outerTopics.length * 2; // Each spoke has at least 2 links (to/from hub)
 
   const handleGenerateMap = async () => {
-    const businessInfo = state.businessInfo;
+    const businessInfo = effectiveBusinessInfo;
     const pillars = activeMap?.pillars;
 
     if (!pillars?.centralEntity) {

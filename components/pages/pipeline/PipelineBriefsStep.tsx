@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
@@ -780,6 +780,12 @@ const PipelineBriefsStep: React.FC = () => {
   } = usePipeline();
   const { state, dispatch } = useAppState();
 
+  // Merge per-map business_info overrides with global state (per-map takes precedence)
+  const effectiveBusinessInfo = useMemo(() => {
+    const mapBI = activeMap?.business_info;
+    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+  }, [state.businessInfo, activeMap?.business_info]);
+
   const stepState = getStepState('briefs');
   const gate = stepState?.gate;
 
@@ -801,7 +807,7 @@ const PipelineBriefsStep: React.FC = () => {
   const allBriefs = { ...existingBriefs, ...localBriefs };
 
   const handleGenerateWave = async (waveNumber: number) => {
-    const businessInfo = state.businessInfo;
+    const businessInfo = effectiveBusinessInfo;
     const pillars = activeMap?.pillars;
 
     if (!pillars?.centralEntity) {
@@ -991,7 +997,7 @@ const PipelineBriefsStep: React.FC = () => {
       {/* Detail view — only shown when adjusting or no data */}
       {isAdjusting && (<>
       {/* Writing Rules Panel */}
-      <WritingRulesPanel language={state.businessInfo.language || 'en'} />
+      <WritingRulesPanel language={effectiveBusinessInfo.language || 'en'} />
 
       {/* Wave-grouped Brief List + Preview Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
