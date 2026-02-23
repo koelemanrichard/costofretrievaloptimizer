@@ -7,6 +7,8 @@
  * Graceful fallback: returns empty array on failure.
  */
 
+import { getSupabaseClient } from './supabaseClient';
+
 export interface UrlInspectionResult {
   url: string;
   verdict: string;
@@ -40,23 +42,17 @@ export async function inspectUrls(
   }
 
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/url-inspection`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
-        'apikey': supabaseAnonKey,
-      },
-      body: JSON.stringify({ urls, siteUrl, accountId }),
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+    const { data, error } = await supabase.functions.invoke('url-inspection', {
+      body: { urls, siteUrl, accountId },
     });
 
-    if (!response.ok) {
-      console.warn('[UrlInspectionService] Edge function error:', response.status);
+    if (error) {
+      console.warn('[UrlInspectionService] Edge function error:', error);
       return [];
     }
 
-    const data = await response.json();
-    if (!data.ok || !data.results) {
+    if (!data?.ok || !data?.results) {
       console.warn('[UrlInspectionService] Unexpected response:', data);
       return [];
     }

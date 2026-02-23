@@ -1,6 +1,6 @@
 // FIX: Replaced placeholder content with a functional module.
 import { GscRow } from '../types';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from './supabaseClient';
 
 /**
  * Unified GSC data source — supports both API and CSV import.
@@ -64,7 +64,7 @@ export async function fetchGscEdgeFunctionData(
   if (!url || !key) {
     throw new Error('Supabase URL and anon key are required for GSC edge function calls.');
   }
-  const supabase = createClient(url, key);
+  const supabase = getSupabaseClient(url, key);
   const { data, error } = await supabase.functions.invoke('gsc-integration', {
     body: { siteUrl, accessToken },
   });
