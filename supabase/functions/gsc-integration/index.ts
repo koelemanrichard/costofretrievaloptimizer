@@ -58,9 +58,10 @@ async function resolveAccessToken(
   authHeader: string,
   origin: string | null
 ): Promise<{ token: string } | { error: Response }> {
-  const projectUrl = Deno.env.get('PROJECT_URL') || Deno.env.get('SUPABASE_URL');
-  const anonKey = Deno.env.get('ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
-  const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  // Prefer auto-injected SUPABASE_* env vars (always correct) over custom secrets (may be stale)
+  const projectUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('PROJECT_URL');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('ANON_KEY');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
 
   console.log('[gsc] resolveAccessToken: accountId=', accountId, 'hasProjectUrl=', !!projectUrl, 'hasAnonKey=', !!anonKey, 'hasServiceRoleKey=', !!serviceRoleKey);
 

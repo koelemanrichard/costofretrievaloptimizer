@@ -64,10 +64,10 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: 'Missing accountId' }, 200, origin);
     }
 
-    // 2. Read env vars
-    const projectUrl = Deno.env.get('PROJECT_URL') || Deno.env.get('SUPABASE_URL');
-    const anonKey = Deno.env.get('ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // 2. Read env vars — prefer auto-injected SUPABASE_* (always correct) over custom secrets
+    const projectUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('PROJECT_URL');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('ANON_KEY');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
 
     if (!projectUrl || !anonKey || !serviceRoleKey) {
       return json({

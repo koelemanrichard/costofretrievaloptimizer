@@ -113,9 +113,9 @@ Deno.serve(async (req: Request) => {
     // Sort by salience descending
     entities.sort((a: any, b: any) => b.salience - a.salience);
 
-    // Log usage
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const projectUrl = Deno.env.get('PROJECT_URL') || Deno.env.get('SUPABASE_URL');
+    // Log usage — prefer auto-injected SUPABASE_* env vars
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
+    const projectUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('PROJECT_URL');
     if (serviceRoleKey && projectUrl) {
       const serviceClient = createClient(projectUrl, serviceRoleKey);
       logUsage(serviceClient, {

@@ -57,9 +57,10 @@ async function resolveAccessToken(
   authHeader: string,
   origin: string | null
 ): Promise<{ token: string } | { error: Response }> {
-  const projectUrl = Deno.env.get('PROJECT_URL') || Deno.env.get('SUPABASE_URL');
-  const anonKey = Deno.env.get('ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
-  const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  // Prefer auto-injected SUPABASE_* env vars (always correct) over custom secrets (may be stale)
+  const projectUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('PROJECT_URL');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('ANON_KEY');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
 
   if (!projectUrl || !anonKey || !serviceRoleKey) {
     return { error: json({ error: 'Server configuration error' }, 500, origin) };
@@ -216,8 +217,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Log usage
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const projectUrl = Deno.env.get('PROJECT_URL') || Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
+    const projectUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('PROJECT_URL');
     if (serviceRoleKey && projectUrl) {
       const serviceClient = createClient(projectUrl, serviceRoleKey);
       logUsage(serviceClient, {
