@@ -23,7 +23,12 @@ const MapSelectionPage: React.FC = () => {
 
     const handleSelectMap = (mapId: string) => {
         dispatch({ type: 'SET_ACTIVE_MAP', payload: mapId });
-        navigate(`/p/${projectId}/m/${mapId}`);
+        const map = projectMaps.find(m => m.id === mapId);
+        if (map?.pipeline_state?.isActive) {
+            navigate(`/p/${projectId}/m/${mapId}/pipeline`);
+        } else {
+            navigate(`/p/${projectId}/m/${mapId}`);
+        }
     };
 
     const handleOpenNewMapModal = () => {

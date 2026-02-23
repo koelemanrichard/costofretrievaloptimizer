@@ -6,6 +6,8 @@ import MapLoader from './MapLoader';
 import TopicLoader from './TopicLoader';
 import AppShell from '../layout/AppShell';
 import { SmartLoader } from '../ui/FunLoaders';
+import { useAppState } from '../../state/appState';
+import type { PipelineStep } from '../../state/slices/pipelineSlice';
 
 // Eagerly loaded (small/critical)
 import { AuthScreen } from '../screens';
@@ -67,6 +69,19 @@ const AdminPage = lazy(() => import('../pages/AdminPage'));
 const QuotationPage = lazy(() => import('../pages/QuotationPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 
+const STEP_PATH_MAP: Record<PipelineStep, string> = {
+    crawl: 'crawl', gap_analysis: 'gap', strategy: 'strategy', eavs: 'eavs',
+    map_planning: 'map', briefs: 'briefs', content: 'content', audit: 'audit',
+    tech_spec: 'tech', export: 'export',
+};
+
+/** Redirects /pipeline to the current pipeline step instead of always to crawl. */
+const PipelineStepRedirect: React.FC = () => {
+    const { state } = useAppState();
+    const path = STEP_PATH_MAP[state.pipeline.currentStep] || 'crawl';
+    return <Navigate to={path} replace />;
+};
+
 const PageLoader: React.FC = () => (
     <div className="flex items-center justify-center min-h-[50vh]">
         <SmartLoader context="loading" size="md" />
@@ -115,7 +130,7 @@ const AppRouter: React.FC = () => {
 
                                 {/* Pipeline */}
                                 <Route path="pipeline" element={<PipelineLayout />}>
-                                    <Route index element={<Navigate to="crawl" replace />} />
+                                    <Route index element={<PipelineStepRedirect />} />
                                     <Route path="crawl" element={<PipelineCrawlStep />} />
                                     <Route path="gap" element={<PipelineGapStep />} />
                                     <Route path="strategy" element={<PipelineStrategyStep />} />
