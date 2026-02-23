@@ -113,14 +113,16 @@ Deno.serve(async (req: Request) => {
 
     // 5. Check if account has analytics.readonly scope
     const scopes: string[] = account.scopes || [];
+    console.log(`[ga4-list-properties] Account ${accountId} stored scopes: [${scopes.join(', ')}]`);
     const hasAnalyticsScope = scopes.some((s: string) =>
       s.includes('analytics.readonly') || s.includes('analytics')
     );
     if (!hasAnalyticsScope) {
       return json({
         ok: false,
-        error: 'GA4 access not granted — please re-connect your Google account to grant Analytics access',
+        error: `GA4 access not granted. Stored scopes: [${scopes.join(', ')}]. Please re-connect your Google account to grant Analytics access.`,
         relink: true,
+        storedScopes: scopes,
       }, 200, origin);
     }
 
@@ -195,21 +197,35 @@ Deno.serve(async (req: Request) => {
       let friendlyError = `GA4 Admin API error (${ga4Response.status})`;
       let detail = errBody.substring(0, 500);
       let relink = false;
+      let apiNotEnabled = false;
       try {
         const parsed = JSON.parse(errBody);
         const gErr = parsed?.error;
         if (gErr?.message) {
           friendlyError = gErr.message;
           detail = '';
+          // Detect "API not enabled" — this is a project config issue, not an auth issue
+          if (gErr.message.includes('has not been used in project') ||
+              gErr.message.includes('is disabled') ||
+              gErr.status === 'PERMISSION_DENIED' && gErr.message.includes('analyticsadmin')) {
+            apiNotEnabled = true;
+          }
         }
       } catch { /* keep raw body as detail */ }
 
-      if (ga4Response.status === 401 || ga4Response.status === 403) {
-        friendlyError = 'Google authorization expired or GA4 access not granted — please re-connect your Google account';
+      if (apiNotEnabled) {
+        friendlyError = 'Google Analytics Admin API is not enabled in your Google Cloud project. Enable it at console.cloud.google.com → APIs & Services → Enable "Google Analytics Admin API"';
+        relink = false;
+      } else if (ga4Response.status === 401) {
+        friendlyError = 'Google authorization expired — please re-connect your Google account';
+        relink = true;
+      } else if (ga4Response.status === 403) {
+        // 403 can mean insufficient scope OR API not enabled — show the actual Google error
+        friendlyError = `GA4 access denied: ${friendlyError}`;
         relink = true;
       }
 
-      return json({ ok: false, error: friendlyError, detail, relink }, 200, origin);
+      return json({ ok: false, error: friendlyError, detail, relink, apiNotEnabled }, 200, origin);
     }
 
     const ga4Data = await ga4Response.json();

@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
     // 3b. Warn if no refresh_token (Google only provides it on first consent)
     // ----------------------------------------------------------------
     if (!tokens.refresh_token) {
-      console.warn('[google-oauth-callback] No refresh_token received — token will expire in ~1 hour and cannot be auto-refreshed. User may need to revoke app access at https://myaccount.google.com/permissions and re-link.');
+      console.warn('[google-oauth-callback] No refresh_token received — will preserve existing refresh token if available.');
     }
 
     // ----------------------------------------------------------------
@@ -140,7 +140,28 @@ Deno.serve(async (req: Request) => {
       getEnvVar('SERVICE_ROLE_KEY')
     );
 
-    const scopes = (tokens.scope || '').split(' ').filter(Boolean);
+    // Parse scopes from the token response
+    const newScopes = (tokens.scope || '').split(' ').filter(Boolean);
+
+    // Fetch existing account to merge scopes and preserve refresh token
+    const { data: existingAccount } = await serviceRoleClient
+      .from('analytics_accounts')
+      .select('scopes, refresh_token_encrypted')
+      .eq('user_id', user.id)
+      .eq('provider', 'google')
+      .eq('account_email', email)
+      .single();
+
+    // Merge new scopes with existing scopes (never lose previously granted scopes)
+    const existingScopes: string[] = existingAccount?.scopes || [];
+    const mergedScopes = [...new Set([...existingScopes, ...newScopes])];
+    console.log(`[google-oauth-callback] Scopes — existing: [${existingScopes}], new: [${newScopes}], merged: [${mergedScopes}]`);
+
+    // Use new refresh token if Google returned one, otherwise preserve the existing one
+    // (Google only returns refresh_token on first consent; re-connections may omit it)
+    const effectiveRefreshToken = refreshTokenEncrypted
+      || existingAccount?.refresh_token_encrypted
+      || '';
 
     const { error: upsertError } = await serviceRoleClient
       .from('analytics_accounts')
@@ -150,11 +171,11 @@ Deno.serve(async (req: Request) => {
           provider: 'google',
           account_email: email,
           access_token_encrypted: accessTokenEncrypted,
-          refresh_token_encrypted: refreshTokenEncrypted,
+          refresh_token_encrypted: effectiveRefreshToken,
           token_expires_at: new Date(
             Date.now() + (tokens.expires_in || 3600) * 1000
           ).toISOString(),
-          scopes,
+          scopes: mergedScopes,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,provider,account_email' }
@@ -172,13 +193,13 @@ Deno.serve(async (req: Request) => {
     // ----------------------------------------------------------------
     // 7. Return success
     // ----------------------------------------------------------------
-    console.log(`[google-oauth-callback] Tokens stored for user ${user.id}, email ${email}`);
+    console.log(`[google-oauth-callback] Tokens stored for user ${user.id}, email ${email}, scopes: [${mergedScopes}]`);
 
     return json(
       {
         ok: true,
         email,
-        scopes,
+        scopes: mergedScopes,
       },
       200,
       origin

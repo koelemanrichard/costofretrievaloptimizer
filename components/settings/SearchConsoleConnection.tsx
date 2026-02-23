@@ -131,12 +131,28 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
     fetchLinkedProperties();
   }, [fetchAccounts, fetchLinkedProperties]);
 
+  // Auto-expand the first account when GA4 isn't linked yet
+  // so the user can immediately see and link GA4 properties
+  useEffect(() => {
+    if (accounts.length > 0 && ga4LinkedProperties.length === 0 && !expandedAccount) {
+      const firstAccount = accounts[0];
+      handleLoadProperties(firstAccount.id);
+    }
+  }, [accounts, ga4LinkedProperties.length]);
+
   // Listen for OAuth completion from the popup window
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'GSC_CONNECTED') {
         setIsConnecting(false);
+        // Clear all caches so properties are re-fetched with new scopes/tokens
+        setRelinkNeeded({});
+        setPropertiesMap({});
+        setGa4PropertiesMap({});
+        setGa4Errors({});
+        setExpandedAccount(null);
+        setError(null);
         fetchAccounts();
       }
     };
@@ -242,12 +258,16 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
     }
   }, [getClient, expandedAccount, propertiesMap, ga4PropertiesMap]);
 
+  // GA4-specific error messages per account
+  const [ga4Errors, setGa4Errors] = useState<Record<string, string>>({});
+
   // Load GA4 properties for an account
   const handleLoadGa4Properties = useCallback(async (accountId: string) => {
     const supabase = getClient();
     if (!supabase) return;
 
     setLoadingGa4Properties(prev => ({ ...prev, [accountId]: true }));
+    setGa4Errors(prev => { const next = { ...prev }; delete next[accountId]; return next; });
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ga4-list-properties', {
@@ -256,28 +276,34 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
 
       if (fnError) {
         let relink = false;
+        let errorMsg = fnError.message || 'Failed to load GA4 properties';
         try {
           if (fnError.context && typeof fnError.context.json === 'function') {
             const body = await fnError.context.json();
             relink = !!body?.relink;
+            if (body?.error) errorMsg = body.error;
           }
         } catch { /* ignore */ }
-        // Don't overwrite GSC error — just log GA4 issue
-        console.warn('[SearchConsoleConnection] GA4 properties error:', fnError.message);
+        console.warn('[SearchConsoleConnection] GA4 properties error:', errorMsg);
         if (relink) setRelinkNeeded(prev => ({ ...prev, [`ga4_${accountId}`]: true }));
+        setGa4Errors(prev => ({ ...prev, [accountId]: errorMsg }));
         setGa4PropertiesMap(prev => ({ ...prev, [accountId]: [] }));
       } else if (!data?.ok) {
         const relink = !!data?.relink;
-        if (relink) {
+        const apiNotEnabled = !!data?.apiNotEnabled;
+        const errorMsg = data?.error || 'Failed to load GA4 properties';
+        console.warn('[SearchConsoleConnection] GA4 properties:', errorMsg);
+        if (relink && !apiNotEnabled) {
           setRelinkNeeded(prev => ({ ...prev, [`ga4_${accountId}`]: true }));
         }
-        console.warn('[SearchConsoleConnection] GA4 properties:', data?.error);
+        setGa4Errors(prev => ({ ...prev, [accountId]: errorMsg }));
         setGa4PropertiesMap(prev => ({ ...prev, [accountId]: [] }));
       } else {
         setGa4PropertiesMap(prev => ({ ...prev, [accountId]: data.properties || [] }));
       }
     } catch (err: any) {
       console.warn('[SearchConsoleConnection] GA4 load error:', err);
+      setGa4Errors(prev => ({ ...prev, [accountId]: err.message || 'Failed to load GA4 properties' }));
       setGa4PropertiesMap(prev => ({ ...prev, [accountId]: [] }));
     } finally {
       setLoadingGa4Properties(prev => ({ ...prev, [accountId]: false }));
@@ -528,25 +554,48 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
 
             return (
               <div key={account.id} className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-green-900/20 border border-green-800 rounded-md">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-400 text-sm font-medium">Connected</span>
-                    <span className="text-gray-300 text-sm">{account.account_email}</span>
+                <div className="p-3 bg-green-900/20 border border-green-800 rounded-md space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-sm font-medium">Connected</span>
+                      <span className="text-gray-300 text-sm">{account.account_email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleLoadProperties(account.id)}
+                        className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                      >
+                        {isExpanded ? 'Hide Properties' : 'Show Properties'}
+                      </button>
+                      <button
+                        onClick={() => handleDisconnect(account.id)}
+                        className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleLoadProperties(account.id)}
-                      className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
-                    >
-                      {isExpanded ? 'Hide Properties' : 'Show Properties'}
-                    </button>
-                    <button
-                      onClick={() => handleDisconnect(account.id)}
-                      className="text-xs text-gray-500 hover:text-red-400 transition-colors"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
+                  {/* Inline GA4 status — always visible, no expand needed */}
+                  {!isExpanded && (
+                    <div className="flex items-center gap-2 text-xs">
+                      {ga4LinkedProperties.some(lp => lp.account_id === account.id) ? (
+                        <span className="text-green-400">
+                          GA4: {ga4LinkedProperties.filter(lp => lp.account_id === account.id).map(lp => lp.property_name || lp.property_id).join(', ')}
+                        </span>
+                      ) : !accountHasAnalytics ? (
+                        <span className="text-amber-400">
+                          GA4: Re-connect required to grant Analytics access
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleLoadProperties(account.id)}
+                          className="text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          GA4: No property linked — click to select a GA4 property
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Property list */}
@@ -654,19 +703,34 @@ export const SearchConsoleConnection: React.FC<SearchConsoleConnectionProps> = (
                         </div>
                       ) : isLoadingGa4 ? (
                         <div className="p-2 text-sm text-gray-500">Loading GA4 properties...</div>
-                      ) : relinkNeeded[`ga4_${account.id}`] ? (
+                      ) : ga4Errors[account.id] ? (
                         <div className="p-2 bg-red-900/20 border border-red-700/40 rounded">
                           <p className="text-sm text-red-300">
-                            GA4 authorization expired — please re-connect your account.
+                            {ga4Errors[account.id]}
                           </p>
-                          <button
-                            type="button"
-                            onClick={handleConnect}
-                            disabled={isConnecting}
-                            className="mt-2 text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors disabled:opacity-50"
-                          >
-                            {isConnecting ? 'Connecting...' : 'Re-connect Google Account'}
-                          </button>
+                          {relinkNeeded[`ga4_${account.id}`] && (
+                            <button
+                              type="button"
+                              onClick={handleConnect}
+                              disabled={isConnecting}
+                              className="mt-2 text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors disabled:opacity-50"
+                            >
+                              {isConnecting ? 'Connecting...' : 'Re-connect Google Account'}
+                            </button>
+                          )}
+                          {!relinkNeeded[`ga4_${account.id}`] && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGa4Errors(prev => { const n = { ...prev }; delete n[account.id]; return n; });
+                                setGa4PropertiesMap(prev => { const n = { ...prev }; delete n[account.id]; return n; });
+                                handleLoadGa4Properties(account.id);
+                              }}
+                              className="mt-2 text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded transition-colors"
+                            >
+                              Retry
+                            </button>
+                          )}
                         </div>
                       ) : ga4Properties && ga4Properties.length > 0 ? (
                         <>
