@@ -27,12 +27,70 @@ export interface PillarSuggestionResult {
 }
 
 /**
+ * Build the competitive intelligence prompt section from gap analysis data.
+ * Returns an empty string when no gap analysis data is available.
+ */
+function buildCompetitiveIntelligenceSection(ctx?: GapAnalysisContext): string {
+  if (!ctx) return '';
+
+  const parts: string[] = [];
+
+  if (ctx.competitorEAVs?.length) {
+    const uniqueEntities = [...new Set(ctx.competitorEAVs.map(e => e.entity))].slice(0, 10);
+    const attrFreq = new Map<string, number>();
+    for (const eav of ctx.competitorEAVs) {
+      attrFreq.set(eav.attribute, (attrFreq.get(eav.attribute) || 0) + 1);
+    }
+    const topAttributes = [...attrFreq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([attr]) => attr);
+
+    parts.push(`- Top competitor entities: ${uniqueEntities.join(', ')}`);
+    parts.push(`- Key competitor attributes (by frequency): ${topAttributes.join(', ')}`);
+  }
+
+  if (ctx.contentGaps?.length) {
+    const gapSummary = ctx.contentGaps
+      .slice(0, 10)
+      .map(g => `${g.missingAttribute} (${g.priority})`)
+      .join(', ');
+    parts.push(`- Content gaps (missing from our site): ${gapSummary}`);
+  }
+
+  if (ctx.topicsCovered?.length) {
+    parts.push(`- Topics our site already covers: ${ctx.topicsCovered.slice(0, 20).join(', ')}`);
+  }
+
+  if (parts.length === 0) return '';
+
+  return `COMPETITIVE INTELLIGENCE (from gap analysis):
+${parts.join('\n')}
+
+Use this competitive data to:
+1. Validate the Central Entity — it should align with what competitors rank for
+2. Derive SC attribute priorities from the most frequent competitor attributes
+3. Extract CSI predicates from the search patterns in competitor data
+4. Identify content areas from the gap + competitor topic clusters
+
+`;
+}
+
+export interface GapAnalysisContext {
+  competitorEAVs?: Array<{ entity: string; attribute: string; value: string }>;
+  contentGaps?: Array<{ missingAttribute: string; priority: string; suggestedContent?: string }>;
+  topicsCovered?: string[];
+}
+
+/**
  * Suggest SEO pillars (CE, SC, CSI) from business context.
  * Called when the user reaches the Strategy step with business info but no pillars.
+ * Optionally enriched with competitive intelligence from gap analysis (Step 2).
  */
 export async function suggestPillarsFromBusinessInfo(
   businessInfo: BusinessInfo,
-  dispatch: React.Dispatch<AppAction>
+  dispatch: React.Dispatch<AppAction>,
+  gapAnalysisContext?: GapAnalysisContext
 ): Promise<PillarSuggestionResult> {
   const { seedKeyword, industry, valueProp, audience, domain, language, targetMarket, region } = businessInfo;
 
@@ -70,7 +128,7 @@ First, detect the website's language and target region from ALL available signal
 4. The explicitly provided language/market fields (if non-empty and not "en"/"United States")
 Only default to "en" / "Global" if there are absolutely no signals.
 
-PILLAR SUGGESTIONS — must be in the DETECTED language (not English, unless the detected language IS English):
+${buildCompetitiveIntelligenceSection(gapAnalysisContext)}PILLAR SUGGESTIONS — must be in the DETECTED language (not English, unless the detected language IS English):
 1. **Central Entity (CE)**: The single unambiguous entity this website should be the definitive source for. Must be a noun or noun phrase (not a keyword). Write in the website's language.
 
 2. **Source Context (SC)**: The authority type — how the website positions itself as a source. Write in the website's language (e.g., for Dutch: "B2B dienstverlener", for German: "B2B-Dienstleister").

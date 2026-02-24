@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
@@ -505,6 +505,12 @@ const PipelineStrategyStep: React.FC = () => {
   } = usePipeline();
   const { state, dispatch } = useAppState();
 
+  // Use per-map business_info merged with global state (per-map takes precedence)
+  const effectiveBusinessInfo = useMemo(() => {
+    const mapBI = activeMap?.business_info;
+    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+  }, [state.businessInfo, activeMap?.business_info]);
+
   const stepState = getStepState('strategy');
   const gate = stepState?.gate;
 
@@ -561,17 +567,17 @@ const PipelineStrategyStep: React.FC = () => {
   }, [activeMap?.id]);
 
   // G4: Pre-fill CE from seedKeyword if empty (immediate, before AI suggest)
-  const hasBusinessContext = !!state.businessInfo.seedKeyword;
+  const hasBusinessContext = !!effectiveBusinessInfo.seedKeyword;
   const hasExistingPillars = !!existingPillars?.centralEntity;
   const [autoSuggestAttempted, setAutoSuggestAttempted] = useState(false);
   const [ceFromCrawl, setCeFromCrawl] = useState(false);
 
   useEffect(() => {
-    if (!ceName && state.businessInfo.seedKeyword) {
-      setCeName(state.businessInfo.seedKeyword);
+    if (!ceName && effectiveBusinessInfo.seedKeyword) {
+      setCeName(effectiveBusinessInfo.seedKeyword);
       setCeFromCrawl(true);
     }
-  }, [state.businessInfo.seedKeyword]);
+  }, [effectiveBusinessInfo.seedKeyword]);
 
   // Auto-suggest on mount when pillars are empty and business info is available
   useEffect(() => {
@@ -587,7 +593,20 @@ const PipelineStrategyStep: React.FC = () => {
     setSaveError(null);
 
     try {
-      const result = await suggestPillarsFromBusinessInfo(state.businessInfo, dispatch);
+      // Extract gap analysis data from the active map (if available from Step 2)
+      const gapAnalysis = (activeMap?.analysis_state as any)?.gap_analysis;
+      const gapContext = gapAnalysis ? {
+        competitorEAVs: gapAnalysis.competitorEAVs?.slice(0, 30)?.map((e: any) => ({
+          entity: e.entity, attribute: e.attribute, value: String(e.value)
+        })),
+        contentGaps: gapAnalysis.contentGaps?.slice(0, 15)?.map((g: any) => ({
+          missingAttribute: g.missingAttribute, priority: g.priority,
+          suggestedContent: g.suggestedContent
+        })),
+        topicsCovered: gapAnalysis.siteInventorySummary?.topicsCovered,
+      } : undefined;
+
+      const result = await suggestPillarsFromBusinessInfo(effectiveBusinessInfo, dispatch, gapContext);
 
       setCeName(result.centralEntity);
       setScType(result.sourceContext);
@@ -606,13 +625,13 @@ const PipelineStrategyStep: React.FC = () => {
       setSuggestionReasoning(result.reasoning);
 
       // Apply detected language/region to businessInfo if not already set
-      const currentLang = state.businessInfo.language;
-      const currentMarket = state.businessInfo.targetMarket;
+      const currentLang = effectiveBusinessInfo.language;
+      const currentMarket = effectiveBusinessInfo.targetMarket;
       const needsLangUpdate = (!currentLang || currentLang === 'en') && result.detectedLanguage && result.detectedLanguage !== 'en';
       const needsMarketUpdate = (!currentMarket || currentMarket === 'United States') && result.detectedRegion && result.detectedRegion !== 'Global';
 
       if (needsLangUpdate || needsMarketUpdate) {
-        const updatedInfo = { ...state.businessInfo };
+        const updatedInfo = { ...effectiveBusinessInfo };
         if (needsLangUpdate) updatedInfo.language = result.detectedLanguage;
         if (needsMarketUpdate) updatedInfo.targetMarket = result.detectedRegion;
         dispatch({ type: 'SET_BUSINESS_INFO', payload: updatedInfo });
@@ -668,8 +687,8 @@ const PipelineStrategyStep: React.FC = () => {
       // Persist to Supabase
       try {
         const supabase = getSupabaseClient(
-          state.businessInfo.supabaseUrl,
-          state.businessInfo.supabaseAnonKey
+          effectiveBusinessInfo.supabaseUrl,
+          effectiveBusinessInfo.supabaseAnonKey
         );
         const { error } = await supabase
           .from('topical_maps')
@@ -724,7 +743,7 @@ const PipelineStrategyStep: React.FC = () => {
       </div>
 
       {/* Business Context Card */}
-      <BusinessContextCard businessInfo={state.businessInfo} />
+      <BusinessContextCard businessInfo={effectiveBusinessInfo} />
 
       {/* AI Suggestion Banner */}
       {aiSuggested && !savedSuccess && (
@@ -767,7 +786,7 @@ const PipelineStrategyStep: React.FC = () => {
         csiText={csiText}
         contentAreas={contentAreas}
         contentAreaTypes={contentAreaTypes}
-        businessInfo={state.businessInfo}
+        businessInfo={effectiveBusinessInfo}
         ceFromCrawl={ceFromCrawl}
         aiSuggested={aiSuggested}
       />
@@ -963,7 +982,7 @@ const PipelineStrategyStep: React.FC = () => {
         contentAreaTypes={contentAreaTypes}
         onUpdate={setContentAreas}
         onUpdateTypes={setContentAreaTypes}
-        industry={state.businessInfo.industry}
+        industry={effectiveBusinessInfo.industry}
       />
 
       {/* Save Button */}
