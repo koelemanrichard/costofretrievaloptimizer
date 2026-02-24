@@ -271,6 +271,7 @@ export interface TopicalMap {
   navigation?: NavigationStructure;
   styleguide_data?: import('../services/styleguide-generator/types').BrandStyleguideData | null;
   pipeline_state?: import('../state/slices/pipelineSlice').PipelineState | null;
+  dialogue_context?: import('./dialogue').DialogueContext;
 }
 
 /**

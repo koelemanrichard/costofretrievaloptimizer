@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
+import StepDialogue from '../../pipeline/StepDialogue';
+import CascadeWarning from '../../pipeline/CascadeWarning';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 import { suggestPillarsFromBusinessInfo } from '../../../services/ai/pillarSuggestion';
+import { detectCascadeImpact, createEmptyDialogueContext } from '../../../services/ai/dialogueEngine';
+import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
 
 // ──── Tag Input (for CSI predicates) ────
 
@@ -543,6 +547,19 @@ const PipelineStrategyStep: React.FC = () => {
   const [aiSuggested, setAiSuggested] = useState(false);
   const [suggestionReasoning, setSuggestionReasoning] = useState<string | null>(null);
 
+  // ──── Dialogue Engine state ────
+  const [dialogueContext, setDialogueContext] = useState<DialogueContext>(
+    (activeMap?.dialogue_context as DialogueContext) || createEmptyDialogueContext()
+  );
+  const loadedDialogueCtx = (activeMap?.dialogue_context as DialogueContext) || null;
+  const [dialogueComplete, setDialogueComplete] = useState(
+    loadedDialogueCtx?.strategy?.status === 'complete' || loadedDialogueCtx?.strategy?.status === 'skipped'
+  );
+  const [showDialogue, setShowDialogue] = useState(
+    loadedDialogueCtx?.strategy?.status === 'in_progress'
+  );
+  const [cascadeImpact, setCascadeImpact] = useState<CascadeImpact | null>(null);
+
   // J1: Adaptive display — show summary when data exists, editor when adjusting
   const hasStrategyData = !!existingPillars?.centralEntity && !!existingPillars?.sourceContext;
   const [isAdjusting, setIsAdjusting] = useState(!hasStrategyData);
@@ -623,6 +640,7 @@ const PipelineStrategyStep: React.FC = () => {
       }
       setAiSuggested(true);
       setSuggestionReasoning(result.reasoning);
+      setShowDialogue(true);
 
       // Apply detected language/region to businessInfo if not already set
       const currentLang = effectiveBusinessInfo.language;
@@ -643,6 +661,86 @@ const PipelineStrategyStep: React.FC = () => {
       setIsSuggesting(false);
     }
   };
+
+  // ──── Dialogue Engine handlers ────
+
+  const persistDialogueContext = useCallback(async (updated: DialogueContext) => {
+    setDialogueContext(updated);
+    if (state.activeMapId) {
+      dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: state.activeMapId, data: { dialogue_context: updated } } });
+      try {
+        const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+        await supabase.from('topical_maps').update({ dialogue_context: updated } as any).eq('id', state.activeMapId);
+      } catch { /* non-fatal */ }
+    }
+  }, [state.activeMapId, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch]);
+
+  const handleDialogueDataExtracted = useCallback((data: ExtractedData) => {
+    if (data.updatedFields) {
+      const fields = data.updatedFields;
+      const oldCE = ceName;
+      const oldSC = scType;
+
+      if (fields.centralEntity) setCeName(fields.centralEntity);
+      if (fields.sourceContext) setScType(fields.sourceContext);
+      if (fields.centralSearchIntent) setCsiText(fields.centralSearchIntent);
+      if (fields.csiPredicates) setCsiPredicates(fields.csiPredicates);
+      if (fields.scPriorities) setScPriorities(fields.scPriorities);
+
+      // Cascade detection for CE/SC changes
+      if (fields.centralEntity && fields.centralEntity !== oldCE) {
+        const impact = detectCascadeImpact('centralEntity', fields.centralEntity, oldCE, {
+          eavs: activeMap?.eavs as any[],
+          topics: state.topicalMaps.find(m => m.id === state.activeMapId)?.topics as any[],
+        });
+        if (impact.hasImpact) setCascadeImpact(impact);
+      }
+      if (fields.sourceContext && fields.sourceContext !== oldSC) {
+        const impact = detectCascadeImpact('sourceContext', fields.sourceContext, oldSC, {
+          eavs: activeMap?.eavs as any[],
+          topics: state.topicalMaps.find(m => m.id === state.activeMapId)?.topics as any[],
+        });
+        if (impact.hasImpact) setCascadeImpact(impact);
+      }
+    }
+
+    // Update questionsAnswered (uses functional updater to avoid stale closure)
+    setDialogueContext(prev => {
+      const updated = { ...prev, strategy: { ...prev.strategy, status: 'in_progress' as const, questionsAnswered: prev.strategy.questionsAnswered + 1 } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [ceName, scType, activeMap, state.topicalMaps, state.activeMapId, persistDialogueContext]);
+
+  // Push confirmed answer to dialogue_context.answers[]
+  const handleAnswerConfirmed = useCallback((answer: import('../../../types/dialogue').DialogueAnswer) => {
+    setDialogueContext(prev => {
+      const updated = { ...prev, strategy: { ...prev.strategy, answers: [...prev.strategy.answers, answer] } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [persistDialogueContext]);
+
+  const handleDialogueComplete = useCallback(() => {
+    setDialogueComplete(true);
+    setDialogueContext(prev => {
+      const updated = { ...prev, strategy: { ...prev.strategy, status: 'complete' as const } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [persistDialogueContext]);
+
+  const handleCascadeAction = useCallback((action: 'update_all' | 'review' | 'cancel', _impact: CascadeImpact) => {
+    setCascadeImpact(null);
+    if (action === 'cancel') {
+      // Revert — reload from existing pillars
+      if (existingPillars) {
+        setCeName(existingPillars.centralEntity ?? '');
+        setScType(existingPillars.sourceContext ?? '');
+      }
+    }
+    // 'update_all' and 'review' — handled by downstream regeneration in later steps
+  }, [existingPillars]);
 
   const handleReorderPriorities = (from: number, to: number) => {
     const updated = [...scPriorities];
@@ -1013,8 +1111,27 @@ const PipelineStrategyStep: React.FC = () => {
       </div>
       </>)}
 
-      {/* Approval Gate — G1, most critical */}
-      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
+      {/* Cascade Warning */}
+      {cascadeImpact && (
+        <CascadeWarning impact={cascadeImpact} onAction={(action) => handleCascadeAction(action, cascadeImpact)} />
+      )}
+
+      {/* Intelligent Dialogue — Q&A before approval */}
+      {showDialogue && !dialogueComplete && (
+        <StepDialogue
+          step="strategy"
+          stepOutput={{ pillars: { centralEntity: ceName, sourceContext: scType, centralSearchIntent: csiText, csiPredicates, scPriorities, contentAreas } }}
+          businessInfo={effectiveBusinessInfo}
+          dialogueContext={dialogueContext}
+          onDataExtracted={handleDialogueDataExtracted}
+          onDialogueComplete={handleDialogueComplete}
+          onCascadeAction={handleCascadeAction}
+          onAnswerConfirmed={handleAnswerConfirmed}
+        />
+      )}
+
+      {/* Approval Gate — G1, most critical (gated on dialogue completion) */}
+      {gate && (dialogueComplete || !showDialogue) && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <div className="bg-violet-900/10 border border-violet-700/40 rounded-lg p-1">
           <ApprovalGate
             step="strategy"

@@ -9,10 +9,12 @@
  */
 
 import type { BusinessInfo, SemanticTriple } from '../../types';
+import type { DialogueContext } from '../../types/dialogue';
 import type { AppAction } from '../../state/appState';
 import { dispatchToProvider } from './providerDispatcher';
 import { autoClassifyEavs } from './eavClassifier';
 import { detectIndustryType, getPredicateSuggestions, generateEavTemplate } from './eavService';
+import { buildDialogueContextSection } from './dialogueEngine';
 import { getLanguageAndRegionInstruction, getLanguageName } from '../../utils/languageUtils';
 import * as geminiService from '../geminiService';
 import * as openAiService from '../openAiService';
@@ -62,7 +64,8 @@ function buildCompetitorSection(ctx: EavGenerationContext): string {
 
 function buildPrompt(
   businessInfo: BusinessInfo,
-  ctx: EavGenerationContext
+  ctx: EavGenerationContext,
+  dialogueContext?: DialogueContext
 ): string {
   const { language, region, industry, audience, domain } = businessInfo;
   const languageInstruction = getLanguageAndRegionInstruction(language, region);
@@ -102,8 +105,7 @@ BUSINESS CONTEXT:
 - CSI Predicates: ${csiPredicates}
 - SC Priorities: ${scPriorities}
 - Content Areas: ${contentAreas}
-${competitorSection}
-REQUIREMENTS:
+${competitorSection}${dialogueContext ? buildDialogueContextSection(dialogueContext, 'eavs') + '\n' : ''}REQUIREMENTS:
 
 Layer 1 (CE) — Generate 20-30 triples:
 - Root Attributes (8-10): Definition, function, types, common problems, maintenance,
@@ -224,9 +226,10 @@ function processAiResponse(
 export async function generateEavsWithAI(
   businessInfo: BusinessInfo,
   ctx: EavGenerationContext,
-  dispatch: React.Dispatch<AppAction>
+  dispatch: React.Dispatch<AppAction>,
+  dialogueContext?: DialogueContext
 ): Promise<EavGenerationResult> {
-  const prompt = buildPrompt(businessInfo, ctx);
+  const prompt = buildPrompt(businessInfo, ctx, dialogueContext);
 
   const fallback = { eavs: [] as any[], reasoning: 'Fallback — AI generation unavailable' };
 

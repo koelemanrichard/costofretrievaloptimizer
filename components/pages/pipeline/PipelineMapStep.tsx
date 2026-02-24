@@ -1,9 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
+import StepDialogue from '../../pipeline/StepDialogue';
 import { generateInitialTopicalMap } from '../../../services/ai/mapGeneration';
 import type { EnrichedTopic, SemanticTriple } from '../../../types';
+import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
+import { createEmptyDialogueContext } from '../../../services/ai/dialogueEngine';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 
 // ──── Metric Card ────
@@ -1071,6 +1074,18 @@ const PipelineMapStep: React.FC = () => {
   const [generatedOuter, setGeneratedOuter] = useState<EnrichedTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // ──── Dialogue Engine state ────
+  const [dialogueContext, setDialogueContext] = useState<DialogueContext>(
+    (activeMap?.dialogue_context as DialogueContext) || createEmptyDialogueContext()
+  );
+  const loadedDialogueCtx = (activeMap?.dialogue_context as DialogueContext) || null;
+  const [dialogueComplete, setDialogueComplete] = useState(
+    loadedDialogueCtx?.map_planning?.status === 'complete' || loadedDialogueCtx?.map_planning?.status === 'skipped'
+  );
+  const [showDialogue, setShowDialogue] = useState(
+    loadedDialogueCtx?.map_planning?.status === 'in_progress'
+  );
+
   // J1: Adaptive display — summary when data exists, detail when adjusting
   const hasMapData = existingCore.length > 0;
   const [isAdjusting, setIsAdjusting] = useState(!hasMapData);
@@ -1141,6 +1156,7 @@ const PipelineMapStep: React.FC = () => {
       }
 
       setStepStatus('map_planning', 'pending_approval');
+      setShowDialogue(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Map generation failed';
       setError(message);
@@ -1149,6 +1165,61 @@ const PipelineMapStep: React.FC = () => {
       setIsGenerating(false);
     }
   };
+
+  // ──── Dialogue Engine handlers ────
+
+  const persistDialogueContext = useCallback(async (updated: DialogueContext) => {
+    setDialogueContext(updated);
+    if (state.activeMapId) {
+      dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: state.activeMapId, data: { dialogue_context: updated } } });
+      try {
+        const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+        await supabase.from('topical_maps').update({ dialogue_context: updated } as any).eq('id', state.activeMapId);
+      } catch { /* non-fatal */ }
+    }
+  }, [state.activeMapId, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch]);
+
+  const handleDialogueDataExtracted = useCallback((data: ExtractedData) => {
+    // Apply topic decisions from dialogue answers
+    if (data.topicDecisions && state.activeMapId) {
+      // Topic decisions are textual — for now store as raw insight for manual processing
+      // Future: implement merge/split/add topic operations
+    }
+
+    // Add new topics if any
+    if (data.rawInsight) {
+      // Store the insight for future topic generation refinement
+    }
+
+    // Update questionsAnswered (uses functional updater to avoid stale closure)
+    setDialogueContext(prev => {
+      const updated = { ...prev, map_planning: { ...prev.map_planning, status: 'in_progress' as const, questionsAnswered: prev.map_planning.questionsAnswered + 1 } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [state.activeMapId, persistDialogueContext]);
+
+  // Push confirmed answer to dialogue_context.answers[]
+  const handleAnswerConfirmed = useCallback((answer: import('../../../types/dialogue').DialogueAnswer) => {
+    setDialogueContext(prev => {
+      const updated = { ...prev, map_planning: { ...prev.map_planning, answers: [...prev.map_planning.answers, answer] } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [persistDialogueContext]);
+
+  const handleDialogueComplete = useCallback(() => {
+    setDialogueComplete(true);
+    setDialogueContext(prev => {
+      const updated = { ...prev, map_planning: { ...prev.map_planning, status: 'complete' as const } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [persistDialogueContext]);
+
+  const handleCascadeAction = useCallback((_action: 'update_all' | 'review' | 'cancel', _impact: CascadeImpact) => {
+    // Map planning cascade actions — handled by regeneration
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -1281,8 +1352,22 @@ const PipelineMapStep: React.FC = () => {
       </div>
       </>)}
 
-      {/* Approval Gate */}
-      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
+      {/* Intelligent Dialogue — Q&A before approval */}
+      {showDialogue && !dialogueComplete && totalTopics > 0 && (
+        <StepDialogue
+          step="map_planning"
+          stepOutput={{ topics: [...coreTopics, ...outerTopics], clusters: clusterCount }}
+          businessInfo={effectiveBusinessInfo}
+          dialogueContext={dialogueContext}
+          onDataExtracted={handleDialogueDataExtracted}
+          onDialogueComplete={handleDialogueComplete}
+          onCascadeAction={handleCascadeAction}
+          onAnswerConfirmed={handleAnswerConfirmed}
+        />
+      )}
+
+      {/* Approval Gate (gated on dialogue completion) */}
+      {gate && (dialogueComplete || !showDialogue) && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="map_planning"
           gate={gate}

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { usePipeline } from '../../../hooks/usePipeline';
 import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
+import StepDialogue from '../../pipeline/StepDialogue';
 import {
   detectIndustryType,
   calculateIndustryCoverage,
@@ -9,6 +10,8 @@ import {
 } from '../../../services/ai/eavService';
 import type { EavGenerationContext } from '../../../services/ai/eavService';
 import type { SemanticTriple } from '../../../types';
+import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
+import { createEmptyDialogueContext } from '../../../services/ai/dialogueEngine';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 
 // ──── Confidence Types (Decision 2) ────
@@ -532,50 +535,6 @@ function CompetitorGapRow({
   );
 }
 
-// ──── Data Requests Panel ────
-
-function DataRequestsPanel() {
-  const [collapsed, setCollapsed] = useState(true);
-  const questions = [
-    'What are the unique specifications of your top 5 products/services?',
-    'Do you have proprietary data, certifications, or awards to reference?',
-    'What are the most common customer objections or misconceptions?',
-    'Which attributes differentiate you from your top 3 competitors?',
-    'What numeric values (prices, measurements, ratings) should be included?',
-  ];
-
-  return (
-    <div className="bg-gray-900 border border-amber-700/50 rounded-lg overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-800/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-          </svg>
-          <h3 className="text-sm font-semibold text-amber-300">Data Requests</h3>
-          <span className="text-xs text-gray-500">Questions for the business owner</span>
-        </div>
-        <svg className={`w-4 h-4 text-gray-500 transition-transform ${collapsed ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {!collapsed && (
-        <div className="px-6 pb-4 space-y-2">
-          {questions.map((question, i) => (
-            <div key={i} className="flex items-start gap-3 bg-gray-800/50 rounded-md px-4 py-3">
-              <span className="text-xs text-amber-400 font-mono mt-0.5">Q{i + 1}</span>
-              <p className="text-sm text-gray-300">{question}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ──── Main Component ────
 
 const PipelineEavsStep: React.FC = () => {
@@ -610,6 +569,18 @@ const PipelineEavsStep: React.FC = () => {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(new Set());
   const [autoGenerateAttempted, setAutoGenerateAttempted] = useState(false);
+
+  // ──── Dialogue Engine state ────
+  const [dialogueContext, setDialogueContext] = useState<DialogueContext>(
+    (activeMap?.dialogue_context as DialogueContext) || createEmptyDialogueContext()
+  );
+  const loadedDialogueCtx = (activeMap?.dialogue_context as DialogueContext) || null;
+  const [dialogueComplete, setDialogueComplete] = useState(
+    loadedDialogueCtx?.eavs?.status === 'complete' || loadedDialogueCtx?.eavs?.status === 'skipped'
+  );
+  const [showDialogue, setShowDialogue] = useState(
+    loadedDialogueCtx?.eavs?.status === 'in_progress'
+  );
 
   // J1: Adaptive display — summary when data exists, editor when adjusting
   const hasEavData = existingEavs.length > 0;
@@ -841,7 +812,7 @@ const PipelineEavsStep: React.FC = () => {
         contentGaps: gapAnalysis?.contentGaps,
       };
 
-      const result = await generateEavsWithAI(effectiveBusinessInfo, ctx, dispatch);
+      const result = await generateEavsWithAI(effectiveBusinessInfo, ctx, dispatch, dialogueContext);
 
       setGeneratedEavs(result.eavs);
 
@@ -864,6 +835,7 @@ const PipelineEavsStep: React.FC = () => {
       }
 
       setStepStatus('eavs', 'pending_approval');
+      setShowDialogue(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'EAV generation failed';
       setError(message);
@@ -899,6 +871,65 @@ const PipelineEavsStep: React.FC = () => {
 
     setStepStatus('eavs', 'pending_approval');
   }, [rawEavs, dismissedIds, state.activeMapId, effectiveBusinessInfo, dispatch, setStepStatus]);
+
+  // ──── Dialogue Engine handlers ────
+
+  const persistDialogueContext = useCallback(async (updated: DialogueContext) => {
+    setDialogueContext(updated);
+    if (state.activeMapId) {
+      dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: state.activeMapId, data: { dialogue_context: updated } } });
+      try {
+        const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+        await supabase.from('topical_maps').update({ dialogue_context: updated } as any).eq('id', state.activeMapId);
+      } catch { /* non-fatal */ }
+    }
+  }, [state.activeMapId, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch]);
+
+  const handleDialogueDataExtracted = useCallback((data: ExtractedData) => {
+    // Add new EAV triples from dialogue answers
+    if (data.newTriples?.length && state.activeMapId) {
+      const updated = [...rawEavs, ...data.newTriples] as SemanticTriple[];
+      dispatch({ type: 'UPDATE_MAP_DATA', payload: { mapId: state.activeMapId, data: { eavs: updated } } });
+      setGeneratedEavs(prev => [...prev, ...data.newTriples!]);
+
+      // Also persist to Supabase
+      (async () => {
+        try {
+          const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
+          await supabase.from('topical_maps').update({ eavs: updated } as any).eq('id', state.activeMapId);
+        } catch { /* non-fatal */ }
+      })();
+    }
+
+    // Update questionsAnswered (uses functional updater to avoid stale closure)
+    setDialogueContext(prev => {
+      const updated = { ...prev, eavs: { ...prev.eavs, status: 'in_progress' as const, questionsAnswered: prev.eavs.questionsAnswered + 1 } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [rawEavs, state.activeMapId, effectiveBusinessInfo, dispatch, persistDialogueContext]);
+
+  // Push confirmed answer to dialogue_context.answers[]
+  const handleAnswerConfirmed = useCallback((answer: import('../../../types/dialogue').DialogueAnswer) => {
+    setDialogueContext(prev => {
+      const updated = { ...prev, eavs: { ...prev.eavs, answers: [...prev.eavs.answers, answer] } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [persistDialogueContext]);
+
+  const handleDialogueComplete = useCallback(() => {
+    setDialogueComplete(true);
+    setDialogueContext(prev => {
+      const updated = { ...prev, eavs: { ...prev.eavs, status: 'complete' as const } };
+      persistDialogueContext(updated);
+      return updated;
+    });
+  }, [persistDialogueContext]);
+
+  const handleCascadeAction = useCallback((_action: 'update_all' | 'review' | 'cancel', _impact: CascadeImpact) => {
+    // EAV step cascade actions are handled by regeneration
+  }, []);
 
   // Industry coverage
   const industryType = detectIndustryType(effectiveBusinessInfo);
@@ -1166,8 +1197,19 @@ const PipelineEavsStep: React.FC = () => {
         </div>
       )}
 
-      {/* Data Requests — only in adjust mode */}
-      {isAdjusting && totalTriples > 0 && needValue > 0 && <DataRequestsPanel />}
+      {/* Intelligent Dialogue — replaces static Data Requests */}
+      {showDialogue && !dialogueComplete && totalTriples > 0 && (
+        <StepDialogue
+          step="eavs"
+          stepOutput={{ eavs: rawEavs, pendingCount: needValue }}
+          businessInfo={effectiveBusinessInfo}
+          dialogueContext={dialogueContext}
+          onDataExtracted={handleDialogueDataExtracted}
+          onDialogueComplete={handleDialogueComplete}
+          onCascadeAction={handleCascadeAction}
+          onAnswerConfirmed={handleAnswerConfirmed}
+        />
+      )}
 
       {/* KBT Consistency Rules (E3) — always show when confirmed */}
       {confirmedCount > 0 && (
@@ -1184,8 +1226,8 @@ const PipelineEavsStep: React.FC = () => {
         </div>
       )}
 
-      {/* Approval Gate */}
-      {gate && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
+      {/* Approval Gate (gated on dialogue completion) */}
+      {gate && (dialogueComplete || !showDialogue) && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="eavs"
           gate={gate}
