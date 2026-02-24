@@ -125,11 +125,15 @@ export async function getStructuralAnalysis(
   const analysis = data.analysis as StructuralAnalysis;
 
   // 3. Cache the result
-  await supabase
+  const { error: updateError } = await supabase
     .from('site_analysis_pages')
     .update({ structural_analysis: analysis } as any)
     .eq('project_id', projectId)
     .eq('url', url);
+
+  if (updateError) {
+    console.warn('[structuralAnalysis] Cache update failed for', url, updateError.message);
+  }
 
   return analysis;
 }
@@ -167,11 +171,13 @@ export async function batchAnalyzePages(
   language?: string,
   onProgress?: (completed: number, total: number) => void
 ): Promise<Map<string, StructuralAnalysis>> {
+  const MAX_BATCH_SIZE = 50;
+  const effectivePages = pages.slice(0, MAX_BATCH_SIZE);
   const results = new Map<string, StructuralAnalysis>();
-  const total = pages.length;
+  const total = effectivePages.length;
 
   for (let i = 0; i < total; i++) {
-    const page = pages[i];
+    const page = effectivePages[i];
     const analysis = await getStructuralAnalysis(projectId, page.url, {
       centralEntity,
       language,
