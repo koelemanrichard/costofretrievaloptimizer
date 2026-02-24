@@ -1,5 +1,6 @@
 
 import { BusinessInfo, ResponseCode, ContentBrief, EnrichedTopic, SEOPillars, KnowledgeGraph, ContentIntegrityResult, SchemaGenerationResult, AuditRuleResult, BriefVisualSemantics, StreamingProgressCallback, HolisticSummary, CompetitorSpecs, SemanticTriple } from '../../types';
+import type { StructuralAnalysis } from '../../types';
 import { MarketPatterns } from '../../types/competitiveIntelligence';
 import type { CategoryPageContext } from '../../types/catalog';
 import * as geminiService from '../geminiService';
@@ -14,6 +15,36 @@ import { analyzeImageRequirements } from '../visualSemanticsService';
 import { shouldApplyMonetizationEnhancement, getMonetizationValidationRules } from './briefOptimization';
 import { validateLanguageSettings } from '../../utils/languageUtils';
 import React from 'react';
+
+/**
+ * Build a structural template section from competitor structural analysis data.
+ * Included in content brief prompts to guide article structure.
+ */
+export function buildStructuralTemplateSection(
+  competitorAnalyses: StructuralAnalysis[]
+): string {
+  if (competitorAnalyses.length === 0) return '';
+
+  const avgH2Count = Math.round(
+    competitorAnalyses.reduce((s, a) => s + a.sections.length, 0) / competitorAnalyses.length
+  );
+  const avgMainWords = Math.round(
+    competitorAnalyses.reduce((s, a) => s + a.mainContentWordCount, 0) / competitorAnalyses.length
+  );
+  const avgListsPerSection = Math.round(
+    competitorAnalyses.reduce((s, a) => s + a.sections.reduce((ls, sec) => ls + sec.listCount, 0), 0) /
+    Math.max(competitorAnalyses.reduce((s, a) => s + a.sections.length, 0), 1) * 10
+  ) / 10;
+  const schemaTypes = [...new Set(
+    competitorAnalyses.flatMap(a => a.schemaMarkup.map(s => s.type))
+  )];
+
+  return `\n## Structural Template (from ${competitorAnalyses.length} competitor pages)\n` +
+    `- Average H2 sections: ${avgH2Count}\n` +
+    `- Average main content word count: ${avgMainWords}\n` +
+    `- Average lists per section: ${avgListsPerSection}\n` +
+    `- Schema types found: ${schemaTypes.join(', ') || 'none'}\n`;
+}
 
 /**
  * Convert MarketPatterns to CompetitorSpecs for storage in ContentBrief

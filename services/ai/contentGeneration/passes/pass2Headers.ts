@@ -1,8 +1,28 @@
 // services/ai/contentGeneration/passes/pass2Headers.ts
 import { ContentBrief, ContentGenerationJob, BusinessInfo, SectionProgressCallback } from '../../../../types';
+import type { StructuralAnalysis } from '../../../../types';
 import { ContentGenerationOrchestrator } from '../orchestrator';
 import { executeSectionPass } from './baseSectionPass';
 import { buildPass2Prompt } from '../rulesEngine/prompts/sectionOptimizationPromptBuilder';
+
+/**
+ * Build structural guidance from competitor analysis for heading optimization.
+ */
+export function buildStructuralGuidance(competitorStructural?: StructuralAnalysis[]): string {
+  if (!competitorStructural?.length) return '';
+
+  const avgH2 = Math.round(
+    competitorStructural.reduce((s, a) => s + a.sections.length, 0) / competitorStructural.length
+  );
+  const avgHeadingMentionRate = Math.round(
+    competitorStructural.reduce((s, a) => s + a.entityProminence.headingMentionRate, 0) /
+    competitorStructural.length * 100
+  );
+
+  return `\nSTRUCTURAL BASELINE (from ${competitorStructural.length} competitor pages):\n` +
+    `- Competitor pages average ${avgH2} H2 sections. Ensure comparable depth.\n` +
+    `- Competitors mention the main entity in ${avgHeadingMentionRate}% of headings.\n`;
+}
 
 /**
  * Pass 2: Header Optimization

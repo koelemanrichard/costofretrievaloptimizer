@@ -9,6 +9,57 @@
 import type { StructuralAnalysis, StructuralAnalysisRequest } from '../types';
 import { useSupabase } from './supabaseClient';
 
+/**
+ * Aggregate structural health metrics across analyzed pages.
+ * Useful for Insights Hub and dashboard-level structural overview.
+ */
+export function aggregateStructuralHealth(
+  analyses: StructuralAnalysis[]
+): {
+  totalPages: number;
+  withSemanticMain: number;
+  avgMainContentRatio: number;
+  withSchema: number;
+  withCeInH1: number;
+  avgDomEfficiency: number;
+} {
+  if (analyses.length === 0) {
+    return {
+      totalPages: 0,
+      withSemanticMain: 0,
+      avgMainContentRatio: 0,
+      withSchema: 0,
+      withCeInH1: 0,
+      avgDomEfficiency: 0,
+    };
+  }
+
+  const totalPages = analyses.length;
+  const withSemanticMain = analyses.filter(a => a.regions.main.exists).length;
+  const avgMainContentRatio = Math.round(
+    analyses.reduce((s, a) => s + a.regions.main.percentage, 0) / totalPages
+  );
+  const withSchema = analyses.filter(a => a.schemaMarkup.length > 0).length;
+  const withCeInH1 = analyses.filter(a => a.entityProminence.inH1).length;
+  const avgDomEfficiency = Math.round(
+    analyses.reduce((s, a) => {
+      const ratio = a.domMetrics.totalNodes > 0
+        ? a.domMetrics.mainContentNodes / a.domMetrics.totalNodes
+        : 0;
+      return s + ratio;
+    }, 0) / totalPages * 100
+  );
+
+  return {
+    totalPages,
+    withSemanticMain,
+    avgMainContentRatio,
+    withSchema,
+    withCeInH1,
+    avgDomEfficiency,
+  };
+}
+
 const ANALYZER_VERSION = '1.0.0';
 
 /**
