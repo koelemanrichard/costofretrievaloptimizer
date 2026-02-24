@@ -15,6 +15,7 @@
 // - types/navigation.ts - Navigation types (FoundationPage, NavigationStructure, NAPData, TOCEntry, Hreflang)
 // - types/migration.ts - Migration types (TransitionStatus, MapMergeState, SiteInventoryItem, MigrationPlan)
 // - types/siteAnalysis.ts - Site analysis types (SiteAnalysisProject, SitePageRecord, JinaExtraction)
+// - types/structuralAnalysis.ts - Structural analysis types (StructuralAnalysis, HeadingNode, EntityProminence)
 // - types/contentGeneration.ts - Content generation types (ContentGenerationJob, PassesStatus, PASS_NAMES)
 // - types/contentTemplates.ts - Content template routing types
 // - types/competitiveIntelligence.ts - Competitive intelligence (GapNode, CompetitorGapNetwork, MentionScanner)
@@ -36,6 +37,7 @@ export * from './types/publication';
 export * from './types/navigation';
 export * from './types/migration';
 export * from './types/siteAnalysis';
+export * from './types/structuralAnalysis';
 export * from './types/contentGeneration';
 export * from './types/contentTemplates';
 export * from './types/competitiveIntelligence';
