@@ -325,3 +325,139 @@ npx playwright test    # Run E2E tests (requires dev server running)
 **Data Persistence — Always Verify Load Path**: When saving data to Supabase (e.g., a new JSONB column on `topical_maps`), **always verify that the data is loaded back** when the component remounts or the page is refreshed. Check: (1) the Supabase `SELECT` query includes the new column (or uses `select('*')`), (2) the state management layer (reducer/context) passes the loaded data to the component, (3) the component reads from state on mount (not just after generation). Test by: generating data, refreshing the page, and confirming the data appears without re-generation. The `ProjectLoader.tsx` uses `select('*')` for topical maps, so new columns are automatically included — but the component must read from `topicalMap.new_column` on initial render.
 
 **Iframe Sandbox — Prevent Script Execution Errors**: When rendering user/AI-generated HTML in `<iframe srcDoc>`, the sandbox attribute controls what the iframe can do. Common error: `Blocked script execution in 'about:srcdoc' because the document's frame is sandboxed`. To fix: (1) If the HTML contains `<script>` tags or inline event handlers and you need them to work, use `sandbox="allow-same-origin allow-scripts"`. (2) If you DON'T need scripts (pure CSS/HTML preview), use `sandbox="allow-same-origin"` and **strip all `<script>` tags and `on*` attributes** before setting `srcDoc` (see `sanitizeHtmlForPreview()` in `StyleGuideElementCard.tsx`). (3) **Never use `sandbox=""` (empty)** — it blocks everything including same-origin access needed for height measurement. (4) For CSS `url()` values, replace external URLs with `url(data:,)` NOT `about:blank` to avoid ERR_NAME_NOT_RESOLVED.
+
+## Recurring Issue Patterns (Learned from 198 Fix Commits)
+
+These rules are derived from a systematic analysis of the entire git history. Each category below represents a class of bug that has been fixed **multiple times** — some as many as 8+ separate commits. These rules are **mandatory** to prevent regression.
+
+---
+
+### 1. CORS — Proxy Enforcement (11 fix commits)
+
+The same CORS bug has been fixed 11 times: frontend code calls an external API via `fetch()`, which works locally but fails in production with a CORS error.
+
+**Rules:**
+- **Every external HTTP request from browser code MUST go through the `fetch-proxy` Supabase edge function.** Never use `fetch()` for external domains. Never use third-party CORS proxies like `corsproxy.io`.
+- **Never make `proxyConfig` an optional parameter.** When a function needs to call an external URL, it must require proxy configuration — not accept it optionally and silently fall back to direct `fetch()`. The safe path must be the only path.
+- **Thread `proxyConfig` through the entire call chain.** When adding a new caller to an existing service that fetches external URLs, verify the caller passes `proxyConfig` all the way down. A missing `proxyConfig` compiles fine but fails at runtime.
+- **Edge function CORS origins are centralized in `_shared/utils.ts`.** Never define inline `Access-Control-Allow-Origin` headers in individual edge functions. When adding a new origin (e.g., a new domain or port), add it only in `_shared/utils.ts` `ALLOWED_ORIGINS`.
+
+---
+
+### 2. Language/Region Enforcement (13 fix commits across 8 waves)
+
+Every AI prompt must produce output in the user's configured language. This has been broken and fixed 8 separate times because there is no centralized enforcement.
+
+**Rules:**
+- **Every AI prompt function MUST accept `businessInfo` (or at minimum `language`/`region`)** and call `getLanguageAndRegionInstruction()`. Place the language directive at the **TOP** of the prompt, not buried at the bottom. LLMs weight top-of-prompt instructions more heavily.
+- **Always use per-map `businessInfo`, not global state.** The per-map overrides in `topical_maps.business_info` (language, region) take precedence over `state.businessInfo`. Components must merge these: `effectiveBusinessInfo = { ...globalBI, ...mapBI }`. Never read `state.businessInfo.language` directly — use the merged version.
+- **When updating a prompt signature to accept `businessInfo`, update ALL 5 provider callers** (`anthropicService.ts`, `geminiService.ts`, `openAiService.ts`, `openRouterService.ts`, `perplexityService.ts`) in the same commit. Missing one caller means that provider silently generates English output.
+- **Never hardcode language values** (e.g., `language: 'en'`). Always read from the effective business info.
+- **Test with a non-English language** before marking a prompt feature complete.
+
+---
+
+### 3. Data Persistence — Round-Trip Verification (14 fix commits)
+
+The most frequent class of bug: data is saved but not loaded back on refresh. Five sub-patterns:
+
+**Rule A — Write Path + Read Path Must Be Verified Together:**
+When saving data to a new Supabase column, verify ALL of:
+1. The database migration exists and has been applied
+2. The TypeScript type includes the new field
+3. The parser/transformer in `utils/parsers.ts` includes the new field (parsers use whitelists that silently drop unknown fields)
+4. The Supabase `SELECT` query includes the column (or uses `select('*')`)
+5. The component reads from persisted state on mount, not just after generation
+6. **Refresh test**: Generate data → hard refresh → confirm data appears without re-generation
+7. **Deep-link test**: Navigate directly to the URL → confirm data loads
+
+**Rule B — Never Use localStorage for Entity-Scoped Data:**
+`localStorage` is acceptable only for truly global UI preferences (theme, sidebar state). Any data scoped to a project, map, or user entity must be persisted to the database. `localStorage` is global, unscoped, and causes cross-entity leakage.
+
+**Rule C — Co-locate Migration and Code Changes:**
+Every commit that writes to a new database column must include: (a) SQL migration, (b) TypeScript type update, (c) parser/whitelist update, (d) load-path verification. Never reference a column in code without a corresponding migration.
+
+**Rule D — State Hydration Must Work From All Entry Points:**
+If state is loaded in one component (e.g., `ProjectDashboardContainer`), verify it also loads when the user deep-links to a child route (e.g., `/pipeline`). Add loading gates to prevent flash-of-empty-state while data restores.
+
+**Rule E — After DB Read, Always Update React State:**
+Any function that reads fresh data from the database must also call the React state setter. Reading from DB into a local variable without calling `setX()` creates stale-state bugs.
+
+---
+
+### 4. RLS / Multi-Tenancy (30+ fix commits across 7 waves)
+
+New tables repeatedly ship with legacy `auth.uid() = user_id` RLS instead of the organization-aware `has_project_access()` function.
+
+**Rules:**
+- **Every new table MUST use `has_project_access()` for RLS.** Never use `auth.uid() = user_id` or `projects.user_id = auth.uid()` as the sole access check.
+  - Tables with `project_id`: `USING (has_project_access(project_id))`
+  - Tables linked through `map_id`: chain through `topical_maps` → `projects` → `has_project_access()`
+  - Tables linked through deeper chains: follow the chain up to `projects`
+- **Always use `.maybeSingle()` for queries that may return 0 rows.** `.single()` throws a PostgREST 406 error when no rows match. Only use `.single()` after an INSERT that returns the created row. Never catch 406 and treat it as "table missing."
+- **Long-running operations MUST refresh the auth session.** Any operation >30 minutes must call `supabase.auth.refreshSession()` periodically. Wrap database writes with 403-retry: detect 403/42501 → refresh session → retry once. After any write, verify affected row count > 0 (RLS silently drops unauthorized writes).
+- **Schema migrations that add access-control columns MUST include data backfill.** When adding `organization_id` or similar columns, backfill existing rows and update all INSERT functions to populate the new column.
+- **Test multi-tenancy**: Create data as User A → log in as User B (same org) → confirm visibility. Log in as User C (different org) → confirm no access.
+
+---
+
+### 5. Edge Functions — Shared Utilities and Env Vars (12 fix commits)
+
+**Rules:**
+- **Every edge function MUST import `getEnvVar`, `corsHeaders`, and `json` from `_shared/utils.ts`.** Never copy-paste these functions into individual edge function files. Before committing, verify: `grep -r "function getEnvVar" supabase/functions/ --include="*.ts" | grep -v _shared` returns zero results.
+- **Edge functions use custom secret names**: `PROJECT_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY` — NOT the auto-injected `SUPABASE_*` variants. The auto-injected values may differ from custom secrets after key rotations.
+- **For edge function calls from the frontend, ALWAYS use `getSupabaseClient()` from `services/supabaseClient.ts`** which provides the authenticated client with `functions.invoke()`. Never use `supabase` from `lib/supabase.ts` (lacks `functions` property). Never use `createClient()` directly (unauthenticated). Never use raw `fetch()` to call edge functions (sends anon key instead of user JWT).
+- **Edge functions MUST complete within 25 seconds** (leaving margin below the gateway timeout). When processing a list, enforce a max batch size (10-20 items) and let the frontend chunk larger requests. Always include an `AbortController` timeout on upstream `fetch()` calls.
+
+---
+
+### 6. Wiring — Dead Code and Disconnected Components (33 fix commits)
+
+Components and services are repeatedly created but never imported, or props are defined but never passed.
+
+**Rules:**
+- **After creating any new file, verify it is imported somewhere.** Run `grep -r "from.*newFileName" src/ --include="*.ts" --include="*.tsx"` and confirm at least one consumer exists. If no consumer imports the file, wire it into the appropriate facade before committing.
+- **Never make handler/callback props optional unless "no handler" is a valid UX state.** If a component renders a button that needs an `onClick`, the prop must be required. If the prop is optional, the component MUST hide or disable the element when the prop is absent:
+  ```tsx
+  {onCreateBrief && <Button onClick={() => onCreateBrief(id)}>Create Brief</Button>}
+  ```
+- **When creating a new service module**, complete this wiring checklist:
+  - [ ] File is imported in its parent facade (`analysis.ts`, `eavService.ts`, `mapGeneration.ts`, etc.)
+  - [ ] Facade re-exports the function/class for external consumers
+  - [ ] At least one UI component or hook calls the re-exported function
+  - [ ] If it is an audit rule validator, its `validate()` is called in the phase adapter's `execute()` method and `totalChecks` is incremented
+- **When adding a large batch of files** (5+), audit the entire batch for import connectivity before committing. Do not rely on `tsc --noEmit` — it does not flag unused exports.
+
+---
+
+### 7. Batch Processing and Scale (14 fix commits)
+
+Code works for 20 items but breaks at 200+. This has caused URL overflow, edge function timeouts, UI freezes, and database errors.
+
+**Rules:**
+- **Every function that processes a collection MUST enforce a max batch size:**
+  - Supabase `.in()` queries: use `batchedIn()` from `utils/supabaseBatchQuery.ts` (limit 200 IDs)
+  - Edge function invocations: limit 10-20 items per call
+  - AI prompt payloads: use `summarizeTopicsForPrompt()` for maps with 100+ topics
+  - Database upserts: de-duplicate by unique key before upserting (Postgres rejects duplicate ON CONFLICT updates in a single statement)
+- **Every `fetch()` and Supabase operation MUST have an explicit timeout** via `AbortController` or `Promise.race()`. Never rely on platform defaults.
+- **For content >10KB, use fast-path algorithms** (e.g., `indexOf`-based scanning instead of regex). For content >15K chars sent to AI, use hierarchical chunking.
+- **UI rendering: virtualize lists >100 rows, cap graph visualizations at 200 nodes.**
+- **Numeric accumulators: clamp after each addition**, not just at the end (`Math.min(MAX, value + bonus)` after each bonus).
+- **When fixing an unbounded-input bug, audit the entire codebase** for the same pattern and fix all instances in one commit. Do not fix only the call site that triggered the error.
+
+---
+
+### 8. OAuth and Token Management (16 fix commits)
+
+**Rules:**
+- **Never make async Supabase calls inside `onAuthStateChange` callbacks.** Known Supabase-js bug (supabase-js#1594) causes deadlocks. Set state in the callback and trigger async work in a separate `useEffect`.
+- **OAuth token storage must merge, never overwrite.** When storing tokens after re-authorization: (a) merge new scopes with existing scopes using `Set` union, (b) preserve the existing `refresh_token` when the new response omits it (Google only returns refresh_token on first consent), (c) log before/after scopes for debugging.
+- **Every API error path must classify the failure type:**
+  - Token expired/revoked → return `{ relink: true }` and prompt re-connection
+  - Insufficient scope → return scope-specific message
+  - API not enabled → return setup instructions
+  - Legitimate "no data" → return empty result
+  - Never show raw HTTP status codes or "no data found" when the real issue is auth failure
+- **Use `getUser()` (server validation) instead of `getSession()` (cache-only)** when you need to verify a session is actually valid.
+- **Long-running operations must not depend on JWT validity for API key access.** Pass API keys directly via headers to edge functions rather than relying on JWT → DB decrypt chains that break when tokens expire mid-operation.

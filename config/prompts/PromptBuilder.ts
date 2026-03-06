@@ -191,8 +191,10 @@ ${config.authorSectionRules.description}
 - Link-back strategy: ${config.authorSectionRules.linkBackStrategy} (PageRank should flow from Author → Core)
 
 **Hub-Spoke Structure:**
-- Optimal ratio: 1:${config.hubSpokeRatio.optimal} (min: ${config.hubSpokeRatio.min}, max: ${config.hubSpokeRatio.max})
-- Generate ${config.hubSpokeRatio.optimal} spokes per core topic
+- Spoke count range: ${config.hubSpokeRatio.min}–${config.hubSpokeRatio.max} per hub (typically ~${config.hubSpokeRatio.optimal})
+- Determine spoke count PER HUB based on semantic breadth — do NOT give every hub the same number of spokes
+- Broad topics (many distinct sub-angles) → closer to ${config.hubSpokeRatio.max} spokes
+- Narrow topics (few distinct angles) → closer to ${config.hubSpokeRatio.min} spokes
 
 **Linking Rules:**
 - Max ${config.linkingRules.maxAnchorsPerPage} anchors per page

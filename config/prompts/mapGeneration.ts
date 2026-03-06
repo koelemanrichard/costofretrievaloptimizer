@@ -200,7 +200,9 @@ ${jsonResponseInstruction}
 
 export const GENERATE_INITIAL_TOPICAL_MAP_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap): string => {
     const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
-    const hubSpokeRatio = typeConfig?.hubSpokeRatio.optimal || 7;
+    const spokeMin = typeConfig?.hubSpokeRatio.min || 3;
+    const spokeMax = typeConfig?.hubSpokeRatio.max || 10;
+    const spokeOptimal = typeConfig?.hubSpokeRatio.optimal || 7;
     const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
 
     return `
@@ -209,7 +211,7 @@ You are a Holistic SEO Architect. Your task is to generate a massive, high-autho
 ${languageInstruction}
 **IMPORTANT:** All topic titles, descriptions, and canonical queries MUST be in ${getRegionalLanguageVariant(info.language, info.region)}. This is critical for SEO targeting.
 
-**CRITICAL OBJECTIVE:** Target 80–150 total topics (8–15 Core Topics × ${hubSpokeRatio} Spokes each). Prioritize quality and semantic distinctness over volume. Cover every meaningful facet without creating redundant or thin topics.
+**CRITICAL OBJECTIVE:** Target 80–150 total topics (8–15 Core Topics with ${spokeMin}–${spokeMax} Spokes each, typically ~${spokeOptimal}). Prioritize quality and semantic distinctness over volume. Cover every meaningful facet without creating redundant or thin topics.
 
 Strategic Inputs:
 - SEO Pillars: ${JSON.stringify(pillars, null, 2)}
@@ -258,20 +260,21 @@ Some frames map naturally to monetization topics (Comparison, Cost, Evaluation),
 Before finalizing your topic list, check for pairs of topics whose canonical queries share >70% word overlap. If found, MERGE them into one topic or differentiate their angles. Two topics targeting the same intent waste crawl budget and dilute authority.
 
 **DEPTH BALANCE RULE:**
-All core topic clusters should have roughly equal depth. No cluster should have more than 2x the spokes of the smallest cluster. If one area naturally has more subtopics, split it into two distinct core topics rather than overloading one hub.
+While spoke counts SHOULD vary by semantic breadth, no cluster should have more than 2× the spokes of the smallest cluster. If one area naturally has many more subtopics, split it into two distinct core topics rather than overloading one hub.
 
 **Expansion Strategy (Think in ${getLanguageName(info.language)}):**
 1.  **Monetization Section (Core Section / Money Pages):**
     *   **MANDATORY: Generate a MINIMUM of 6 SEMANTICALLY DISTINCT Core Topics.**
     *   Each Core Topic MUST target a different attribute/facet of "${pillars.centralEntity}"
-    *   **HARD CONSTRAINT (1:${hubSpokeRatio} HUB-SPOKE RATIO):** For EVERY Core Topic, generate exactly **${hubSpokeRatio} unique Spokes**.
+    *   **VARIABLE SPOKE COUNT (${spokeMin}–${spokeMax} per hub, typically ~${spokeOptimal}):** Determine the spoke count FOR EACH Core Topic based on its semantic breadth. A broad service area may need ${spokeMax} spokes covering distinct sub-angles, while a narrow facet may only need ${spokeMin}–${spokeMin + 1}. Do NOT pad narrow topics with filler spokes just to hit a number.
+    *   **SPOKE JUSTIFICATION RULE:** Every spoke MUST target a search intent that is DISTINCT from the hub page and from every other spoke in the same cluster. Ask: "Would a user searching for this expect a dedicated page, or would the hub page answer it?" If the hub suffices, do NOT create the spoke.
     *   *Spoke Ideas:* Location variants, price tiers, urgency levels, specific use cases, comparisons, checklists.
     *   *Example Structure:* "[Service Type]" (Core) → "Emergency [Service Type]", "[Service Type] Costs", "[Service Type] in [Location]", etc. (Spokes)
 
 2.  **Informational Section (Author Section / Trust Pages):**
     *   Topics related to "${pillars.centralEntity} + Knowledge/Background/Trust".
     *   Generate 3-5 distinct clusters covering: Laws/Regulations, General Costs, Procedures, Industry Background.
-    *   Each cluster must have 3-5 supporting spokes.
+    *   Each cluster should have ${spokeMin}–${Math.min(spokeMax, 7)} supporting spokes, determined by the breadth of the knowledge domain. Apply the same SPOKE JUSTIFICATION RULE: every spoke must target a distinct search intent.
 
 **Granular Node Identity (REQUIRED for each topic):**
 For every topic (Core AND Spoke), provide:
@@ -303,7 +306,7 @@ Each Core Topic object structure:
         "query_network": ["string"],
         "url_slug_hint": "string"
       }
-      // ... MUST HAVE ${hubSpokeRatio} SPOKES HERE ...
+      // ... ${spokeMin}–${spokeMax} spokes per hub, justified by semantic breadth ...
   ]
 }
 
@@ -315,6 +318,10 @@ ${jsonResponseInstruction}
 export const GENERATE_MONETIZATION_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap): string => {
     const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
     const regionalLang = getRegionalLanguageVariant(info.language, info.region);
+    const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
+    const spokeMin = typeConfig?.hubSpokeRatio.min || 3;
+    const spokeMax = typeConfig?.hubSpokeRatio.max || 10;
+    const spokeOptimal = typeConfig?.hubSpokeRatio.optimal || 7;
 
     return `
 You are a Holistic SEO Architect. Your task is to generate the MONETIZATION SECTION of a topical map.
@@ -349,7 +356,8 @@ An **OUTER TOPIC (Spoke)** is a VARIATION, MODIFIER, or SPECIFIC INSTANCE of a C
 **Monetization Section (Core Section / Money Pages):**
 - Generate 5-8 SEMANTICALLY DISTINCT Core Topics
 - Each Core Topic MUST represent a different attribute/facet of "${pillars.centralEntity}"
-- Each Core Topic MUST have 5-7 unique Spokes
+- Each Core Topic should have ${spokeMin}–${spokeMax} Spokes (typically ~${spokeOptimal}), determined by the semantic breadth of that specific hub. Broad service areas warrant more spokes; narrow facets warrant fewer. Do NOT create filler spokes to hit a number.
+- **SPOKE JUSTIFICATION:** Every spoke must target a search intent DISTINCT from the hub and all sibling spokes. If the hub page fully answers the query, that spoke is unnecessary.
 - Spokes should include: location variants, price tiers, urgency levels, comparisons
 
 **FRAME COVERAGE:** Ensure monetization topics collectively cover: Comparison, Cost, Evaluation, Benefits, and Components frames. Each core topic + its spokes should map to at least one frame.
@@ -375,6 +383,9 @@ ${jsonResponseInstruction}
 export const GENERATE_INFORMATIONAL_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap): string => {
     const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
     const regionalLang = getRegionalLanguageVariant(info.language, info.region);
+    const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
+    const spokeMin = typeConfig?.hubSpokeRatio.min || 3;
+    const spokeMax = Math.min(typeConfig?.hubSpokeRatio.max || 7, 7);
 
     return `
 You are a Holistic SEO Architect. Your task is to generate the INFORMATIONAL SECTION of a topical map.
@@ -403,7 +414,7 @@ An **OUTER TOPIC (Spoke)** is a specific aspect, sub-question, or variation with
 
 **Informational Section (Trust & Authority Pages):**
 - Generate 3-5 DISTINCT knowledge domain clusters
-- Each Core Topic should have 3-5 supporting Spokes
+- Each Core Topic should have ${spokeMin}–${spokeMax} supporting Spokes, determined by the breadth of the knowledge domain. Apply the same spoke justification: every spoke must target a distinct question that warrants its own page.
 - Focus on: educational content, guides, explanations, industry knowledge
 
 **FRAME COVERAGE:** Ensure informational topics collectively cover: Definition, Process, Risks, Troubleshooting, and Future frames. Each cluster should map to at least one frame.
