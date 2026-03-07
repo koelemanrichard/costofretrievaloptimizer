@@ -134,120 +134,145 @@ const PipelineBriefsStep: React.FC = () => {
 
     const knowledgeGraph = new KnowledgeGraph();
     const newBriefs: Record<string, ContentBrief> = {};
+    const failedTopics: string[] = [];
 
     // Get action context per topic for brief prompt tailoring
     const actionEntryMap = new Map(
       (actionPlan?.entries ?? []).map(e => [e.topicId, e])
     );
 
-    try {
-      for (let i = 0; i < topicsNeedingBriefs.length; i++) {
-        const topic = topicsNeedingBriefs[i];
-        setGeneratingTopicId(topic.id);
-        setProgressText(`Generating brief ${i + 1}/${topicsNeedingBriefs.length}: ${topic.title}`);
+    for (let i = 0; i < topicsNeedingBriefs.length; i++) {
+      const topic = topicsNeedingBriefs[i];
+      setGeneratingTopicId(topic.id);
+      setProgressText(`Generating brief ${i + 1}/${topicsNeedingBriefs.length}: ${topic.title}`);
 
-        const { responseCode } = await suggestResponseCode(businessInfo, topic.title, dispatch);
-
-        const actionEntry = actionEntryMap.get(topic.id);
-        const briefData = await generateContentBrief(
-          businessInfo,
-          topic,
-          topics,
-          pillars,
-          knowledgeGraph,
-          responseCode,
-          dispatch,
-          undefined,
-          eavs,
-          undefined,
-          actionEntry?.actionType
-        );
-
-        const brief: ContentBrief = {
-          id: `brief-${topic.id}`,
-          topic_id: topic.id,
-          articleDraft: undefined,
-          ...briefData,
-        };
-
-        newBriefs[topic.id] = brief;
-        setLocalBriefs(prev => ({ ...prev, [topic.id]: brief }));
-      }
-
-      // Persist to React state and content_briefs table
-      if (state.activeMapId) {
-        const mergedBriefs = { ...allBriefs, ...newBriefs };
-        dispatch({
-          type: 'SET_BRIEFS_FOR_MAP',
-          payload: { mapId: state.activeMapId, briefs: mergedBriefs },
-        });
-
-        // Save each new brief to the content_briefs table
+      // Per-topic try/catch with one retry so a single failure doesn't kill the wave
+      let attempts = 0;
+      const MAX_ATTEMPTS = 2;
+      while (attempts < MAX_ATTEMPTS) {
+        attempts++;
         try {
-          const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+          const { responseCode } = await suggestResponseCode(businessInfo, topic.title, dispatch);
 
-          for (const [topicId, brief] of Object.entries(newBriefs)) {
-            const briefRecord = {
-              topic_id: topicId,
-              title: brief.title || '',
-              slug: brief.slug,
-              meta_description: brief.metaDescription,
-              key_takeaways: Array.isArray(brief.keyTakeaways) ? brief.keyTakeaways : [],
-              outline: brief.outline,
-              target_keyword: brief.targetKeyword,
-              search_intent: brief.searchIntent,
-              serp_analysis: brief.serpAnalysis as any,
-              visuals: brief.visuals as any,
-              contextual_vectors: brief.contextualVectors as any,
-              contextual_bridge: brief.contextualBridge as any,
-              perspectives: brief.perspectives as any,
-              methodology_note: brief.methodology_note,
-              structured_outline: brief.structured_outline as any,
-              structural_template_hash: brief.structural_template_hash,
-              predicted_user_journey: brief.predicted_user_journey,
-              query_type_format: brief.query_type_format,
-              featured_snippet_target: brief.featured_snippet_target as any,
-              visual_semantics: brief.visual_semantics as any,
-              discourse_anchors: brief.discourse_anchors as any,
-              cta: brief.cta,
-            };
+          const actionEntry = actionEntryMap.get(topic.id);
+          const briefData = await generateContentBrief(
+            businessInfo,
+            topic,
+            topics,
+            pillars,
+            knowledgeGraph,
+            responseCode,
+            dispatch,
+            undefined,
+            eavs,
+            undefined,
+            actionEntry?.actionType
+          );
 
-            // Check-then-insert/update (avoids upsert hang issues)
-            const { data: existing } = await supabase
-              .from('content_briefs')
-              .select('id')
-              .eq('topic_id', topicId)
-              .maybeSingle();
+          const brief: ContentBrief = {
+            id: `brief-${topic.id}`,
+            topic_id: topic.id,
+            articleDraft: undefined,
+            ...briefData,
+          };
 
-            if (existing) {
-              const { error } = await supabase
-                .from('content_briefs')
-                .update({ ...briefRecord, updated_at: new Date().toISOString() })
-                .eq('id', existing.id);
-              if (error) console.warn(`[Briefs] Update failed for topic ${topicId}: ${error.message}`);
-            } else {
-              const { error } = await supabase
-                .from('content_briefs')
-                .insert({ ...briefRecord, created_at: new Date().toISOString() });
-              if (error) console.warn(`[Briefs] Insert failed for topic ${topicId}: ${error.message}`);
-            }
-          }
+          newBriefs[topic.id] = brief;
+          setLocalBriefs(prev => ({ ...prev, [topic.id]: brief }));
+          break; // success — exit retry loop
         } catch (err) {
-          console.warn('[Briefs] Supabase save failed:', err);
+          const message = err instanceof Error ? err.message : String(err);
+          if (attempts < MAX_ATTEMPTS) {
+            console.warn(`[Briefs] Attempt ${attempts} failed for "${topic.title}", retrying: ${message}`);
+            await new Promise(r => setTimeout(r, 2000)); // brief backoff before retry
+          } else {
+            console.error(`[Briefs] Failed after ${MAX_ATTEMPTS} attempts for "${topic.title}": ${message}`);
+            failedTopics.push(topic.title);
+          }
         }
       }
-
-      setStepStatus('briefs', 'pending_approval');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Brief generation failed';
-      setError(`Wave ${waveNumber}: ${message}`);
-      setStepStatus('briefs', 'in_progress');
-    } finally {
-      setIsBriefGenerating(false);
-      setGeneratingWave(null);
-      setGeneratingTopicId(null);
-      setProgressText('');
     }
+
+    // Persist all successfully generated briefs (even if some topics failed)
+    if (Object.keys(newBriefs).length > 0 && state.activeMapId) {
+      const mergedBriefs = { ...allBriefs, ...newBriefs };
+      dispatch({
+        type: 'SET_BRIEFS_FOR_MAP',
+        payload: { mapId: state.activeMapId, briefs: mergedBriefs },
+      });
+
+      // Save each new brief to the content_briefs table
+      try {
+        const supabase = getSupabaseClient(businessInfo.supabaseUrl, businessInfo.supabaseAnonKey);
+
+        for (const [topicId, brief] of Object.entries(newBriefs)) {
+          const briefRecord = {
+            topic_id: topicId,
+            title: brief.title || '',
+            slug: brief.slug,
+            meta_description: brief.metaDescription,
+            key_takeaways: Array.isArray(brief.keyTakeaways) ? brief.keyTakeaways : [],
+            outline: brief.outline,
+            target_keyword: brief.targetKeyword,
+            search_intent: brief.searchIntent,
+            serp_analysis: brief.serpAnalysis as any,
+            visuals: brief.visuals as any,
+            contextual_vectors: brief.contextualVectors as any,
+            contextual_bridge: brief.contextualBridge as any,
+            perspectives: brief.perspectives as any,
+            methodology_note: brief.methodology_note,
+            structured_outline: brief.structured_outline as any,
+            structural_template_hash: brief.structural_template_hash,
+            predicted_user_journey: brief.predicted_user_journey,
+            query_type_format: brief.query_type_format,
+            featured_snippet_target: brief.featured_snippet_target as any,
+            visual_semantics: brief.visual_semantics as any,
+            discourse_anchors: brief.discourse_anchors as any,
+            cta: brief.cta,
+          };
+
+          // Check-then-insert/update (avoids upsert hang issues)
+          const { data: existing } = await supabase
+            .from('content_briefs')
+            .select('id')
+            .eq('topic_id', topicId)
+            .maybeSingle();
+
+          if (existing) {
+            const { error } = await supabase
+              .from('content_briefs')
+              .update({ ...briefRecord, updated_at: new Date().toISOString() })
+              .eq('id', existing.id);
+            if (error) console.warn(`[Briefs] Update failed for topic ${topicId}: ${error.message}`);
+          } else {
+            const { error } = await supabase
+              .from('content_briefs')
+              .insert({ ...briefRecord, created_at: new Date().toISOString() });
+            if (error) console.warn(`[Briefs] Insert failed for topic ${topicId}: ${error.message}`);
+          }
+        }
+      } catch (err) {
+        console.warn('[Briefs] Supabase save failed:', err);
+      }
+    }
+
+    // Report results
+    if (failedTopics.length > 0) {
+      const successCount = Object.keys(newBriefs).length;
+      setError(
+        `Wave ${waveNumber}: ${successCount} briefs generated, ${failedTopics.length} failed: ${failedTopics.join(', ')}`
+      );
+    }
+
+    if (Object.keys(newBriefs).length > 0) {
+      setStepStatus('briefs', 'pending_approval');
+    } else {
+      setStepStatus('briefs', 'available');
+    }
+
+    setIsBriefGenerating(false);
+    setGeneratingWave(null);
+    setGeneratingTopicId(null);
+    setProgressText('');
   };
 
   // Metrics for approval gate
