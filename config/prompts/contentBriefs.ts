@@ -88,6 +88,14 @@ ${languageInstruction}
 **CENTERPIECE RULE:** First 400 chars must contain "${pillars.centralEntity}", primary definition, and key attributes.
 
 **SUBORDINATE TEXT:** Each section's subordinate_text_hint MUST be a direct answer — no filler.
+
+**ANSWER CAPSULE RULE (per H2 section)**:
+For each H2, include an "answer_capsule" object:
+- "text_hint": A 40-70 word direct factual answer to the heading's question. No preamble, no "In this section...". Lead with the entity name or key term. Must read as a natural, compelling opening paragraph.
+- "target_length": Number between 40 and 70.
+- "required_predicates": 1-3 key verbs/terms the capsule must contain.
+
+VARIETY RULE: Vary capsule openings across sections. Use definition ("X is..."), statistic ("In 2025, X..."), narrative ("When X occurs..."), scene-setting ("For businesses seeking..."), and question-answer approaches. Do NOT start every capsule with "[Entity] is...".
 ${fsFormatGuide}
 ${contentLengthGuide}
 ${websiteTypeRules}
@@ -122,7 +130,7 @@ ${eavContext}
 **OUTPUT JSON (outline only — no visual_semantics, discourse_anchors, perspectives, serpAnalysis, or predicted_user_journey):**
 {
   "structured_outline": [
-    { "heading": "string", "level": 2, "format_code": "FS|PAA|LISTING|DEFINITIVE|TABLE|PROSE", "attribute_category": "ROOT|UNIQUE|RARE|COMMON", "content_zone": "MAIN|SUPPLEMENTARY", "subordinate_text_hint": "string", "mapped_eavs": [0, 1] }
+    { "heading": "string", "level": 2, "format_code": "FS|PAA|LISTING|DEFINITIVE|TABLE|PROSE", "attribute_category": "ROOT|UNIQUE|RARE|COMMON", "content_zone": "MAIN|SUPPLEMENTARY", "subordinate_text_hint": "string", "answer_capsule": { "text_hint": "40-70 word direct answer", "target_length": 50, "required_predicates": ["verb/term"] }, "mapped_eavs": [0, 1] }
   ],
   "title": "string",
   "slug": "string",
@@ -338,6 +346,14 @@ ${languageInstruction}
 - "Why X?" → "X happens because [reason]"
 No filler phrases. No "In this section we will discuss..."
 
+**ANSWER CAPSULE RULE (per H2 section)**:
+For each H2, include an "answer_capsule" object:
+- "text_hint": A 40-70 word direct factual answer to the heading's question. No preamble, no "In this section...". Lead with the entity name or key term. Must read as a natural, compelling opening paragraph.
+- "target_length": Number between 40 and 70.
+- "required_predicates": 1-3 key verbs/terms the capsule must contain.
+
+VARIETY RULE: Vary capsule openings across sections. Use definition ("X is..."), statistic ("In 2025, X..."), narrative ("When X occurs..."), scene-setting ("For businesses seeking..."), and question-answer approaches. Do NOT start every capsule with "[Entity] is...".
+
 **FEATURED SNIPPET FORMAT:** Select target_type based on query type:
 - Definitional ("What is X?") → PARAGRAPH (<40 words)
 - Enumeration ("Types of X", "Best X") → LIST (3-8 items)
@@ -478,6 +494,11 @@ Respond with a SINGLE valid JSON object. Generate the 'structured_outline' FIRST
       "attribute_category": "ROOT | UNIQUE | RARE | COMMON",
       "content_zone": "MAIN | SUPPLEMENTARY",
       "subordinate_text_hint": "string (First-sentence syntax instruction)",
+      "answer_capsule": {
+        "text_hint": "40-70 word direct factual answer (no preamble, lead with entity/key term)",
+        "target_length": 50,
+        "required_predicates": ["key verb/term"]
+      },
       "methodology_note": "string",
       "required_phrases": ["string"],
       "anchor_texts": [{ "phrase": "string", "target_topic_id": "string" }],

@@ -206,6 +206,12 @@ export interface BriefSection {
 
   // Existing fields (enhanced)
   subordinate_text_hint?: string; // Instructions for the first sentence
+  /** Answer capsule: 40-70 word direct answer for this section (LLM/RAG/Featured Snippet optimization) */
+  answer_capsule?: {
+    text_hint: string;
+    target_length: number;
+    required_predicates?: string[];
+  };
   methodology_note?: string; // Formatting instructions
 
   // Required phrases from ["..."] codes
