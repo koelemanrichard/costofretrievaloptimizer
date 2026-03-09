@@ -37,6 +37,7 @@ export class ContentFormatValidator {
     this.checkListTypeCorrectness(html, issues); // Rule 231
     this.checkTableDimensions(html, issues); // Rule 232
     this.checkTableHeaderRow(html, issues); // Rule 233b
+    this.checkSummaryPresence(html, issues); // Summary/TL;DR detection
 
     return issues;
   }
@@ -335,6 +336,28 @@ export class ContentFormatValidator {
           'If the data is truly tabular, ensure at least 2 columns and 2 data rows. ' +
           'Otherwise, convert to a list (<ul>/<ol>) or definition list (<dl>).',
       });
+    }
+  }
+
+  /**
+   * Summary/TL;DR detection for long content.
+   * Content over 1500 words should have a summary near the top.
+   */
+  checkSummaryPresence(html: string, issues: FormatIssue[]): void {
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount > 1500) {
+      const first500Chars = text.slice(0, 500).toLowerCase();
+      const hasSummary = /summary|tl;?dr|key takeaways|at a glance|overview|highlights/i.test(first500Chars);
+      if (!hasSummary) {
+        issues.push({
+          ruleId: 'rule-format-summary',
+          severity: 'low',
+          title: 'Long content missing summary',
+          description: `Page has ${wordCount} words but no summary in first 500 characters. Long content benefits from an upfront summary.`,
+          exampleFix: 'Add a "Key Takeaways" or "TL;DR" section near the top',
+        });
+      }
     }
   }
 

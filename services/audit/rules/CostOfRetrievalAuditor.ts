@@ -46,6 +46,7 @@ export class CostOfRetrievalAuditor {
     this.checkHtmlSize(metrics, issues);        // Rule 309
     this.checkTcpSlowStart(html, issues);       // Rule 310
     this.checkCrawlEfficiency(crawlData, issues); // Rule 311b
+    this.checkTextToCodeRatio(html, issues);      // Text-to-code ratio
 
     return issues;
   }
@@ -194,6 +195,22 @@ export class CostOfRetrievalAuditor {
         expectedValue: 'meta, title, h1, and first paragraph within first 14KB',
         exampleFix: 'Move critical HTML elements above bulky inline styles/scripts. ' +
           'Externalize CSS/JS that appears before the main content in the document.',
+      });
+    }
+  }
+
+  // Text-to-code ratio: text content should be >50% of total HTML
+  checkTextToCodeRatio(html: string, issues: CoRIssue[]): void {
+    const textContent = html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (html.length === 0) return;
+    const ratio = textContent.length / html.length;
+    if (ratio < 0.5) {
+      issues.push({
+        ruleId: 'rule-cor-text-ratio',
+        severity: 'low',
+        title: 'Low text-to-code ratio',
+        description: `Text-to-code ratio is ${Math.round(ratio * 100)}% (target: >50%). High HTML overhead increases Cost of Retrieval.`,
+        exampleFix: 'Reduce unnecessary wrapper elements, inline styles, and verbose attributes',
       });
     }
   }

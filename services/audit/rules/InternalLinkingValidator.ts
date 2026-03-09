@@ -49,6 +49,10 @@ export class InternalLinkingValidator {
     this.checkAnchorTextRepetition(links, issues);
     // Rules 190-191: Jump link / ToC validation (Finding #66)
     this.checkJumpLinksAndToc(context.html, context.totalWords || this.countWords(context.html), issues);
+    // Rule: Total internal links cap
+    this.checkLinkCap(links, issues);
+    // Rule: Cross-destination anchor text overuse
+    this.checkCrossDestinationAnchorOveruse(links, issues);
 
     return issues;
   }
@@ -467,6 +471,53 @@ export class InternalLinkingValidator {
         description: `Only ${headingsWithId} of ${headingsTotal} headings have id attributes. Without ids, jump links and ToC navigation cannot work.`,
         exampleFix: 'Add id attributes to headings (e.g., <h2 id="section-name">Section Name</h2>) to enable jump link navigation.',
       });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule: Total internal links should not exceed 150
+  // ---------------------------------------------------------------------------
+
+  checkLinkCap(
+    links: { href: string }[],
+    issues: LinkingIssue[],
+  ): void {
+    if (links.length > 150) {
+      issues.push({
+        ruleId: 'rule-link-cap-150',
+        severity: 'medium',
+        title: 'Excessive internal links',
+        description: `Page has ${links.length} internal links (recommended maximum: 150). Excessive links dilute PageRank and overwhelm crawlers.`,
+        exampleFix: 'Remove low-value links, consolidate navigation, prioritize contextual links in main content',
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rule: Same anchor text used >3 times regardless of destination
+  // ---------------------------------------------------------------------------
+
+  checkCrossDestinationAnchorOveruse(
+    links: { anchor: string }[],
+    issues: LinkingIssue[],
+  ): void {
+    const anchorCounts = new Map<string, number>();
+    for (const link of links) {
+      const anchor = link.anchor?.toLowerCase().trim();
+      if (anchor && anchor.length > 0) {
+        anchorCounts.set(anchor, (anchorCounts.get(anchor) || 0) + 1);
+      }
+    }
+    for (const [anchor, count] of anchorCounts) {
+      if (count > 3) {
+        issues.push({
+          ruleId: 'rule-link-anchor-overuse',
+          severity: 'medium',
+          title: 'Same anchor text used too many times',
+          description: `Anchor text "${anchor}" used ${count} times (maximum: 3). Over-optimized anchor text can trigger algorithmic penalties.`,
+          exampleFix: 'Vary anchor text for different links — use synonyms and natural phrasing',
+        });
+      }
     }
   }
 
