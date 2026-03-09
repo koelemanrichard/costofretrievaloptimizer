@@ -78,11 +78,13 @@ export function reviewBriefQuality(
   // ── Component 5: Format Compliance (15%) ──
   const fsCheck = checkFeaturedSnippet(brief, topicConfig);
   const websiteCheck = checkWebsiteTypeCompliance(brief, websiteType);
-  checks.push(fsCheck, websiteCheck);
+  const answerCapsuleCheck = checkAnswerCapsules(brief);
+  checks.push(fsCheck, websiteCheck, answerCapsuleCheck);
 
   componentScores.formatCompliance = Math.round(
-    (graduateCheck(fsCheck) * 0.6) +
-    (graduateCheck(websiteCheck) * 0.4)
+    (graduateCheck(fsCheck) * 0.4) +
+    (graduateCheck(websiteCheck) * 0.3) +
+    (graduateCheck(answerCapsuleCheck) * 0.3)
   );
 
   // ── Component 6: Structural Integrity (15%) ──
@@ -393,6 +395,27 @@ function checkOutlineCompleteness(brief: ContentBrief): BriefQualityCheck {
     passed,
     details: `${score}/5 core fields present${missing.length > 0 ? ` (missing: ${missing.join(', ')})` : ''}`,
     suggestion: passed ? undefined : `Add missing fields: ${missing.join(', ')}`,
+  };
+}
+
+function checkAnswerCapsules(brief: ContentBrief): BriefQualityCheck {
+  const sections = (brief.structured_outline ?? []).filter(s => s.level === 2);
+  if (sections.length === 0) {
+    return { name: 'Answer Capsules', passed: true, details: 'No H2 sections' };
+  }
+  const withCapsule = sections.filter(s =>
+    s.answer_capsule &&
+    s.answer_capsule.text_hint &&
+    s.answer_capsule.target_length >= 40 &&
+    s.answer_capsule.target_length <= 70
+  );
+  const ratio = withCapsule.length / sections.length;
+  const passed = ratio >= 0.5;
+  return {
+    name: 'Answer Capsules',
+    passed,
+    details: `${withCapsule.length}/${sections.length} H2 sections have valid answer capsules (40-70 words)`,
+    suggestion: passed ? undefined : 'Add answer_capsule with text_hint (40-70 words) to each H2 section for Featured Snippet and AI Overview eligibility',
   };
 }
 
