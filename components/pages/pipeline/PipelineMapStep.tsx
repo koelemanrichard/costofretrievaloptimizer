@@ -15,6 +15,7 @@ import { getSupabaseClient } from '../../../services/supabaseClient';
 import { verifiedBulkInsert } from '../../../services/verifiedDatabaseService';
 import { v4 as uuidv4 } from 'uuid';
 import { slugify, cleanSlug } from '../../../utils/helpers';
+import { runPreAnalysis, calculateHealthScore, type PreAnalysisFinding } from '../../../services/ai/dialoguePreAnalysis';
 
 // ──── Ensure existing service pages are pillar topics ────
 
@@ -1237,6 +1238,8 @@ const PipelineMapStep: React.FC = () => {
   const [generatedCore, setGeneratedCore] = useState<EnrichedTopic[]>([]);
   const [generatedOuter, setGeneratedOuter] = useState<EnrichedTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [mapQualityFindings, setMapQualityFindings] = useState<PreAnalysisFinding[]>([]);
+  const [mapHealthScore, setMapHealthScore] = useState<number | null>(null);
 
   // Services extracted from EAVs — fallback for first-time users
   const extractedServices = useMemo(() => {
@@ -1529,6 +1532,26 @@ const PipelineMapStep: React.FC = () => {
         } finally {
           setIsGeneratingWaves(false);
         }
+      }
+
+      // ── Map Quality Gate ──
+      // Run pre-analysis to detect critical issues before allowing advancement
+      try {
+        const allTopics = [...coreTopics, ...outerTopics];
+        const analysis = runPreAnalysis(
+          'map_planning',
+          { topics: allTopics, eavs: activeMap?.eavs ?? [], confirmedServices },
+          effectiveBusinessInfo
+        );
+        setMapQualityFindings(analysis.findings);
+        setMapHealthScore(analysis.healthScore);
+
+        const criticalFindings = analysis.findings.filter(f => f.severity === 'critical');
+        if (criticalFindings.length > 0) {
+          console.warn(`[PipelineMap] Map quality gate: ${criticalFindings.length} critical findings, health score: ${analysis.healthScore}`);
+        }
+      } catch (err) {
+        console.warn('[PipelineMap] Map quality check failed (non-fatal):', err);
       }
 
       setStepStatus('map_planning', 'pending_approval');
@@ -1841,13 +1864,57 @@ const PipelineMapStep: React.FC = () => {
         />
       )}
 
-      {/* Approval Gate (gated on dialogue completion) */}
+      {/* Map Quality Gate — show critical findings that block advancement */}
+      {mapHealthScore !== null && mapQualityFindings.length > 0 && (
+        <div className={`border rounded-lg p-4 space-y-3 ${
+          mapHealthScore < 60
+            ? 'bg-red-900/15 border-red-700/50'
+            : mapHealthScore < 80
+            ? 'bg-amber-900/15 border-amber-700/50'
+            : 'bg-green-900/15 border-green-700/50'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-semibold ${
+                mapHealthScore < 60 ? 'text-red-300' :
+                mapHealthScore < 80 ? 'text-amber-300' : 'text-green-300'
+              }`}>
+                Map Health: {mapHealthScore}%
+              </span>
+              {mapHealthScore < 60 && (
+                <span className="text-[9px] bg-red-600/20 text-red-300 border border-red-500/30 rounded px-1.5 py-0.5">
+                  Blocked — resolve critical issues
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-gray-500">{mapQualityFindings.length} findings</span>
+          </div>
+          {mapQualityFindings
+            .filter(f => f.severity === 'critical' || f.severity === 'high')
+            .slice(0, 8)
+            .map((finding, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                <span className={`flex-shrink-0 mt-0.5 ${
+                  finding.severity === 'critical' ? 'text-red-400' : 'text-amber-400'
+                }`}>
+                  {finding.severity === 'critical' ? '\u2717' : '!'}
+                </span>
+                <div>
+                  <p className="text-gray-300">{finding.title}</p>
+                  <p className="text-gray-500 text-[10px]">{finding.suggestedAction}</p>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* Approval Gate (gated on dialogue completion + map quality) */}
       {gate && (dialogueComplete || !showDialogue) && (stepState?.status === 'pending_approval' || stepState?.approval?.status === 'rejected') && (
         <ApprovalGate
           step="map_planning"
           gate={gate}
           approval={stepState?.approval}
-          autoApprove={autoApprove}
+          autoApprove={autoApprove && (mapHealthScore === null || mapHealthScore >= 60)}
           onApprove={() => approveGate('map_planning')}
           onReject={(reason) => rejectGate('map_planning', reason)}
           onRevise={() => reviseStep('map_planning')}
@@ -1856,6 +1923,7 @@ const PipelineMapStep: React.FC = () => {
             { label: 'Hub Topics', value: clusterCount, color: clusterCount > 0 ? 'green' : 'gray' },
             { label: 'Total Pages', value: totalTopics, color: totalTopics > 0 ? 'green' : 'gray' },
             { label: 'Internal Links', value: internalLinksEstimate > 0 ? `~${internalLinksEstimate}` : 0, color: internalLinksEstimate > 0 ? 'amber' : 'gray' },
+            { label: 'Map Health', value: mapHealthScore !== null ? `${mapHealthScore}%` : '--', color: mapHealthScore !== null ? (mapHealthScore >= 80 ? 'green' : mapHealthScore >= 60 ? 'amber' : 'red') : 'gray' },
           ]}
         />
       )}

@@ -1,9 +1,9 @@
 /**
  * Brief Quality Review Service
  *
- * Rule-based quality checks for generated content briefs.
- * No AI calls needed — purely algorithmic validation against
- * the Holistic SEO framework rules.
+ * 6-component weighted quality scoring for generated content briefs.
+ * Graduated sub-scoring (not binary) for meaningful differentiation.
+ * Aligned to the Holistic SEO framework.
  *
  * @module services/ai/briefQualityReview
  */
@@ -12,9 +12,20 @@ import type { ContentBrief, EnrichedTopic, BusinessInfo, SEOPillars, SemanticTri
 import type { BriefQualityReport, BriefQualityCheck, TopicConfig } from '../../types/actionPlan';
 import { getWebsiteTypeConfig } from '../../config/websiteTypeTemplates';
 
+// ── Component Weights (must sum to 1.0) ──
+
+const COMPONENT_WEIGHTS: Record<string, number> = {
+  contextualFlow: 0.20,
+  eavQuality: 0.20,
+  informationDensity: 0.15,
+  linkCompliance: 0.15,
+  formatCompliance: 0.15,
+  structuralIntegrity: 0.15,
+};
+
 /**
  * Run a comprehensive quality review on a generated content brief.
- * Returns a score (0-100) and per-check pass/fail with suggestions.
+ * Returns a weighted score (0-100) with per-component breakdown.
  */
 export function reviewBriefQuality(
   brief: ContentBrief,
@@ -28,52 +39,94 @@ export function reviewBriefQuality(
   websiteType?: WebsiteType,
 ): BriefQualityReport {
   const checks: BriefQualityCheck[] = [];
+  const componentScores: Record<string, number> = {};
 
-  // 1. EAV Coverage
-  checks.push(checkEavCoverage(brief, eavs));
+  // ── Component 1: Contextual Flow (20%) ──
+  const centerpieceCheck = checkCenterpiece(brief, pillars);
+  const bridgeCheck = checkContextualBridge(brief);
+  const subordinateCheck = checkSubordinateText(brief);
+  checks.push(centerpieceCheck, bridgeCheck, subordinateCheck);
 
-  // 2. Centerpiece Rule
-  checks.push(checkCenterpiece(brief, pillars));
+  componentScores.contextualFlow = Math.round(
+    (graduateCheck(centerpieceCheck) * 0.4) +
+    (graduateCheck(bridgeCheck) * 0.3) +
+    (graduateCheck(subordinateCheck) * 0.3)
+  );
 
-  // 3. Featured Snippet Target
-  checks.push(checkFeaturedSnippet(brief, topicConfig));
+  // ── Component 2: EAV Quality (20%) ──
+  const eavCheck = checkEavCoverage(brief, eavs);
+  checks.push(eavCheck);
 
-  // 4. Internal Links
-  checks.push(checkInternalLinks(brief, allTopics));
+  componentScores.eavQuality = graduateEavScore(brief, eavs);
 
-  // 5. Section Count
-  checks.push(checkSectionCount(brief, topicConfig));
+  // ── Component 3: Information Density (15%) ──
+  const sectionCheck = checkSectionCount(brief, topicConfig);
+  const completenessCheck = checkOutlineCompleteness(brief);
+  checks.push(sectionCheck, completenessCheck);
 
-  // 6. Contextual Bridge
-  checks.push(checkContextualBridge(brief));
+  componentScores.informationDensity = Math.round(
+    (graduateSectionCount(brief, topicConfig) * 0.6) +
+    (graduateCheck(completenessCheck) * 0.4)
+  );
 
-  // 7. Subordinate Text Quality
-  checks.push(checkSubordinateText(brief));
+  // ── Component 4: Link Compliance (15%) ──
+  const linkCheck = checkInternalLinks(brief, allTopics);
+  checks.push(linkCheck);
 
-  // 8. Structured Outline Completeness
-  checks.push(checkOutlineCompleteness(brief));
+  componentScores.linkCompliance = graduateLinkScore(brief, allTopics);
 
-  // 9. Website-Type Compliance
-  checks.push(checkWebsiteTypeCompliance(brief, websiteType));
+  // ── Component 5: Format Compliance (15%) ──
+  const fsCheck = checkFeaturedSnippet(brief, topicConfig);
+  const websiteCheck = checkWebsiteTypeCompliance(brief, websiteType);
+  checks.push(fsCheck, websiteCheck);
 
-  // 10. Cross-Topic Cannibalization
-  checks.push(checkCannibalization(brief, topic, allTopics, allBriefs));
+  componentScores.formatCompliance = Math.round(
+    (graduateCheck(fsCheck) * 0.6) +
+    (graduateCheck(websiteCheck) * 0.4)
+  );
+
+  // ── Component 6: Structural Integrity (15%) ──
+  const cannibCheck = checkCannibalization(brief, topic, allTopics, allBriefs);
+  checks.push(cannibCheck);
+
+  componentScores.structuralIntegrity = Math.round(
+    (graduateCheck(completenessCheck) * 0.5) +
+    (graduateCheck(cannibCheck) * 0.5)
+  );
+
+  // ── Weighted Score ──
+  const score = Math.round(
+    Object.entries(COMPONENT_WEIGHTS).reduce((sum, [key, weight]) => {
+      return sum + (componentScores[key] ?? 0) * weight;
+    }, 0)
+  );
 
   const passCount = checks.filter(c => c.passed).length;
   const failCount = checks.filter(c => !c.passed).length;
-  const score = checks.length > 0 ? Math.round((passCount / checks.length) * 100) : 0;
 
-  return { score, checks, passCount, failCount };
+  return {
+    score,
+    checks,
+    passCount,
+    failCount,
+    componentScores,
+    meetsMinimum: score >= 50,
+    meetsTarget: score >= 85,
+  };
 }
 
-function checkEavCoverage(brief: ContentBrief, eavs?: SemanticTriple[]): BriefQualityCheck {
-  if (!eavs || eavs.length === 0) {
-    return { name: 'EAV Coverage', passed: true, details: 'No EAVs provided — skipped' };
-  }
+// ── Graduated Scoring Helpers ──
+
+/** Convert a binary check into a graduated 0-100 score */
+function graduateCheck(check: BriefQualityCheck): number {
+  return check.passed ? 100 : 0;
+}
+
+/** Graduated EAV scoring: 0/30/60/100 based on coverage ratio */
+function graduateEavScore(brief: ContentBrief, eavs?: SemanticTriple[]): number {
+  if (!eavs || eavs.length === 0) return 100; // No EAVs to check against
 
   const sections = brief.structured_outline ?? [];
-
-  // Count how many sections have EAVs mapped
   let totalMapped = 0;
   for (const section of sections) {
     if (section.mapped_eavs && section.mapped_eavs.length > 0) {
@@ -81,14 +134,68 @@ function checkEavCoverage(brief: ContentBrief, eavs?: SemanticTriple[]): BriefQu
     }
   }
 
-  // Check if any provided EAVs are UNIQUE or ROOT
+  const targetCount = Math.min(eavs.length, 30);
+  const ratio = targetCount > 0 ? totalMapped / targetCount : 0;
+
+  if (ratio >= 0.5) return 100;
+  if (ratio >= 0.3) return 60;
+  if (totalMapped > 0) return 30;
+  return 0;
+}
+
+/** Graduated section count: 0→0, 1-2→30, 3-4→60, 5+→100 */
+function graduateSectionCount(brief: ContentBrief, topicConfig?: TopicConfig): number {
+  const count = brief.structured_outline?.length ?? 0;
+  const lengthPreset = topicConfig?.contentLength;
+
+  // Minimal preset has lower expectations
+  if (lengthPreset === 'minimal') {
+    if (count >= 3) return 100;
+    if (count >= 2) return 60;
+    if (count >= 1) return 30;
+    return 0;
+  }
+
+  if (count >= 5) return 100;
+  if (count >= 3) return 60;
+  if (count >= 1) return 30;
+  return 0;
+}
+
+/** Graduated link scoring: 0→0, 1→40, 2-4→100 */
+function graduateLinkScore(brief: ContentBrief, allTopics: EnrichedTopic[]): number {
+  const links = getBridgeLinks(brief.contextualBridge);
+  const topicTitles = new Set(allTopics.map(t => t.title));
+  const validTargets = links.filter(l => topicTitles.has(l.targetTopic)).length;
+
+  if (validTargets >= 2 && links.length <= 4) return 100;
+  if (validTargets >= 2) return 80;
+  if (links.length >= 1) return 40;
+  return 0;
+}
+
+// ── Individual Check Functions ──
+
+function checkEavCoverage(brief: ContentBrief, eavs?: SemanticTriple[]): BriefQualityCheck {
+  if (!eavs || eavs.length === 0) {
+    return { name: 'EAV Coverage', passed: true, details: 'No EAVs provided — skipped' };
+  }
+
+  const sections = brief.structured_outline ?? [];
+  let totalMapped = 0;
+  for (const section of sections) {
+    if (section.mapped_eavs && section.mapped_eavs.length > 0) {
+      totalMapped += section.mapped_eavs.length;
+    }
+  }
+
   const criticalCount = eavs.filter(e =>
     e.predicate?.category === 'UNIQUE' || e.predicate?.category === 'ROOT'
   ).length;
 
   const ratio = eavs.length > 0 ? totalMapped / Math.min(eavs.length, 30) : 0;
   const passed = ratio >= 0.3 || totalMapped > 0;
-  const coveredCritical = Math.min(totalMapped, criticalCount); // approximation
+  const coveredCritical = Math.min(totalMapped, criticalCount);
 
   return {
     name: 'EAV Coverage',
@@ -169,7 +276,6 @@ function checkInternalLinks(brief: ContentBrief, allTopics: EnrichedTopic[]): Br
     };
   }
 
-  // Check for duplicate anchors
   const anchorCounts = new Map<string, number>();
   for (const link of links) {
     const anchor = (link.anchorText || '').toLowerCase().trim();
@@ -177,7 +283,6 @@ function checkInternalLinks(brief: ContentBrief, allTopics: EnrichedTopic[]): Br
   }
   const duplicateAnchors = [...anchorCounts.entries()].filter(([, count]) => count > 3);
 
-  // Check targets exist in topic list
   const validTargets = links.filter(l => topicTitles.has(l.targetTopic)).length;
 
   const passed = links.length >= 2 && links.length <= 4 && duplicateAnchors.length === 0 && validTargets >= 2;
@@ -303,7 +408,6 @@ function checkWebsiteTypeCompliance(brief: ContentBrief, websiteType?: WebsiteTy
     return { name: 'Website-Type Compliance', passed: true, details: `No ROOT keywords for type "${websiteType}"` };
   }
 
-  // Collect all heading text and subordinate text hints from the brief's outline
   const sections = brief.structured_outline ?? [];
   const textPool = sections
     .map(s => `${(s.heading || '').toLowerCase()} ${(s.subordinate_text_hint || '').toLowerCase()}`)
@@ -321,9 +425,6 @@ function checkWebsiteTypeCompliance(brief: ContentBrief, websiteType?: WebsiteTy
   };
 }
 
-/**
- * Compute Jaccard similarity between two sets of words.
- */
 function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 && b.size === 0) return 0;
   let intersection = 0;
@@ -334,9 +435,6 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   return union > 0 ? intersection / union : 0;
 }
 
-/**
- * Extract a set of normalized words from all headings of a brief's structured outline.
- */
 function extractHeadingWords(brief: ContentBrief): Set<string> {
   const sections = brief.structured_outline ?? [];
   const words = new Set<string>();
@@ -360,7 +458,6 @@ function checkCannibalization(
     return { name: 'Cross-Topic Cannibalization', passed: true, details: 'No sibling briefs to compare — skipped' };
   }
 
-  // Find sibling topics (same parent_topic_id)
   const siblings = allTopics.filter(
     t => t.id !== topic.id && t.parent_topic_id === topic.parent_topic_id
   );

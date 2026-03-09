@@ -5,6 +5,7 @@ import { useActionPlan } from '../../../hooks/useActionPlan';
 import ApprovalGate from '../../pipeline/ApprovalGate';
 import { generateContentBrief, suggestResponseCode } from '../../../services/ai/briefGeneration';
 import { reviewBriefQuality } from '../../../services/ai/briefQualityReview';
+import { improveBrief } from '../../../services/ai/briefImprover';
 import { KnowledgeGraph } from '../../../lib/knowledgeGraph';
 import type { EnrichedTopic, ContentBrief } from '../../../types';
 import type { ActionPlanEntry, BriefQualityReport } from '../../../types/actionPlan';
@@ -141,16 +142,19 @@ const PipelineBriefsStep: React.FC = () => {
       (actionPlan?.entries ?? []).map(e => [e.topicId, e])
     );
 
-    for (let i = 0; i < targetTopics.length; i++) {
-      const topic = targetTopics[i];
+    const CONCURRENCY = 3;
+    let completedCount = 0;
+
+    async function generateSingleBrief(topic: EnrichedTopic) {
       setGeneratingTopicId(topic.id);
-      setProgressText(`Generating brief ${i + 1}/${targetTopics.length}: ${topic.title}`);
+      completedCount++;
+      setProgressText(`Generating brief ${completedCount}/${targetTopics.length}: ${topic.title}`);
 
       // Update brief status to generating
       updateBriefStatus(topic.id, 'generating');
 
       let attempts = 0;
-      const MAX_ATTEMPTS = 2;
+      const MAX_ATTEMPTS = 3;
       while (attempts < MAX_ATTEMPTS) {
         attempts++;
         try {
@@ -180,17 +184,61 @@ const PipelineBriefsStep: React.FC = () => {
             ...briefData,
           };
 
-          newBriefs[topic.id] = brief;
-          setLocalBriefs(prev => ({ ...prev, [topic.id]: brief }));
-
           // Run quality review
           const report = reviewBriefQuality(
             brief, topic, businessInfo, pillars, topics, eavs, actionEntry?.config,
             { ...allBriefs, ...newBriefs }, businessInfo.websiteType
           );
-          setQualityReports(prev => ({ ...prev, [topic.id]: report }));
 
-          // Update brief status
+          // Quality-based status gating
+          if (!report.meetsMinimum && attempts < MAX_ATTEMPTS) {
+            // Score < 50: auto-retry
+            console.warn(`[Briefs] Brief for "${topic.title}" scored ${report.score}% (below 50% minimum), retrying...`);
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+
+          if (!report.meetsMinimum) {
+            // Still below minimum after all retries: mark failed
+            console.error(`[Briefs] Brief for "${topic.title}" scored ${report.score}% after ${MAX_ATTEMPTS} attempts — marking failed`);
+            failedTopics.push(topic.title);
+            updateBriefStatus(topic.id, 'failed');
+            break;
+          }
+
+          // Multi-pass improvement for briefs scoring 50-84%
+          let finalBrief = brief;
+          let finalReport = report;
+          if (report.meetsMinimum && !report.meetsTarget) {
+            try {
+              setProgressText(`Improving brief for "${topic.title}" (${report.score}%)...`);
+              const { improved, newReport } = await improveBrief(
+                brief, report, topic,
+                {
+                  businessInfo,
+                  pillars,
+                  allTopics: topics,
+                  eavs,
+                  topicConfig: actionEntry?.config,
+                  allBriefs: { ...allBriefs, ...newBriefs },
+                },
+                dispatch
+              );
+              if (newReport.score > report.score) {
+                finalBrief = improved;
+                finalReport = newReport;
+              }
+            } catch (err) {
+              console.warn(`[Briefs] Improvement pass failed for "${topic.title}":`, err);
+              // Non-fatal: keep original brief
+            }
+          }
+
+          newBriefs[topic.id] = finalBrief;
+          setLocalBriefs(prev => ({ ...prev, [topic.id]: finalBrief }));
+          setQualityReports(prev => ({ ...prev, [topic.id]: finalReport }));
+
+          // Update brief status — generated (UI shows amber/green based on score)
           updateBriefStatus(topic.id, 'generated');
           break;
         } catch (err) {
@@ -206,6 +254,19 @@ const PipelineBriefsStep: React.FC = () => {
         }
       }
     }
+
+    // Run briefs with controlled concurrency
+    const active = new Set<Promise<void>>();
+    for (const topic of targetTopics) {
+      const task = generateSingleBrief(topic).then(() => {
+        active.delete(task);
+      });
+      active.add(task);
+      if (active.size >= CONCURRENCY) {
+        await Promise.race(active);
+      }
+    }
+    await Promise.all(active);
 
     // Persist
     if (Object.keys(newBriefs).length > 0 && state.activeMapId) {

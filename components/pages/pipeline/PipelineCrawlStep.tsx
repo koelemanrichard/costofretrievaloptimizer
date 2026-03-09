@@ -4,6 +4,7 @@ import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
 import * as migrationService from '../../../services/migrationService';
 import { researchBusiness, BusinessResearchResult } from '../../../services/ai/businessResearch';
+import { profileBusinessFromCrawlData, type DetectedService } from '../../../services/ai/businessProfiler';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 import BusinessInfoForm from '../../BusinessInfoForm';
 import { BusinessInfo, WEBSITE_TYPE_CONFIG } from '../../../types';
@@ -288,6 +289,121 @@ function FieldDisplay({ label, value, span }: { label: string; value?: string; s
   );
 }
 
+// ──── Detected Services Confirmation ────
+
+function ServiceConfirmation({
+  services,
+  confirmed,
+  onToggle,
+  onAdd,
+  onRemove,
+}: {
+  services: DetectedService[];
+  confirmed: string[];
+  onToggle: (name: string) => void;
+  onAdd: (name: string) => void;
+  onRemove: (name: string) => void;
+}) {
+  const [newService, setNewService] = useState('');
+
+  if (services.length === 0) return null;
+
+  return (
+    <div className="bg-gray-800 border border-blue-700/40 rounded-lg overflow-hidden">
+      <div className="px-5 py-3 border-b border-blue-700/30 bg-blue-900/15">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+          </svg>
+          <h3 className="text-sm font-semibold text-blue-300">Detected Services & Products</h3>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          These services were detected from your website. Confirm or adjust before proceeding.
+        </p>
+      </div>
+      <div className="p-4 space-y-2">
+        {services.map((service) => {
+          const isConfirmed = confirmed.includes(service.name);
+          return (
+            <div
+              key={service.name}
+              className={`flex items-center justify-between px-3 py-2 rounded border transition-colors ${
+                isConfirmed
+                  ? 'bg-green-900/15 border-green-700/30'
+                  : 'bg-gray-900/50 border-gray-700/50 opacity-60'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => onToggle(service.name)}
+                  className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs ${
+                    isConfirmed
+                      ? 'bg-green-600 border-green-500 text-white'
+                      : 'border-gray-600 text-transparent hover:border-gray-500'
+                  }`}
+                >
+                  {isConfirmed && '\u2713'}
+                </button>
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-200 truncate">{service.name}</p>
+                  {service.matchedUrl && (
+                    <p className="text-[10px] text-gray-500 truncate">{service.matchedUrl}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
+                  service.confidence >= 0.7
+                    ? 'bg-green-900/20 text-green-400 border-green-700/30'
+                    : service.confidence >= 0.4
+                    ? 'bg-amber-900/20 text-amber-400 border-amber-700/30'
+                    : 'bg-gray-700/30 text-gray-500 border-gray-600/30'
+                }`}>
+                  {Math.round(service.confidence * 100)}%
+                </span>
+                <span className="text-[9px] bg-gray-700/30 text-gray-400 border border-gray-600/30 rounded px-1 py-0.5">
+                  {service.pageType}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Add custom service */}
+        <div className="flex gap-2 pt-2">
+          <input
+            type="text"
+            value={newService}
+            onChange={(e) => setNewService(e.target.value)}
+            placeholder="Add a service..."
+            className="flex-1 bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newService.trim()) {
+                onAdd(newService.trim());
+                setNewService('');
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (newService.trim()) {
+                onAdd(newService.trim());
+                setNewService('');
+              }
+            }}
+            disabled={!newService.trim()}
+            className="text-xs bg-blue-600/20 text-blue-300 border border-blue-500/30 rounded px-2 py-1 hover:bg-blue-600/30 transition-colors disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ──── Main Component ────
 
 const PipelineCrawlStep: React.FC = () => {
@@ -318,6 +434,8 @@ const PipelineCrawlStep: React.FC = () => {
   const [contextSaved, setContextSaved] = useState(false);
   const [discoveryError, setDiscoveryError] = useState('');
   const [researchResult, setResearchResult] = useState<BusinessResearchResult | null>(null);
+  const [detectedServices, setDetectedServices] = useState<DetectedService[]>([]);
+  const [confirmedServices, setConfirmedServices] = useState<string[]>([]);
 
   // Ref to prevent double-runs
   const discoveryRunningRef = useRef(false);
@@ -512,6 +630,32 @@ const PipelineCrawlStep: React.FC = () => {
     setStepStatus('crawl', 'in_progress');
     discoveryRunningRef.current = false;
 
+    // ── Post-discovery: business profiling (detect services from crawled URLs) ──
+    if (discoveredUrlsRef.current.length > 0) {
+      addEvent('Detecting business services...', 'analyzing');
+      try {
+        const profile = await profileBusinessFromCrawlData(
+          discoveredUrlsRef.current,
+          state.businessInfo,
+          dispatch
+        );
+        if (profile.detectedServices.length > 0) {
+          setDetectedServices(profile.detectedServices);
+          setConfirmedServices(profile.detectedServices.map(s => s.name));
+          addEvent(
+            `Detected ${profile.detectedServices.length} services/products`,
+            'found',
+            profile.detectedServices.slice(0, 5).map(s => s.name).join(', ')
+          );
+        } else {
+          addEvent('No services detected from crawl data', 'warning');
+        }
+      } catch (err) {
+        console.warn('[PipelineCrawlStep] Business profiling failed:', err);
+        addEvent('Service detection failed — you can add services manually', 'warning');
+      }
+    }
+
     // ── Post-discovery: structural analysis (non-blocking background) ──
     // Analyze a sample of discovered pages for HTML structure.
     // Uses the edge function which fetches HTML from URLs directly.
@@ -565,6 +709,7 @@ const PipelineCrawlStep: React.FC = () => {
         ...formData,
         ...(domain ? { domain } : {}),
         pagesFound,
+        confirmed_services: formData.offerings || confirmedServices || [],
       };
 
       dispatch({
@@ -626,8 +771,34 @@ const PipelineCrawlStep: React.FC = () => {
       };
     }
 
+    // Include confirmed services as offerings
+    if (confirmedServices.length > 0) {
+      formData.offerings = confirmedServices;
+    }
+
     await handleSaveBusinessContext(formData);
   }, [researchResult, url, state.businessInfo, handleSaveBusinessContext]);
+
+  // ──── Service confirmation handlers ────
+  const handleToggleService = useCallback((name: string) => {
+    setConfirmedServices(prev =>
+      prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+    );
+  }, []);
+
+  const handleAddService = useCallback((name: string) => {
+    if (!confirmedServices.includes(name)) {
+      setConfirmedServices(prev => [...prev, name]);
+      setDetectedServices(prev => [
+        ...prev,
+        { name, confidence: 1, evidence: [], pageType: 'service' as const },
+      ]);
+    }
+  }, [confirmedServices]);
+
+  const handleRemoveService = useCallback((name: string) => {
+    setConfirmedServices(prev => prev.filter(s => s !== name));
+  }, []);
 
   // ──── Derived state ────
   const existingBizInfo = activeMap?.business_info;
@@ -736,6 +907,17 @@ const PipelineCrawlStep: React.FC = () => {
               language={researchResult?.suggestions?.language || existingBizInfo?.language}
               industry={researchResult?.suggestions?.industry || existingBizInfo?.industry}
               websiteType={researchResult?.suggestions?.websiteType || existingBizInfo?.websiteType}
+            />
+          )}
+
+          {/* ──── Detected Services Confirmation ──── */}
+          {discoveryPhase === 'done' && !contextSaved && detectedServices.length > 0 && (
+            <ServiceConfirmation
+              services={detectedServices}
+              confirmed={confirmedServices}
+              onToggle={handleToggleService}
+              onAdd={handleAddService}
+              onRemove={handleRemoveService}
             />
           )}
 

@@ -189,6 +189,9 @@ function analyzeMapPlanning(
   } else {
     validatorsSkipped.push('ServiceAlignment');
   }
+
+  // 7. Hub-Spoke Compliance — each hub (pillar) should have ≥3 spokes
+  runHubSpokeCompliance(topics, findings, validatorsRun, validatorsSkipped);
 }
 
 // ── Map Planning Sub-Validators ──
@@ -237,7 +240,9 @@ function runFrameCoverage(
     );
 
     if (uncoveredFrames.length > 0) {
-      const severity: FindingSeverity = uncoveredFrames.length > 3 ? 'high' : 'medium';
+      // Promote to critical if <7/10 frames covered (map quality gate blocker)
+      const coveredFrameCount = report.frameResults.length - uncoveredFrames.length;
+      const severity: FindingSeverity = coveredFrameCount < 7 ? 'critical' : uncoveredFrames.length > 3 ? 'high' : 'medium';
       for (const fr of uncoveredFrames) {
         findings.push({
           category: 'missing_frame',
@@ -434,6 +439,48 @@ function runPageWorthiness(
   }
 }
 
+// ── Hub-Spoke Compliance Validator ──
+
+function runHubSpokeCompliance(
+  topics: EnrichedTopic[],
+  findings: PreAnalysisFinding[],
+  validatorsRun: string[],
+  validatorsSkipped: string[]
+): void {
+  try {
+    const hubs = topics.filter(t => t.cluster_role === 'pillar' || (!t.parent_topic_id && topics.some(c => c.parent_topic_id === t.id)));
+    validatorsRun.push('HubSpokeCompliance');
+
+    if (hubs.length === 0) {
+      validatorsSkipped.push('HubSpokeCompliance (no hubs)');
+      return;
+    }
+
+    const weakHubs: string[] = [];
+    for (const hub of hubs) {
+      const spokeCount = topics.filter(t => t.parent_topic_id === hub.id).length;
+      if (spokeCount < 3) {
+        weakHubs.push(`"${hub.title}" (${spokeCount} spoke${spokeCount === 1 ? '' : 's'})`);
+      }
+    }
+
+    if (weakHubs.length > 0) {
+      findings.push({
+        category: 'depth_imbalance',
+        severity: weakHubs.length > 2 ? 'critical' : 'high',
+        title: `${weakHubs.length} hub(s) have fewer than 3 spokes`,
+        details: `Weak hubs: ${weakHubs.join(', ')}. Each hub needs ≥3 supporting topics for topical depth.`,
+        affectedItems: weakHubs.map(h => h.replace(/^"(.+?)".*$/, '$1')),
+        suggestedAction: 'Add supporting subtopics to weak hubs to establish topical authority',
+        autoFixable: true,
+      });
+    }
+  } catch (err) {
+    console.warn('[dialoguePreAnalysis] HubSpokeCompliance failed:', err);
+    validatorsSkipped.push('HubSpokeCompliance');
+  }
+}
+
 // ── Service Alignment Validator ──
 
 function runServiceAlignment(
@@ -477,9 +524,10 @@ function runServiceAlignment(
 
     const uncovered = services.filter(s => !coveredServices.has(s));
     if (uncovered.length > 0) {
+      // Promote to critical if ANY service has no hub — map quality gate blocker
       findings.push({
         category: 'service_gap',
-        severity: uncovered.length > 2 ? 'high' : 'medium',
+        severity: uncovered.length > 2 ? 'critical' : 'high',
         title: `${uncovered.length} business service(s) have no dedicated hub topic`,
         details: `Uncovered services: ${uncovered.join(', ')}. Each service should have at least one hub topic to capture search demand.`,
         affectedItems: uncovered,

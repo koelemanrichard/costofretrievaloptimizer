@@ -224,7 +224,22 @@ function BriefCard({ topic, brief, actionContext, generatingTopicId, qualityRepo
           {/* Quality checks */}
           {qualityReport && (
             <div className="space-y-1 pt-2 border-t border-gray-800">
-              <p className="text-[10px] text-gray-500 uppercase font-medium">Quality Checks ({qualityReport.passCount}/{qualityReport.checks.length})</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-gray-500 uppercase font-medium">Quality Checks ({qualityReport.passCount}/{qualityReport.checks.length})</p>
+                {qualityReport.componentScores && (
+                  <div className="flex items-center gap-2">
+                    {Object.entries(qualityReport.componentScores).map(([key, score]) => (
+                      <span key={key} className={`text-[9px] px-1 py-0.5 rounded ${
+                        score >= 85 ? 'bg-green-900/20 text-green-400' :
+                        score >= 50 ? 'bg-amber-900/20 text-amber-400' :
+                        'bg-red-900/20 text-red-400'
+                      }`}>
+                        {key.replace(/([A-Z])/g, ' $1').trim().split(' ')[0]}: {score}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
               {qualityReport.checks.map((check, i) => (
                 <div key={i} className="flex items-center gap-2 text-[10px]">
                   <span className={check.passed ? 'text-green-400' : 'text-red-400'}>

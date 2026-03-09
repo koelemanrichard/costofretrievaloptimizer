@@ -431,7 +431,25 @@ export const generateContentBrief = async (
         visual_semantics: Array, discourse_anchors: Array
     };
 
-    return callApi(prompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK));
+    let result = await callApi(prompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK));
+
+    // Retry once if structured_outline is empty — use reduced outline-only prompt to prevent truncation
+    if (!result.structured_outline || result.structured_outline.length === 0) {
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'OpenAI',
+            message: `Empty structured_outline detected, retrying with outline-only prompt...`,
+            status: 'warning',
+            timestamp: Date.now()
+        }});
+        try {
+            const outlinePrompt = prompts.GENERATE_BRIEF_OUTLINE_PROMPT(info, topic, allTopics, pillars, kg, code, marketPatterns, eavs, actionType, topicConfig, existingBriefs);
+            result = await callApi(outlinePrompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK));
+        } catch (retryErr) {
+            console.warn('[OpenAI] Retry failed:', retryErr);
+        }
+    }
+
+    return result;
 };
 
 export const generateArticleDraft = async (brief: ContentBrief, info: BusinessInfo, dispatch: React.Dispatch<any>): Promise<string> => {

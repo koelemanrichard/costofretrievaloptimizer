@@ -20,6 +20,188 @@ import {
 } from './_common';
 import type { TopicConfig } from '../../types/actionPlan';
 
+/**
+ * OUTLINE-ONLY prompt for two-phase brief generation (Step 3).
+ * Generates ONLY the structural skeleton: title, slug, metaDescription, keyTakeaways,
+ * structured_outline, featured_snippet_target, contextualBridge, and internal links.
+ *
+ * Strips: visual_semantics, discourse_anchors, perspectives, methodology_note,
+ * serpAnalysis, predicted_user_journey — these are generated in the enrichment phase.
+ *
+ * Context sizes reduced: KG nodes 30→15, EAVs 30→15, topics for linking 20→10.
+ */
+export const GENERATE_BRIEF_OUTLINE_PROMPT = (info: BusinessInfo, topic: EnrichedTopic, allTopics: EnrichedTopic[], pillars: SEOPillars, knowledgeGraph: KnowledgeGraph, responseCode: ResponseCode, marketPatterns?: MarketPatterns, eavs?: SemanticTriple[], actionType?: string, topicConfig?: TopicConfig, existingBriefs?: Record<string, ContentBrief>): string => {
+    // Extract up to 15 topic-relevant nodes (reduced from 30)
+    const kgContext = knowledgeGraph
+        ? (() => {
+            const allNodes = Array.from(knowledgeGraph.getNodes().values());
+            const topicTerms = [topic.title, topic.canonical_query, topic.attribute_focus]
+              .filter(Boolean).map(s => s!.toLowerCase());
+
+            const scored = allNodes.map(n => {
+              const termLower = n.term.toLowerCase();
+              let relevance = 0;
+              for (const t of topicTerms) {
+                if (t.includes(termLower) || termLower.includes(t)) relevance += 3;
+                else if (t.split(/\s+/).some((w: string) => w.length > 2 && termLower.includes(w))) relevance += 1;
+              }
+              return { node: n, relevance };
+            });
+
+            const topNodes = scored
+              .sort((a, b) => b.relevance - a.relevance || a.node.term.localeCompare(b.node.term))
+              .slice(0, 15)
+              .map(s => ({ term: s.node.term }));
+
+            return JSON.stringify(topNodes, null, 2);
+          })()
+        : "No Knowledge Graph available.";
+
+    // Format EAVs — reduced to 15 (from 30)
+    const eavContext = eavs && eavs.length > 0
+        ? `\n**Semantic Triples (EAVs):**\n${eavs.slice(0, 15).map((eav, i) => {
+            const category = eav.predicate?.category || 'UNCLASSIFIED';
+            return `${i + 1}. [${category}] ${eav.subject?.label || '?'} → ${eav.predicate?.relation || '?'} → ${eav.object?.value || '?'}`;
+          }).join('\n')}\nMap these triples into structured_outline sections via 'mapped_eavs'. Prioritize UNIQUE and ROOT triples.\n`
+        : '';
+
+    const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
+    const bridgeGuidance = getContextualBridgeGuidance(topic, allTopics);
+
+    const contentLengthGuide = topicConfig?.contentLength
+        ? `\n**CONTENT LENGTH: ${topicConfig.contentLength.toUpperCase()}** — minimal: 3-4 sections, short: 4-5, standard: 5-7, comprehensive: 8-10+.`
+        : '';
+
+    const fsFormatGuide = topicConfig?.featuredSnippetFormat && topicConfig.featuredSnippetFormat !== 'NONE'
+        ? `\n**TARGET FS FORMAT: ${topicConfig.featuredSnippetFormat}**`
+        : '';
+
+    const websiteTypeRules = getWebsiteTypeRulesForBrief(info.websiteType);
+    const cannibalizationContext = getCannibalizationContext(topic, allTopics, knowledgeGraph);
+
+    return `
+You are an expert Algorithmic Architect generating a content brief OUTLINE.
+Focus on structure: sections, headings, format codes, EAV mappings, and internal links.
+
+${languageInstruction}
+
+**CENTERPIECE RULE:** First 400 chars must contain "${pillars.centralEntity}", primary definition, and key attributes.
+
+**SUBORDINATE TEXT:** Each section's subordinate_text_hint MUST be a direct answer — no filler.
+${fsFormatGuide}
+${contentLengthGuide}
+${websiteTypeRules}
+${cannibalizationContext}
+
+**Topic:** "${topic.title}"
+**Description:** "${topic.description}"
+**Response Code:** ${responseCode}
+${businessContext(info)}
+**SEO Pillars:** CE: "${pillars.centralEntity}", SC: "${pillars.sourceContext}", CSI: "${pillars.centralSearchIntent}"
+**Knowledge Graph:** ${kgContext}
+**Topics for Linking:**
+${allTopics.slice(0, 10).map(t => {
+  const isParent = topic.parent_topic_id === t.id;
+  const isSibling = topic.parent_topic_id && topic.parent_topic_id === t.parent_topic_id && t.id !== topic.id;
+  const isChild = t.parent_topic_id === topic.id;
+  if (t.id === topic.id) return null;
+  const rel = isParent ? 'PARENT' : isChild ? 'CHILD' : isSibling ? 'SIBLING' : 'RELATED';
+  return '- "' + t.title + '" [' + rel + ']';
+}).filter(Boolean).join('\n')}
+${eavContext}
+
+**RULES:**
+- Every heading modifies CE "${pillars.centralEntity}". No generic headings.
+- Filter by SC "${pillars.sourceContext}".
+- Vary heading structures: mix questions, noun phrases, action phrases.
+- EAV-Section Mapping: include 'mapped_eavs' per section.
+- Contextual Bridge: ${bridgeGuidance}
+- 2-4 internal links in contextualBridge.links. targetTopic = verbatim title, anchorText = 2-5 words.
+- Format codes: [FS] Featured Snippet, [PAA] Q&A, [LISTING], [DEFINITIVE], [TABLE], [PROSE].
+
+**OUTPUT JSON (outline only — no visual_semantics, discourse_anchors, perspectives, serpAnalysis, or predicted_user_journey):**
+{
+  "structured_outline": [
+    { "heading": "string", "level": 2, "format_code": "FS|PAA|LISTING|DEFINITIVE|TABLE|PROSE", "attribute_category": "ROOT|UNIQUE|RARE|COMMON", "content_zone": "MAIN|SUPPLEMENTARY", "subordinate_text_hint": "string", "mapped_eavs": [0, 1] }
+  ],
+  "title": "string",
+  "slug": "string",
+  "metaDescription": "string",
+  "keyTakeaways": ["string"],
+  "featured_snippet_target": { "question": "string", "answer_target_length": 40, "required_predicates": ["string"], "target_type": "PARAGRAPH|LIST|TABLE" },
+  "contextualBridge": {
+    "type": "section", "content": "string",
+    "links": [{ "targetTopic": "exact title", "anchorText": "2-5 words", "annotation_text_hint": "string", "reasoning": "string" }]
+  }
+}
+
+structured_outline MUST have 5-10 sections. contextualBridge.links MUST have 2-4 entries.
+
+${shouldApplyMonetizationEnhancement(topic.topic_class) ? getMonetizationPromptEnhancement(info.language || 'English') : ''}
+
+${jsonResponseInstruction}
+`;
+};
+
+/**
+ * ENRICHMENT prompt for two-phase brief generation (Step 3).
+ * Takes the skeleton outline as input, produces secondary fields:
+ * serpAnalysis, visual_semantics, discourse_anchors, perspectives,
+ * predicted_user_journey, discourse_anchor_sequence.
+ */
+export const GENERATE_BRIEF_ENRICHMENT_PROMPT = (info: BusinessInfo, topic: EnrichedTopic, pillars: SEOPillars, outlineBrief: Partial<ContentBrief>): string => {
+    const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
+
+    // Condense the outline for context
+    const outlineSummary = (outlineBrief.structured_outline || [])
+        .map((s: any, i: number) => `${i + 1}. [H${s.level || 2}] ${s.heading} (${s.format_code || 'PROSE'})`)
+        .join('\n');
+
+    return `
+You are an expert SEO strategist enriching a content brief with secondary analysis fields.
+The structural outline has already been created. Your job is to add enrichment data.
+
+${languageInstruction}
+
+**Topic:** "${topic.title}"
+**Central Entity:** "${pillars.centralEntity}"
+**Source Context:** "${pillars.sourceContext}"
+
+**Existing Outline (${outlineBrief.structured_outline?.length || 0} sections):**
+${outlineSummary}
+
+**Featured Snippet Target:** ${outlineBrief.featured_snippet_target ? JSON.stringify(outlineBrief.featured_snippet_target) : 'Not set'}
+
+Generate ONLY the enrichment fields below. Do NOT regenerate the outline or title.
+
+${jsonResponseInstruction}
+
+**OUTPUT JSON:**
+{
+  "serpAnalysis": {
+    "peopleAlsoAsk": ["3-5 questions users also search"],
+    "competitorHeadings": [],
+    "avgWordCount": 1500,
+    "avgHeadings": 8,
+    "commonStructure": "Describe heading flow for this topic's intent",
+    "contentGaps": ["topics competitors miss"]
+  },
+  "visual_semantics": [
+    { "type": "INFOGRAPHIC|CHART|DIAGRAM", "description": "specific data visualization", "caption_data": "string" }
+  ],
+  "visual_placement_map": [
+    { "section_heading": "string", "entity_anchor": "string", "image_type": "string", "placement_rationale": "string" }
+  ],
+  "discourse_anchors": ["bridging word/phrase between sections"],
+  "discourse_anchor_sequence": [
+    { "from_section": "string", "to_section": "string", "bridge_concept": "string", "transition_terms": ["term"], "transition_type": "elaboration|contrast|cause_effect|sequence|example|summary" }
+  ],
+  "perspectives": ["unique angles for this topic"],
+  "predicted_user_journey": "string describing reader flow"
+}
+`;
+};
+
 export const SUGGEST_RESPONSE_CODE_PROMPT = (info: BusinessInfo, topicTitle: string): string => `
 You are an expert content strategist. For the given topic title, suggest the most effective "Response Code" (content template).
 
@@ -87,16 +269,16 @@ export const GENERATE_CONTENT_BRIEF_PROMPT = (info: BusinessInfo, topic: Enriche
 
             const topNodes = scored
               .sort((a, b) => b.relevance - a.relevance || a.node.term.localeCompare(b.node.term))
-              .slice(0, 30)
+              .slice(0, 15)
               .map(s => ({ term: s.node.term }));
 
             return JSON.stringify(topNodes, null, 2);
           })()
         : "No Knowledge Graph available.";
 
-    // Format EAVs for prompt inclusion
+    // Format EAVs for prompt inclusion (reduced from 30 to 15 to prevent truncation)
     const eavContext = eavs && eavs.length > 0
-        ? `\n**Semantic Triples (Entity-Attribute-Value) for this topic:**\n${eavs.slice(0, 30).map((eav, i) => {
+        ? `\n**Semantic Triples (Entity-Attribute-Value) for this topic:**\n${eavs.slice(0, 15).map((eav, i) => {
             const category = eav.predicate?.category || 'UNCLASSIFIED';
             return `${i + 1}. [${category}] ${eav.subject?.label || '?'} → ${eav.predicate?.relation || '?'} → ${eav.object?.value || '?'}`;
           }).join('\n')}\n\nYou MUST incorporate these semantic triples into the structured_outline. Each section should map to at least one triple. Prioritize UNIQUE and ROOT triples in early sections. Populate the brief's 'eavs' field with these triples.\n`
@@ -180,7 +362,7 @@ ${businessContext(info)}
 **SEO Pillars:** ${JSON.stringify(pillars, null, 2)}
 **Knowledge Graph Context:** ${kgContext}
 **Available Topics for Linking (with relationships):**
-${allTopics.slice(0, 20).map(t => {
+${allTopics.slice(0, 10).map(t => {
   const isParent = topic.parent_topic_id === t.id;
   const isSibling = topic.parent_topic_id && topic.parent_topic_id === t.parent_topic_id && t.id !== topic.id;
   const isChild = t.parent_topic_id === topic.id;

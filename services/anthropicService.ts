@@ -850,13 +850,29 @@ export const generateContentBrief = async (info: BusinessInfo, topic: EnrichedTo
     };
 
     // Use streaming to avoid timeouts on large content brief generation
-    const result = await callApiWithStreaming(prompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK), 'generateContentBrief');
+    let result = await callApiWithStreaming(prompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK), 'generateContentBrief');
 
-    // Validate structured_outline was returned
+    // Retry once if structured_outline is empty — use reduced outline-only prompt to prevent truncation
     if (!result.structured_outline || result.structured_outline.length === 0) {
         dispatch({ type: 'LOG_EVENT', payload: {
             service: 'Anthropic',
-            message: `CRITICAL: AI did not return structured_outline. Content brief will have empty sections. Try regenerating.`,
+            message: `Empty structured_outline detected, retrying with outline-only prompt...`,
+            status: 'warning',
+            timestamp: Date.now()
+        }});
+        try {
+            const outlinePrompt = prompts.GENERATE_BRIEF_OUTLINE_PROMPT(info, topic, allTopics, pillars, kg, code, marketPatterns, eavs, actionType, topicConfig, existingBriefs);
+            result = await callApiWithStreaming(outlinePrompt, info, dispatch, (text) => sanitizer.sanitize(text, schema, CONTENT_BRIEF_FALLBACK), 'generateContentBrief (outline retry)');
+        } catch (retryErr) {
+            console.warn('[Anthropic] Retry failed:', retryErr);
+        }
+    }
+
+    // Log final result
+    if (!result.structured_outline || result.structured_outline.length === 0) {
+        dispatch({ type: 'LOG_EVENT', payload: {
+            service: 'Anthropic',
+            message: `CRITICAL: AI did not return structured_outline after retry. Content brief will have empty sections.`,
             status: 'error',
             timestamp: Date.now()
         }});

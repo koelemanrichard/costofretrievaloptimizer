@@ -539,6 +539,129 @@ export const generateContentBrief = async (
         openrouter: () => openRouterService.generateContentBrief(businessInfo, topic, allTopics, pillars, knowledgeGraph, responseCode, dispatch, marketPatterns, eavs, actionType, topicConfig, existingBriefs),
     });
 
+    // ── Structural Validation Gate ──
+    // Hard validation BEFORE any post-processing. Prevents empty/truncated briefs
+    // from silently passing through and being marked "generated".
+    if (!brief.structured_outline || brief.structured_outline.length < 3) {
+        const sectionCount = brief.structured_outline?.length ?? 0;
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'BriefGeneration',
+                message: `Structural validation failed: ${sectionCount} sections (minimum 3). Topic: "${topic.title}". The AI response was likely truncated.`,
+                status: 'error',
+                timestamp: Date.now(),
+            },
+        });
+        throw new Error(
+            `Brief generation produced ${sectionCount} sections (minimum 3). ` +
+            `Topic: "${topic.title}". The AI response was likely truncated.`
+        );
+    }
+    if (!brief.title || !brief.metaDescription) {
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'BriefGeneration',
+                message: `Structural validation failed: missing title or metaDescription for "${topic.title}".`,
+                status: 'error',
+                timestamp: Date.now(),
+            },
+        });
+        throw new Error(`Brief missing title or metaDescription for "${topic.title}".`);
+    }
+
+    // ── Enrichment Phase (two-phase generation) ──
+    // If the outline is valid but secondary fields are missing (truncated response),
+    // run a focused enrichment call to fill them in. This is cheaper than full regeneration.
+    const missingSerpAnalysis = !brief.serpAnalysis || typeof brief.serpAnalysis === 'string' ||
+        (!brief.serpAnalysis.peopleAlsoAsk?.length && !brief.serpAnalysis.contentGaps?.length);
+    const missingVisualSemantics = !brief.visual_semantics || brief.visual_semantics.length === 0;
+    const missingDiscourseAnchors = !brief.discourse_anchors || brief.discourse_anchors.length === 0;
+
+    if (missingSerpAnalysis || missingVisualSemantics || missingDiscourseAnchors) {
+        const missingFields = [
+            missingSerpAnalysis && 'serpAnalysis',
+            missingVisualSemantics && 'visual_semantics',
+            missingDiscourseAnchors && 'discourse_anchors',
+        ].filter(Boolean).join(', ');
+
+        dispatch({
+            type: 'LOG_EVENT',
+            payload: {
+                service: 'BriefGeneration',
+                message: `Outline valid (${brief.structured_outline.length} sections) but missing enrichment fields: ${missingFields}. Running enrichment phase...`,
+                status: 'info',
+                timestamp: Date.now(),
+            },
+        });
+
+        try {
+            const enrichmentPrompt = prompts.GENERATE_BRIEF_ENRICHMENT_PROMPT(businessInfo, topic, pillars, brief);
+            const enrichmentFallback = {
+                serpAnalysis: { peopleAlsoAsk: [], competitorHeadings: [], avgWordCount: 1500, avgHeadings: 8, commonStructure: '', contentGaps: [] },
+                visual_semantics: [],
+                visual_placement_map: [],
+                discourse_anchors: [],
+                discourse_anchor_sequence: [],
+                perspectives: [],
+                predicted_user_journey: '',
+            };
+
+            const enrichment = await dispatchToProvider(businessInfo, {
+                gemini: () => geminiService.generateJson(enrichmentPrompt, businessInfo, dispatch, enrichmentFallback),
+                openai: () => openAiService.generateJson(enrichmentPrompt, businessInfo, dispatch, enrichmentFallback),
+                anthropic: () => anthropicService.generateJson(enrichmentPrompt, businessInfo, dispatch, enrichmentFallback),
+                perplexity: () => perplexityService.generateJson(enrichmentPrompt, businessInfo, dispatch, enrichmentFallback),
+                openrouter: () => openRouterService.generateJson(enrichmentPrompt, businessInfo, dispatch, enrichmentFallback),
+            });
+
+            // Merge enrichment into brief — only fill missing fields, don't overwrite existing
+            if (missingSerpAnalysis && enrichment.serpAnalysis && typeof enrichment.serpAnalysis === 'object') {
+                (brief as any).serpAnalysis = enrichment.serpAnalysis;
+            }
+            if (missingVisualSemantics && enrichment.visual_semantics?.length > 0) {
+                (brief as any).visual_semantics = enrichment.visual_semantics;
+            }
+            if (missingDiscourseAnchors && enrichment.discourse_anchors?.length > 0) {
+                (brief as any).discourse_anchors = enrichment.discourse_anchors;
+            }
+            if (!brief.perspectives?.length && enrichment.perspectives?.length > 0) {
+                (brief as any).perspectives = enrichment.perspectives;
+            }
+            if (!brief.predicted_user_journey && enrichment.predicted_user_journey) {
+                (brief as any).predicted_user_journey = enrichment.predicted_user_journey;
+            }
+            if (enrichment.visual_placement_map?.length > 0 && !brief.visual_placement_map?.length) {
+                (brief as any).visual_placement_map = enrichment.visual_placement_map;
+            }
+            if (enrichment.discourse_anchor_sequence?.length > 0 && !brief.discourse_anchor_sequence?.length) {
+                (brief as any).discourse_anchor_sequence = enrichment.discourse_anchor_sequence;
+            }
+
+            dispatch({
+                type: 'LOG_EVENT',
+                payload: {
+                    service: 'BriefGeneration',
+                    message: `Enrichment phase complete. Filled missing fields for "${topic.title}".`,
+                    status: 'success',
+                    timestamp: Date.now(),
+                },
+            });
+        } catch (enrichmentError) {
+            // Enrichment is nice-to-have — the skeleton brief is still usable
+            dispatch({
+                type: 'LOG_EVENT',
+                payload: {
+                    service: 'BriefGeneration',
+                    message: `Enrichment phase failed (non-fatal): ${enrichmentError instanceof Error ? enrichmentError.message : 'Unknown error'}. Proceeding with outline-only brief.`,
+                    status: 'warning',
+                    timestamp: Date.now(),
+                },
+            });
+        }
+    }
+
     // Validate monetization briefs meet minimum requirements
     if (shouldApplyMonetizationEnhancement(topic.topic_class)) {
         validateMonetizationBrief(brief, dispatch);

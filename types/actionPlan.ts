@@ -188,4 +188,7 @@ export interface BriefQualityReport {
   checks: BriefQualityCheck[];
   passCount: number;
   failCount: number;
+  componentScores?: Record<string, number>; // Per-component breakdown (0-100 each)
+  meetsMinimum: boolean; // score >= 50
+  meetsTarget: boolean;  // score >= 85
 }
