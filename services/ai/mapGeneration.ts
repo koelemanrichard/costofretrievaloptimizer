@@ -360,7 +360,7 @@ export const expandSemanticTriples = (
 export const generateInitialTopicalMap = async (
     businessInfo: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>,
     serpIntel?: import('../../config/prompts').SerpIntelligenceForMap,
-    services?: string[]
+    services?: import('../../utils/eavUtils').ServiceWithPage[]
 ): Promise<{ coreTopics: EnrichedTopic[], outerTopics: EnrichedTopic[] }> => {
     // Validate language and region settings before generation
     const validation = validateLanguageSettings(businessInfo.language, businessInfo.region);

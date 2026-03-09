@@ -202,14 +202,27 @@ export function createInitialEntries(
   topics: EnrichedTopic[],
   waveAssignment: Map<string, number>
 ): ActionPlanEntry[] {
-  return topics.map(topic => ({
-    topicId: topic.id,
-    actionType: suggestActionType(topic),
-    priority: suggestPriority(topic),
-    wave: waveAssignment.get(topic.id) ?? 1,
-    rationale: '',
-    config: suggestTopicConfig(topic),
-  }));
+  return topics.map(topic => {
+    const entry: ActionPlanEntry = {
+      topicId: topic.id,
+      actionType: suggestActionType(topic),
+      priority: suggestPriority(topic),
+      wave: waveAssignment.get(topic.id) ?? 1,
+      rationale: '',
+      config: suggestTopicConfig(topic),
+    };
+
+    // Force existing service page pillars to Wave 1
+    if (topic.target_url && topic.cluster_role === 'pillar' &&
+        (topic.metadata as any)?.is_existing_page) {
+      entry.wave = 1;
+      entry.rationale = 'Existing service page — optimize first to establish hub authority.';
+      entry.actionType = 'OPTIMIZE';
+      entry.priority = 'critical';
+    }
+
+    return entry;
+  });
 }
 
 // ============================================================================
@@ -280,6 +293,10 @@ Example wave structures:
 - E-commerce (3 waves): Core Product Pages → Category Support → Buying Guides
 - SaaS (5 waves): Feature Pages → Use Case Pages → Integration Guides → Comparison Content → Educational Content
 - Local business (3 waves): Core Services → Service Area Pages → Trust & Authority Content
+
+**EXISTING PAGE PRIORITY RULES:**
+- Topics marked [EXISTING PAGE + PILLAR] should be in Wave 1 with actionType OPTIMIZE (optimize existing pages first to establish hub authority)
+- Their supporting spokes should be in Wave 2+ (create supporting content after hub is optimized)
 
 For each topic, determine:
 1. **actionType** — One of: CREATE_NEW, OPTIMIZE, REWRITE, MERGE, REDIRECT_301, PRUNE_410, CANONICALIZE, KEEP

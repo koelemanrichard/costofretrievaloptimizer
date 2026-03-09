@@ -14,7 +14,8 @@ import {
     getWebsiteTypeConfig,
 } from './_common';
 import type { SerpIntelligenceForMap } from './_common';
-import { summarizeEavsForPrompt } from '../../utils/eavUtils';
+import { summarizeEavsForPrompt, formatServicesForPrompt } from '../../utils/eavUtils';
+import type { ServiceWithPage } from '../../utils/eavUtils';
 
 export const SUGGEST_CENTRAL_ENTITY_CANDIDATES_PROMPT = (info: BusinessInfo): string => `
 You are an expert SEO strategist specializing in semantic content modeling. Based on the following business context, identify EXACTLY 5 potential "Central Entities".
@@ -199,7 +200,7 @@ ${jsonResponseInstruction}
 **FINAL CHECK: Your response MUST contain EXACTLY ${count} triple objects in the array. Count them before responding.**
 `;
 
-export const GENERATE_INITIAL_TOPICAL_MAP_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap, services?: string[]): string => {
+export const GENERATE_INITIAL_TOPICAL_MAP_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap, services?: ServiceWithPage[]): string => {
     const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
     const spokeMin = typeConfig?.hubSpokeRatio.min || 3;
     const spokeMax = typeConfig?.hubSpokeRatio.max || 10;
@@ -220,12 +221,7 @@ Strategic Inputs:
 - Key Competitors: ${competitors.join(', ')}
 ${buildSerpIntelligenceBlock(serpIntel)}
 
-${services && services.length > 0 ? `**Business Services/Products (CRITICAL — Hub topics MUST map to these):**
-${services.map((s, i) => `${i + 1}. ${s}`).join('\n')}
-
-MANDATORY: Every service listed above MUST have at least one dedicated hub topic in the monetization section.
-Topics that don't serve the business's revenue model should be in the informational section only.
-` : ''}
+${services && services.length > 0 ? formatServicesForPrompt(services) : ''}
 
 ${businessContext(info)}
 
@@ -331,7 +327,7 @@ ${jsonResponseInstruction}
 };
 
 // Section-specific prompts for chunked generation to avoid token truncation
-export const GENERATE_MONETIZATION_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap, services?: string[]): string => {
+export const GENERATE_MONETIZATION_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap, services?: ServiceWithPage[]): string => {
     const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
     const regionalLang = getRegionalLanguageVariant(info.language, info.region);
     const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;
@@ -351,11 +347,7 @@ Strategic Inputs:
 - Key Competitors: ${competitors.join(', ')}
 ${buildSerpIntelligenceBlock(serpIntel)}
 
-${services && services.length > 0 ? `**Business Services/Products (CRITICAL — Hub topics MUST map to these):**
-${services.map((s, i) => `${i + 1}. ${s}`).join('\n')}
-
-MANDATORY: Every service listed above MUST have at least one dedicated hub topic.
-` : ''}
+${services && services.length > 0 ? formatServicesForPrompt(services) : ''}
 
 ${businessContext(info)}
 
@@ -404,7 +396,7 @@ ${jsonResponseInstruction}
 `;
 };
 
-export const GENERATE_INFORMATIONAL_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap, services?: string[]): string => {
+export const GENERATE_INFORMATIONAL_SECTION_PROMPT = (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], serpIntel?: SerpIntelligenceForMap, services?: ServiceWithPage[]): string => {
     const languageInstruction = getLanguageAndRegionInstruction(info.language, info.region);
     const regionalLang = getRegionalLanguageVariant(info.language, info.region);
     const typeConfig = info.websiteType ? getWebsiteTypeConfig(info.websiteType) : null;

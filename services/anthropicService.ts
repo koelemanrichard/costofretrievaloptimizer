@@ -693,7 +693,7 @@ export const expandSemanticTriples = async (info: BusinessInfo, pillars: SEOPill
     return allNewTriples.slice(0, count);
 };
 
-export const generateInitialTopicalMap = async (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>, serpIntel?: import('../config/prompts').SerpIntelligenceForMap, services?: string[]) => {
+export const generateInitialTopicalMap = async (info: BusinessInfo, pillars: SEOPillars, eavs: SemanticTriple[], competitors: string[], dispatch: React.Dispatch<any>, serpIntel?: import('../config/prompts').SerpIntelligenceForMap, services?: import('../utils/eavUtils').ServiceWithPage[]) => {
     const sanitizer = new AIResponseSanitizer(dispatch);
 
     // Use chunked generation to avoid token truncation

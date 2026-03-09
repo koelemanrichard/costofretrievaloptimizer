@@ -113,6 +113,19 @@ export const GENERATE_CONTENT_BRIEF_PROMPT = (info: BusinessInfo, topic: Enriche
     // Contextual bridge guidance based on topic characteristics
     const bridgeGuidance = getContextualBridgeGuidance(topic, allTopics);
 
+    // Parent service page context for spokes
+    const parentServicePageContext = (() => {
+        if (!topic.parent_topic_id) return '';
+        const parentTopic = allTopics.find(t => t.id === topic.parent_topic_id);
+        if (!parentTopic?.target_url || parentTopic.cluster_role !== 'pillar') return '';
+        return `
+**PARENT SERVICE PAGE:** This topic supports the existing service page at ${parentTopic.target_url}.
+- Internal links MUST include a link TO the parent service page
+- Content should complement, not duplicate, the parent service page
+- The contextual bridge should connect this supporting topic TO the parent service page
+`;
+    })();
+
     // New framework enrichments
     const websiteTypeRules = getWebsiteTypeRulesForBrief(info.websiteType);
     const cannibalizationContext = getCannibalizationContext(topic, allTopics, knowledgeGraph);
@@ -162,7 +175,7 @@ ${actionContextSection}
 **Description:** "${topic.description}"
 **Response Code:** ${responseCode}
 ${userContextInstruction}
-
+${parentServicePageContext}
 ${businessContext(info)}
 **SEO Pillars:** ${JSON.stringify(pillars, null, 2)}
 **Knowledge Graph Context:** ${kgContext}

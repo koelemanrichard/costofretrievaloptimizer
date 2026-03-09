@@ -110,6 +110,122 @@ export function summarizeEavsForPrompt(eavs: SemanticTriple[]): string {
   return JSON.stringify(result, null, 2);
 }
 
+// ── ServiceWithPage: matches services to existing crawled URLs ──
+
+export interface ServiceWithPage {
+  name: string;           // e.g. "Bitumen Dakbedekking"
+  existingUrl?: string;   // e.g. "https://example.nl/bitumen-dakbedekking/"
+  existingTitle?: string; // Page <title> or H1 if available
+  existingSlug?: string;  // e.g. "bitumen-dakbedekking"
+}
+
+/**
+ * Match business services to existing crawled URLs.
+ * For each service, finds the best-matching URL based on word overlap.
+ */
+export function matchServicesToExistingUrls(
+  services: string[],
+  crawledUrls: string[],
+  siteInventory?: Array<{ url: string; title?: string }>
+): ServiceWithPage[] {
+  if (!services.length) return [];
+
+  // Parse crawled URLs into pathname + word tokens
+  const crawledEntries = crawledUrls.map(url => {
+    let pathname: string;
+    try {
+      pathname = new URL(url).pathname.replace(/\/$/, '').toLowerCase();
+    } catch {
+      pathname = url.replace(/\/$/, '').toLowerCase();
+    }
+    return { url, pathname, words: extractPathWords(pathname) };
+  });
+
+  // Build title lookup from siteInventory
+  const titleByUrl = new Map<string, string>();
+  if (siteInventory) {
+    for (const item of siteInventory) {
+      if (item.title) titleByUrl.set(item.url, item.title);
+    }
+  }
+
+  return services.map(serviceName => {
+    const result: ServiceWithPage = { name: serviceName };
+
+    if (!crawledEntries.length) return result;
+
+    // Normalize service name into word tokens
+    const serviceWords = serviceName
+      .toLowerCase()
+      .split(/[\s\-_/]+/)
+      .filter(w => w.length > 2 && !SLUG_STOP_WORDS.has(w));
+
+    if (serviceWords.length === 0) return result;
+
+    // Find best matching URL by word overlap
+    let bestMatch: { url: string; pathname: string; overlap: number } | null = null;
+    for (const entry of crawledEntries) {
+      if (entry.words.length === 0) continue;
+      const overlap = serviceWords.filter(w => entry.words.includes(w)).length;
+      // Require at least 1 meaningful word match (service names are often short)
+      if (overlap >= 1 && (!bestMatch || overlap > bestMatch.overlap)) {
+        bestMatch = { url: entry.url, pathname: entry.pathname, overlap };
+      }
+    }
+
+    if (bestMatch) {
+      result.existingUrl = bestMatch.url;
+      // Extract slug from pathname (last segment)
+      const segments = bestMatch.pathname.split('/').filter(Boolean);
+      result.existingSlug = segments[segments.length - 1] || undefined;
+      // Pull title from siteInventory if available, else derive from slug
+      result.existingTitle = titleByUrl.get(bestMatch.url)
+        || (result.existingSlug
+          ? result.existingSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : undefined);
+    }
+
+    return result;
+  });
+}
+
+/**
+ * Format ServiceWithPage[] for prompt inclusion.
+ * Separates services into existing-page vs new categories.
+ */
+export function formatServicesForPrompt(services: ServiceWithPage[]): string {
+  const withPages = services.filter(s => s.existingUrl);
+  const withoutPages = services.filter(s => !s.existingUrl);
+
+  let block = '**Business Services/Products — EXISTING PAGES ARE YOUR HUB ANCHORS:**\n\n';
+
+  if (withPages.length > 0) {
+    block += 'Services with EXISTING pages on the website (these ARE your hub topics — do NOT create new hubs):\n';
+    withPages.forEach((s, i) => {
+      const slug = s.existingSlug || new URL(s.existingUrl!).pathname.replace(/^\/|\/$/g, '');
+      block += `${i + 1}. "${s.name}" → EXISTING: /${slug}/ — Use this slug as url_slug_hint\n`;
+    });
+    block += '\n';
+  }
+
+  if (withoutPages.length > 0) {
+    block += 'Services WITHOUT existing pages (create new hub topics for these):\n';
+    withoutPages.forEach((s, i) => {
+      block += `${withPages.length + i + 1}. "${s.name}" → NEW — Create a hub topic\n`;
+    });
+    block += '\n';
+  }
+
+  block += `RULES:
+- For EXISTING services: adopt the existing slug as url_slug_hint. Hub title should match the existing page.
+- For NEW services: create a new hub topic as normal.
+- ALL spokes must support their parent hub. Spokes are bridge content, not standalone pages.
+- MANDATORY: Every service listed above MUST have at least one dedicated hub topic.
+`;
+
+  return block;
+}
+
 // ── Stop words to exclude from slug matching ──
 const SLUG_STOP_WORDS = new Set([
   'the', 'and', 'for', 'van', 'het', 'een', 'des', 'der', 'die', 'das',

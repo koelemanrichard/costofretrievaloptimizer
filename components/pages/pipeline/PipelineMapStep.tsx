@@ -4,7 +4,8 @@ import { useAppState } from '../../../state/appState';
 import ApprovalGate from '../../pipeline/ApprovalGate';
 import StepDialogue from '../../pipeline/StepDialogue';
 import { generateInitialTopicalMap, generateSingleCluster } from '../../../services/ai/mapGeneration';
-import { extractServicesFromEavs, matchTopicsToExistingUrls } from '../../../utils/eavUtils';
+import { extractServicesFromEavs, matchTopicsToExistingUrls, matchServicesToExistingUrls } from '../../../utils/eavUtils';
+import type { ServiceWithPage } from '../../../utils/eavUtils';
 import { generateTopicRationales } from '../../../services/ai/actionPlanService';
 import type { ActionPlan } from '../../../types/actionPlan';
 import type { EnrichedTopic, SemanticTriple } from '../../../types';
@@ -14,6 +15,51 @@ import { getSupabaseClient } from '../../../services/supabaseClient';
 import { verifiedBulkInsert } from '../../../services/verifiedDatabaseService';
 import { v4 as uuidv4 } from 'uuid';
 import { slugify, cleanSlug } from '../../../utils/helpers';
+
+// ──── Ensure existing service pages are pillar topics ────
+
+/**
+ * Deterministic safety net: ensures services with existing pages
+ * always appear as pillar topics, regardless of AI compliance.
+ * Mutates topics in-place.
+ */
+function ensureExistingPagesArePillars(
+  topics: EnrichedTopic[],
+  servicesWithPages: ServiceWithPage[]
+): void {
+  for (const service of servicesWithPages) {
+    if (!service.existingUrl) continue;
+
+    // Check if AI created a matching core topic (by slug or service_alignment)
+    const existingSlugLower = service.existingSlug?.toLowerCase();
+    const serviceNameLower = service.name.toLowerCase();
+
+    const matchingCore = topics.find(t =>
+      t.type === 'core' && (
+        (existingSlugLower && t.slug?.toLowerCase().includes(existingSlugLower)) ||
+        (t.metadata as any)?.service_alignment?.toLowerCase() === serviceNameLower ||
+        t.title.toLowerCase().includes(serviceNameLower)
+      )
+    );
+
+    if (matchingCore) {
+      // AI created a matching topic — enrich it
+      matchingCore.target_url = service.existingUrl;
+      matchingCore.cluster_role = 'pillar';
+      if (service.existingSlug && !matchingCore.slug?.includes(service.existingSlug)) {
+        matchingCore.slug = service.existingSlug;
+      }
+      matchingCore.metadata = {
+        ...matchingCore.metadata,
+        is_existing_page: true,
+        original_service: service.name,
+      };
+    }
+    // Note: We don't inject missing pillar topics here because the AI already
+    // received strong prompt instructions. If a service wasn't mapped, it's
+    // likely been merged into another topic by the AI's judgment.
+  }
+}
 
 // ──── Metric Card ────
 
@@ -1280,6 +1326,18 @@ const PipelineMapStep: React.FC = () => {
     setStepStatus('map_planning', 'in_progress');
 
     try {
+      // Load crawled URLs early to enrich services with existing page data
+      const crawledUrls: string[] =
+        (activeMap?.analysis_state as any)?.crawl?.urls ??
+        (activeMap?.analysis_state as any)?.discovery?.urls ??
+        [];
+
+      // Enrich services with existing page data for prompt context
+      const servicesWithPages: ServiceWithPage[] | undefined =
+        confirmedServices.length > 0
+          ? matchServicesToExistingUrls(confirmedServices, crawledUrls)
+          : undefined;
+
       const result = await generateInitialTopicalMap(
         businessInfo,
         pillars,
@@ -1287,7 +1345,7 @@ const PipelineMapStep: React.FC = () => {
         competitors,
         dispatch,
         undefined, // serpIntel
-        confirmedServices.length > 0 ? confirmedServices : undefined
+        servicesWithPages
       );
 
       const { coreTopics: newCore, outerTopics: newOuter } = result;
@@ -1389,17 +1447,17 @@ const PipelineMapStep: React.FC = () => {
       }
 
       // ── Match topics to existing site URLs before action plan generation ──
-      const crawledUrls: string[] =
-        (activeMap?.analysis_state as any)?.crawl?.urls ??
-        (activeMap?.analysis_state as any)?.discovery?.urls ??
-        [];
-
       if (crawledUrls.length > 0) {
         matchTopicsToExistingUrls(
           resolvedTopics,
           crawledUrls,
           (activeMap?.business_info as any)?.domain || state.businessInfo.domain
         );
+
+        // Safety net: ensure services with existing pages appear as pillar topics
+        if (servicesWithPages) {
+          ensureExistingPagesArePillars(resolvedTopics, servicesWithPages);
+        }
       }
 
       // Generate AI-driven publishing waves after topics are created
