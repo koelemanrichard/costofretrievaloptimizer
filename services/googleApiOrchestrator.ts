@@ -16,7 +16,8 @@ import type { TrendsData, SeasonalityPattern } from './googleTrendsService';
 import type { Ga4PageMetrics } from './googleGa4Service';
 import type { KnowledgeGraphEntityResult } from '../types';
 
-import { inspectUrls, getIndexationSummary } from './googleUrlInspectionService';
+import { inspectUrls, getIndexationSummary, UrlInspectionAuthError } from './googleUrlInspectionService';
+import { classifyGoogleAuthError } from '../utils/googleAuthErrorClassifier';
 import { analyzeEntitySalience, measureCentralEntityProminence } from './googleCloudNlpService';
 import { getTrendsData, getSeasonalityPattern } from './googleTrendsService';
 import { getGa4PageMetrics, getGa4Summary } from './googleGa4Service';
@@ -121,7 +122,11 @@ export async function fetchAllGoogleApiData(config: OrchestratorConfig): Promise
         enrichment.urlInspection = { results, summary };
         emit(onProgress, 'inspection', `URL Inspection complete: ${summary.indexed}/${summary.total} indexed`, `${summary.blocked} blocked, ${summary.errors} errors`);
       } catch (e) {
-        emit(onProgress, 'warning', 'URL Inspection failed', (e as Error).message);
+        if (e instanceof UrlInspectionAuthError) {
+          emit(onProgress, 'auth_error', e.authError.message, e.authError.action);
+        } else {
+          emit(onProgress, 'warning', 'URL Inspection failed', (e as Error).message);
+        }
       }
     })());
   }
@@ -258,8 +263,13 @@ export async function fetchAllGoogleApiData(config: OrchestratorConfig): Promise
         } else {
           emit(onProgress, 'warning', 'No GA4 property linked');
         }
-      } catch (e) {
-        emit(onProgress, 'warning', 'GA4 data fetch failed', (e as Error).message);
+      } catch (e: any) {
+        const classified = classifyGoogleAuthError(e?.data || e, null, 'GA4 Analytics');
+        if (classified.relink) {
+          emit(onProgress, 'auth_error', classified.message, classified.action);
+        } else {
+          emit(onProgress, 'warning', 'GA4 data fetch failed', (e as Error).message);
+        }
       }
     })());
   }

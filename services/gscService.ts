@@ -1,6 +1,17 @@
 // FIX: Replaced placeholder content with a functional module.
 import { GscRow } from '../types';
 import { getSupabaseClient } from './supabaseClient';
+import { classifyGoogleAuthError, type GoogleAuthError } from '../utils/googleAuthErrorClassifier';
+
+/** Thrown when GSC edge function returns an auth error requiring re-connection */
+export class GscAuthError extends Error {
+  public authError: GoogleAuthError;
+  constructor(authError: GoogleAuthError) {
+    super(authError.message);
+    this.name = 'GscAuthError';
+    this.authError = authError;
+  }
+}
 
 /**
  * Unified GSC data source — supports both API and CSV import.
@@ -68,7 +79,16 @@ export async function fetchGscEdgeFunctionData(
   const { data, error } = await supabase.functions.invoke('gsc-integration', {
     body: { siteUrl, accessToken },
   });
-  if (error) throw error;
+
+  // Classify auth errors before throwing
+  if (error || (data && !data.ok && data.error)) {
+    const classified = classifyGoogleAuthError(data, error, 'Google Search Console');
+    if (classified.relink) {
+      throw new GscAuthError(classified);
+    }
+    if (error) throw error;
+  }
+
   return data;
 }
 

@@ -8,6 +8,17 @@
  */
 
 import { getSupabaseClient } from './supabaseClient';
+import { classifyGoogleAuthError, type GoogleAuthError } from '../utils/googleAuthErrorClassifier';
+
+/** Thrown when the URL Inspection API returns an auth error requiring re-connection */
+export class UrlInspectionAuthError extends Error {
+  public authError: GoogleAuthError;
+  constructor(authError: GoogleAuthError) {
+    super(authError.message);
+    this.name = 'UrlInspectionAuthError';
+    this.authError = authError;
+  }
+}
 
 export interface UrlInspectionResult {
   url: string;
@@ -55,8 +66,14 @@ export async function inspectUrls(
         body: { urls: batch, siteUrl, accountId },
       });
 
-      if (error) {
-        console.warn(`[UrlInspectionService] Batch ${i / BATCH_SIZE + 1} error:`, error);
+      // Check for auth errors in both fnError and structured response
+      if (error || (data && !data.ok)) {
+        const classified = classifyGoogleAuthError(data, error, 'URL Inspection API');
+        if (classified.relink) {
+          // Auth error — throw immediately, don't process more batches
+          throw new UrlInspectionAuthError(classified);
+        }
+        console.warn(`[UrlInspectionService] Batch ${i / BATCH_SIZE + 1} error:`, classified.message);
         continue;
       }
 
@@ -66,6 +83,8 @@ export async function inspectUrls(
         console.warn(`[UrlInspectionService] Batch ${i / BATCH_SIZE + 1} unexpected response:`, data);
       }
     } catch (error) {
+      // Re-throw auth errors so callers can handle them
+      if (error instanceof UrlInspectionAuthError) throw error;
       console.warn(`[UrlInspectionService] Batch ${i / BATCH_SIZE + 1} failed:`, error);
     }
   }

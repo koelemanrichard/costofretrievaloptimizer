@@ -17,6 +17,7 @@ import type {
   GscRow,
 } from '../../../types';
 import { fetchAllGoogleApiData, type GoogleApiEnrichment } from '../../../services/googleApiOrchestrator';
+import { classifyGoogleAuthError } from '../../../utils/googleAuthErrorClassifier';
 import { GapAnalysisExportDropdown } from '../../pipeline/GapAnalysisExportDropdown';
 
 // ──── Helper Functions ────
@@ -181,7 +182,7 @@ function deriveEntityType(
 interface AnalysisEvent {
   id: string;
   message: string;
-  type: 'scanning' | 'found' | 'detected' | 'analyzing' | 'complete' | 'warning' | 'error' | 'gsc' | 'ga4' | 'inspection' | 'nlp' | 'trends' | 'kg';
+  type: 'scanning' | 'found' | 'detected' | 'analyzing' | 'complete' | 'warning' | 'error' | 'auth_error' | 'gsc' | 'ga4' | 'inspection' | 'nlp' | 'trends' | 'kg';
   detail?: string;
   timestamp: number;
 }
@@ -205,6 +206,7 @@ function AnalysisNarrativeFeed({ events, isActive }: { events: AnalysisEvent[]; 
     complete: { icon: '\u2714', color: 'text-green-400' },
     warning: { icon: '!', color: 'text-amber-400' },
     error: { icon: '\u2717', color: 'text-red-400' },
+    auth_error: { icon: '\u26A0', color: 'text-orange-400' },
     gsc: { icon: '\u2606', color: 'text-teal-400' },
     ga4: { icon: '\u2261', color: 'text-blue-400' },
     inspection: { icon: '\u2315', color: 'text-teal-400' },
@@ -249,9 +251,26 @@ function AnalysisNarrativeFeed({ events, isActive }: { events: AnalysisEvent[]; 
                 ) : !isActive && (event.type === 'analyzing' || event.type === 'scanning') ? '\u2713' : icon}
               </span>
               <div className="min-w-0">
-                <p className="text-sm text-gray-300">{event.message}</p>
-                {event.detail && (
-                  <p className="text-xs text-gray-500 mt-0.5">{event.detail}</p>
+                {event.type === 'auth_error' ? (
+                  <div className="bg-orange-900/30 border border-orange-700/50 rounded px-3 py-2 -ml-1">
+                    <p className="text-sm text-orange-300 font-medium">{event.message}</p>
+                    {event.detail && (
+                      <p className="text-xs text-orange-400/80 mt-1">{event.detail}</p>
+                    )}
+                    <a
+                      href="/settings"
+                      className="inline-flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 mt-1.5 underline underline-offset-2"
+                    >
+                      Go to Settings to re-connect
+                    </a>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-300">{event.message}</p>
+                    {event.detail && (
+                      <p className="text-xs text-gray-500 mt-0.5">{event.detail}</p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1789,16 +1808,15 @@ const PipelineGapStep: React.FC = () => {
       // Check for structured error responses from the edge function.
       // When the edge function returns a non-2xx status, supabase.functions.invoke()
       // sets fnError to a generic message but data still contains the actual error details.
-      if (data?.error) {
-        const needsRelink = !!data.relink;
-        setGscNeedsRelink(needsRelink);
-        const detail = data.detail ? ` (${data.detail})` : '';
-        setGscError(`${data.error}${detail}`);
+      if (data?.error || fnError) {
+        const classified = classifyGoogleAuthError(data, fnError, 'Google Search Console');
+        setGscNeedsRelink(classified.relink);
+        setGscError(classified.relink
+          ? `${classified.message}. ${classified.action}`
+          : classified.message);
         setGscState(prev => ({ ...prev, isLoading: false }));
         return null;
       }
-
-      if (fnError) throw fnError;
 
       const rows: GscRow[] = (data?.rows || []).map((row: any) => ({
         query: row.keys?.[0] || row.query || '',
@@ -1815,9 +1833,12 @@ const PipelineGapStep: React.FC = () => {
       return rows;
     } catch (err: any) {
       console.warn('[GapStep] Failed to load GSC data:', err);
-      // Try to parse structured error from edge function
-      const message = err?.message || 'Failed to load GSC data';
-      setGscError(message);
+      // Classify the error to provide actionable guidance
+      const classified = classifyGoogleAuthError(err?.data || err, null, 'Google Search Console');
+      setGscNeedsRelink(classified.relink);
+      setGscError(classified.relink
+        ? `${classified.message}. ${classified.action}`
+        : (err?.message || 'Failed to load GSC data'));
       setGscState(prev => ({ ...prev, isLoading: false }));
       return null;
     }
