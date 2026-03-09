@@ -15,6 +15,7 @@ import { HeadingAndDiscourseValidator } from '../rules/HeadingAndDiscourseValida
 import { ContextualBridgeDetector } from '../rules/ContextualBridgeDetector';
 import type { BridgeContext } from '../rules/ContextualBridgeDetector';
 import { AnchorSegmentChainValidator } from '../rules/AnchorSegmentChainValidator';
+import { ChunkingResistanceValidator } from '../rules/ChunkingResistanceValidator';
 
 export class ContextualFlowPhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'contextualFlow';
@@ -136,6 +137,28 @@ export class ContextualFlowPhase extends AuditPhase {
           affectedElement: issue.affectedElement,
           exampleFix: issue.exampleFix,
           whyItMatters: 'Anchor segment chains and LIFT model compliance affect link equity flow and topical coherence.',
+          category: 'Contextual Flow',
+        }));
+      }
+    }
+
+    // Chunking resistance: cross-section references, entity re-introduction, section length
+    if (htmlContent) {
+      totalChecks++;
+      const chunkValidator = new ChunkingResistanceValidator();
+      const chunkIssues = chunkValidator.validate(
+        htmlContent,
+        contentData?.centralEntity
+      );
+      for (const issue of chunkIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Self-contained sections survive RAG chunking and can be retrieved independently by AI systems.',
           category: 'Contextual Flow',
         }));
       }
