@@ -17,6 +17,7 @@ import { UrlArchitectureAuditor } from '../rules/UrlArchitectureAuditor';
 import { UrlStructureValidator } from '../rules/UrlStructureValidator';
 import { HreflangValidator } from '../rules/HreflangValidator';
 import { ImageSitemapGenerator } from '../rules/ImageSitemapGenerator';
+import { AiCrawlManagementValidator } from '../rules/AiCrawlManagementValidator';
 
 export class UrlArchitecturePhase extends AuditPhase {
   readonly phaseName: AuditPhaseName = 'urlArchitecture';
@@ -133,6 +134,44 @@ export class UrlArchitecturePhase extends AuditPhase {
           affectedElement: issue.affectedElement,
           exampleFix: issue.exampleFix,
           whyItMatters: 'Image sitemap completeness improves image indexing and visibility in image search results.',
+          category: 'URL Architecture',
+        }));
+      }
+    }
+
+    // Rules rule-ai-crawl-policy, rule-ai-crawl-wildcard: AI crawler robots.txt coverage
+    const aiCrawlValidator = new AiCrawlManagementValidator();
+    const contentObj = content as Record<string, unknown> | undefined;
+    if (contentObj?.robotsTxt && typeof contentObj.robotsTxt === 'string') {
+      totalChecks++;
+      const aiRobotsIssues = aiCrawlValidator.validate(contentObj.robotsTxt);
+      for (const issue of aiRobotsIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Explicit AI crawler policies give you control over how AI systems use your content.',
+          category: 'URL Architecture',
+        }));
+      }
+    }
+
+    // Rule rule-ai-meta-tags: AI-specific meta directives
+    if (htmlContent) {
+      totalChecks++;
+      const aiMetaIssues = aiCrawlValidator.validateMetaTags(htmlContent);
+      for (const issue of aiMetaIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'AI meta directives let you control whether your content is used for AI training.',
           category: 'URL Architecture',
         }));
       }
