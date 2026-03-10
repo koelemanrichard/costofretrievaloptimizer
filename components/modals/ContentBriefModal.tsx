@@ -315,6 +315,8 @@ const ContentBriefModal: React.FC<ContentBriefModalProps> = ({ allTopics, onGene
                         featured_snippet_target: result.brief.featured_snippet_target as any,
                         query_type_format: result.brief.query_type_format,
                         discourse_anchors: result.brief.discourse_anchors as any,
+                        visual_placement_map: result.brief.visual_placement_map as any,
+                        discourse_anchor_sequence: result.brief.discourse_anchor_sequence as any,
                         competitor_specs: result.brief.competitorSpecs as any, // NEW: Save competitor data
                         ...(result.brief.categoryContext ? { category_context: result.brief.categoryContext as any } : {}),
                         updated_at: new Date().toISOString()

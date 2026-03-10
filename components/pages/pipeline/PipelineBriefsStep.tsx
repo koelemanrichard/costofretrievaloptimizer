@@ -302,6 +302,8 @@ const PipelineBriefsStep: React.FC = () => {
             featured_snippet_target: brief.featured_snippet_target as any,
             visual_semantics: brief.visual_semantics as any,
             discourse_anchors: brief.discourse_anchors as any,
+            visual_placement_map: brief.visual_placement_map as any,
+            discourse_anchor_sequence: brief.discourse_anchor_sequence as any,
             cta: brief.cta,
           };
 
