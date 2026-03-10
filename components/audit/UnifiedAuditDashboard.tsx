@@ -9,6 +9,8 @@ import { PhaseScoreCard } from './PhaseScoreCard';
 import { AuditFindingCard } from './AuditFindingCard';
 import { AuditExportDropdown } from './AuditExportDropdown';
 import { getTranslations } from '../../config/audit-i18n/index';
+import { computeCor2Score, extractCor2InputFromReport } from '../../services/ai/cor2Scorer';
+import type { Cor2Result } from '../../services/ai/cor2Scorer';
 
 export interface UnifiedAuditDashboardProps {
   report: UnifiedAuditReport;
@@ -67,6 +69,12 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
     return [...report.phaseResults].sort((a, b) => a.score - b.score);
   }, [report.phaseResults]);
 
+  // Compute CoR 2.0 score from audit findings
+  const cor2Result = useMemo<Cor2Result>(() => {
+    const cor2Input = extractCor2InputFromReport(report);
+    return computeCor2Score(cor2Input);
+  }, [report]);
+
   // Compute quick stats
   const criticalCount = allFindings.filter((f) => f.severity === 'critical').length;
   const highCount = allFindings.filter((f) => f.severity === 'high').length;
@@ -86,9 +94,12 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
 
       {/* === Top Section === */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
-        {/* Left: Overall Score Ring + Export */}
+        {/* Left: Overall Score Ring + CoR 2.0 Badge + Export */}
         <div className="flex-shrink-0 flex flex-col items-center gap-3">
-          <AuditScoreRing score={report.overallScore} size={140} label="Overall Score" />
+          <div className="flex items-end gap-4">
+            <AuditScoreRing score={report.overallScore} size={140} label="Overall Score" />
+            <Cor2ScoreBadge result={cor2Result} />
+          </div>
           <AuditExportDropdown report={report} />
         </div>
 
@@ -334,5 +345,113 @@ const PrerequisiteBadge: React.FC<PrerequisiteBadgeProps> = ({ label, met }) => 
     {label}
   </span>
 );
+
+/* ---- CoR 2.0 Score Badge sub-component ---- */
+
+const COR2_COLORS: Record<Cor2Result['interpretation'], { ring: string; text: string; bg: string }> = {
+  fully_optimized: { ring: '#22c55e', text: 'text-green-400', bg: 'bg-green-900/20' },
+  good_foundation: { ring: '#eab308', text: 'text-yellow-400', bg: 'bg-yellow-900/20' },
+  significant_gaps: { ring: '#f97316', text: 'text-orange-400', bg: 'bg-orange-900/20' },
+  not_optimized: { ring: '#ef4444', text: 'text-red-400', bg: 'bg-red-900/20' },
+};
+
+const COR2_LABELS: Record<Cor2Result['interpretation'], string> = {
+  fully_optimized: 'Fully Optimized',
+  good_foundation: 'Good Foundation',
+  significant_gaps: 'Significant Gaps',
+  not_optimized: 'Not Optimized',
+};
+
+interface Cor2ScoreBadgeProps {
+  result: Cor2Result;
+}
+
+const Cor2ScoreBadge: React.FC<Cor2ScoreBadgeProps> = ({ result }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const colors = COR2_COLORS[result.interpretation];
+  const size = 80;
+  const strokeWidth = 6;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = result.score / 5;
+  const strokeDashoffset = circumference - progress * circumference;
+
+  return (
+    <div
+      className="relative flex flex-col items-center gap-1"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      data-testid="cor2-score-badge"
+    >
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+        <svg width={size} height={size}>
+          <circle
+            className="text-gray-700"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+          />
+          <circle
+            stroke={colors.ring}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{
+              strokeDasharray: circumference,
+              strokeDashoffset,
+              transition: 'stroke-dashoffset 0.5s ease-in-out',
+            }}
+          />
+        </svg>
+        <div className="absolute flex flex-col items-center justify-center">
+          <span className={`text-lg font-bold ${colors.text}`}>
+            {result.score}
+          </span>
+          <span className="text-[10px] text-gray-500">/5</span>
+        </div>
+      </div>
+      <span className="text-xs text-gray-400">CoR 2.0</span>
+
+      {/* Tooltip with factor breakdown */}
+      {showTooltip && (
+        <div
+          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-64 bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl"
+          data-testid="cor2-tooltip"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-300">CoR 2.0 LLM Readiness</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
+              {COR2_LABELS[result.interpretation]}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {Object.values(result.factors).map((factor) => (
+              <div key={factor.label} className="flex items-center gap-2">
+                <div className="flex-1 text-[11px] text-gray-400 truncate">{factor.label}</div>
+                <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(factor.score / 5) * 100}%`,
+                      backgroundColor: colors.ring,
+                    }}
+                  />
+                </div>
+                <span className="text-[11px] text-gray-400 w-6 text-right">{factor.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default UnifiedAuditDashboard;
