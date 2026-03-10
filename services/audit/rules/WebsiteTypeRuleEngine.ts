@@ -11,6 +11,19 @@
  *   b2b            (rules 421-425)
  *   blog           (rules 426-432)
  *   local-business (rules 433-437)
+ *   marketplace     (rules 443-445)
+ *   events          (rules 446-448)
+ *   lead-generation (rules 449-451)
+ *   real-estate     (rules 452-454)
+ *   healthcare      (rules 455-457)
+ *   hospitality     (rules 458-460)
+ *   affiliate-review(rules 461-463)
+ *   news-media      (rules 464-466)
+ *   education       (rules 467-469)
+ *   recruitment     (rules 470-472)
+ *   directory       (rules 473-475)
+ *   community       (rules 476-478)
+ *   nonprofit       (rules 479-481)
  *   other          (no type-specific rules)
  */
 
@@ -24,6 +37,19 @@ export type WebsiteType =
   | 'b2b'
   | 'blog'
   | 'local-business'
+  | 'marketplace'
+  | 'events'
+  | 'lead-generation'
+  | 'real-estate'
+  | 'healthcare'
+  | 'hospitality'
+  | 'affiliate-review'
+  | 'news-media'
+  | 'education'
+  | 'recruitment'
+  | 'directory'
+  | 'community'
+  | 'nonprofit'
   | 'other';
 
 export interface WebsiteTypeInput {
@@ -60,6 +86,32 @@ export class WebsiteTypeRuleEngine {
         return this.validateBlog(input);
       case 'local-business':
         return this.validateLocalBusiness(input);
+      case 'marketplace':
+        return this.validateMarketplace(input);
+      case 'events':
+        return this.validateEvents(input);
+      case 'lead-generation':
+        return this.validateLeadGeneration(input);
+      case 'real-estate':
+        return this.validateRealEstate(input);
+      case 'healthcare':
+        return this.validateHealthcare(input);
+      case 'hospitality':
+        return this.validateHospitality(input);
+      case 'affiliate-review':
+        return this.validateAffiliateReview(input);
+      case 'news-media':
+        return this.validateNewsMedia(input);
+      case 'education':
+        return this.validateEducation(input);
+      case 'recruitment':
+        return this.validateRecruitment(input);
+      case 'directory':
+        return this.validateDirectory(input);
+      case 'community':
+        return this.validateCommunity(input);
+      case 'nonprofit':
+        return this.validateNonprofit(input);
       case 'other':
       default:
         return [];
@@ -563,6 +615,617 @@ export class WebsiteTypeRuleEngine {
     const categoryText =
       /\b(category|categories|tags?|filed\s*under|topics?)\s*:/i.test(html);
     return categoryClass || categoryRel || categoryText;
+  }
+
+  // -----------------------------------------------------------------------
+  // Marketplace (rules 443-445)
+  // -----------------------------------------------------------------------
+
+  private validateMarketplace(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 443: Product/Offer schema present
+    if (!schemas.some(s => s === 'Product' || s === 'Offer')) {
+      issues.push({
+        ruleId: 'rule-443',
+        severity: 'high',
+        title: 'Missing Product or Offer schema',
+        description: 'Marketplace pages should include Product or Offer schema for listing rich results.',
+        exampleFix: 'Add JSON-LD with "@type": "Product" or "@type": "Offer" for each listing.',
+      });
+    }
+
+    // Rule 444: Trust/safety signals
+    if (!/\b(verified|trust|guarantee|buyer protection|secure payment|escrow|money.back)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-444',
+        severity: 'medium',
+        title: 'No trust or safety signals found',
+        description: 'Marketplaces should display trust signals such as buyer protection, verified sellers, or guarantees.',
+        exampleFix: 'Add trust badges, buyer protection notice, or verified seller indicators.',
+      });
+    }
+
+    // Rule 445: Buyer/seller content separation
+    const hasBuyerSection = /\b(buyer|customer|shopper|purchase)\b/i.test(html);
+    const hasSellerSection = /\b(seller|vendor|merchant|supplier|sell on)\b/i.test(html);
+    if (!hasBuyerSection || !hasSellerSection) {
+      issues.push({
+        ruleId: 'rule-445',
+        severity: 'low',
+        title: 'No buyer/seller content separation',
+        description: 'Marketplace pages benefit from distinct buyer and seller sections or role-based content.',
+        exampleFix: 'Add separate sections addressing buyers and sellers with role-specific content.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Events (rules 446-448)
+  // -----------------------------------------------------------------------
+
+  private validateEvents(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 446: Event schema present
+    if (!schemas.some(s => s === 'Event')) {
+      issues.push({
+        ruleId: 'rule-446',
+        severity: 'high',
+        title: 'Missing Event schema',
+        description: 'Event pages should include JSON-LD with "@type": "Event" for rich results in search.',
+        exampleFix: 'Add JSON-LD with "@type": "Event" including name, startDate, location, and offers.',
+      });
+    }
+
+    // Rule 447: Temporal urgency markers
+    if (!/\b(limited|tickets? available|sold out|register now|early bird|deadline|ends? soon|last chance)\b/i.test(html) &&
+        !/\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b/.test(html) &&
+        !/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-447',
+        severity: 'medium',
+        title: 'No temporal urgency markers',
+        description: 'Event pages should include dates, availability status, or urgency signals (e.g., "limited tickets", "sold out").',
+        exampleFix: 'Add event dates, ticket availability status, and urgency markers like "Early Bird pricing ends March 15".',
+      });
+    }
+
+    // Rule 448: Venue/performer entities
+    if (!/\b(venue|location|stadium|arena|theater|theatre|hall|center|centre|performer|artist|speaker|band|presenter|host)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-448',
+        severity: 'medium',
+        title: 'No venue or performer entities mentioned',
+        description: 'Event pages should reference venue and/or performer entities for entity association.',
+        exampleFix: 'Add venue name, address, and performer/speaker names with relevant details.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Lead Generation (rules 449-451)
+  // -----------------------------------------------------------------------
+
+  private validateLeadGeneration(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+
+    // Rule 449: Form present on page
+    const hasForm = /<form\b/i.test(html);
+    const hasInputs = /<input\b/i.test(html);
+    if (!hasForm && !hasInputs) {
+      issues.push({
+        ruleId: 'rule-449',
+        severity: 'critical',
+        title: 'No form or input elements found',
+        description: 'Lead generation pages must include a form for capturing visitor information.',
+        exampleFix: 'Add a lead capture form with name, email, and a clear submit button.',
+      });
+    }
+
+    // Rule 450: Social proof near CTA
+    const ctaPos = html.search(/\b(get started|sign up|download|request|submit|contact us|free trial|get quote)\b/i);
+    const hasSocialProofNearCta = ctaPos > -1 && /\b(testimonial|review|case study|trusted by|clients|customers|companies)\b/i.test(
+      html.slice(Math.max(0, ctaPos - 500), ctaPos + 500)
+    );
+    if (ctaPos > -1 && !hasSocialProofNearCta) {
+      issues.push({
+        ruleId: 'rule-450',
+        severity: 'medium',
+        title: 'No social proof near CTA',
+        description: 'Lead generation pages benefit from testimonials, reviews, or trust signals near the call-to-action.',
+        exampleFix: 'Add a testimonial quote, client logos, or "Trusted by X companies" near the form or CTA button.',
+      });
+    }
+
+    // Rule 451: Clear value proposition in first 300 chars
+    const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const first300 = textContent.slice(0, 300).toLowerCase();
+    const hasValueProp = /\b(save|free|boost|increase|reduce|improve|transform|grow|unlock|discover|get|learn)\b/i.test(first300);
+    if (!hasValueProp) {
+      issues.push({
+        ruleId: 'rule-451',
+        severity: 'medium',
+        title: 'No clear value proposition in first 300 characters',
+        description: 'Lead generation pages should communicate a clear value proposition early to reduce bounce rate.',
+        exampleFix: 'Lead with a benefit-driven headline such as "Save 40% on your monthly costs" or "Get your free audit".',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Real Estate (rules 452-454)
+  // -----------------------------------------------------------------------
+
+  private validateRealEstate(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 452: Property listing schema
+    if (!schemas.some(s => s === 'RealEstateListing' || s === 'Product' || s === 'Residence' || s === 'Apartment' || s === 'House')) {
+      issues.push({
+        ruleId: 'rule-452',
+        severity: 'high',
+        title: 'Missing property listing schema',
+        description: 'Real estate pages should include RealEstateListing, Product, or Residence schema for structured data.',
+        exampleFix: 'Add JSON-LD with "@type": "RealEstateListing" or "@type": "Product" with property attributes.',
+      });
+    }
+
+    // Rule 453: Location/neighborhood content
+    if (!/\b(neighborhood|neighbourhood|area|district|community|location|nearby|walking distance|schools|parks|transit|commute)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-453',
+        severity: 'medium',
+        title: 'No location or neighborhood content',
+        description: 'Real estate listings should include neighborhood information, nearby amenities, and location context.',
+        exampleFix: 'Add a neighborhood section with nearby schools, parks, transit options, and community details.',
+      });
+    }
+
+    // Rule 454: Price/size attributes
+    const hasPrice = /(\$|€|£)\s*[\d,]+|\b(price|asking|listed at)\b/i.test(html);
+    const hasSize = /\b(sq\s*ft|square\s*feet|sqm|square\s*met|bedroom|bathroom|bed|bath|acres?|hectares?)\b/i.test(html);
+    if (!hasPrice || !hasSize) {
+      const missing: string[] = [];
+      if (!hasPrice) missing.push('price');
+      if (!hasSize) missing.push('size/rooms');
+      issues.push({
+        ruleId: 'rule-454',
+        severity: 'high',
+        title: `Missing property attributes: ${missing.join(', ')}`,
+        description: 'Real estate listings should clearly display price and property dimensions (size, bedrooms, bathrooms).',
+        exampleFix: 'Add visible price, square footage, and bedroom/bathroom count.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Healthcare (rules 455-457)
+  // -----------------------------------------------------------------------
+
+  private validateHealthcare(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+
+    // Rule 455: Medical disclaimer
+    if (!/\b(not medical advice|not a substitute for|consult your doctor|consult your physician|consult a (healthcare|medical) professional|for informational purposes only|seek (professional|medical) advice)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-455',
+        severity: 'critical',
+        title: 'Missing medical disclaimer',
+        description: 'Healthcare content must include a medical disclaimer stating it is not a substitute for professional medical advice.',
+        exampleFix: 'Add a disclaimer: "This content is for informational purposes only and is not a substitute for professional medical advice. Consult your doctor."',
+      });
+    }
+
+    // Rule 456: Author credentials
+    if (!/\b(M\.?D\.?|Dr\.|physician|board.certified|medical director|clinical|R\.?N\.?|Pharm\.?D\.?|credentials|qualifications)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-456',
+        severity: 'high',
+        title: 'No author credentials found',
+        description: 'Healthcare content should display author credentials (MD, Dr., board-certified) for E-E-A-T compliance.',
+        exampleFix: 'Add author byline with medical credentials: "Reviewed by Dr. Jane Smith, MD, Board-Certified Cardiologist".',
+      });
+    }
+
+    // Rule 457: Source citations
+    if (!/\b(reference|citation|source|study|pubmed|doi:|PMID|journal|peer.reviewed|clinical trial|evidence.based)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-457',
+        severity: 'high',
+        title: 'No source citations found',
+        description: 'Healthcare content should cite medical sources, studies, or peer-reviewed references for credibility.',
+        exampleFix: 'Add a references section with links to PubMed, medical journals, or clinical studies.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Hospitality (rules 458-460)
+  // -----------------------------------------------------------------------
+
+  private validateHospitality(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 458: LodgingBusiness or Hotel schema
+    if (!schemas.some(s => s === 'LodgingBusiness' || s === 'Hotel' || s === 'Resort' || s === 'Hostel' || s === 'BedAndBreakfast' || s === 'Motel')) {
+      issues.push({
+        ruleId: 'rule-458',
+        severity: 'high',
+        title: 'Missing LodgingBusiness or Hotel schema',
+        description: 'Hospitality pages should include LodgingBusiness, Hotel, or related schema for rich results.',
+        exampleFix: 'Add JSON-LD with "@type": "Hotel" including name, address, starRating, and amenityFeature.',
+      });
+    }
+
+    // Rule 459: Booking/reservation CTA
+    if (!/\b(book now|reserve|reservation|check availability|book a room|book your stay|availability)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-459',
+        severity: 'high',
+        title: 'No booking or reservation CTA',
+        description: 'Hospitality pages should include a clear booking or reservation call-to-action.',
+        exampleFix: 'Add a prominent "Book Now" or "Check Availability" button linked to the reservation system.',
+      });
+    }
+
+    // Rule 460: Location schema with address
+    if (!this.hasAddressInfo(html)) {
+      issues.push({
+        ruleId: 'rule-460',
+        severity: 'medium',
+        title: 'No location or address information',
+        description: 'Hospitality pages should display the property address for local search visibility.',
+        exampleFix: 'Add a visible address and include PostalAddress in the schema markup.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Affiliate/Review (rules 461-463)
+  // -----------------------------------------------------------------------
+
+  private validateAffiliateReview(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 461: Affiliate disclosure
+    if (!/\b(affiliate|commission|sponsored|compensation|partner link|earn a commission|paid partnership|disclosure)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-461',
+        severity: 'critical',
+        title: 'Missing affiliate disclosure',
+        description: 'Affiliate review pages must include a clear disclosure about affiliate relationships per FTC guidelines.',
+        exampleFix: 'Add a disclosure: "This page contains affiliate links. We may earn a commission at no extra cost to you."',
+      });
+    }
+
+    // Rule 462: Comparison methodology
+    if (!/\b(criteria|scoring|methodology|how we (test|rate|rank|evaluate|review)|evaluation process|our process|testing method)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-462',
+        severity: 'medium',
+        title: 'No comparison methodology explained',
+        description: 'Affiliate review pages should explain the evaluation criteria and scoring methodology for transparency.',
+        exampleFix: 'Add a "How We Test" or "Our Methodology" section explaining review criteria and scoring.',
+      });
+    }
+
+    // Rule 463: Product schema with review/rating
+    const hasProductSchema = schemas.some(s => s === 'Product');
+    const hasReviewSchema = schemas.some(s => s === 'Review' || s === 'AggregateRating');
+    if (!hasProductSchema || !hasReviewSchema) {
+      issues.push({
+        ruleId: 'rule-463',
+        severity: 'medium',
+        title: 'Missing Product schema with Review or AggregateRating',
+        description: 'Affiliate review pages should include Product schema with Review or AggregateRating for rich snippets.',
+        exampleFix: 'Add Product JSON-LD with nested Review or AggregateRating schema for star ratings in search.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // News/Media (rules 464-466)
+  // -----------------------------------------------------------------------
+
+  private validateNewsMedia(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 464: NewsArticle schema
+    if (!schemas.some(s => s === 'NewsArticle')) {
+      issues.push({
+        ruleId: 'rule-464',
+        severity: 'high',
+        title: 'Missing NewsArticle schema',
+        description: 'News pages should include JSON-LD with "@type": "NewsArticle" for Google News and Top Stories eligibility.',
+        exampleFix: 'Add JSON-LD with "@type": "NewsArticle" including headline, datePublished, author, and publisher.',
+      });
+    }
+
+    // Rule 465: Publish date and author byline
+    const hasDate = this.hasPublicationDate(html);
+    const hasAuthor = this.hasAuthorInfo(html);
+    if (!hasDate || !hasAuthor) {
+      const missing: string[] = [];
+      if (!hasDate) missing.push('publication date');
+      if (!hasAuthor) missing.push('author byline');
+      issues.push({
+        ruleId: 'rule-465',
+        severity: 'high',
+        title: `Missing ${missing.join(' and ')}`,
+        description: 'News articles must display a publication date and author byline for credibility and freshness signals.',
+        exampleFix: 'Add a visible publish date and author name near the headline.',
+      });
+    }
+
+    // Rule 466: Source citations
+    if (!/\b(source|according to|cited|reported by|statement from|press release|official)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-466',
+        severity: 'medium',
+        title: 'No source citations in news content',
+        description: 'News articles should cite sources and attribute claims to build trust and meet journalistic standards.',
+        exampleFix: 'Add source attributions: "According to [Source]" or "A spokesperson said...".',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Education (rules 467-469)
+  // -----------------------------------------------------------------------
+
+  private validateEducation(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 467: Course schema
+    if (!schemas.some(s => s === 'Course')) {
+      issues.push({
+        ruleId: 'rule-467',
+        severity: 'high',
+        title: 'Missing Course schema',
+        description: 'Education pages should include JSON-LD with "@type": "Course" for rich results in search.',
+        exampleFix: 'Add JSON-LD with "@type": "Course" including name, description, provider, and offers.',
+      });
+    }
+
+    // Rule 468: Learning outcomes
+    if (!/\b(you will learn|learning objectives?|outcomes?|by the end|what you('ll| will) (learn|gain|achieve)|skills? (you('ll| will))? (gain|develop|master))\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-468',
+        severity: 'medium',
+        title: 'No learning outcomes specified',
+        description: 'Education pages should clearly state learning objectives or outcomes to set expectations.',
+        exampleFix: 'Add a "What You Will Learn" section listing specific skills or knowledge outcomes.',
+      });
+    }
+
+    // Rule 469: Curriculum structure
+    if (!/\b(module|lesson|chapter|unit|syllabus|curriculum|week \d|session \d|part \d|section \d)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-469',
+        severity: 'medium',
+        title: 'No curriculum structure found',
+        description: 'Education pages should present a structured curriculum with modules, lessons, or chapters.',
+        exampleFix: 'Add a curriculum outline with numbered modules or lessons and their topics.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Recruitment (rules 470-472)
+  // -----------------------------------------------------------------------
+
+  private validateRecruitment(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 470: JobPosting schema
+    if (!schemas.some(s => s === 'JobPosting')) {
+      issues.push({
+        ruleId: 'rule-470',
+        severity: 'high',
+        title: 'Missing JobPosting schema',
+        description: 'Recruitment pages should include JSON-LD with "@type": "JobPosting" for Google Jobs eligibility.',
+        exampleFix: 'Add JSON-LD with "@type": "JobPosting" including title, description, datePosted, hiringOrganization, and jobLocation.',
+      });
+    }
+
+    // Rule 471: Salary transparency
+    if (!/\b(salary|compensation|pay range|pay rate|wage|annual|per hour|per year|\$\s*[\d,]+\s*[-–]\s*\$\s*[\d,]+|€\s*[\d,]+|£\s*[\d,]+)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-471',
+        severity: 'medium',
+        title: 'No salary or compensation information',
+        description: 'Job postings should include salary or compensation range for transparency and higher application rates.',
+        exampleFix: 'Add salary range: "Salary: $80,000 - $120,000 per year" or include baseSalary in JobPosting schema.',
+      });
+    }
+
+    // Rule 472: Application method
+    if (!/\b(apply now|apply here|submit (your )?application|send (your )?resume|how to apply|application form)\b/i.test(html) &&
+        !/<form\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-472',
+        severity: 'high',
+        title: 'No application method found',
+        description: 'Job postings must include a clear application method (form, email, or application link).',
+        exampleFix: 'Add an "Apply Now" button, application form, or instructions on how to apply.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Directory (rules 473-475)
+  // -----------------------------------------------------------------------
+
+  private validateDirectory(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 473: Listing completeness (name + contact info)
+    const hasListingNames = /<h[2-4]\b/i.test(html);
+    const hasContactInfo = this.hasPhoneInfo(html) || /\b(email|contact|website|phone)\b/i.test(html);
+    if (!hasListingNames || !hasContactInfo) {
+      issues.push({
+        ruleId: 'rule-473',
+        severity: 'high',
+        title: 'Incomplete listing information',
+        description: 'Directory listings should include name, address, and contact information for each entry.',
+        exampleFix: 'Ensure each listing has a name heading, address, and phone/email/website link.',
+      });
+    }
+
+    // Rule 474: Category taxonomy
+    if (!/\b(categor|filter|sort by|browse by|tag|topic|industry|type)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-474',
+        severity: 'medium',
+        title: 'No category taxonomy or filtering',
+        description: 'Directory pages should include category navigation, filters, or tags for discoverability.',
+        exampleFix: 'Add category navigation, filter controls, or tag-based browsing for listings.',
+      });
+    }
+
+    // Rule 475: LocalBusiness schema on listing pages
+    if (!schemas.some(s => s === 'LocalBusiness' || s === 'Organization' || s === 'ItemList')) {
+      issues.push({
+        ruleId: 'rule-475',
+        severity: 'medium',
+        title: 'Missing LocalBusiness or ItemList schema',
+        description: 'Directory pages should use LocalBusiness schema per listing or ItemList for the collection.',
+        exampleFix: 'Add ItemList JSON-LD wrapping individual LocalBusiness or Organization entries.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Community (rules 476-478)
+  // -----------------------------------------------------------------------
+
+  private validateCommunity(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 476: DiscussionForumPosting schema
+    if (!schemas.some(s => s === 'DiscussionForumPosting' || s === 'Question' || s === 'Answer' || s === 'Comment')) {
+      issues.push({
+        ruleId: 'rule-476',
+        severity: 'medium',
+        title: 'Missing DiscussionForumPosting schema',
+        description: 'Community pages should include DiscussionForumPosting or Q&A schema for rich results.',
+        exampleFix: 'Add JSON-LD with "@type": "DiscussionForumPosting" including author, dateCreated, and text.',
+      });
+    }
+
+    // Rule 477: User contribution quality signals
+    if (!/\b(upvote|downvote|vote|karma|reputation|verified|endorsed|helpful|best answer|accepted answer|likes?|points?)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-477',
+        severity: 'low',
+        title: 'No user contribution quality signals',
+        description: 'Community pages benefit from quality signals like upvotes, reputation scores, or verified badges.',
+        exampleFix: 'Add voting, reputation scores, or "verified contributor" badges to surface quality content.',
+      });
+    }
+
+    // Rule 478: Moderation indicators
+    if (!/\b(rules|guidelines|community guidelines|terms of (use|service)|report|flag|moderator|moderation|code of conduct)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-478',
+        severity: 'low',
+        title: 'No moderation indicators found',
+        description: 'Community pages should reference rules, guidelines, or moderation policies for trust signals.',
+        exampleFix: 'Add links to community guidelines, a "Report" button, or moderator identification.',
+      });
+    }
+
+    return issues;
+  }
+
+  // -----------------------------------------------------------------------
+  // Nonprofit (rules 479-481)
+  // -----------------------------------------------------------------------
+
+  private validateNonprofit(input: WebsiteTypeInput): WebsiteTypeIssue[] {
+    const issues: WebsiteTypeIssue[] = [];
+    const { html } = input;
+    const schemas = input.schemaTypes ?? this.extractSchemaTypes(html);
+
+    // Rule 479: NGO/NonprofitType schema
+    if (!schemas.some(s => s === 'NGO' || s === 'NonprofitType' || s === 'Organization')) {
+      issues.push({
+        ruleId: 'rule-479',
+        severity: 'medium',
+        title: 'Missing NGO or Organization schema',
+        description: 'Nonprofit pages should include NGO or Organization schema with nonprofit classification.',
+        exampleFix: 'Add JSON-LD with "@type": "NGO" or "@type": "Organization" with nonprofitStatus.',
+      });
+    }
+
+    // Rule 480: Impact reporting
+    if (!/\b(impact|results|outcomes?|beneficiar|lives? (changed|saved|improved)|people (served|helped|reached)|donations? (used|allocated)|mission accomplished)\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-480',
+        severity: 'medium',
+        title: 'No impact reporting found',
+        description: 'Nonprofit pages should include impact reports showing outcomes, beneficiaries served, or results achieved.',
+        exampleFix: 'Add an impact section: "In 2025, we served 10,000 families and distributed 50,000 meals."',
+      });
+    }
+
+    // Rule 481: Transparency
+    if (!/\b(annual report|financials?|990|budget|transparency|audit(ed)?|accountability|tax.exempt|how (we|funds?) (use|spend|allocate))\b/i.test(html)) {
+      issues.push({
+        ruleId: 'rule-481',
+        severity: 'medium',
+        title: 'No financial transparency information',
+        description: 'Nonprofit pages should provide financial transparency through annual reports, Form 990, or budget breakdowns.',
+        exampleFix: 'Add links to annual reports, Form 990, or a "How We Use Your Donations" section.',
+      });
+    }
+
+    return issues;
   }
 
   // -----------------------------------------------------------------------

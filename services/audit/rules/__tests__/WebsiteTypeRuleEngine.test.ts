@@ -344,6 +344,191 @@ describe('WebsiteTypeRuleEngine', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Marketplace (rules 443-445)
+  // -----------------------------------------------------------------------
+
+  describe('marketplace', () => {
+    it('flags missing Product/Offer schema (rule 443)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'marketplace',
+        html: '<html><body><h1>Buy & Sell</h1><p>Verified sellers with buyer protection</p></body></html>',
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-443' }),
+      );
+    });
+
+    it('passes when Product schema is present', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'marketplace',
+        html: '<html><body><h1>Buy & Sell</h1><p>Verified sellers with buyer protection</p></body></html>',
+        schemaTypes: ['Product'],
+      };
+      const issues = engine.validate(input);
+      expect(issues.find((i) => i.ruleId === 'rule-443')).toBeUndefined();
+    });
+
+    it('flags missing trust signals (rule 444)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'marketplace',
+        html: '<html><body><h1>Marketplace</h1><p>Buy things from sellers and sell to buyers.</p></body></html>',
+        schemaTypes: ['Product'],
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-444' }),
+      );
+    });
+
+    it('flags missing buyer/seller separation (rule 445)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'marketplace',
+        html: '<html><body><h1>Shop</h1><p>Great products with verified guarantee.</p></body></html>',
+        schemaTypes: ['Product'],
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-445' }),
+      );
+    });
+
+    it('well-formed marketplace passes clean', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'marketplace',
+        html: `<html><body>
+          <h1>Marketplace</h1>
+          <p>Verified sellers with buyer protection and trust guarantee.</p>
+          <section><h2>For Buyers</h2><p>Find great deals as a customer or shopper.</p></section>
+          <section><h2>For Sellers</h2><p>List your products and reach millions of buyers as a vendor.</p></section>
+        </body></html>`,
+        schemaTypes: ['Product'],
+      };
+      const issues = engine.validate(input);
+      expect(issues.length).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Healthcare (rules 455-457)
+  // -----------------------------------------------------------------------
+
+  describe('healthcare', () => {
+    it('flags missing medical disclaimer (rule 455)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'healthcare',
+        html: '<html><body><h1>Heart Disease Treatment</h1><p>By Dr. Smith, MD. Reference: PubMed study 12345.</p></body></html>',
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-455' }),
+      );
+    });
+
+    it('flags missing author credentials (rule 456)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'healthcare',
+        html: '<html><body><h1>Heart Disease</h1><p>This is not medical advice. Consult your doctor. Reference: PubMed study.</p></body></html>',
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-456' }),
+      );
+    });
+
+    it('flags missing source citations (rule 457)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'healthcare',
+        html: '<html><body><h1>Heart Disease</h1><p>This is not medical advice. Consult your doctor. By Dr. Smith, MD.</p></body></html>',
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-457' }),
+      );
+    });
+
+    it('well-formed healthcare page passes clean', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'healthcare',
+        html: `<html><body>
+          <h1>Understanding Heart Disease</h1>
+          <p>Reviewed by Dr. Jane Smith, MD, board-certified cardiologist.</p>
+          <p>This content is for informational purposes only and is not a substitute for professional medical advice. Consult your doctor.</p>
+          <section><h2>References</h2><p>Source: PubMed study PMID:12345678</p></section>
+        </body></html>`,
+      };
+      const issues = engine.validate(input);
+      expect(issues.length).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // News/Media (rules 464-466)
+  // -----------------------------------------------------------------------
+
+  describe('news-media', () => {
+    it('flags missing NewsArticle schema (rule 464)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'news-media',
+        html: `<html><body>
+          <h1>Breaking: Major Event</h1>
+          <p>By John Reporter</p>
+          <time datetime="2025-06-15">June 15, 2025</time>
+          <p>According to officials, the event occurred today.</p>
+        </body></html>`,
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-464' }),
+      );
+    });
+
+    it('flags missing publish date and author (rule 465)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'news-media',
+        html: '<html><body><h1>Breaking News</h1><p>According to sources, something happened.</p></body></html>',
+        schemaTypes: ['NewsArticle'],
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-465' }),
+      );
+    });
+
+    it('flags missing source citations (rule 466)', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'news-media',
+        html: `<html><body>
+          <h1>Breaking News</h1>
+          <p class="author">By John Reporter</p>
+          <time datetime="2025-06-15">June 15, 2025</time>
+          <p>Something happened today in the city.</p>
+        </body></html>`,
+        schemaTypes: ['NewsArticle'],
+      };
+      const issues = engine.validate(input);
+      expect(issues).toContainEqual(
+        expect.objectContaining({ ruleId: 'rule-466' }),
+      );
+    });
+
+    it('well-formed news article passes clean', () => {
+      const input: WebsiteTypeInput = {
+        websiteType: 'news-media',
+        html: `<html><body>
+          <h1>Major Policy Change Announced</h1>
+          <p class="author">By Jane Reporter</p>
+          <time datetime="2025-06-15">June 15, 2025</time>
+          <p>According to officials, the policy will take effect immediately. A source close to the matter confirmed the details.</p>
+        </body></html>`,
+        schemaTypes: ['NewsArticle'],
+      };
+      const issues = engine.validate(input);
+      expect(issues.length).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Schema extraction from HTML
   // -----------------------------------------------------------------------
 
