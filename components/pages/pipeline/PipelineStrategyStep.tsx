@@ -6,7 +6,7 @@ import StepDialogue from '../../pipeline/StepDialogue';
 import CascadeWarning from '../../pipeline/CascadeWarning';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 import { suggestPillarsFromBusinessInfo } from '../../../services/ai/pillarSuggestion';
-import { detectCascadeImpact, createEmptyDialogueContext } from '../../../services/ai/dialogueEngine';
+import { detectCascadeImpact, createEmptyDialogueContext, ensureValidDialogueContext } from '../../../services/ai/dialogueEngine';
 import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
 
 // ──── Tag Input (for CSI predicates) ────
@@ -549,9 +549,9 @@ const PipelineStrategyStep: React.FC = () => {
 
   // ──── Dialogue Engine state ────
   const [dialogueContext, setDialogueContext] = useState<DialogueContext>(
-    (activeMap?.dialogue_context as DialogueContext) || createEmptyDialogueContext()
+    ensureValidDialogueContext(activeMap?.dialogue_context)
   );
-  const loadedDialogueCtx = (activeMap?.dialogue_context as DialogueContext) || null;
+  const loadedDialogueCtx = activeMap?.dialogue_context ? ensureValidDialogueContext(activeMap.dialogue_context) : null;
   const [dialogueComplete, setDialogueComplete] = useState(
     loadedDialogueCtx?.strategy?.status === 'complete' || loadedDialogueCtx?.strategy?.status === 'skipped'
   );

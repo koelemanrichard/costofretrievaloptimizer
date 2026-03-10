@@ -11,7 +11,7 @@ import {
 import type { EavGenerationContext } from '../../../services/ai/eavService';
 import type { SemanticTriple } from '../../../types';
 import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
-import { createEmptyDialogueContext } from '../../../services/ai/dialogueEngine';
+import { createEmptyDialogueContext, ensureValidDialogueContext } from '../../../services/ai/dialogueEngine';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 
 // ──── Confidence Types (Decision 2) ────
@@ -572,9 +572,9 @@ const PipelineEavsStep: React.FC = () => {
 
   // ──── Dialogue Engine state ────
   const [dialogueContext, setDialogueContext] = useState<DialogueContext>(
-    (activeMap?.dialogue_context as DialogueContext) || createEmptyDialogueContext()
+    ensureValidDialogueContext(activeMap?.dialogue_context)
   );
-  const loadedDialogueCtx = (activeMap?.dialogue_context as DialogueContext) || null;
+  const loadedDialogueCtx = activeMap?.dialogue_context ? ensureValidDialogueContext(activeMap.dialogue_context) : null;
   const [dialogueComplete, setDialogueComplete] = useState(
     loadedDialogueCtx?.eavs?.status === 'complete' || loadedDialogueCtx?.eavs?.status === 'skipped'
   );
@@ -907,7 +907,8 @@ const PipelineEavsStep: React.FC = () => {
 
     // Update questionsAnswered (uses functional updater to avoid stale closure)
     setDialogueContext(prev => {
-      const updated = { ...prev, eavs: { ...prev.eavs, status: 'in_progress' as const, questionsAnswered: prev.eavs.questionsAnswered + 1 } };
+      const eavs = prev.eavs ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, eavs: { ...eavs, status: 'in_progress' as const, questionsAnswered: (eavs.questionsAnswered ?? 0) + 1 } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -916,7 +917,8 @@ const PipelineEavsStep: React.FC = () => {
   // Push confirmed answer to dialogue_context.answers[]
   const handleAnswerConfirmed = useCallback((answer: import('../../../types/dialogue').DialogueAnswer) => {
     setDialogueContext(prev => {
-      const updated = { ...prev, eavs: { ...prev.eavs, answers: [...prev.eavs.answers, answer] } };
+      const eavs = prev.eavs ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, eavs: { ...eavs, answers: [...(eavs.answers ?? []), answer] } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -925,7 +927,8 @@ const PipelineEavsStep: React.FC = () => {
   const handleDialogueComplete = useCallback(() => {
     setDialogueComplete(true);
     setDialogueContext(prev => {
-      const updated = { ...prev, eavs: { ...prev.eavs, status: 'complete' as const } };
+      const eavs = prev.eavs ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, eavs: { ...eavs, status: 'complete' as const } };
       persistDialogueContext(updated);
       return updated;
     });

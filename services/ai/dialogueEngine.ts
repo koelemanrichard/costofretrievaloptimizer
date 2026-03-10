@@ -82,6 +82,39 @@ export function createEmptyDialogueContext(): DialogueContext {
   };
 }
 
+/**
+ * Safely validate and normalize a dialogue context loaded from the database.
+ * DB may store `{}`, partial objects, or corrupted data — this ensures every
+ * nested property exists with a valid shape, preventing `Cannot read property
+ * of undefined` crashes throughout the pipeline.
+ */
+export function ensureValidDialogueContext(raw: unknown): DialogueContext {
+  if (!raw || typeof raw !== 'object') {
+    return createEmptyDialogueContext();
+  }
+  const obj = raw as Record<string, unknown>;
+  return {
+    strategy: ensureStepDialogueState(obj.strategy),
+    eavs: ensureStepDialogueState(obj.eavs),
+    map_planning: ensureStepDialogueState(obj.map_planning),
+  };
+}
+
+function ensureStepDialogueState(raw: unknown): StepDialogueState {
+  if (!raw || typeof raw !== 'object') {
+    return { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+  }
+  const obj = raw as Record<string, unknown>;
+  return {
+    answers: Array.isArray(obj.answers) ? obj.answers : [],
+    status: (['pending', 'in_progress', 'complete', 'skipped'] as const).includes(obj.status as any)
+      ? (obj.status as StepDialogueState['status'])
+      : 'pending',
+    questionsGenerated: typeof obj.questionsGenerated === 'number' ? obj.questionsGenerated : 0,
+    questionsAnswered: typeof obj.questionsAnswered === 'number' ? obj.questionsAnswered : 0,
+  };
+}
+
 // ── Prompt Builders ──
 
 function buildStepQuestionPrompt(
@@ -644,7 +677,7 @@ export function buildDialogueContextSection(
   // For eavs step: include strategy answers
   // For map_planning step: include strategy + eavs answers
   if (forStep === 'eavs' || forStep === 'map_planning') {
-    const strategyAnswers = dialogueContext.strategy.answers;
+    const strategyAnswers = dialogueContext.strategy?.answers ?? [];
     if (strategyAnswers.length > 0) {
       const formatted = formatPreviousAnswers(strategyAnswers);
       if (formatted) sections.push(`Strategy Clarifications:\n${formatted}`);
@@ -652,7 +685,7 @@ export function buildDialogueContextSection(
   }
 
   if (forStep === 'map_planning') {
-    const eavAnswers = dialogueContext.eavs.answers;
+    const eavAnswers = dialogueContext.eavs?.answers ?? [];
     if (eavAnswers.length > 0) {
       const formatted = formatPreviousAnswers(eavAnswers);
       if (formatted) sections.push(`EAV Clarifications:\n${formatted}`);

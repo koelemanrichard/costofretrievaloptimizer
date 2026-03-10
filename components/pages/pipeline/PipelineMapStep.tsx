@@ -10,7 +10,7 @@ import { generateTopicRationales } from '../../../services/ai/actionPlanService'
 import type { ActionPlan } from '../../../types/actionPlan';
 import type { EnrichedTopic, SemanticTriple } from '../../../types';
 import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
-import { createEmptyDialogueContext } from '../../../services/ai/dialogueEngine';
+import { createEmptyDialogueContext, ensureValidDialogueContext } from '../../../services/ai/dialogueEngine';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 import { verifiedBulkInsert } from '../../../services/verifiedDatabaseService';
 import { v4 as uuidv4 } from 'uuid';
@@ -1304,9 +1304,9 @@ const PipelineMapStep: React.FC = () => {
 
   // ──── Dialogue Engine state ────
   const [dialogueContext, setDialogueContext] = useState<DialogueContext>(
-    (activeMap?.dialogue_context as DialogueContext) || createEmptyDialogueContext()
+    ensureValidDialogueContext(activeMap?.dialogue_context)
   );
-  const loadedDialogueCtx = (activeMap?.dialogue_context as DialogueContext) || null;
+  const loadedDialogueCtx = activeMap?.dialogue_context ? ensureValidDialogueContext(activeMap.dialogue_context) : null;
   const [dialogueComplete, setDialogueComplete] = useState(
     loadedDialogueCtx?.map_planning?.status === 'complete' || loadedDialogueCtx?.map_planning?.status === 'skipped'
   );
@@ -1652,7 +1652,8 @@ const PipelineMapStep: React.FC = () => {
 
     // Update questionsAnswered (uses functional updater to avoid stale closure)
     setDialogueContext(prev => {
-      const updated = { ...prev, map_planning: { ...prev.map_planning, status: 'in_progress' as const, questionsAnswered: prev.map_planning.questionsAnswered + 1 } };
+      const mp = prev.map_planning ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, map_planning: { ...mp, status: 'in_progress' as const, questionsAnswered: (mp.questionsAnswered ?? 0) + 1 } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -1661,7 +1662,8 @@ const PipelineMapStep: React.FC = () => {
   // Push confirmed answer to dialogue_context.answers[]
   const handleAnswerConfirmed = useCallback((answer: import('../../../types/dialogue').DialogueAnswer) => {
     setDialogueContext(prev => {
-      const updated = { ...prev, map_planning: { ...prev.map_planning, answers: [...prev.map_planning.answers, answer] } };
+      const mp = prev.map_planning ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, map_planning: { ...mp, answers: [...(mp.answers ?? []), answer] } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -1670,7 +1672,8 @@ const PipelineMapStep: React.FC = () => {
   const handleDialogueComplete = useCallback(() => {
     setDialogueComplete(true);
     setDialogueContext(prev => {
-      const updated = { ...prev, map_planning: { ...prev.map_planning, status: 'complete' as const } };
+      const mp = prev.map_planning ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, map_planning: { ...mp, status: 'complete' as const } };
       persistDialogueContext(updated);
       return updated;
     });
