@@ -99,11 +99,11 @@ function buildStepQuestionPrompt(
   // Gather previous dialogue answers for cross-step awareness
   const priorAnswers: string[] = [];
   if (step === 'eavs' || step === 'map_planning') {
-    const strategyFormatted = formatPreviousAnswers(dialogueContext.strategy.answers);
+    const strategyFormatted = formatPreviousAnswers(dialogueContext.strategy?.answers ?? []);
     if (strategyFormatted) priorAnswers.push(`STRATEGY DIALOGUE:\n${strategyFormatted}`);
   }
   if (step === 'map_planning') {
-    const eavsFormatted = formatPreviousAnswers(dialogueContext.eavs.answers);
+    const eavsFormatted = formatPreviousAnswers(dialogueContext.eavs?.answers ?? []);
     if (eavsFormatted) priorAnswers.push(`EAV DIALOGUE:\n${eavsFormatted}`);
   }
 
@@ -176,8 +176,9 @@ ${outputStr}
 
 INSTRUCTIONS:
 1. ${questionCountGuidance}
-2. Each question must be in ${languageName}.
+2. Each question must be in ${languageName}. Use standard, professional language — NEVER use dialect, slang, or regional colloquialisms.
 3. Prioritize questions that would have the highest impact on downstream quality.
+4. Write in a professional, helpful tone. Be clear and concise, not overly casual or playful.
 
 Return JSON:
 {

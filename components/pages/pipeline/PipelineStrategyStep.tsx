@@ -707,7 +707,8 @@ const PipelineStrategyStep: React.FC = () => {
 
     // Update questionsAnswered (uses functional updater to avoid stale closure)
     setDialogueContext(prev => {
-      const updated = { ...prev, strategy: { ...prev.strategy, status: 'in_progress' as const, questionsAnswered: prev.strategy.questionsAnswered + 1 } };
+      const strategy = prev.strategy ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, strategy: { ...strategy, status: 'in_progress' as const, questionsAnswered: (strategy.questionsAnswered ?? 0) + 1 } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -716,7 +717,8 @@ const PipelineStrategyStep: React.FC = () => {
   // Push confirmed answer to dialogue_context.answers[]
   const handleAnswerConfirmed = useCallback((answer: import('../../../types/dialogue').DialogueAnswer) => {
     setDialogueContext(prev => {
-      const updated = { ...prev, strategy: { ...prev.strategy, answers: [...prev.strategy.answers, answer] } };
+      const strategy = prev.strategy ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, strategy: { ...strategy, answers: [...(strategy.answers ?? []), answer] } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -725,7 +727,8 @@ const PipelineStrategyStep: React.FC = () => {
   const handleDialogueComplete = useCallback(() => {
     setDialogueComplete(true);
     setDialogueContext(prev => {
-      const updated = { ...prev, strategy: { ...prev.strategy, status: 'complete' as const } };
+      const strategy = prev.strategy ?? { answers: [], status: 'pending', questionsGenerated: 0, questionsAnswered: 0 };
+      const updated = { ...prev, strategy: { ...strategy, status: 'complete' as const } };
       persistDialogueContext(updated);
       return updated;
     });
@@ -806,6 +809,14 @@ const PipelineStrategyStep: React.FC = () => {
     setSavedSuccess(true);
     setIsSaving(false);
     setStepStatus('strategy', 'pending_approval');
+
+    // Show dialogue and scroll to it so user sees the AI review starting
+    if (!dialogueComplete) {
+      setShowDialogue(true);
+      setTimeout(() => {
+        document.getElementById('strategy-dialogue-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
 
     // Reset success flash after 3 seconds
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -1131,6 +1142,7 @@ const PipelineStrategyStep: React.FC = () => {
       )}
 
       {/* Intelligent Dialogue — Q&A before approval */}
+      <div id="strategy-dialogue-section" />
       {showDialogue && !dialogueComplete && (
         <StepDialogue
           step="strategy"

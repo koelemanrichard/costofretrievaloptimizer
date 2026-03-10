@@ -311,6 +311,11 @@ export function getLanguageAndRegionInstruction(
 - Use European Portuguese vocabulary and grammar conventions.
 - Use "tu" form for informal address where appropriate.`;
       }
+    } else if (normalizedLang === 'dutch') {
+      instruction += `
+- Use standard Dutch (Algemeen Nederlands / ABN). NEVER use dialect, slang, or regional colloquialisms.
+- Write in a professional, clear tone. Do NOT use Brabants, Limburgs, Flemish dialect words, or informal expressions like "efkes", "wa", "bende", "keigoed", "gij".
+- Use "u" for formal address, "je/jij" for informal but standard Dutch.`;
     } else if (normalizedLang === 'spanish') {
       if (region.toLowerCase().includes('spain')) {
         instruction += `
