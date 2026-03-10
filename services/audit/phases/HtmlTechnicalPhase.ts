@@ -13,6 +13,7 @@ import { HtmlNestingValidator } from '../rules/HtmlNestingValidator';
 import { HtmlTechnicalValidator } from '../rules/HtmlTechnicalValidator';
 import { HtmlStructureExtendedValidator } from '../rules/HtmlStructureExtendedValidator';
 import { ImageMetadataValidator } from '../rules/ImageMetadataValidator';
+import { PromptInjectionDefenseValidator } from '../rules/PromptInjectionDefenseValidator';
 import { ImageProcessingService } from '../../imageProcessingService';
 
 export class HtmlTechnicalPhase extends AuditPhase {
@@ -108,6 +109,23 @@ export class HtmlTechnicalPhase extends AuditPhase {
           title: 'Image SEO issues detected',
           description: `${imageSeoIssues.length} image SEO issue(s): ${imageSeoIssues.slice(0, 3).join('; ')}${imageSeoIssues.length > 3 ? '...' : ''}`,
           whyItMatters: 'Optimized images improve page speed, accessibility, and image search visibility.',
+          category: 'HTML Technical',
+        }));
+      }
+
+      // Prompt injection defense checks
+      totalChecks++;
+      const injectionValidator = new PromptInjectionDefenseValidator();
+      const injectionIssues = injectionValidator.validate(html);
+      for (const issue of injectionIssues) {
+        findings.push(this.createFinding({
+          ruleId: issue.ruleId,
+          severity: issue.severity,
+          title: issue.title,
+          description: issue.description,
+          affectedElement: issue.affectedElement,
+          exampleFix: issue.exampleFix,
+          whyItMatters: 'Hidden or obfuscated text can be exploited as prompt injection vectors by AI crawlers and LLM-based search systems.',
           category: 'HTML Technical',
         }));
       }
