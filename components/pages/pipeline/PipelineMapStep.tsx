@@ -1472,16 +1472,6 @@ const PipelineMapStep: React.FC = () => {
             description: t.description,
             type: t.type,
             freshness: t.freshness,
-            // New top-level columns from page_inventory_fields migration
-            search_volume: typeof t.search_volume === 'number' ? t.search_volume : null,
-            search_volume_source: t.search_volume_source || null,
-            page_decision: t.page_decision || null,
-            page_decision_confidence: typeof t.page_decision_confidence === 'number' ? t.page_decision_confidence : null,
-            page_decision_reasoning: t.page_decision_reasoning || null,
-            consolidation_target_id: t.consolidation_target_id || null,
-            extracted_keyword: t.extracted_keyword || null,
-            competitor_heading_frequency: typeof t.competitor_heading_frequency === 'number' ? t.competitor_heading_frequency : null,
-            competitor_has_dedicated_url: typeof t.competitor_has_dedicated_url === 'boolean' ? t.competitor_has_dedicated_url : null,
             metadata: {
               topic_class: t.topic_class || (t.type === 'core' ? 'monetization' : 'informational'),
               cluster_role: t.cluster_role,
