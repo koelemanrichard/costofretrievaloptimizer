@@ -178,7 +178,7 @@ const PipelineBriefsStep: React.FC = () => {
           );
 
           const brief: ContentBrief = {
-            id: `brief-${topic.id}`,
+            id: topic.id,
             topic_id: topic.id,
             articleDraft: undefined,
             ...briefData,

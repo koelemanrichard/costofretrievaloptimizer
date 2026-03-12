@@ -15,6 +15,8 @@ import type {
 import { DEFAULT_AUDIT_WEIGHTS } from './types';
 import { AuditSnapshotService } from './AuditSnapshotService';
 import { buildRuleInventory } from './ruleRegistry';
+import { CrossPageEavAuditor } from './rules/CrossPageEavAuditor';
+import type { PageEavData, CrossPageEavIssue } from './rules/CrossPageEavAuditor';
 import { SiteAuditAggregator } from './SiteAuditAggregator';
 import type { SiteAuditResult } from './SiteAuditAggregator';
 import { AutoFixEngine } from './AutoFixEngine';
@@ -190,6 +192,9 @@ export class UnifiedAuditOrchestrator {
     // Build complete rule inventory (passed/failed/skipped for every rule)
     const ruleInventory = buildRuleInventory(phaseResults, enrichedContent);
 
+    // Extract cross-page EAV issues for dedicated UI component
+    const crossPageEavIssues = this.extractCrossPageEavIssues(enrichedContent);
+
     const report: UnifiedAuditReport = {
       id: crypto.randomUUID(),
       projectId: request.projectId,
@@ -203,6 +208,7 @@ export class UnifiedAuditOrchestrator {
       contentFetchFailed,
       fetchedContent,
       ruleInventory,
+      crossPageEavIssues: crossPageEavIssues.length > 0 ? crossPageEavIssues : undefined,
       language: request.language,
       version: 1,
       createdAt: new Date().toISOString(),
@@ -273,6 +279,20 @@ export class UnifiedAuditOrchestrator {
     );
 
     return Math.round((weightedSum / totalWeight) * 100) / 100;
+  }
+
+  /**
+   * Extract cross-page EAV issues from enriched content (if crossPageEavData is present).
+   */
+  private extractCrossPageEavIssues(
+    enrichedContent?: Record<string, unknown>
+  ): CrossPageEavIssue[] {
+    if (!enrichedContent || !Array.isArray(enrichedContent.crossPageEavData)) {
+      return [];
+    }
+    const pages = enrichedContent.crossPageEavData as PageEavData[];
+    if (pages.length < 2) return [];
+    return CrossPageEavAuditor.audit(pages);
   }
 
   /**

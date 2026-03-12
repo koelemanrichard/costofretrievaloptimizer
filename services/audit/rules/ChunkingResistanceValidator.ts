@@ -4,6 +4,11 @@
  * Validates that content sections can be extracted in isolation by RAG systems
  * and still make complete sense. Checks for cross-section references, entity
  * re-introduction, and section length optimization.
+ *
+ * Three validation methods:
+ *   1. validate(text, entityName?) — Forward/backward reference detection
+ *   2. validateSection(firstSentence, entityName, isFirstSentence) — Entity re-introduction
+ *   3. validateSectionLength(sectionText) — Section length check (>500 words)
  */
 
 export interface ChunkingIssue {
@@ -15,83 +20,61 @@ export interface ChunkingIssue {
   exampleFix?: string;
 }
 
-const FORWARD_BACKWARD_PATTERNS = [
-  /as mentioned above/i,
-  /as discussed above/i,
-  /as noted above/i,
-  /as explained above/i,
-  /as described above/i,
-  /as stated above/i,
-  /as we discussed/i,
-  /as we mentioned/i,
-  /see below/i,
-  /see above/i,
-  /in the previous section/i,
-  /in the next section/i,
-  /in the following section/i,
+// English patterns
+const EN_PATTERNS: RegExp[] = [
+  /as mentioned (above|earlier|before|previously)/i,
+  /as we (discussed|noted|stated) above/i,
+  /as (discussed|noted|stated|explained) (earlier|before|previously)/i,
+  /see (above|below|the previous section)/i,
+  /referring to the (above|previous|following)/i,
+  /in the (previous|next|following) section/i,
   /later in this article/i,
   /earlier in this article/i,
-  /as discussed earlier/i,
-  /as noted earlier/i,
   /we covered this in/i,
   /refer to the section/i,
 ];
 
+// Dutch patterns
+const NL_PATTERNS: RegExp[] = [
+  /zoals (eerder|hierboven|hiervoor) (vermeld|besproken|genoemd|uitgelegd)/i,
+  /zie (hierboven|hieronder|het vorige)/i,
+  /als eerder aangegeven/i,
+  /zoals (hierboven|hieronder) beschreven/i,
+  /in het vorige (hoofdstuk|deel|gedeelte)/i,
+  /in de volgende (sectie|paragraaf)/i,
+];
+
+// German patterns
+const DE_PATTERNS: RegExp[] = [
+  /wie (oben|zuvor|bereits) (erwähnt|besprochen|genannt|erklärt)/i,
+  /siehe (oben|unten|den vorherigen Abschnitt)/i,
+  /im (vorherigen|nächsten|folgenden) Abschnitt/i,
+  /wie bereits (oben|zuvor) (beschrieben|dargestellt)/i,
+];
+
+const ALL_PATTERNS = [...EN_PATTERNS, ...NL_PATTERNS, ...DE_PATTERNS];
+
+// Pronouns that indicate missing entity re-introduction
+const PRONOUN_STARTERS: RegExp = /^(it|this|that|these|those|het|er|es|dies|das)\b/i;
+
 export class ChunkingResistanceValidator {
-  validate(html: string, entityName?: string): ChunkingIssue[] {
+  /**
+   * Checks text for forward/backward reference patterns that break
+   * when content is extracted as standalone chunks by RAG systems.
+   */
+  validate(text: string, _entityName?: string): ChunkingIssue[] {
     const issues: ChunkingIssue[] = [];
-    const sections = this.extractH2Sections(html);
 
-    for (const section of sections) {
-      // Check forward/backward references
-      for (const pattern of FORWARD_BACKWARD_PATTERNS) {
-        if (pattern.test(section.content)) {
-          const match = section.content.match(pattern);
-          issues.push({
-            ruleId: 'rule-chunk-forward-ref',
-            severity: 'medium',
-            title: 'Cross-section reference breaks chunking',
-            description: `Section "${section.heading}" contains "${match?.[0] || 'cross-reference'}". RAG systems may extract this section alone — the referenced content won't be available.`,
-            affectedElement: section.heading,
-            exampleFix: 'Replace the cross-reference with the actual fact or statement being referenced',
-          });
-          break; // One finding per section
-        }
-      }
-
-      // Check entity re-introduction in first sentence
-      if (entityName && section.firstSentence) {
-        if (!section.firstSentence.toLowerCase().includes(entityName.toLowerCase())) {
-          issues.push({
-            ruleId: 'rule-chunk-entity-reintro',
-            severity: 'medium',
-            title: 'Entity not re-introduced in section',
-            description: `First sentence of "${section.heading}" does not mention "${entityName}". When this section is extracted as a standalone chunk, the subject is unclear.`,
-            affectedElement: section.heading,
-            exampleFix: `Naturally include "${entityName}" in the opening sentence`,
-          });
-        }
-      }
-
-      // Check section length
-      const wordCount = section.content.split(/\s+/).filter(w => w.length > 0).length;
-      if (wordCount > 800) {
+    for (const pattern of ALL_PATTERNS) {
+      const match = text.match(pattern);
+      if (match) {
         issues.push({
-          ruleId: 'rule-chunk-section-length',
-          severity: 'low',
-          title: 'Section may split across multiple RAG chunks',
-          description: `Section "${section.heading}" is ${wordCount} words. Sections over 800 words risk being split by RAG chunking algorithms.`,
-          affectedElement: section.heading,
-          exampleFix: 'Split into 2-3 subsections (H3) of 200-500 words each',
-        });
-      } else if (wordCount < 100 && wordCount > 0) {
-        issues.push({
-          ruleId: 'rule-chunk-section-length',
-          severity: 'low',
-          title: 'Section too thin for standalone retrieval',
-          description: `Section "${section.heading}" is only ${wordCount} words. Sections under 100 words may not provide sufficient context.`,
-          affectedElement: section.heading,
-          exampleFix: 'Expand with supporting evidence, examples, or merge into parent section',
+          ruleId: 'CHUNKING_FORWARD_REF',
+          severity: 'medium',
+          title: 'Cross-section reference breaks chunking',
+          description: `Text contains "${match[0]}". RAG systems may extract this section alone — the referenced content won't be available.`,
+          affectedElement: match[0],
+          exampleFix: 'Replace the cross-reference with the actual fact or statement being referenced.',
         });
       }
     }
@@ -99,26 +82,61 @@ export class ChunkingResistanceValidator {
     return issues;
   }
 
-  private extractH2Sections(html: string): Array<{
-    heading: string;
-    content: string;
-    firstSentence: string;
-  }> {
-    const results: Array<{ heading: string; content: string; firstSentence: string }> = [];
-    const h2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
-    const matches = [...html.matchAll(h2Regex)];
+  /**
+   * Checks whether the entity is properly re-introduced at the start of a section.
+   * Only validates when isFirstSentence is true.
+   * Flags if the entity name is absent AND the sentence starts with a pronoun.
+   */
+  validateSection(
+    firstSentence: string,
+    entityName: string,
+    isFirstSentence: boolean
+  ): ChunkingIssue[] {
+    if (!isFirstSentence) return [];
 
-    for (let i = 0; i < matches.length; i++) {
-      const heading = matches[i][1].replace(/<[^>]+>/g, '').trim();
-      const start = matches[i].index! + matches[i][0].length;
-      const end = i + 1 < matches.length ? matches[i + 1].index! : html.length;
-      const sectionHtml = html.slice(start, end);
-      const content = sectionHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      const sentenceMatch = content.match(/^[^.!?]+[.!?]/);
-      const firstSentence = sentenceMatch ? sentenceMatch[0].trim() : content.slice(0, 200);
-      results.push({ heading, content, firstSentence });
+    const trimmed = firstSentence.trim();
+    if (!trimmed) return [];
+
+    const entityPresent = trimmed.toLowerCase().includes(entityName.toLowerCase());
+    const startsWithPronoun = PRONOUN_STARTERS.test(trimmed);
+
+    if (!entityPresent && startsWithPronoun) {
+      return [
+        {
+          ruleId: 'CHUNKING_ENTITY_REINTRO',
+          severity: 'medium',
+          title: 'Entity not re-introduced in section opening',
+          description: `First sentence starts with a pronoun ("${trimmed.split(/\s+/)[0]}") without mentioning "${entityName}". When extracted as a standalone chunk, the subject is unclear.`,
+          affectedElement: trimmed,
+          exampleFix: `Replace the pronoun with "${entityName}" or naturally include it in the opening sentence.`,
+        },
+      ];
     }
 
-    return results;
+    return [];
+  }
+
+  /**
+   * Checks whether a section exceeds the recommended word count for RAG chunking.
+   * Sections over 500 words risk being split by chunking algorithms.
+   */
+  validateSectionLength(sectionText: string): ChunkingIssue[] {
+    const words = sectionText.trim().split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length;
+
+    if (wordCount > 500) {
+      return [
+        {
+          ruleId: 'CHUNKING_SECTION_LENGTH',
+          severity: 'medium',
+          title: 'Section may split across multiple RAG chunks',
+          description: `Section is ${wordCount} words. Sections over 500 words risk being split by RAG chunking algorithms, losing context boundaries.`,
+          affectedElement: `${wordCount} words`,
+          exampleFix: 'Split into 2-3 subsections (H3) of 200-400 words each.',
+        },
+      ];
+    }
+
+    return [];
   }
 }

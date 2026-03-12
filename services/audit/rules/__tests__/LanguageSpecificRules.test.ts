@@ -248,6 +248,288 @@ describe('LanguageSpecificRules', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // validate — Dutch filler detection
+  // ---------------------------------------------------------------------------
+
+  describe('validate() — Dutch filler detection', () => {
+    it('should flag single-word Dutch fillers', () => {
+      const text = 'Dit product is eigenlijk heel goed.';
+      const issues = rules.validate(text, 'nl');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_NL');
+      expect(fillerIssues.length).toBe(1);
+      expect(fillerIssues[0].affectedElement).toBe('eigenlijk');
+      expect(fillerIssues[0].severity).toBe('low');
+    });
+
+    it('should flag multi-word Dutch fillers', () => {
+      const text = 'Over het algemeen is dit een goede keuze.';
+      const issues = rules.validate(text, 'nl');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_NL');
+      expect(fillerIssues.length).toBe(1);
+      expect(fillerIssues[0].affectedElement).toBe('over het algemeen');
+    });
+
+    it('should flag multiple Dutch fillers in one text', () => {
+      const text = 'Dit is eigenlijk gewoon een goed product, natuurlijk.';
+      const issues = rules.validate(text, 'nl');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_NL');
+      expect(fillerIssues.length).toBe(3);
+    });
+
+    it('should not flag Dutch fillers in non-Dutch text', () => {
+      const text = 'Dit is eigenlijk gewoon een goed product.';
+      const issues = rules.validate(text, 'en');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_NL');
+      expect(fillerIssues.length).toBe(0);
+    });
+
+    it('should match Dutch fillers case-insensitively', () => {
+      const text = 'EIGENLIJK is dit een goed product.';
+      const issues = rules.validate(text, 'nl');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_NL');
+      expect(fillerIssues.length).toBe(1);
+    });
+
+    it('should not flag partial word matches for Dutch fillers', () => {
+      // "gewoon" should not match inside "gewoonweg"
+      const text = 'Dit is gewoonweg fantastisch.';
+      const issues = rules.validate(text, 'nl');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_NL' && i.affectedElement === 'gewoon');
+      expect(fillerIssues.length).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // validate — German filler detection
+  // ---------------------------------------------------------------------------
+
+  describe('validate() — German filler detection', () => {
+    it('should flag single-word German fillers', () => {
+      const text = 'Das Produkt ist eigentlich sehr gut.';
+      const issues = rules.validate(text, 'de');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_DE');
+      expect(fillerIssues.length).toBe(1);
+      expect(fillerIssues[0].affectedElement).toBe('eigentlich');
+      expect(fillerIssues[0].severity).toBe('low');
+    });
+
+    it('should flag multi-word German fillers', () => {
+      const text = 'Im Grunde genommen ist das eine gute Wahl.';
+      const issues = rules.validate(text, 'de');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_DE');
+      expect(fillerIssues.length).toBe(1);
+      expect(fillerIssues[0].affectedElement).toBe('im Grunde genommen');
+    });
+
+    it('should flag multiple German fillers in one text', () => {
+      const text = 'Es ist eigentlich quasi selbstverständlich.';
+      const issues = rules.validate(text, 'de');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_DE');
+      expect(fillerIssues.length).toBe(3);
+    });
+
+    it('should not flag German fillers for other languages', () => {
+      const text = 'Es ist eigentlich quasi selbstverständlich.';
+      const issues = rules.validate(text, 'nl');
+      const fillerIssues = issues.filter(i => i.ruleId === 'FILLER_DE');
+      expect(fillerIssues.length).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // validate — Dutch address mixing
+  // ---------------------------------------------------------------------------
+
+  describe('validate() — Dutch address mixing', () => {
+    it('should flag mixing of formal and informal Dutch address', () => {
+      const text = 'U kunt uw product bekijken. Klik op jouw account.';
+      const issues = rules.validate(text, 'nl');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_NL');
+      expect(addrIssues.length).toBe(1);
+      expect(addrIssues[0].severity).toBe('high');
+    });
+
+    it('should not flag purely formal Dutch text', () => {
+      const text = 'U kunt uw product bekijken via uw account.';
+      const issues = rules.validate(text, 'nl');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_NL');
+      expect(addrIssues.length).toBe(0);
+    });
+
+    it('should not flag purely informal Dutch text', () => {
+      const text = 'Je kunt jouw product bekijken via je account.';
+      const issues = rules.validate(text, 'nl');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_NL');
+      expect(addrIssues.length).toBe(0);
+    });
+
+    it('should detect je + u mixing', () => {
+      const text = 'Als je wilt kunt u hier klikken.';
+      const issues = rules.validate(text, 'nl');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_NL');
+      expect(addrIssues.length).toBe(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // validate — German address mixing
+  // ---------------------------------------------------------------------------
+
+  describe('validate() — German address mixing', () => {
+    it('should flag mixing of Sie (formal) and du (informal)', () => {
+      const text = 'Sie können Ihr Produkt ansehen. Klick auf dein Konto.';
+      const issues = rules.validate(text, 'de');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_DE');
+      expect(addrIssues.length).toBe(1);
+      expect(addrIssues[0].severity).toBe('high');
+    });
+
+    it('should not flag purely formal German text (Sie)', () => {
+      const text = 'Sie können Ihr Produkt ansehen.';
+      const issues = rules.validate(text, 'de');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_DE');
+      expect(addrIssues.length).toBe(0);
+    });
+
+    it('should not flag purely informal German text (du)', () => {
+      const text = 'Du kannst dein Produkt ansehen.';
+      const issues = rules.validate(text, 'de');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_DE');
+      expect(addrIssues.length).toBe(0);
+    });
+
+    it('should be case-sensitive for German Sie (capital = formal)', () => {
+      // lowercase "sie" (they) + "du" should not be flagged
+      const text = 'Wenn sie kommen, kannst du gehen.';
+      const issues = rules.validate(text, 'de');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_DE');
+      expect(addrIssues.length).toBe(0);
+    });
+
+    it('should flag when Sie (capital) is mixed with informal forms', () => {
+      const text = 'Sie haben recht, aber du musst aufpassen.';
+      const issues = rules.validate(text, 'de');
+      const addrIssues = issues.filter(i => i.ruleId === 'ADDRESS_MIX_DE');
+      expect(addrIssues.length).toBe(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // validateEavSentence — V2 word order
+  // ---------------------------------------------------------------------------
+
+  describe('validateEavSentence()', () => {
+    it('should flag Dutch sentence ending with a verb', () => {
+      const issues = rules.validateEavSentence(
+        'Het product veel geld kost.',
+        'nl',
+      );
+      expect(issues.length).toBe(1);
+      expect(issues[0].ruleId).toBe('V2_WORD_ORDER_NL');
+      expect(issues[0].severity).toBe('medium');
+    });
+
+    it('should flag German sentence ending with a verb', () => {
+      const issues = rules.validateEavSentence(
+        'Das Produkt viel Geld kostet.',
+        'de',
+      );
+      expect(issues.length).toBe(1);
+      expect(issues[0].ruleId).toBe('V2_WORD_ORDER_DE');
+      expect(issues[0].severity).toBe('medium');
+    });
+
+    it('should not flag Dutch sentence with correct V2 order', () => {
+      const issues = rules.validateEavSentence(
+        'Het product kost veel geld.',
+        'nl',
+      );
+      expect(issues.length).toBe(0);
+    });
+
+    it('should not flag German sentence with correct V2 order', () => {
+      const issues = rules.validateEavSentence(
+        'Das Produkt kostet viel Geld.',
+        'de',
+      );
+      expect(issues.length).toBe(0);
+    });
+
+    it('should strip trailing punctuation before checking', () => {
+      const issues = rules.validateEavSentence(
+        'Het apparaat tien kilo weegt.',
+        'nl',
+      );
+      expect(issues.length).toBe(1);
+      expect(issues[0].ruleId).toBe('V2_WORD_ORDER_NL');
+    });
+
+    it('should not flag sentences shorter than 4 words', () => {
+      const issues = rules.validateEavSentence('Het kost geld.', 'nl');
+      expect(issues.length).toBe(0);
+    });
+
+    it('should return empty for English', () => {
+      const issues = rules.validateEavSentence(
+        'The product costs a lot of money is.',
+        'en',
+      );
+      expect(issues.length).toBe(0);
+    });
+
+    it('should return empty for French', () => {
+      const issues = rules.validateEavSentence(
+        'Le produit coûte beaucoup est.',
+        'fr',
+      );
+      expect(issues.length).toBe(0);
+    });
+
+    it('should handle sentence without punctuation', () => {
+      const issues = rules.validateEavSentence(
+        'Das System viele Funktionen bietet',
+        'de',
+      );
+      expect(issues.length).toBe(1);
+      expect(issues[0].ruleId).toBe('V2_WORD_ORDER_DE');
+    });
+
+    it('should detect various Dutch verb forms at end', () => {
+      const verbSentences = [
+        'Het systeem goed werkt.',
+        'Dit product veel waarde biedt.',
+        'De installatie lang duurt.',
+        'Deze taak veel inspanning vereist.',
+      ];
+      for (const s of verbSentences) {
+        const issues = rules.validateEavSentence(s, 'nl');
+        expect(issues.length).toBe(1);
+      }
+    });
+
+    it('should detect various German verb forms at end', () => {
+      const verbSentences = [
+        'Das System gut funktioniert.',
+        'Dieses Produkt viel Wert bietet.',
+        'Die Installation lange dauert.',
+        'Diese Aufgabe viel Aufwand erfordert.',
+      ];
+      for (const s of verbSentences) {
+        const issues = rules.validateEavSentence(s, 'de');
+        expect(issues.length).toBe(1);
+      }
+    });
+
+    it('should not flag when last word is not a known verb form', () => {
+      const issues = rules.validateEavSentence(
+        'Het product is zeer betaalbaar.',
+        'nl',
+      );
+      expect(issues.length).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Edge cases
   // ---------------------------------------------------------------------------
 

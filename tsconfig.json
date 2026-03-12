@@ -32,6 +32,7 @@
     "node_modules",
     "supabase/functions",
     "dist",
-    "tmp"
+    "tmp",
+    "e2e"
   ]
 }

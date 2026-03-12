@@ -28,8 +28,8 @@ describe('ContentQualityPhase', () => {
       text: 'Water filters are devices that remove impurities from water. They use various technologies including activated carbon, reverse osmosis, and UV treatment. The effectiveness depends on the type and quality of the filter.',
     };
     const result = await phase.execute(makeRequest(), content);
-    // 4 (micro semantics) + 4 (AI fallback)
-    expect(result.totalChecks).toBe(8);
+    // 4 (micro semantics) + 1 (language rules) + 4 (AI fallback) + 1 (chunking ref) + 1 (section length)
+    expect(result.totalChecks).toBe(11);
     expect(result.totalChecks).toBeGreaterThanOrEqual(result.findings.length);
   });
 
@@ -87,7 +87,8 @@ describe('ContentQualityPhase', () => {
       rootAttributes: ['lifespan', 'capacity'],
     };
     const result = await phase.execute(makeRequest(), content);
-    expect(result.totalChecks).toBe(8);
+    // 4 (micro semantics) + 1 (language rules) + 4 (AI fallback) + 1 (chunking ref) + 1 (section length)
+    expect(result.totalChecks).toBe(11);
     // Should pass experience and examples checks
     expect(result.findings.find(f => f.ruleId === 'rule-21-ai')).toBeUndefined();
   });

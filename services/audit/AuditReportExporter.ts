@@ -387,6 +387,170 @@ ${report.ruleInventory ? this.renderRuleCoverage(report.ruleInventory) : ''}
   }
 
   // ---------------------------------------------------------------------------
+  // Topical Map XLSX Export
+  // ---------------------------------------------------------------------------
+
+  /** Export topical map as XLSX with overview + topics + EAV inventory sheets */
+  async exportTopicalMapXlsx(data: {
+    topics: Array<{
+      title: string;
+      type?: string;
+      cluster?: string;
+      parent?: string;
+      url?: string;
+      status?: string;
+    }>;
+    pillars?: {
+      centralEntity?: string;
+      sourceContext?: string;
+      centralSearchIntent?: string;
+    };
+    eavs?: Array<{
+      entity: string;
+      attribute: string;
+      value: string;
+      category?: string;
+      classification?: string;
+    }>;
+  }): Promise<ArrayBuffer> {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Holistic SEO Topical Map Generator';
+    wb.created = new Date();
+
+    // -- Sheet 1: Overview --
+    const overviewSheet = wb.addWorksheet('Overview');
+    overviewSheet.columns = [
+      { header: 'Property', key: 'property', width: 30 },
+      { header: 'Value', key: 'value', width: 50 },
+    ];
+    overviewSheet.addRows([
+      { property: 'Central Entity', value: data.pillars?.centralEntity ?? 'N/A' },
+      { property: 'Source Context', value: data.pillars?.sourceContext ?? 'N/A' },
+      { property: 'Central Search Intent', value: data.pillars?.centralSearchIntent ?? 'N/A' },
+      { property: 'Total Topics', value: String(data.topics.length) },
+      { property: 'Hub Topics', value: String(data.topics.filter(t => t.type === 'hub').length) },
+      { property: 'Spoke Topics', value: String(data.topics.filter(t => t.type === 'spoke').length) },
+      { property: 'EAV Triples', value: String(data.eavs?.length ?? 0) },
+      { property: 'Export Date', value: new Date().toISOString().slice(0, 10) },
+    ]);
+    this.styleHeaderRow(overviewSheet);
+
+    // -- Sheet 2: Topics --
+    const topicsSheet = wb.addWorksheet('Topics');
+    topicsSheet.columns = [
+      { header: 'Title', key: 'title', width: 40 },
+      { header: 'Type', key: 'type', width: 12 },
+      { header: 'Cluster', key: 'cluster', width: 25 },
+      { header: 'Parent', key: 'parent', width: 30 },
+      { header: 'URL', key: 'url', width: 40 },
+      { header: 'Status', key: 'status', width: 12 },
+    ];
+    for (const topic of data.topics) {
+      const row = topicsSheet.addRow({
+        title: topic.title,
+        type: topic.type ?? '',
+        cluster: topic.cluster ?? '',
+        parent: topic.parent ?? '',
+        url: topic.url ?? '',
+        status: topic.status ?? '',
+      });
+      // Color hubs differently
+      if (topic.type === 'hub') {
+        row.getCell('type').fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF3B82F6' },
+        };
+        row.getCell('type').font = { color: { argb: 'FFFFFFFF' } };
+      }
+    }
+    this.styleHeaderRow(topicsSheet);
+
+    // -- Sheet 3: EAV Inventory --
+    if (data.eavs && data.eavs.length > 0) {
+      const eavSheet = wb.addWorksheet('EAV Inventory');
+      eavSheet.columns = [
+        { header: 'Entity', key: 'entity', width: 30 },
+        { header: 'Attribute', key: 'attribute', width: 30 },
+        { header: 'Value', key: 'value', width: 40 },
+        { header: 'Category', key: 'category', width: 15 },
+        { header: 'Classification', key: 'classification', width: 15 },
+      ];
+      for (const eav of data.eavs) {
+        eavSheet.addRow({
+          entity: eav.entity,
+          attribute: eav.attribute,
+          value: eav.value,
+          category: eav.category ?? '',
+          classification: eav.classification ?? '',
+        });
+      }
+      this.styleHeaderRow(eavSheet);
+    }
+
+    return wb.xlsx.writeBuffer() as Promise<ArrayBuffer>;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Content Brief DOCX-style Export (as structured text for now)
+  // ---------------------------------------------------------------------------
+
+  /** Export content brief as structured markdown text (downloadable as .md) */
+  exportBriefMarkdown(brief: {
+    title: string;
+    slug?: string;
+    metaDescription?: string;
+    structured_outline?: Array<{
+      heading: string;
+      format_code?: string;
+      subordinate_text_hint?: string;
+    }>;
+    featured_snippet_target?: {
+      question?: string;
+      answer_format?: string;
+    };
+    internalLinkInstructions?: Array<{
+      targetTopic?: string;
+      anchorText?: string;
+    }>;
+  }): string {
+    const lines: string[] = [];
+    lines.push(`# ${brief.title}`);
+    if (brief.slug) lines.push(`**Slug:** ${brief.slug}`);
+    if (brief.metaDescription) lines.push(`**Meta Description:** ${brief.metaDescription}`);
+    lines.push('');
+
+    if (brief.featured_snippet_target?.question) {
+      lines.push('## Featured Snippet Target');
+      lines.push(`**Question:** ${brief.featured_snippet_target.question}`);
+      if (brief.featured_snippet_target.answer_format) {
+        lines.push(`**Format:** ${brief.featured_snippet_target.answer_format}`);
+      }
+      lines.push('');
+    }
+
+    if (brief.structured_outline && brief.structured_outline.length > 0) {
+      lines.push('## Content Outline');
+      for (const section of brief.structured_outline) {
+        lines.push(`### ${section.heading}`);
+        if (section.format_code) lines.push(`*Format: ${section.format_code}*`);
+        if (section.subordinate_text_hint) lines.push(`> ${section.subordinate_text_hint}`);
+        lines.push('');
+      }
+    }
+
+    if (brief.internalLinkInstructions && brief.internalLinkInstructions.length > 0) {
+      lines.push('## Internal Links');
+      for (const link of brief.internalLinkInstructions) {
+        lines.push(`- **${link.anchorText ?? 'Link'}** → ${link.targetTopic ?? 'Target'}`);
+      }
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  // ---------------------------------------------------------------------------
   // Batch ZIP Export (multiple reports)
   // ---------------------------------------------------------------------------
 

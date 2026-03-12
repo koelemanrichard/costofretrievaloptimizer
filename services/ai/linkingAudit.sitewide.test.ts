@@ -44,7 +44,7 @@ const createMockTopic = (overrides: Partial<EnrichedTopic> = {}): EnrichedTopic 
 });
 
 const createMockBrief = (topicId: string, overrides: Partial<ContentBrief> = {}): ContentBrief => ({
-  id: 'brief-' + topicId,
+  id: topicId,
   topic_id: topicId,
   title: 'Sample Brief Title',
   slug: 'sample-brief',

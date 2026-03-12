@@ -8,6 +8,9 @@ import { AuditScoreRing } from './AuditScoreRing';
 import { PhaseScoreCard } from './PhaseScoreCard';
 import { AuditFindingCard } from './AuditFindingCard';
 import { AuditExportDropdown } from './AuditExportDropdown';
+import { SemanticSeoChecklist } from './SemanticSeoChecklist';
+import { CrossPageEavReport } from './CrossPageEavReport';
+import { AiVisibilityScoreCard } from './AiVisibilityScoreCard';
 import { getTranslations } from '../../config/audit-i18n/index';
 import { computeCor2Score, extractCor2InputFromReport } from '../../services/ai/cor2Scorer';
 import type { Cor2Result } from '../../services/ai/cor2Scorer';
@@ -74,6 +77,33 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
     const cor2Input = extractCor2InputFromReport(report);
     return computeCor2Score(cor2Input);
   }, [report]);
+
+  // Compute AI Visibility scores from audit findings
+  const aiVisibilityScores = useMemo(() => {
+    const passageFindings = allFindings.filter(f => f.ruleId.startsWith('PASSAGE_'));
+    const chunkingFindings = allFindings.filter(f => f.ruleId.startsWith('CHUNKING_'));
+
+    // Passage score: start at 100, deduct per finding (high=-15, medium=-8)
+    const passageDeduction = passageFindings.reduce((sum, f) => {
+      return sum + (f.severity === 'high' ? 15 : f.severity === 'critical' ? 20 : 8);
+    }, 0);
+    const passageScore = Math.max(0, 100 - passageDeduction);
+
+    // Chunking score: start at 100, deduct per finding
+    const chunkingDeduction = chunkingFindings.reduce((sum, f) => {
+      return sum + (f.severity === 'high' ? 15 : f.severity === 'critical' ? 20 : 8);
+    }, 0);
+    const chunkingScore = Math.max(0, 100 - chunkingDeduction);
+
+    // Entity explicitness and answer capsule scores are not yet wired to validators;
+    // default to 50 as baseline until dedicated validators produce findings
+    return {
+      passageScore,
+      chunkingScore,
+      entityExplicitness: 50,
+      answerCapsuleCompliance: 50,
+    };
+  }, [allFindings]);
 
   // Compute quick stats
   const criticalCount = allFindings.filter((f) => f.severity === 'critical').length;
@@ -170,6 +200,16 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
         </div>
       </section>
 
+      {/* === AI Visibility Score === */}
+      <section>
+        <AiVisibilityScoreCard
+          passageScore={aiVisibilityScores.passageScore}
+          chunkingScore={aiVisibilityScores.chunkingScore}
+          entityExplicitness={aiVisibilityScores.entityExplicitness}
+          answerCapsuleCompliance={aiVisibilityScores.answerCapsuleCompliance}
+        />
+      </section>
+
       {/* === Findings Section === */}
       <section>
         <h2 className="text-lg font-semibold text-orange-400 mb-4" data-testid="findings-heading">
@@ -219,6 +259,24 @@ export const UnifiedAuditDashboard: React.FC<UnifiedAuditDashboardProps> = ({
           </div>
         )}
       </section>
+
+      {/* === Semantic SEO Checklist === */}
+      <section>
+        <h2 className="text-lg font-semibold text-orange-400 mb-4">
+          Quick Reference
+        </h2>
+        <SemanticSeoChecklist />
+      </section>
+
+      {/* === Cross-Page EAV Consistency === */}
+      {report.crossPageEavIssues && report.crossPageEavIssues.length > 0 && (
+        <section data-testid="cross-page-eav-section">
+          <h2 className="text-lg font-semibold text-orange-400 mb-4">
+            Cross-Page EAV Consistency
+          </h2>
+          <CrossPageEavReport issues={report.crossPageEavIssues} />
+        </section>
+      )}
 
       {/* === Cannibalization Risks === */}
       {report.cannibalizationRisks.length > 0 && (

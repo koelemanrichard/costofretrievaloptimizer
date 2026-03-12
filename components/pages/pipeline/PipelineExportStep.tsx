@@ -833,6 +833,72 @@ const PipelineExportStep: React.FC = () => {
     [activeMap, briefs]
   );
 
+  // ──── Export topical map as XLSX ────
+
+  const handleExportTopicalMapXlsx = useCallback(async () => {
+    if (!activeMap) return;
+    try {
+      const { AuditReportExporter } = await import('../../../services/audit/AuditReportExporter');
+      const exporter = new AuditReportExporter();
+      const buffer = await exporter.exportTopicalMapXlsx({
+        topics: (activeMap.topics ?? []).map(t => ({
+          title: t.title,
+          type: t.type,
+          cluster: t.topic_class ?? undefined,
+          parent: t.parent_topic_id ?? undefined,
+        })),
+        pillars: activeMap.pillars,
+        eavs: (activeMap.eavs ?? []).map(e => ({
+          entity: e.subject?.label ?? '',
+          attribute: typeof e.predicate === 'string' ? e.predicate : (e.predicate as any)?.relation ?? '',
+          value: typeof e.object === 'string' ? e.object : String(e.object ?? ''),
+          category: e.category ?? undefined,
+          classification: e.classification ?? undefined,
+        })),
+      });
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `topical-map-${activeMap.name || 'export'}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(`XLSX export failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [activeMap]);
+
+  // ──── Export briefs as markdown ────
+
+  const handleExportBriefsMarkdown = useCallback(() => {
+    if (!activeMap) return;
+    try {
+      const { AuditReportExporter } = require('../../../services/audit/AuditReportExporter');
+      const exporter = new AuditReportExporter();
+      const allBriefsMd: string[] = [];
+      for (const [, brief] of Object.entries(briefs)) {
+        if (brief) {
+          const md = exporter.exportBriefMarkdown(brief);
+          allBriefsMd.push(md);
+        }
+      }
+      const content = allBriefsMd.join('\n\n---\n\n');
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `content-briefs-${activeMap.name || 'export'}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(`Brief export failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [activeMap, briefs]);
+
   // ──── Persist export checked items to analysis_state ────
 
   const persistedCheckedItems = (activeMap?.analysis_state as any)?.export_checked_items as string[] | undefined;
@@ -994,6 +1060,20 @@ const PipelineExportStep: React.FC = () => {
             format="ZIP"
             enabled={topics.length > 0}
             onDownload={exportResult ? handleDownloadZip : handleGeneratePackage}
+          />
+          <DownloadCard
+            name="Topical Map"
+            description="Hub-spoke structure, topics, EAV inventory"
+            format="XLSX"
+            enabled={topics.length > 0}
+            onDownload={handleExportTopicalMapXlsx}
+          />
+          <DownloadCard
+            name="Content Briefs"
+            description="Structured briefs with outlines and links"
+            format="MD"
+            enabled={briefCount > 0}
+            onDownload={handleExportBriefsMarkdown}
           />
         </div>
       </div>

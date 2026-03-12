@@ -111,6 +111,8 @@ export interface UnifiedAuditReport {
   fetchedContent?: FetchedContent;
   /** Complete rule inventory — every rule with its status */
   ruleInventory?: RuleInventoryItem[];
+  /** Cross-page EAV consistency issues (from CrossPageEavAuditor) */
+  crossPageEavIssues?: import('../audit/rules/CrossPageEavAuditor').CrossPageEavIssue[];
   language: string;
   version: number;
   createdAt: string;

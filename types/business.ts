@@ -265,6 +265,12 @@ export interface BusinessInfo {
 
   // Business conversion fields
   conversionGoal?: string; // Primary conversion goal (e.g., "sign up", "purchase", "contact")
+  conversionPath?: {
+    primaryAction?: string;                // "request quote", "buy online", "book demo"
+    salesCycleLength?: string;             // "immediate", "1-2 weeks", "1-3 months", "3+ months"
+    mainObjections?: string[];             // ["price", "trust", "complexity"]
+    infoNeededBeforeConversion?: string[]; // Info prospects need before converting
+  };
 
   dataforseoLogin?: string;
   dataforseoPassword?: string;
