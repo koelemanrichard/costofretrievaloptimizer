@@ -1851,6 +1851,25 @@ const PipelineMapStep: React.FC = () => {
     }
   }, [allTopics, state.activeMapId, dispatch, rebuildPageInventory, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey]);
 
+  // Re-check health without regenerating the map
+  const handleRecheckHealth = useCallback(() => {
+    const currentAll = [...coreTopics, ...outerTopics];
+    if (currentAll.length === 0) return;
+    const analysis = runPreAnalysis(
+      'map_planning',
+      { topics: currentAll, eavs: activeMap?.eavs ?? [], confirmedServices },
+      effectiveBusinessInfo
+    );
+    setMapQualityFindings(analysis.findings);
+    setMapHealthScore(analysis.healthScore);
+    setDismissedFindings(new Set());
+    setActionFeedback({
+      message: `Health re-checked: ${analysis.healthScore}% (${analysis.findings.length} findings)`,
+      type: analysis.healthScore >= 80 ? 'success' : 'info',
+    });
+    setTimeout(() => setActionFeedback(null), 6000);
+  }, [coreTopics, outerTopics, activeMap?.eavs, confirmedServices, effectiveBusinessInfo]);
+
   // Dismiss a finding and recalculate health score
   const handleDismissFinding = useCallback((findingIndex: number) => {
     setDismissedFindings(prev => {
@@ -2257,6 +2276,18 @@ const PipelineMapStep: React.FC = () => {
         />
       )}
 
+      {/* Check Health button — shown when map exists but no health score yet */}
+      {mapHealthScore === null && totalTopics > 0 && !isGenerating && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleRecheckHealth}
+            className="text-xs px-3 py-1.5 rounded border border-gray-600 text-gray-400 hover:text-gray-200 hover:border-gray-400 transition-colors"
+          >
+            Check Map Health
+          </button>
+        </div>
+      )}
+
       {/* Map Quality Gate — show critical findings that block advancement */}
       {mapHealthScore !== null && actionableFindings.length > 0 && (
         <div className={`border rounded-lg p-4 space-y-3 ${
@@ -2280,7 +2311,15 @@ const PipelineMapStep: React.FC = () => {
                 </span>
               )}
             </div>
-            <span className="text-xs text-gray-500">{actionableFindings.length} findings</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">{actionableFindings.length} findings</span>
+              <button
+                onClick={handleRecheckHealth}
+                className="text-[10px] px-2 py-0.5 rounded border border-gray-600 text-gray-400 hover:text-gray-200 hover:border-gray-400 transition-colors"
+              >
+                Re-check
+              </button>
+            </div>
           </div>
           <ActionableFindingsPanel findings={actionableFindings} />
         </div>
