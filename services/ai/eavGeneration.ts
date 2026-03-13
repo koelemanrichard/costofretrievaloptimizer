@@ -141,15 +141,31 @@ VALUE RULES — THIS IS CRITICAL:
 - IMPORTANT: At least 90% of triples must have populated values. Empty values are
   unacceptable for CE layer attributes.
 
+MINIMUM CATEGORY COUNTS — MANDATORY:
+- CE layer must have at least 8 ROOT, 6 UNIQUE, and 4 RARE triples
+- Do NOT generate all triples as the same category
+- If you cannot think of enough RARE attributes, include: failure causes, maintenance intervals,
+  regulatory requirements, assembly details, lifespan data, degradation factors
+
+ONE-SHOT EXAMPLE (for a "heat pump" entity):
+[
+  {"entity":"heat pump","attribute":"is_a","value":"warmtepomp voor verwarming en koeling","category":"ROOT","classification":"TYPE","confidence":0.9,"layer":"ce"},
+  {"entity":"heat pump","attribute":"has_types","value":"lucht-water, water-water, hybride","category":"ROOT","classification":"TYPE","confidence":0.9,"layer":"ce"},
+  {"entity":"heat pump","attribute":"costs_per_m2","value":"€50-€150 per m²","category":"ROOT","classification":"SPECIFICATION","confidence":0.8,"layer":"ce"},
+  {"entity":"heat pump","attribute":"has_cop_rating","value":"3.0-5.0 afhankelijk van type","category":"UNIQUE","classification":"SPECIFICATION","confidence":0.9,"layer":"ce"},
+  {"entity":"heat pump","attribute":"failure_cause","value":"koudemiddellekkage, compressordefect","category":"RARE","classification":"RISK","confidence":0.8,"layer":"ce"},
+  {"entity":"heat pump","attribute":"maintenance_interval","value":"jaarlijkse inspectie verplicht","category":"RARE","classification":"PROCESS","confidence":0.85,"layer":"ce"}
+]
+
 Return JSON:
 {
   "eavs": [
     {
-      "entity": "the entity name",
-      "attribute": "snake_case_predicate",
-      "value": "specific populated value or clipboard emoji",
-      "category": "ROOT|UNIQUE|RARE|COMMON",
-      "classification": "TYPE|COMPONENT|BENEFIT|RISK|PROCESS|SPECIFICATION",
+      "entity": "the entity name (REQUIRED)",
+      "attribute": "snake_case_predicate (REQUIRED)",
+      "value": "specific populated value or clipboard emoji (REQUIRED - NEVER empty)",
+      "category": "ROOT|UNIQUE|RARE|COMMON (REQUIRED - assign for every triple)",
+      "classification": "TYPE|COMPONENT|BENEFIT|RISK|PROCESS|SPECIFICATION (REQUIRED)",
       "confidence": 0.85,
       "layer": "ce|sc"
     }
@@ -318,6 +334,122 @@ Return JSON:
   }
 }
 
+// ── Category Rebalancing ──
+
+/**
+ * Post-generation pass: if any required category is under minimum count,
+ * make a targeted AI call to generate specifically the missing categories.
+ */
+async function rebalanceCategories(
+  eavs: SemanticTriple[],
+  businessInfo: BusinessInfo,
+  ctx: EavGenerationContext,
+  dispatch: React.Dispatch<AppAction>
+): Promise<SemanticTriple[]> {
+  // Count categories
+  const counts: Record<string, number> = { ROOT: 0, UNIQUE: 0, RARE: 0, COMMON: 0 };
+  for (const eav of eavs) {
+    const cat = eav.predicate?.category;
+    if (cat && cat in counts) counts[cat]++;
+  }
+
+  const MINIMUMS = { ROOT: 3, UNIQUE: 2, RARE: 2 };
+  const needed: Array<{ category: string; count: number }> = [];
+
+  for (const [cat, min] of Object.entries(MINIMUMS)) {
+    if (counts[cat] < min) {
+      needed.push({ category: cat, count: min - counts[cat] });
+    }
+  }
+
+  if (needed.length === 0) return eavs;
+
+  const languageInstruction = getLanguageAndRegionInstruction(businessInfo.language, businessInfo.region);
+  const languageName = getLanguageName(businessInfo.language);
+
+  const neededDesc = needed.map(n => `${n.count} ${n.category}`).join(', ');
+  const existingPredicates = eavs.map(e => e.predicate?.relation || e.attribute).filter(Boolean).join(', ');
+
+  const rebalancePrompt = `${languageInstruction}
+
+You are generating additional EAV (Entity-Attribute-Value) triples for "${ctx.pillars.centralEntity}".
+Industry: ${businessInfo.industry || 'not specified'}
+
+The current set is missing these categories: ${neededDesc}.
+Do NOT duplicate these existing predicates: ${existingPredicates}
+
+Generate EXACTLY the missing triples with POPULATED values in ${languageName}.
+
+Category guidelines:
+- ROOT: Core identity facts (definition, function, types, common problems, applications)
+- UNIQUE: Differentiating attributes (costs, specifications, variants, technical details)
+- RARE: Expert-level details (failure causes, maintenance intervals, regulatory requirements, assembly, lifespan, degradation)
+
+Return JSON:
+{
+  "eavs": [
+    {
+      "entity": "entity name",
+      "attribute": "snake_case_predicate",
+      "value": "concrete value",
+      "category": "ROOT|UNIQUE|RARE",
+      "classification": "TYPE|COMPONENT|BENEFIT|RISK|PROCESS|SPECIFICATION",
+      "confidence": 0.7,
+      "layer": "ce"
+    }
+  ]
+}`;
+
+  const fallback = { eavs: [] as any[] };
+
+  try {
+    const raw = await dispatchToProvider<any>(businessInfo, {
+      gemini: () => geminiService.generateJson(rebalancePrompt, businessInfo, dispatch, fallback),
+      openai: () => openAiService.generateJson(rebalancePrompt, businessInfo, dispatch, fallback),
+      anthropic: () => anthropicService.generateJson(rebalancePrompt, businessInfo, dispatch, fallback),
+      perplexity: () => perplexityService.generateJson(rebalancePrompt, businessInfo, dispatch, fallback),
+      openrouter: () => openRouterService.generateJson(rebalancePrompt, businessInfo, dispatch, fallback),
+    });
+
+    const newEavs = Array.isArray(raw?.eavs) ? raw.eavs : [];
+    if (newEavs.length === 0) return eavs;
+
+    const startIdx = eavs.length;
+    const additionalTriples: SemanticTriple[] = newEavs
+      .filter((e: any) => e?.entity && e?.attribute && e?.value)
+      .map((e: any, i: number) => {
+        const category = ['ROOT', 'UNIQUE', 'RARE', 'COMMON'].includes(e.category) ? e.category : undefined;
+        const classification = ['TYPE', 'COMPONENT', 'BENEFIT', 'RISK', 'PROCESS', 'SPECIFICATION'].includes(e.classification) ? e.classification : undefined;
+        return {
+          id: `eav-ce-rebal-${startIdx + i}`,
+          subject: { label: e.entity || ctx.pillars.centralEntity, type: 'Entity' as const },
+          predicate: {
+            relation: e.attribute,
+            type: 'Property' as const,
+            ...(category ? { category } : {}),
+            ...(classification ? { classification } : {}),
+          },
+          object: { value: String(e.value), type: 'Value' as const },
+          confidence: typeof e.confidence === 'number' ? e.confidence : 0.7,
+          source: 'ai',
+          context: 'needs_confirmation',
+          entity: e.entity || ctx.pillars.centralEntity,
+          attribute: e.attribute,
+          value: String(e.value),
+          category,
+          classification,
+        } as SemanticTriple;
+      });
+
+    const merged = [...eavs, ...autoClassifyEavs(additionalTriples)];
+    console.info(`[eavGeneration] Rebalance: added ${additionalTriples.length} triples for missing categories: ${neededDesc}`);
+    return merged;
+  } catch (err) {
+    console.warn('[eavGeneration] Rebalance failed (non-fatal):', err);
+    return eavs;
+  }
+}
+
 // ── Main Export ──
 
 /**
@@ -361,6 +493,9 @@ export async function generateEavsWithAI(
     result = generateFallbackEavs(businessInfo, ctx.pillars.centralEntity);
   }
 
+  // Rebalance pass: ensure minimum category distribution
+  result.eavs = await rebalanceCategories(result.eavs, businessInfo, ctx, dispatch);
+
   // Auto-fill pass: populate any remaining empty values
   const emptyCount = result.eavs.filter(e => {
     const v = e.object?.value ?? e.value;
@@ -383,15 +518,16 @@ function generateFallbackEavs(
 ): EavGenerationResult {
   const industryType = detectIndustryType(businessInfo);
   const suggestions = getPredicateSuggestions(industryType);
-  const highAndMedium = suggestions.filter(s => s.priority === 'high' || s.priority === 'medium');
-  const templates = highAndMedium.map((s, i) => {
+  // Include ALL priority levels to get RARE predicates (not just high+medium)
+  const templates = suggestions.map((s, i) => {
     const template = generateEavTemplate(s, centralEntity);
     return {
       id: `eav-${i}`,
       ...template,
       subject: template.subject ?? { label: centralEntity, type: 'Entity' as const },
       predicate: template.predicate ?? { relation: '', type: 'Property' as const, category: 'COMMON' as const },
-      object: template.object ?? { value: '', type: 'Value' as const },
+      // Use exampleValue from suggestion instead of empty string
+      object: { value: s.exampleValue || '', type: 'Value' as const },
       source: 'ai',
       confidence: 0.5,
     } as SemanticTriple;

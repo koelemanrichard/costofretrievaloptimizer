@@ -21,6 +21,17 @@ const PREDICATE_CATEGORY_HINTS: Record<string, { category: AttributeCategory; cl
   'founded_in': { category: 'ROOT', classification: 'SPECIFICATION' },
   'has_price': { category: 'ROOT', classification: 'SPECIFICATION' },
   'costs': { category: 'ROOT', classification: 'SPECIFICATION' },
+  'has_type': { category: 'ROOT', classification: 'TYPE' },
+  'has_definition': { category: 'ROOT', classification: 'TYPE' },
+  'description': { category: 'ROOT', classification: 'TYPE' },
+  'function': { category: 'ROOT', classification: 'TYPE' },
+  'purpose': { category: 'ROOT', classification: 'TYPE' },
+  'used_for': { category: 'ROOT', classification: 'TYPE' },
+  'consists_of': { category: 'ROOT', classification: 'COMPONENT' },
+  'serves_area': { category: 'ROOT', classification: 'SPECIFICATION' },
+  'has_hours': { category: 'ROOT', classification: 'SPECIFICATION' },
+  'operates_in': { category: 'ROOT', classification: 'SPECIFICATION' },
+  'offers_service': { category: 'ROOT', classification: 'COMPONENT' },
 
   // UNIQUE predicates - differentiators
   'has_feature': { category: 'UNIQUE', classification: 'COMPONENT' },
@@ -69,6 +80,14 @@ const PREDICATE_CATEGORY_HINTS: Record<string, { category: AttributeCategory; cl
   'warning': { category: 'RARE', classification: 'RISK' },
   'side_effect': { category: 'RARE', classification: 'RISK' },
   'contraindication': { category: 'RARE', classification: 'RISK' },
+
+  // Additional RARE predicates - technical/expert details
+  'failure_cause': { category: 'RARE', classification: 'RISK' },
+  'maintenance_interval': { category: 'RARE', classification: 'PROCESS' },
+  'regulatory': { category: 'RARE', classification: 'SPECIFICATION' },
+  'assembly': { category: 'RARE', classification: 'PROCESS' },
+  'lifespan': { category: 'RARE', classification: 'SPECIFICATION' },
+  'degradation': { category: 'RARE', classification: 'RISK' },
 };
 
 /**
@@ -98,31 +117,14 @@ export const classifyPredicate = (relation: string): { category: AttributeCatego
   // Keyword-based classification
   const lower = normalized;
 
-  // BENEFIT indicators
-  if (lower.includes('benefit') || lower.includes('advantage') || lower.includes('improve') ||
-      lower.includes('help') || lower.includes('save') || lower.includes('reduce')) {
-    return { category: 'UNIQUE', classification: 'BENEFIT' };
+  // ROOT identity/definition indicators (check BEFORE COMPONENT to avoid UNIQUE bias)
+  if (lower.includes('defines') || lower.includes('identifies') || lower.includes('characterizes') ||
+      lower.includes('purpose') || lower.includes('function') || lower.includes('description') ||
+      lower.includes('used_for') || lower.includes('consists')) {
+    return { category: 'ROOT', classification: 'TYPE' };
   }
 
-  // RISK indicators
-  if (lower.includes('risk') || lower.includes('warn') || lower.includes('limit') ||
-      lower.includes('challenge') || lower.includes('issue') || lower.includes('problem')) {
-    return { category: 'RARE', classification: 'RISK' };
-  }
-
-  // PROCESS indicators
-  if (lower.includes('process') || lower.includes('method') || lower.includes('step') ||
-      lower.includes('how') || lower.includes('procedure') || lower.includes('workflow')) {
-    return { category: 'RARE', classification: 'PROCESS' };
-  }
-
-  // COMPONENT indicators
-  if (lower.includes('component') || lower.includes('part') || lower.includes('include') ||
-      lower.includes('contain') || lower.includes('feature') || lower.includes('element')) {
-    return { category: 'UNIQUE', classification: 'COMPONENT' };
-  }
-
-  // SPECIFICATION indicators
+  // SPECIFICATION indicators (check before COMPONENT — price/cost/size are ROOT, not UNIQUE)
   if (lower.includes('spec') || lower.includes('require') || lower.includes('size') ||
       lower.includes('weight') || lower.includes('dimension') || lower.includes('version') ||
       lower.includes('date') || lower.includes('price') || lower.includes('cost')) {
@@ -133,6 +135,37 @@ export const classifyPredicate = (relation: string): { category: AttributeCatego
   if (lower.includes('is_') || lower.includes('type') || lower.includes('kind') ||
       lower.includes('category') || lower.includes('class')) {
     return { category: 'ROOT', classification: 'TYPE' };
+  }
+
+  // BENEFIT indicators
+  if (lower.includes('benefit') || lower.includes('advantage') || lower.includes('improve') ||
+      lower.includes('help') || lower.includes('save') || lower.includes('reduce')) {
+    return { category: 'UNIQUE', classification: 'BENEFIT' };
+  }
+
+  // RISK indicators
+  if (lower.includes('risk') || lower.includes('warn') || lower.includes('limit') ||
+      lower.includes('challenge') || lower.includes('issue') || lower.includes('problem') ||
+      lower.includes('failure') || lower.includes('degradation')) {
+    return { category: 'RARE', classification: 'RISK' };
+  }
+
+  // PROCESS indicators
+  if (lower.includes('process') || lower.includes('method') || lower.includes('step') ||
+      lower.includes('how') || lower.includes('procedure') || lower.includes('workflow') ||
+      lower.includes('maintenance') || lower.includes('assembly')) {
+    return { category: 'RARE', classification: 'PROCESS' };
+  }
+
+  // COMPONENT indicators (narrowed — "feature" alone no longer triggers UNIQUE)
+  if (lower.includes('component') || lower.includes('part') || lower.includes('include') ||
+      lower.includes('contain') || lower.includes('element')) {
+    return { category: 'UNIQUE', classification: 'COMPONENT' };
+  }
+
+  // Feature as standalone keyword → UNIQUE only if no better match above
+  if (lower.includes('feature')) {
+    return { category: 'UNIQUE', classification: 'COMPONENT' };
   }
 
   // Default to COMMON/TYPE for unknown predicates

@@ -62,11 +62,11 @@ export const CATEGORY_COLORS: Record<AttributeCategory | 'UNCATEGORIZED', string
   UNCATEGORIZED: '#9ca3af'   // Light gray
 };
 
-// Expected minimum counts for good coverage
+// Expected minimum counts for good coverage (aligned with prompt targets of 20-30 CE triples)
 const EXPECTED_COUNTS = {
-  ROOT: 3,      // At least 3 ROOT/CORE_DEFINITION attributes
-  UNIQUE: 2,    // At least 2 UNIQUE/COMPETITIVE_EXPANSION attributes
-  RARE: 2,      // At least 2 RARE/SEARCH_DEMAND attributes
+  ROOT: 6,      // ~30% of minimum 20 CE triples
+  UNIQUE: 5,    // ~25% of minimum 20 CE triples
+  RARE: 4,      // ~20% of minimum 20 CE triples
   COMMON: 0     // No minimum for COMMON
 };
 
