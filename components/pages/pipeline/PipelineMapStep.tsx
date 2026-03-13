@@ -1244,6 +1244,7 @@ const PipelineMapStep: React.FC = () => {
   const [generatedCore, setGeneratedCore] = useState<EnrichedTopic[]>([]);
   const [generatedOuter, setGeneratedOuter] = useState<EnrichedTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [mapQualityFindings, setMapQualityFindings] = useState<PreAnalysisFinding[]>([]);
   const [mapHealthScore, setMapHealthScore] = useState<number | null>(null);
   const [dismissedFindings, setDismissedFindings] = useState<Set<number>>(new Set());
@@ -1637,6 +1638,9 @@ const PipelineMapStep: React.FC = () => {
   }, [state.activeMapId, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch]);
 
   const handleDialogueDataExtracted = useCallback(async (data: ExtractedData) => {
+    const changes: string[] = [];
+    const currentAll = [...coreTopics, ...outerTopics];
+
     // Apply topic decisions from dialogue answers
     if (data.topicDecisions && state.activeMapId) {
       const decisions = data.topicDecisions as Record<string, any>;
@@ -1647,24 +1651,22 @@ const PipelineMapStep: React.FC = () => {
           const pillars = activeMap?.pillars;
           const eavs = activeMap?.eavs ?? [];
           if (pillars) {
-            const allTopics = [...coreTopics, ...outerTopics];
             const { hub, spokes } = await generateSingleCluster(
               decisions.add_cluster.service,
               effectiveBusinessInfo,
               pillars,
               eavs,
-              allTopics,
+              currentAll,
               dispatch
             );
-            // Merge into state
+            // Update local + persisted state
             setGeneratedCore(prev => [...prev, hub]);
             setGeneratedOuter(prev => [...prev, ...spokes]);
-            if (state.activeMapId) {
-              dispatch({
-                type: 'SET_TOPICS_FOR_MAP',
-                payload: { mapId: state.activeMapId, topics: [...allTopics, hub, ...spokes] },
-              });
-            }
+            dispatch({
+              type: 'SET_TOPICS_FOR_MAP',
+              payload: { mapId: state.activeMapId, topics: [...currentAll, hub, ...spokes] },
+            });
+            changes.push(`Added hub "${hub.title}" with ${spokes.length} spokes`);
           }
         } catch (err) {
           console.warn('[PipelineMap] Cluster generation failed:', err);
@@ -1674,29 +1676,32 @@ const PipelineMapStep: React.FC = () => {
       // Handle remove_topic
       if (decisions.remove_topic?.topicId) {
         const removeId = decisions.remove_topic.topicId;
+        const removed = currentAll.find(t => t.id === removeId);
         setGeneratedCore(prev => prev.filter(t => t.id !== removeId));
         setGeneratedOuter(prev => prev.filter(t => t.id !== removeId && t.parent_topic_id !== removeId));
-        // Persist deletion to topics table
+        dispatch({ type: 'DELETE_TOPIC', payload: { mapId: state.activeMapId, topicId: removeId } });
         try {
           const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
-          // Delete the topic and its children (outer topics referencing it)
-          const { error: childErr } = await supabase.from('topics').delete().eq('parent_topic_id', removeId);
-          if (childErr) console.warn(`[PipelineMap] Child topic delete failed: ${childErr.message}`);
-          const { error } = await supabase.from('topics').delete().eq('id', removeId);
-          if (error) console.warn(`[PipelineMap] Topic delete failed: ${error.message}`);
-        } catch (err) {
-          console.warn('[PipelineMap] Topic delete error:', err);
-        }
+          await supabase.from('topics').delete().eq('parent_topic_id', removeId);
+          await supabase.from('topics').delete().eq('id', removeId);
+        } catch { /* non-fatal */ }
+        if (removed) changes.push(`Removed topic "${removed.title}"`);
       }
 
       // Handle rename_topic
       if (decisions.rename_topic?.topicId && decisions.rename_topic?.newTitle) {
         const { topicId, newTitle } = decisions.rename_topic;
+        const oldTopic = currentAll.find(t => t.id === topicId);
         const updateTitle = (topics: EnrichedTopic[]) =>
           topics.map(t => t.id === topicId ? { ...t, title: newTitle } : t);
         setGeneratedCore(updateTitle);
         setGeneratedOuter(updateTitle);
-        // Persist rename to topics table
+
+        // Update persisted state
+        const updatedAll = currentAll.map(t => t.id === topicId ? { ...t, title: newTitle } : t);
+        dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: state.activeMapId, topics: updatedAll } });
+
+        // Persist rename to DB
         try {
           const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
           const { error } = await supabase.from('topics').update({ title: newTitle }).eq('id', topicId);
@@ -1704,7 +1709,14 @@ const PipelineMapStep: React.FC = () => {
         } catch (err) {
           console.warn('[PipelineMap] Topic rename error:', err);
         }
+        changes.push(`Renamed "${oldTopic?.title || topicId}" → "${newTitle}"`);
       }
+    }
+
+    // Show feedback about what changed
+    if (changes.length > 0) {
+      setActionFeedback({ message: changes.join(' | '), type: 'success' });
+      setTimeout(() => setActionFeedback(null), 8000);
     }
 
     // Update questionsAnswered (uses functional updater to avoid stale closure)
@@ -1876,12 +1888,15 @@ const PipelineMapStep: React.FC = () => {
     const items = finding.affectedItems || [];
     if (items.length < 2) return;
     const removeId = items[1];
+    const keepTarget = allTopics.find(t => t.id === items[0] || t.title === items[0]);
     const removeTarget = allTopics.find(t => t.id === removeId || t.title === removeId);
     if (removeTarget) {
       removeTopic(removeTarget.id);
       // Dismiss this finding and recalculate health
       const findingIdx = (mapQualityFindings || []).findIndex(f => f === finding);
       if (findingIdx >= 0) handleDismissFinding(findingIdx);
+      setActionFeedback({ message: `Merged: kept "${keepTarget?.title || items[0]}", removed "${removeTarget.title}"`, type: 'success' });
+      setTimeout(() => setActionFeedback(null), 6000);
     }
   }, [allTopics, removeTopic, mapQualityFindings, handleDismissFinding]);
 
@@ -1903,36 +1918,86 @@ const PipelineMapStep: React.FC = () => {
       // Dismiss this finding and recalculate health
       const findingIdx = (mapQualityFindings || []).findIndex(f => f === finding);
       if (findingIdx >= 0) handleDismissFinding(findingIdx);
+      setActionFeedback({ message: `Removed "${target.title}" from the map`, type: 'success' });
+      setTimeout(() => setActionFeedback(null), 6000);
     }
   }, [allTopics, removeTopic, mapQualityFindings, handleDismissFinding]);
 
-  // Add hub topics for uncovered business services
-  const handleAddServiceHubs = useCallback((finding: PreAnalysisFinding) => {
+  // Add hub topics for uncovered business services (with spokes via AI)
+  const handleAddServiceHubs = useCallback(async (finding: PreAnalysisFinding) => {
     const services = finding.affectedItems || [];
     if (services.length === 0 || !state.activeMapId) return;
 
-    const newTopics: EnrichedTopic[] = services.map((serviceName, i) => ({
-      id: `hub-service-${Date.now()}-${i}`,
-      title: serviceName,
-      type: 'core' as const,
-      description: `Hub topic for business service: ${serviceName}`,
-      parent_topic_id: null,
-      topic_class: 'monetization' as const,
-      cluster_role: 'pillar' as const,
-      page_decision: 'standalone_page' as const,
-    } as EnrichedTopic));
+    const pillars = activeMap?.pillars;
+    const eavs = activeMap?.eavs ?? [];
 
-    // Add to local state
-    setGeneratedCore(prev => [...prev, ...newTopics]);
+    // If we have pillars, generate proper hub+spokes via AI (not just placeholder topics)
+    if (pillars) {
+      setActionFeedback({ message: `Generating hub topics for: ${services.join(', ')}...`, type: 'info' });
+      let addedTopics: EnrichedTopic[] = [];
+      for (const serviceName of services) {
+        try {
+          const currentAll = [...allTopics, ...addedTopics];
+          const { hub, spokes } = await generateSingleCluster(
+            serviceName,
+            effectiveBusinessInfo,
+            pillars,
+            eavs,
+            currentAll,
+            dispatch
+          );
+          addedTopics = [...addedTopics, hub, ...spokes];
+        } catch (err) {
+          console.warn(`[PipelineMap] Cluster generation for "${serviceName}" failed:`, err);
+          // Fallback: add plain hub topic
+          addedTopics.push({
+            id: `hub-service-${Date.now()}-${services.indexOf(serviceName)}`,
+            title: serviceName,
+            type: 'core' as const,
+            description: `Hub topic for business service: ${serviceName}`,
+            parent_topic_id: null,
+            topic_class: 'monetization' as const,
+            cluster_role: 'pillar' as const,
+            page_decision: 'standalone_page' as const,
+          } as EnrichedTopic);
+        }
+      }
 
-    // Add to persisted state
-    const updatedAll = [...allTopics, ...newTopics];
-    dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: state.activeMapId, topics: updatedAll } });
+      // Update state
+      const newCore = addedTopics.filter(t => t.type === 'core' || t.cluster_role === 'pillar');
+      const newOuter = addedTopics.filter(t => t.type === 'outer' || (t.type !== 'core' && t.cluster_role !== 'pillar'));
+      setGeneratedCore(prev => [...prev, ...newCore]);
+      setGeneratedOuter(prev => [...prev, ...newOuter]);
+      const updatedAll = [...allTopics, ...addedTopics];
+      dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: state.activeMapId, topics: updatedAll } });
+
+      setActionFeedback({ message: `Added ${addedTopics.length} topics for ${services.join(', ')}`, type: 'success' });
+      setTimeout(() => setActionFeedback(null), 6000);
+    } else {
+      // Fallback: plain hub topics without AI
+      const newTopics: EnrichedTopic[] = services.map((serviceName, i) => ({
+        id: `hub-service-${Date.now()}-${i}`,
+        title: serviceName,
+        type: 'core' as const,
+        description: `Hub topic for business service: ${serviceName}`,
+        parent_topic_id: null,
+        topic_class: 'monetization' as const,
+        cluster_role: 'pillar' as const,
+        page_decision: 'standalone_page' as const,
+      } as EnrichedTopic));
+
+      setGeneratedCore(prev => [...prev, ...newTopics]);
+      const updatedAll = [...allTopics, ...newTopics];
+      dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: state.activeMapId, topics: updatedAll } });
+
+      setActionFeedback({ message: `Added ${newTopics.length} hub topics for ${services.join(', ')}`, type: 'success' });
+      setTimeout(() => setActionFeedback(null), 6000);
+    }
 
     // Dismiss finding and recalculate
     const findingIdx = (mapQualityFindings || []).findIndex(f => f === finding);
     if (findingIdx >= 0) handleDismissFinding(findingIdx);
-  }, [allTopics, state.activeMapId, dispatch, mapQualityFindings, handleDismissFinding]);
+  }, [allTopics, state.activeMapId, activeMap?.pillars, activeMap?.eavs, effectiveBusinessInfo, dispatch, mapQualityFindings, handleDismissFinding]);
 
   // Convert pre-analysis findings to actionable findings format
   const actionableFindings: ActionableFinding[] = useMemo(() => {
@@ -2005,6 +2070,25 @@ const PipelineMapStep: React.FC = () => {
       )}
 
       {/* Error */}
+      {/* Action feedback toast */}
+      {actionFeedback && (
+        <div className={`border rounded-lg p-3 flex items-center gap-2 ${
+          actionFeedback.type === 'success'
+            ? 'bg-green-900/20 border-green-700'
+            : 'bg-blue-900/20 border-blue-700'
+        }`}>
+          <svg className={`w-4 h-4 flex-shrink-0 ${actionFeedback.type === 'success' ? 'text-green-400' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            {actionFeedback.type === 'success'
+              ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              : <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            }
+          </svg>
+          <p className={`text-sm ${actionFeedback.type === 'success' ? 'text-green-300' : 'text-blue-300'}`}>
+            {actionFeedback.message}
+          </p>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
           <p className="text-sm text-red-300">{error}</p>
