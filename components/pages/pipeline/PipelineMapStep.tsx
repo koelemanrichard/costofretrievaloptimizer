@@ -14,7 +14,7 @@ import { createEmptyDialogueContext, ensureValidDialogueContext } from '../../..
 import { getSupabaseClient } from '../../../services/supabaseClient';
 import { verifiedBulkInsert } from '../../../services/verifiedDatabaseService';
 import { v4 as uuidv4 } from 'uuid';
-import { slugify, cleanSlug } from '../../../utils/helpers';
+import { slugify, cleanSlug, mergeMapBusinessInfo } from '../../../utils/helpers';
 import { runPreAnalysis, calculateHealthScore, type PreAnalysisFinding } from '../../../services/ai/dialoguePreAnalysis';
 import { PageInventoryView } from '../../pipeline/PageInventoryView';
 import { ActionableFindingsPanel, type ActionableFinding, type FindingAction } from '../../pipeline/ActionableFindingsPanel';
@@ -1228,7 +1228,7 @@ const PipelineMapStep: React.FC = () => {
   // Merge per-map business_info overrides with global state (per-map takes precedence)
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   const stepState = getStepState('map_planning');
@@ -1638,36 +1638,75 @@ const PipelineMapStep: React.FC = () => {
     }
   }, [state.activeMapId, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, dispatch]);
 
-  // Helper: persist newly added topics to the DB topics table
+  // Helper: persist newly added topics to the DB topics table.
+  // Converts temp_xxx IDs to proper UUIDs and updates local + Redux state with the new IDs.
   const persistNewTopics = useCallback(async (newTopics: EnrichedTopic[]) => {
     if (!state.activeMapId || !state.user?.id || newTopics.length === 0) return;
     try {
       const supabase = getSupabaseClient(effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey);
-      const dbTopics = newTopics.map(t => ({
-        id: t.id,
-        map_id: state.activeMapId,
-        user_id: state.user!.id,
-        parent_topic_id: t.parent_topic_id,
-        title: t.title,
-        slug: t.slug || slugify(t.title),
-        description: t.description,
-        type: t.type,
-        freshness: t.freshness || 'STANDARD',
-        metadata: {
-          topic_class: t.topic_class || (t.type === 'core' ? 'monetization' : 'informational'),
-          cluster_role: t.cluster_role,
-          attribute_focus: t.attribute_focus,
-          canonical_query: t.canonical_query,
-          rationale: (t.metadata as any)?.rationale || '',
-          service_alignment: (t.metadata as any)?.service_alignment || '',
-        },
-      }));
+
+      // Build a map from temp IDs to real UUIDs
+      const idMap = new Map<string, string>();
+      for (const t of newTopics) {
+        if (t.id.startsWith('temp_') || t.id.startsWith('hub-service-')) {
+          idMap.set(t.id, uuidv4());
+        }
+      }
+
+      const dbTopics = newTopics.map(t => {
+        const realId = idMap.get(t.id) || t.id;
+        const realParent = t.parent_topic_id ? (idMap.get(t.parent_topic_id) || t.parent_topic_id) : null;
+        return {
+          id: realId,
+          map_id: state.activeMapId,
+          user_id: state.user!.id,
+          parent_topic_id: realParent,
+          title: t.title,
+          slug: t.slug || slugify(t.title),
+          description: t.description,
+          type: t.type,
+          freshness: t.freshness || 'STANDARD',
+          metadata: {
+            topic_class: t.topic_class || (t.type === 'core' ? 'monetization' : 'informational'),
+            cluster_role: t.cluster_role,
+            attribute_focus: t.attribute_focus,
+            canonical_query: t.canonical_query,
+            rationale: (t.metadata as any)?.rationale || '',
+            service_alignment: (t.metadata as any)?.service_alignment || '',
+          },
+        };
+      });
       const { error } = await supabase.from('topics').insert(dbTopics);
-      if (error) console.warn(`[PipelineMap] persistNewTopics failed: ${error.message}`);
+      if (error) {
+        console.warn(`[PipelineMap] persistNewTopics failed: ${error.message}`);
+        return;
+      }
+
+      // Update local state and Redux with the real UUIDs
+      if (idMap.size > 0) {
+        const remapIds = (topics: EnrichedTopic[]) =>
+          topics.map(t => {
+            const newId = idMap.get(t.id);
+            const newParent = t.parent_topic_id ? idMap.get(t.parent_topic_id) : undefined;
+            if (!newId && !newParent) return t;
+            return {
+              ...t,
+              id: newId || t.id,
+              parent_topic_id: newParent || t.parent_topic_id,
+            };
+          });
+        setGeneratedCore(remapIds);
+        setGeneratedOuter(remapIds);
+
+        // Update Redux with remapped IDs
+        const allCurrent = [...coreTopics, ...outerTopics];
+        const remapped = remapIds(allCurrent);
+        dispatch({ type: 'SET_TOPICS_FOR_MAP', payload: { mapId: state.activeMapId!, topics: remapped } });
+      }
     } catch (err) {
       console.warn('[PipelineMap] persistNewTopics error:', err);
     }
-  }, [state.activeMapId, state.user?.id, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey]);
+  }, [state.activeMapId, state.user?.id, effectiveBusinessInfo.supabaseUrl, effectiveBusinessInfo.supabaseAnonKey, coreTopics, outerTopics, dispatch]);
 
   const handleDialogueDataExtracted = useCallback(async (data: ExtractedData) => {
     const changes: string[] = [];

@@ -8,6 +8,7 @@ import { reviewBriefQuality } from '../../../services/ai/briefQualityReview';
 import { improveBrief } from '../../../services/ai/briefImprover';
 import { validateCrossWaveLinks, type CrossWaveLinkReport } from '../../../services/ai/crossWaveLinkValidator';
 import { KnowledgeGraph } from '../../../lib/knowledgeGraph';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 import type { EnrichedTopic, ContentBrief } from '../../../types';
 import type { Wave } from '../../../types/wave';
 import type { ActionPlanEntry, BriefQualityReport } from '../../../types/actionPlan';
@@ -38,7 +39,7 @@ const PipelineBriefsStep: React.FC = () => {
   // Merge per-map business_info overrides with global state
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   const stepState = getStepState('briefs');

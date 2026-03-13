@@ -11,6 +11,7 @@ import {
 } from '../../../services/ai/contentGeneration';
 // Pass 9 (audit) is aliased as executePass9 in the barrel but the underlying function signature is from pass8Audit
 import type { EnrichedTopic } from '../../../types';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 
 // ──── Metric Card ────
 
@@ -507,7 +508,7 @@ const PipelineContentStep: React.FC = () => {
   // Merge per-map business_info overrides with global state (per-map takes precedence)
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   // Action Plan for wave-aware topic assignment

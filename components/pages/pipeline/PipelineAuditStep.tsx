@@ -8,6 +8,7 @@ import { ContentFetcher } from '../../../services/audit/ContentFetcher';
 import type { AuditRequest, AuditPhaseName, UnifiedAuditReport } from '../../../services/audit/types';
 import { getSupabaseClient } from '../../../services/supabaseClient';
 import { StrategicFoundationPhase } from '../../../services/audit/phases/StrategicFoundationPhase';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 import { EavSystemPhase } from '../../../services/audit/phases/EavSystemPhase';
 import { ContentQualityPhase } from '../../../services/audit/phases/ContentQualityPhase';
 import { InformationDensityPhase } from '../../../services/audit/phases/InformationDensityPhase';
@@ -662,7 +663,7 @@ const PipelineAuditStep: React.FC = () => {
   // Merge per-map business_info overrides with global state (per-map takes precedence)
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   // A1: Handler to standardize duplicate EAV values to canonical form

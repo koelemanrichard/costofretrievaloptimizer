@@ -8,6 +8,7 @@ import {
   type TechSpecDeliverable,
   type TechSpecResult,
 } from '../../../services/techSpecGenerationService';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 import type { EnrichedTopic, ContentBrief } from '../../../types';
 
 // ──── Icon Components ────
@@ -333,7 +334,7 @@ const PipelineTechSpecStep: React.FC = () => {
   // Merge per-map business_info overrides with global state
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [activeMap?.business_info, state.businessInfo]);
 
   // Load persisted tech spec result from analysis_state on mount

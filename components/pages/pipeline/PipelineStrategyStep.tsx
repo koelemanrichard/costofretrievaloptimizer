@@ -8,6 +8,7 @@ import { getSupabaseClient } from '../../../services/supabaseClient';
 import { suggestPillarsFromBusinessInfo } from '../../../services/ai/pillarSuggestion';
 import { detectCascadeImpact, createEmptyDialogueContext, ensureValidDialogueContext } from '../../../services/ai/dialogueEngine';
 import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 
 // ──── Tag Input (for CSI predicates) ────
 
@@ -512,7 +513,7 @@ const PipelineStrategyStep: React.FC = () => {
   // Use per-map business_info merged with global state (per-map takes precedence)
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   const stepState = getStepState('strategy');

@@ -1,6 +1,32 @@
 
 // FIX: Corrected import path for 'types' to be relative, fixing module resolution error.
-import { EnrichedTopic, ContentBrief, DashboardMetrics, KnowledgeGraph } from '../types';
+import { EnrichedTopic, ContentBrief, DashboardMetrics, KnowledgeGraph, BusinessInfo } from '../types';
+
+/**
+ * Merge per-map business_info with global settings.
+ * AI settings (provider, model, API keys) ALWAYS come from global — never from the map.
+ * Map overrides only apply to business context fields (language, region, industry, etc.).
+ *
+ * This prevents stale map.business_info.aiProvider='gemini' from overriding a user's
+ * current global setting of 'anthropic', which caused $31+ in unexpected Gemini costs.
+ */
+export const mergeMapBusinessInfo = (globalBI: BusinessInfo, mapBI?: Partial<BusinessInfo> | null): BusinessInfo => {
+  if (!mapBI) return globalBI;
+  // Strip AI-related fields from map overrides
+  const {
+    aiProvider: _p,
+    aiModel: _m,
+    geminiApiKey: _gk,
+    openAiApiKey: _ok,
+    anthropicApiKey: _ak,
+    perplexityApiKey: _pk,
+    openRouterApiKey: _ork,
+    supabaseUrl: _su,
+    supabaseAnonKey: _sa,
+    ...mapBusinessContext
+  } = mapBI;
+  return { ...globalBI, ...mapBusinessContext };
+};
 
 export const slugify = (text: string): string => {
   if (!text) return '';

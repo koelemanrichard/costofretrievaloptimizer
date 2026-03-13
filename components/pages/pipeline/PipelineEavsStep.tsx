@@ -13,6 +13,7 @@ import type { SemanticTriple } from '../../../types';
 import type { DialogueContext, ExtractedData, CascadeImpact } from '../../../types/dialogue';
 import { createEmptyDialogueContext, ensureValidDialogueContext } from '../../../services/ai/dialogueEngine';
 import { getSupabaseClient } from '../../../services/supabaseClient';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 import { EavCompletenessCard } from '../../eav/EavCompletenessCard';
 
 // ──── Confidence Types (Decision 2) ────
@@ -676,7 +677,7 @@ const PipelineEavsStep: React.FC = () => {
   // Merge per-map businessInfo overrides with global state (per-map takes precedence)
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   const stepState = getStepState('eavs');

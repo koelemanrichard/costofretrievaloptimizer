@@ -7,6 +7,7 @@ import {
   type ExportPackageOptions,
   type ExportResult,
 } from '../../../services/packageExportService';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 
 // ──── Metric Card ────
 
@@ -733,7 +734,7 @@ const PipelineExportStep: React.FC = () => {
   // Merge per-map business_info overrides with global state
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [activeMap?.business_info, state.businessInfo]);
 
   const [activeTab, setActiveTab] = useState('SEO');

@@ -5,6 +5,7 @@ import ApprovalGate from '../../pipeline/ApprovalGate';
 import { runQueryNetworkAudit } from '../../../services/ai/queryNetworkAudit';
 import { GscApiAdapter } from '../../../services/audit/adapters/GscApiAdapter';
 import { getSupabaseClient } from '../../../services/supabaseClient';
+import { mergeMapBusinessInfo } from '../../../utils/helpers';
 import type {
   QueryNetworkAnalysisResult,
   QueryNetworkAuditConfig,
@@ -1851,7 +1852,7 @@ const PipelineGapStep: React.FC = () => {
   // Merge per-map business_info overrides with global state (per-map takes precedence)
   const effectiveBusinessInfo = useMemo(() => {
     const mapBI = activeMap?.business_info;
-    return mapBI ? { ...state.businessInfo, ...mapBI } : state.businessInfo;
+    return mergeMapBusinessInfo(state.businessInfo, mapBI);
   }, [state.businessInfo, activeMap?.business_info]);
 
   // Resolve Central Entity from all available sources (priority order):
