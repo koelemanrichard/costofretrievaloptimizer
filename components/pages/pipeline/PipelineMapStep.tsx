@@ -1857,6 +1857,8 @@ const PipelineMapStep: React.FC = () => {
 
   // Stable allTopics for page inventory handlers
   const allTopics = useMemo(() => [...coreTopics, ...outerTopics], [coreTopics, outerTopics]);
+  const standalonePages = useMemo(() => allTopics.filter(t => !t.page_decision || t.page_decision === 'standalone_page').length, [allTopics]);
+  const sectionTopics = totalTopics - standalonePages;
 
   const rebuildPageInventory = useCallback(async (topics: EnrichedTopic[]) => {
     try {
@@ -2318,11 +2320,19 @@ const PipelineMapStep: React.FC = () => {
       )}
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${sectionTopics > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <MetricCard label="Hub Topics" value={clusterCount} color={clusterCount > 0 ? 'blue' : 'gray'} />
-        <MetricCard label="Total Pages" value={totalTopics} color={totalTopics > 0 ? 'green' : 'gray'} />
+        <MetricCard label="Total Topics" value={totalTopics} color={totalTopics > 0 ? 'green' : 'gray'} />
+        {sectionTopics > 0 && (
+          <MetricCard label="Standalone Pages" value={standalonePages} color="green" />
+        )}
         <MetricCard label="Internal Links" value={internalLinksEstimate > 0 ? `~${internalLinksEstimate}` : 0} color={internalLinksEstimate > 0 ? 'amber' : 'gray'} />
       </div>
+      {sectionTopics > 0 && (
+        <p className="text-xs text-gray-500 -mt-2">
+          {sectionTopics} topic{sectionTopics !== 1 ? 's' : ''} consolidated as sections within parent pages — {standalonePages} pages will get individual content briefs
+        </p>
+      )}
 
       {/* Page Inventory View — shown when enrichment has produced page decisions */}
       {pageInventory && (
@@ -2542,8 +2552,8 @@ const PipelineMapStep: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-200">
                   {mapHealthScore !== null && mapHealthScore >= 80
-                    ? `Content plan ready — ${totalTopics} pages across ${clusterCount} hubs`
-                    : `${totalTopics} pages planned across ${clusterCount} hubs`}
+                    ? `Content plan ready — ${standalonePages} pages across ${clusterCount} hubs${sectionTopics > 0 ? ` (${sectionTopics} consolidated as sections)` : ''}`
+                    : `${standalonePages} pages planned across ${clusterCount} hubs${sectionTopics > 0 ? ` + ${sectionTopics} sections` : ''}`}
                 </p>
                 {mapHealthScore !== null && actionableFindings.length > 0 && (
                   <p className="text-xs text-gray-400 mt-0.5">
